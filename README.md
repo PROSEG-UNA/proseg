@@ -31,7 +31,6 @@ La estructura principal se divide en dos conceptos clave:
 
 ## Notas
 
-- Este proyecto sigue una arquitectura distribuida basada en microservicios
 - Cada servicio puede evolucionar de forma independiente
 - Se promueve el uso de buenas prácticas como separación de responsabilidades y escalabilidad
 
