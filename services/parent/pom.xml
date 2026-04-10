@@ -24,6 +24,7 @@
     <modules>
         <module>msvc-gateway</module>
         <module>msvc-eureka</module>
+        <module>msvc-config</module>
     </modules>
 
     <properties>
