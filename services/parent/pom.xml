@@ -9,7 +9,7 @@
         <version>4.0.5</version>
     </parent>
 
-    <groupId>com.mycompany.app</groupId>
+    <groupId>com.sssi</groupId>
     <artifactId>parent</artifactId>
     <version>1.0-SNAPSHOT</version>
 
@@ -20,6 +20,10 @@
     it is only used to manage dependencies and plugins for its child modules
     -->
     <packaging>pom</packaging>
+
+    <modules>
+        <module>msvc-gateway</module>
+    </modules>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
