@@ -1,0 +1,204 @@
+.inventory-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.inventory-header {
+  background: linear-gradient(135deg, #C41E3A 0%, #0047AB 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(196, 30, 58, 0.15);
+}
+
+.inventory-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 2rem;
+  min-height: 64px;
+}
+
+.inventory-title {
+  flex: 1;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: white;
+  margin: 0;
+}
+
+.inventory-nav-button {
+  background-color: transparent;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  border-radius: 4px;
+}
+
+.inventory-nav-button:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.inventory-logout-button {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 1.5rem;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+}
+
+.inventory-logout-button:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.inventory-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.inventory-header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.inventory-list-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #333;
+  margin: 0;
+}
+
+.inventory-add-button {
+  background: linear-gradient(135deg, #C41E3A 0%, #0047AB 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.inventory-add-button:hover {
+  box-shadow: 0 4px 12px rgba(196, 30, 58, 0.3);
+  transform: translateY(-2px);
+}
+
+.inventory-table-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.inventory-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.inventory-table-head {
+  background-color: #f5f5f5;
+  border-bottom: 2px solid #C41E3A;
+}
+
+.inventory-table-head-cell {
+  padding: 1rem;
+  text-align: left;
+  font-weight: bold;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.inventory-table-head-cell[align="center"] {
+  text-align: center;
+}
+
+.inventory-table-body-row {
+  border-bottom: 1px solid #E0E0E0;
+  transition: background-color 0.2s ease;
+}
+
+.inventory-table-body-row:hover {
+  background-color: #f9f9f9;
+}
+
+.inventory-table-body-cell {
+  padding: 1rem;
+  color: #333;
+}
+
+.inventory-table-body-cell[align="center"] {
+  text-align: center;
+}
+
+.inventory-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.inventory-action-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inventory-action-button.edit {
+  color: #0047AB;
+}
+
+.inventory-action-button.edit:hover {
+  background-color: rgba(0, 71, 171, 0.1);
+}
+
+.inventory-action-button.delete {
+  color: #d32f2f;
+}
+
+.inventory-action-button.delete:hover {
+  background-color: rgba(211, 47, 47, 0.1);
+}
+
+@media (max-width: 768px) {
+  .inventory-content {
+    padding: 1rem;
+  }
+
+  .inventory-header-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .inventory-table-container {
+    border-radius: 4px;
+  }
+
+  .inventory-table-head-cell,
+  .inventory-table-body-cell {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.875rem;
+  }
+}

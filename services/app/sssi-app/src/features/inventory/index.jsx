@@ -1,0 +1,2 @@
+// Inventory Feature Module
+export {};
