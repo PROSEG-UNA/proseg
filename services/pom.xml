@@ -22,6 +22,7 @@
     <packaging>pom</packaging>
 
     <modules>
+        <module>msvc-common</module>
         <module>msvc-gateway</module>
         <module>msvc-eureka</module>
         <module>msvc-config</module>
