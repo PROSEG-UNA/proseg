@@ -1,2 +1,0 @@
-// Auth Feature Module
-export {};

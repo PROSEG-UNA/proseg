@@ -1,7 +1,9 @@
 import { createBrowserRouter } from 'react-router-dom';
 import LoginPage from '../features/auth/pages/LoginPage';
 import InventoryPage from '../features/inventory/pages/InventoryPage';
-import SecurityPage from '../features/security/pages/SecurityPage';
+import AssetPage from '../features/inventory/pages/AssetPage';
+import UserPage from '../features/security/pages/UserPage';
+import RolePage from '../features/security/pages/RolePage';
 
 export const router = createBrowserRouter([
   {
@@ -13,11 +15,19 @@ export const router = createBrowserRouter([
     element: <LoginPage />,
   },
   {
-    path: '/inventory',
+    path: '/inventario',
     element: <InventoryPage />,
   },
   {
-    path: '/security',
-    element: <SecurityPage />,
+    path: '/inventario/activos',
+    element: <AssetPage />,
+  },
+  {
+    path: '/seguridad/usuarios',
+    element: <UserPage />,
+  },
+  {
+    path: '/seguridad/roles',
+    element: <RolePage />,
   },
 ]);

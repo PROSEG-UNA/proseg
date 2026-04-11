@@ -7,8 +7,8 @@ export function Navbar() {
       <ul className="navbar-menu">
         <li><a href="/">Home</a></li>
         <li><a href="/auth">Auth</a></li>
-        <li><a href="/inventory">Inventory</a></li>
-        <li><a href="/security">Security</a></li>
+        <li><a href="/inventario">Inventario</a></li>
+        <li><a href="/seguridad/usuarios">Seguridad</a></li>
       </ul>
     </nav>
   );

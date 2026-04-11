@@ -15,7 +15,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import MenuIcon from '@mui/icons-material/Menu';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
@@ -62,12 +62,23 @@ export function Sidebar() {
           textAlign: 'center',
           borderBottom: '1px solid rgba(0,0,0,0.1)',
           display: 'flex',
-          flexDirection: 'column',
+          flexDirection: isMinimized ? 'column' : 'row',
           alignItems: 'center',
-          justifyContent: 'center',
-          gap: 1,
+          justifyContent: isMinimized ? 'center' : 'space-between',
+          gap: isMinimized ? 1 : 3,
         }}
       >
+        {!isMinimized && (
+          <img
+            src="/logo_una.png"
+            alt="Logo UNA"
+            style={{
+              maxWidth: '60%',
+              height: 'auto',
+              maxHeight: '60px',
+            }}
+          />
+        )}
         <IconButton
           onClick={() => setIsMinimized(!isMinimized)}
           sx={{
@@ -78,128 +89,184 @@ export function Sidebar() {
             },
           }}
         >
-          {isMinimized ? <MenuOpenIcon /> : <ChevronLeftIcon />}
+          {isMinimized ? <MenuOpenIcon /> : <MenuIcon />}
         </IconButton>
-        {!isMinimized && (
-          <img
-            src="/logo_una.png"
-            alt="Logo UNA"
-            style={{
-              maxWidth: '80%',
-              height: 'auto',
-              maxHeight: '80px',
+      </Box>
+
+      {!isMinimized && (
+        <Box className="sidebar-nav" sx={{ flex: 1, overflowY: 'auto', p: 0, display: 'block' }}>
+          <List sx={{ p: 0 }}>
+            <ListItem disablePadding className="sidebar-menu" sx={{ display: 'block' }}>
+              <ListItemButton
+                className="sidebar-menu-title"
+                onClick={() => toggleMenu('inventory')}
+                sx={{
+                  borderBottom: '1px solid rgba(0,0,0,0.1)',
+                  color: '#333',
+                  '&:hover': {
+                    backgroundColor: 'rgba(196, 30, 58, 0.05)',
+                  },
+                }}
+              >
+                <ListItemText 
+                  primary="Gestión Inventarios"
+                  sx={{ color: '#333' }}
+                />
+                {expandedMenu === 'inventory' ? (
+                  <ExpandLessIcon sx={{ color: '#333' }} />
+                ) : (
+                  <ExpandMoreIcon sx={{ color: '#333' }} />
+                )}
+              </ListItemButton>
+              <Collapse in={expandedMenu === 'inventory'} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding sx={{ backgroundColor: 'rgba(196, 30, 58, 0.05)' }}>
+                  <ListItem disablePadding>
+                    <ListItemButton 
+                      className="sidebar-item"
+                      onClick={() => navigate('/inventario/activos')}
+                      sx={{ 
+                        pl: 4, 
+                        color: '#333',
+                        '&:hover': { 
+                          backgroundColor: 'rgba(196, 30, 58, 0.1)',
+                          fontWeight: 600,
+                        }
+                      }}
+                    >
+                      <WarehouseIcon sx={{ mr: 1.5, fontSize: 20 }} />
+                      <ListItemText primary="Activos" />
+                    </ListItemButton>
+                  </ListItem>
+                </List>
+              </Collapse>
+            </ListItem>
+
+            <ListItem disablePadding className="sidebar-menu" sx={{ display: 'block' }}>
+              <ListItemButton
+                className="sidebar-menu-title"
+                onClick={() => toggleMenu('security')}
+                sx={{
+                  borderBottom: '1px solid rgba(0,0,0,0.1)',
+                  color: '#333',
+                  '&:hover': {
+                    backgroundColor: 'rgba(196, 30, 58, 0.05)',
+                  },
+                }}
+              >
+                <ListItemText 
+                  primary="Gestión Seguridad"
+                  sx={{ color: '#333' }}
+                />
+                {expandedMenu === 'security' ? (
+                  <ExpandLessIcon sx={{ color: '#333' }} />
+                ) : (
+                  <ExpandMoreIcon sx={{ color: '#333' }} />
+                )}
+              </ListItemButton>
+              <Collapse in={expandedMenu === 'security'} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding sx={{ backgroundColor: 'rgba(196, 30, 58, 0.05)' }}>
+                  <ListItem disablePadding>
+                    <ListItemButton 
+                      className="sidebar-item"
+                      onClick={() => navigate('/seguridad/usuarios')}
+                      sx={{ 
+                        pl: 4, 
+                        color: '#333',
+                        '&:hover': { 
+                          backgroundColor: 'rgba(196, 30, 58, 0.1)',
+                          fontWeight: 600,
+                        }
+                      }}
+                    >
+                      <PeopleIcon sx={{ mr: 1.5, fontSize: 20 }} />
+                      <ListItemText primary="Usuarios" />
+                    </ListItemButton>
+                  </ListItem>
+                  <ListItem disablePadding>
+                    <ListItemButton 
+                      className="sidebar-item"
+                      onClick={() => navigate('/seguridad/roles')}
+                      sx={{ 
+                        pl: 4, 
+                        color: '#333',
+                        '&:hover': { 
+                          backgroundColor: 'rgba(196, 30, 58, 0.1)',
+                          fontWeight: 600,
+                        }
+                      }}
+                    >
+                      <VerifiedUserIcon sx={{ mr: 1.5, fontSize: 20 }} />
+                      <ListItemText primary="Roles" />
+                    </ListItemButton>
+                  </ListItem>
+                </List>
+              </Collapse>
+            </ListItem>
+          </List>
+        </Box>
+      )}
+
+      {isMinimized && (
+        <Box className="sidebar-nav-minimized" sx={{ flex: 1, overflowY: 'auto', p: 1, display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center' }}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 1,
+              width: '100%',
             }}
-          />
-        )}
-      </Box>
-
-      <Box className="sidebar-nav" sx={{ flex: 1, overflowY: 'auto', p: 0, display: isMinimized ? 'none' : 'block' }}>
-        <List sx={{ p: 0 }}>
-          <ListItem disablePadding className="sidebar-menu" sx={{ display: 'block' }}>
-            <ListItemButton
-              className="sidebar-menu-title"
-              onClick={() => toggleMenu('inventory')}
+          >
+            <IconButton
+              onClick={() => {
+                setIsMinimized(false);
+                toggleMenu('inventory');
+              }}
+              title="Gestión Inventarios"
               sx={{
-                borderBottom: '1px solid rgba(0,0,0,0.1)',
                 color: '#333',
+                width: 50,
+                height: 50,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 '&:hover': {
-                  backgroundColor: 'rgba(196, 30, 58, 0.05)',
+                  backgroundColor: 'rgba(196, 30, 58, 0.1)',
                 },
               }}
             >
-              <ListItemText 
-                primary="Gestión Inventarios"
-                sx={{ color: '#333' }}
-              />
-              {expandedMenu === 'inventory' ? (
-                <ExpandLessIcon sx={{ color: '#333' }} />
-              ) : (
-                <ExpandMoreIcon sx={{ color: '#333' }} />
-              )}
-            </ListItemButton>
-            <Collapse in={expandedMenu === 'inventory'} timeout="auto" unmountOnExit>
-              <List component="div" disablePadding sx={{ backgroundColor: 'rgba(196, 30, 58, 0.05)' }}>
-                <ListItem disablePadding>
-                  <ListItemButton 
-                    className="sidebar-item"
-                    sx={{ 
-                      pl: 4, 
-                      color: '#333',
-                      '&:hover': { 
-                        backgroundColor: 'rgba(196, 30, 58, 0.1)',
-                        fontWeight: 600,
-                      }
-                    }}
-                  >
-                    <WarehouseIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                    <ListItemText primary="Activos" />
-                  </ListItemButton>
-                </ListItem>
-              </List>
-            </Collapse>
-          </ListItem>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                <WarehouseIcon sx={{ fontSize: 24 }} />
+                <ExpandMoreIcon sx={{ fontSize: 16 }} />
+              </Box>
+            </IconButton>
 
-          <ListItem disablePadding className="sidebar-menu" sx={{ display: 'block' }}>
-            <ListItemButton
-              className="sidebar-menu-title"
-              onClick={() => toggleMenu('security')}
+            <IconButton
+              onClick={() => {
+                setIsMinimized(false);
+                toggleMenu('security');
+              }}
+              title="Gestión Seguridad"
               sx={{
-                borderBottom: '1px solid rgba(0,0,0,0.1)',
                 color: '#333',
+                width: 50,
+                height: 50,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 '&:hover': {
-                  backgroundColor: 'rgba(196, 30, 58, 0.05)',
+                  backgroundColor: 'rgba(196, 30, 58, 0.1)',
                 },
               }}
             >
-              <ListItemText 
-                primary="Gestión Seguridad"
-                sx={{ color: '#333' }}
-              />
-              {expandedMenu === 'security' ? (
-                <ExpandLessIcon sx={{ color: '#333' }} />
-              ) : (
-                <ExpandMoreIcon sx={{ color: '#333' }} />
-              )}
-            </ListItemButton>
-            <Collapse in={expandedMenu === 'security'} timeout="auto" unmountOnExit>
-              <List component="div" disablePadding sx={{ backgroundColor: 'rgba(196, 30, 58, 0.05)' }}>
-                <ListItem disablePadding>
-                  <ListItemButton 
-                    className="sidebar-item"
-                    sx={{ 
-                      pl: 4, 
-                      color: '#333',
-                      '&:hover': { 
-                        backgroundColor: 'rgba(196, 30, 58, 0.1)',
-                        fontWeight: 600,
-                      }
-                    }}
-                  >
-                    <PeopleIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                    <ListItemText primary="Usuarios" />
-                  </ListItemButton>
-                </ListItem>
-                <ListItem disablePadding>
-                  <ListItemButton 
-                    className="sidebar-item"
-                    sx={{ 
-                      pl: 4, 
-                      color: '#333',
-                      '&:hover': { 
-                        backgroundColor: 'rgba(196, 30, 58, 0.1)',
-                        fontWeight: 600,
-                      }
-                    }}
-                  >
-                    <VerifiedUserIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                    <ListItemText primary="Roles" />
-                  </ListItemButton>
-                </ListItem>
-              </List>
-            </Collapse>
-          </ListItem>
-        </List>
-      </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                <VerifiedUserIcon sx={{ fontSize: 24 }} />
+                <ExpandMoreIcon sx={{ fontSize: 16 }} />
+              </Box>
+            </IconButton>
+          </Box>
+        </Box>
+      )}
 
       {!isMinimized && (
         <Box className="sidebar-footer" sx={{ p: 2, borderTop: '1px solid rgba(0,0,0,0.1)' }}>

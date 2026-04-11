@@ -6,31 +6,19 @@ import {
   Toolbar,
   Typography,
   Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  IconButton,
   Container,
+  Card,
+  CardContent,
+  CardActions,
+  Grid,
+  IconButton,
 } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
+import StorageIcon from '@mui/icons-material/Storage';
 import '../css/InventoryPage.css';
-
-const mockItems = [
-  { id: 1, name: 'Producto A', quantity: 50, price: 100 },
-  { id: 2, name: 'Producto B', quantity: 30, price: 200 },
-  { id: 3, name: 'Producto C', quantity: 20, price: 150 },
-];
 
 export function InventoryPage() {
   const navigate = useNavigate();
-  const [items] = useState(mockItems);
 
   const handleLogout = () => {
     navigate('/login');
@@ -52,13 +40,6 @@ export function InventoryPage() {
           >
             Gestión de Inventario
           </Typography>
-          <Button 
-            color="inherit" 
-            onClick={() => navigate('/security')}
-            sx={{ mr: 2, textTransform: 'none', fontSize: '1rem' }}
-          >
-            Seguridad
-          </Button>
           <IconButton color="inherit" onClick={handleLogout}>
             <LogoutIcon />
           </IconButton>
@@ -66,54 +47,39 @@ export function InventoryPage() {
       </AppBar>
 
       <Container maxWidth="lg" className="inventory-content">
-        <Box className="inventory-header-section">
-          <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-            Lista de productos
+        <Box sx={{ py: 4 }}>
+          <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 3 }}>
+            Bienvenido a Gestión de Inventario
           </Typography>
-          <Button 
-            variant="contained" 
-            startIcon={<AddIcon />}
-            sx={{ backgroundColor: '#C41E3A', textTransform: 'none' }}
-          >
-            Agregar
-          </Button>
-        </Box>
+          <Typography variant="body1" sx={{ color: '#666', mb: 4 }}>
+            Selecciona una opción para comenzar a gestionar los activos de tu organización.
+          </Typography>
 
-        <TableContainer component={Paper} className="inventory-table-container">
-          <Table>
-            <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid #C41E3A' }}>Nombre</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 'bold', borderBottom: '2px solid #C41E3A' }}>
-                  Cantidad
-                </TableCell>
-                <TableCell align="center" sx={{ fontWeight: 'bold', borderBottom: '2px solid #C41E3A' }}>
-                  Precio
-                </TableCell>
-                <TableCell align="center" sx={{ fontWeight: 'bold', borderBottom: '2px solid #C41E3A' }}>
-                  Acciones
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {items.map(item => (
-                <TableRow key={item.id} hover>
-                  <TableCell>{item.name}</TableCell>
-                  <TableCell align="center">{item.quantity}</TableCell>
-                  <TableCell align="center">${item.price}</TableCell>
-                  <TableCell align="center">
-                    <IconButton size="small" sx={{ color: '#C41E3A' }}>
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton size="small" sx={{ color: '#d32f2f' }}>
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6} md={4}>
+              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <CardContent sx={{ flex: 1, textAlign: 'center' }}>
+                  <StorageIcon sx={{ fontSize: 60, color: '#C41E3A', mb: 2 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
+                    Gestión de Activos
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#666' }}>
+                    Administra todos los activos de la organización
+                  </Typography>
+                </CardContent>
+                <CardActions sx={{ justifyContent: 'center' }}>
+                  <Button 
+                    variant="contained" 
+                    sx={{ backgroundColor: '#C41E3A' }}
+                    onClick={() => navigate('/inventario/activos')}
+                  >
+                    Ir a Activos
+                  </Button>
+                </CardActions>
+              </Card>
+            </Grid>
+          </Grid>
+        </Box>
       </Container>
     </Box>
   );

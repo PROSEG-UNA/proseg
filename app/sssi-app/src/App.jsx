@@ -6,7 +6,9 @@ import theme from './common/theme';
 import { SidebarProvider } from './common/context/SidebarContext';
 import LoginPage from './features/auth/pages/LoginPage';
 import InventoryPage from './features/inventory/pages/InventoryPage';
-import SecurityPage from './features/security/pages/SecurityPage';
+import AssetPage from './features/inventory/pages/AssetPage';
+import UserPage from './features/security/pages/UserPage';
+import RolePage from './features/security/pages/RolePage';
 import DashboardLayout from './layouts/DashboardLayout';
 
 function App() {
@@ -19,7 +21,7 @@ function App() {
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<LoginPage />} />
             <Route
-              path="/inventory"
+              path="/inventario"
               element={
                 <DashboardLayout>
                   <InventoryPage />
@@ -27,10 +29,26 @@ function App() {
               }
             />
             <Route
-              path="/security"
+              path="/inventario/activos"
               element={
                 <DashboardLayout>
-                  <SecurityPage />
+                  <AssetPage />
+                </DashboardLayout>
+              }
+            />
+            <Route
+              path="/seguridad/usuarios"
+              element={
+                <DashboardLayout>
+                  <UserPage />
+                </DashboardLayout>
+              }
+            />
+            <Route
+              path="/seguridad/roles"
+              element={
+                <DashboardLayout>
+                  <RolePage />
                 </DashboardLayout>
               }
             />

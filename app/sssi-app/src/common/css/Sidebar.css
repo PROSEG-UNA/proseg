@@ -2,6 +2,18 @@
   width: 280px;
 }
 
+.sidebar-nav-minimized {
+  align-content: flex-start;
+}
+
+.sidebar-nav-minimized .MuiIconButton-root {
+  transition: all 0.2s ease-in-out;
+}
+
+.sidebar-nav-minimized .MuiIconButton-root:hover {
+  transform: scale(1.1);
+}
+
 @media (max-width: 768px) {
   .sidebar {
     width: 100%;

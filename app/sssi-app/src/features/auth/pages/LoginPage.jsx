@@ -37,7 +37,7 @@ export function LoginPage() {
 
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      navigate('/inventory');
+      navigate('/inventario');
     } catch (err) {
       setError('Error en la autenticación. Intenta de nuevo.');
     } finally {

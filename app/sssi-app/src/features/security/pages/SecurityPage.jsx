@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -6,35 +5,20 @@ import {
   Toolbar,
   Typography,
   Button,
+  Container,
   Card,
   CardContent,
-  CardHeader,
-  Switch,
-  FormControlLabel,
+  CardActions,
   Grid,
   IconButton,
-  Container,
 } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
-import SecurityIcon from '@mui/icons-material/Security';
-import LockIcon from '@mui/icons-material/Lock';
-import ScheduleIcon from '@mui/icons-material/Schedule';
+import PeopleIcon from '@mui/icons-material/People';
+import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import '../css/SecurityPage.css';
 
 export function SecurityPage() {
   const navigate = useNavigate();
-  const [settings, setSettings] = useState({
-    twoFactor: false,
-    apiKey: true,
-    sessionTimeout: true,
-  });
-
-  const handleToggle = (key) => {
-    setSettings(prev => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  };
 
   const handleLogout = () => {
     navigate('/login');
@@ -54,11 +38,11 @@ export function SecurityPage() {
               textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
             }}
           >
-            Configuración de Seguridad
+            Gestión de Seguridad
           </Typography>
           <Button 
             color="inherit" 
-            onClick={() => navigate('/inventory')}
+            onClick={() => navigate('/inventory/activos')}
             sx={{ mr: 2, textTransform: 'none', fontSize: '1rem' }}
           >
             Inventario
@@ -69,125 +53,62 @@ export function SecurityPage() {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="md" className="security-content">
-        <Grid container spacing={3} className="security-grid">
-          <Grid item xs={12} sm={6} md={4}>
-            <Card>
-              <CardHeader
-                avatar={<SecurityIcon sx={{ color: '#C41E3A' }} />}
-                title="Autenticación"
-              />
-              <CardContent>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={settings.twoFactor}
-                      onChange={() => handleToggle('twoFactor')}
-                      sx={{
-                        '& .MuiSwitch-switchBase.Mui-checked': {
-                          color: '#C41E3A',
-                        },
-                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                          backgroundColor: '#C41E3A',
-                        },
-                      }}
-                    />
-                  }
-                  label="Factor Doble"
-                />
-              </CardContent>
-            </Card>
-          </Grid>
+      <Container maxWidth="lg" className="security-content">
+        <Box sx={{ py: 4 }}>
+          <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 3 }}>
+            Bienvenido a Gestión de Seguridad
+          </Typography>
+          <Typography variant="body1" sx={{ color: '#666', mb: 4 }}>
+            Administra usuarios, roles y permisos de tu organización.
+          </Typography>
 
-          <Grid item xs={12} sm={6} md={4}>
-            <Card>
-              <CardHeader
-                avatar={<LockIcon sx={{ color: '#C41E3A' }} />}
-                title="Claves API"
-              />
-              <CardContent>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={settings.apiKey}
-                      onChange={() => handleToggle('apiKey')}
-                      sx={{
-                        '& .MuiSwitch-switchBase.Mui-checked': {
-                          color: '#C41E3A',
-                        },
-                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                          backgroundColor: '#C41E3A',
-                        },
-                      }}
-                    />
-                  }
-                  label="Activado"
-                />
-              </CardContent>
-            </Card>
-          </Grid>
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6} md={5}>
+              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <CardContent sx={{ flex: 1, textAlign: 'center' }}>
+                  <PeopleIcon sx={{ fontSize: 60, color: '#C41E3A', mb: 2 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
+                    Gestión de Usuarios
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#666' }}>
+                    Administra los usuarios de la organización
+                  </Typography>
+                </CardContent>
+                <CardActions sx={{ justifyContent: 'center' }}>
+                  <Button 
+                    variant="contained" 
+                    sx={{ backgroundColor: '#C41E3A' }}
+                    onClick={() => navigate('/security/usuarios')}
+                  >
+                    Ir a Usuarios
+                  </Button>
+                </CardActions>
+              </Card>
+            </Grid>
 
-          <Grid item xs={12} sm={6} md={4}>
-            <Card>
-              <CardHeader
-                avatar={<ScheduleIcon sx={{ color: '#C41E3A' }} />}
-                title="Sesiones"
-              />
-              <CardContent>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={settings.sessionTimeout}
-                      onChange={() => handleToggle('sessionTimeout')}
-                      sx={{
-                        '& .MuiSwitch-switchBase.Mui-checked': {
-                          color: '#C41E3A',
-                        },
-                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                          backgroundColor: '#C41E3A',
-                        },
-                      }}
-                    />
-                  }
-                  label="Timeout activo"
-                />
-              </CardContent>
-            </Card>
+            <Grid item xs={12} sm={6} md={5}>
+              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <CardContent sx={{ flex: 1, textAlign: 'center' }}>
+                  <VerifiedUserIcon sx={{ fontSize: 60, color: '#C41E3A', mb: 2 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
+                    Gestión de Roles
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#666' }}>
+                    Administra los roles y permisos del sistema
+                  </Typography>
+                </CardContent>
+                <CardActions sx={{ justifyContent: 'center' }}>
+                  <Button 
+                    variant="contained" 
+                    sx={{ backgroundColor: '#C41E3A' }}
+                    onClick={() => navigate('/security/roles')}
+                  >
+                    Ir a Roles
+                  </Button>
+                </CardActions>
+              </Card>
+            </Grid>
           </Grid>
-
-          <Grid item xs={12}>
-            <Card className="security-activity-log">
-              <CardHeader title="Últimas acciones" />
-              <CardContent>
-                <Typography variant="body2" color="textSecondary" className="security-activity-item">
-                  Acceso desde 192.168.1.100 - Hoy 10:30 AM
-                </Typography>
-                <Typography variant="body2" color="textSecondary" className="security-activity-item">
-                  Cambio de contraseña - Ayer 2:15 PM
-                </Typography>
-                <Typography variant="body2" color="textSecondary" className="security-activity-item">
-                  Nuevo dispositivo autorizado - Hace 3 días
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-
-        <Box className="security-footer">
-          <Button 
-            variant="outlined" 
-            color="error"
-            sx={{ 
-              color: '#d32f2f',
-              borderColor: '#d32f2f',
-              '&:hover': {
-                borderColor: '#d32f2f',
-                backgroundColor: 'rgba(211, 47, 47, 0.1)',
-              },
-            }}
-          >
-            Cerrar todas las sesiones
-          </Button>
         </Box>
       </Container>
     </Box>
