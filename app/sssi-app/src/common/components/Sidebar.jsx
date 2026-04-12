@@ -23,7 +23,6 @@ import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import { alpha } from '@mui/material/styles';
 import { SidebarContext } from '../context/SidebarContext';
-import AppTheme from '../theme/AppTheme';
 import '../css/Sidebar.css';
 
 export function Sidebar() {
@@ -53,7 +52,6 @@ export function Sidebar() {
   const sidebarWidth = isMinimized ? 80 : 280;
 
   return (
-    <AppTheme>
     <Box
       component="nav"
       className="sidebar"
@@ -308,7 +306,6 @@ export function Sidebar() {
         </Box>
       )}
     </Box>
-    </AppTheme>
   );
 }
 

@@ -23,7 +23,6 @@ import WarehouseIcon from '@mui/icons-material/Warehouse';
 import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import { alpha } from '@mui/material/styles';
-import AppTheme from '../theme/AppTheme';
 
 export function MobileNavbar() {
   const navigate = useNavigate();
@@ -52,9 +51,8 @@ export function MobileNavbar() {
   };
 
   return (
-    <AppTheme>
-      <>
-        <AppBar position="static" sx={{ backgroundColor: 'primary.main' }}>
+    <>
+      <AppBar position="static" sx={{ backgroundColor: 'primary.main' }}>
           <Toolbar>
             <IconButton
               edge="start"
@@ -242,8 +240,7 @@ export function MobileNavbar() {
             </Box>
           </Box>
         </Drawer>
-      </>
-    </AppTheme>
+    </>
   );
 }
 

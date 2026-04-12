@@ -1,8 +1,7 @@
 import './App.css';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import theme from './common/theme';
+import AppTheme from './common/theme/AppTheme';
 import { SidebarProvider } from './common/context/SidebarContext';
 import LoginPage from './features/auth/pages/LoginPage';
 import RegisterPage from './features/auth/pages/RegisterPage';
@@ -15,7 +14,7 @@ import DashboardLayout from './layouts/DashboardLayout';
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
+    <AppTheme>
       <CssBaseline />
       <SidebarProvider>
         <Router>
@@ -66,7 +65,7 @@ function App() {
           </Routes>
         </Router>
       </SidebarProvider>
-    </ThemeProvider>
+    </AppTheme>
   );
 }
 

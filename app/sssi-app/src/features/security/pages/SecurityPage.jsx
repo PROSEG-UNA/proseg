@@ -14,7 +14,6 @@ import {
 import LogoutIcon from '@mui/icons-material/Logout';
 import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
-import AppTheme from '../../../common/theme/AppTheme';
 import '../css/SecurityPage.css';
 
 export function SecurityPage() {
@@ -25,8 +24,7 @@ export function SecurityPage() {
   };
 
   return (
-    <AppTheme>
-      <Box className="security-page">
+    <Box className="security-page">
         <AppBar position="static" sx={{ backgroundColor: 'primary.main' }}>
           <Toolbar>
             <Typography
@@ -109,8 +107,7 @@ export function SecurityPage() {
             </Box>
           </Box>
         </Container>
-      </Box>
-    </AppTheme>
+    </Box>
   );
 }
 

@@ -13,7 +13,6 @@ import {
 } from '@mui/material';
 import LoginIcon from '@mui/icons-material/Login';
 import { alpha } from '@mui/material/styles';
-import AppTheme from '../../../common/theme/AppTheme';
 import '../css/LoginPage.css';
 
 const fieldSx = (theme) => ({
@@ -49,8 +48,7 @@ export function LoginPage() {
     };
 
     return (
-        <AppTheme>
-            <Box
+        <Box
                 className="login-page"
                 sx={(theme) => ({
                     '&::before': { backgroundColor: alpha(theme.palette.primary.main, 0.15) },
@@ -167,8 +165,7 @@ export function LoginPage() {
                         </Typography>
                     </Card>
                 </Container>
-            </Box>
-        </AppTheme>
+        </Box>
     );
 }
 

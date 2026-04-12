@@ -39,7 +39,6 @@ import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import AppsIcon from '@mui/icons-material/Apps';
 import { alpha } from '@mui/material/styles';
 import { FilterAccordion } from '../../../common/components/FilterAccordion';
-import AppTheme from '../../../common/theme/AppTheme';
 import '../css/AssetPage.css';
 
 const mockAssets = [
@@ -99,8 +98,7 @@ export function AssetPage() {
   };
 
   return (
-    <AppTheme>
-      <Box className="asset-page">
+    <Box className="asset-page">
         <AppBar position="static" sx={{ backgroundColor: 'primary.main' }}>
           <Toolbar>
             {isMediumOrDown && (
@@ -344,8 +342,7 @@ export function AssetPage() {
             </Table>
           </TableContainer>
         </Container>
-      </Box>
-    </AppTheme>
+    </Box>
   );
 }
 

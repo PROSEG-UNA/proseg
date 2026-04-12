@@ -13,7 +13,6 @@ import {
 } from '@mui/material';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import { alpha } from '@mui/material/styles';
-import AppTheme from '../../../common/theme/AppTheme';
 import '../css/RegisterPage.css';
 
 const fieldSx = (theme) => ({
@@ -48,8 +47,7 @@ export function RegisterPage() {
     };
 
     return (
-        <AppTheme>
-            <Box
+        <Box
                 className="register-page"
                 sx={(theme) => ({
                     '&::before': { backgroundColor: alpha(theme.palette.primary.main, 0.15) },
@@ -179,8 +177,7 @@ export function RegisterPage() {
                         </Typography>
                     </Card>
                 </Container>
-            </Box>
-        </AppTheme>
+        </Box>
     );
 }
 

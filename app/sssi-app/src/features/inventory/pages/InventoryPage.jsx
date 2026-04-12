@@ -31,7 +31,6 @@ import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import AppsIcon from '@mui/icons-material/Apps';
 import { alpha } from '@mui/material/styles';
-import AppTheme from '../../../common/theme/AppTheme';
 import '../css/InventoryPage.css';
 
 export function InventoryPage() {
@@ -62,8 +61,7 @@ export function InventoryPage() {
   };
 
   return (
-    <AppTheme>
-      <Box className="inventory-page">
+    <Box className="inventory-page">
         <AppBar position="static" sx={{ backgroundColor: 'primary.main' }}>
           <Toolbar>
             {isMediumOrDown && (
@@ -278,8 +276,7 @@ export function InventoryPage() {
             </Box>
           </Box>
         </Container>
-      </Box>
-    </AppTheme>
+    </Box>
   );
 }
 

@@ -7,12 +7,10 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import TuneIcon from '@mui/icons-material/Tune';
-import AppTheme from '../theme/AppTheme';
 
 export function FilterAccordion({ children, title = 'Filtros' }) {
   return (
-    <AppTheme>
-      <Accordion sx={{ flex: 1, width: '100%', minWidth: 0 }}>
+    <Accordion sx={{ flex: 1, width: '100%', minWidth: 0 }}>
         <AccordionSummary
           expandIcon={<ExpandMoreIcon />}
           aria-controls="filter-content"
@@ -51,8 +49,7 @@ export function FilterAccordion({ children, title = 'Filtros' }) {
         >
           {children}
         </AccordionDetails>
-      </Accordion>
-    </AppTheme>
+    </Accordion>
   );
 }
 

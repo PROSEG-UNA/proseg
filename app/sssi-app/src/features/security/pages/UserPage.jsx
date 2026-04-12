@@ -39,7 +39,6 @@ import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import AppsIcon from '@mui/icons-material/Apps';
 import { alpha } from '@mui/material/styles';
 import { FilterAccordion } from '../../../common/components/FilterAccordion';
-import AppTheme from '../../../common/theme/AppTheme';
 import '../css/UserPage.css';
 
 const mockUsers = [
@@ -99,8 +98,7 @@ export function UserPage() {
   };
 
   return (
-    <AppTheme>
-      <Box className="user-page">
+    <Box className="user-page">
         <AppBar position="static" sx={{ backgroundColor: 'primary.main' }}>
           <Toolbar>
             {isMediumOrDown && (
@@ -344,8 +342,7 @@ export function UserPage() {
             </Table>
           </TableContainer>
         </Container>
-      </Box>
-    </AppTheme>
+    </Box>
   );
 }
 
