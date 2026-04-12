@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   Container,
   Box,
@@ -39,7 +39,7 @@ export function LoginPage() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       navigate('/inventario');
     } catch (err) {
-      setError('Error en la autenticación. Intenta de nuevo.');
+      setError('Error en la autenticación. Intenta de nuevo.', err);
     } finally {
       setLoading(false);
     }
@@ -179,6 +179,13 @@ export function LoginPage() {
               )}
             </Button>
           </form>
+
+          <Typography variant="body2" sx={{ textAlign: 'center', color: '#666666' }}>
+            ¿No tienes cuenta?{' '}
+            <Link to="/registro" style={{ color: '#C41E3A', fontWeight: 600, textDecoration: 'none' }}>
+              Regístrate
+            </Link>
+          </Typography>
         </Card>
       </Container>
     </Box>
