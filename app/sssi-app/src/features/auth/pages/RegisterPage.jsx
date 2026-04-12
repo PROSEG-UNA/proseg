@@ -10,12 +10,13 @@ import {
   Alert,
   Typography,
 } from '@mui/material';
-import LoginIcon from '@mui/icons-material/Login';
-import '../css/LoginPage.css';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import './RegisterPage.css';
 
-export function LoginPage() {
+export function RegisterPage() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
+    name: '',
     email: '',
     password: '',
   });
@@ -37,63 +38,60 @@ export function LoginPage() {
 
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      navigate('/inventario');
+      navigate('/login');
     } catch (err) {
-      setError('Error en la autenticación. Intenta de nuevo.', err);
-    } finally {
+      setError('Error al registrar el usuario. Intenta de nuevo. ', err)
       setLoading(false);
     }
   };
 
+  const fieldSx = {
+    '& .MuiOutlinedInput-root': {
+      '&:hover fieldset': { borderColor: '#C41E3A' },
+      '&.Mui-focused fieldset': { borderColor: '#C41E3A' },
+    },
+  };
+
   return (
-    <Box className="login-page">
-      <Container maxWidth="sm" className="login-container">
+    <Box className="register-page">
+      <Container maxWidth="sm" className="register-container">
         <Card
           sx={{
-            padding: 4,
+            padding: 3,
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
             borderRadius: 2,
             backgroundColor: 'rgba(255, 255, 255, 0.98)',
             borderTop: '5px solid #C41E3A',
           }}
         >
-          <Box sx={{ textAlign: 'center', mb: 3 }}>
+          <Box sx={{ textAlign: 'center', mb: 2 }}>
             <Box
               sx={{
-                width: 60,
-                height: 60,
+                width: 50,
+                height: 50,
                 backgroundColor: '#C41E3A',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 margin: '0 auto',
-                mb: 2,
+                mb: 1,
               }}
             >
-              <LoginIcon sx={{ fontSize: 35, color: '#FFFFFF' }} />
+              <PersonAddIcon sx={{ fontSize: 35, color: '#FFFFFF' }} />
             </Box>
             <Typography
               variant="h4"
               component="h1"
-              sx={{
-                fontWeight: 'bold',
-                color: '#C41E3A',
-                letterSpacing: '1px',
-              }}
+              sx={{ fontWeight: 'bold', color: '#C41E3A', letterSpacing: '1px' }}
             >
               SSSI
             </Typography>
             <Typography
               variant="body2"
-              sx={{
-                color: '#666666',
-                mt: 0.5,
-                fontSize: '0.95rem',
-                fontWeight: 500,
-              }}
+              sx={{ color: '#666666', mt: 0.5, fontSize: '0.95rem', fontWeight: 500 }}
             >
-              Sistema de Sección de Seguridad Institucional
+              Crear nueva cuenta
             </Typography>
           </Box>
 
@@ -102,25 +100,30 @@ export function LoginPage() {
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
+              label="Nombre completo"
+              name="name"
+              type="text"
+              value={formData.name}
+              onChange={handleChange}
+              margin="dense"
+              variant="outlined"
+              required
+              disabled={loading}
+              sx={fieldSx}
+            />
+
+            <TextField
+              fullWidth
               label="Email"
               name="email"
               type="email"
               value={formData.email}
               onChange={handleChange}
-              margin="normal"
+              margin="dense"
               variant="outlined"
               required
               disabled={loading}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '&:hover fieldset': {
-                    borderColor: '#C41E3A',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#C41E3A',
-                  },
-                },
-              }}
+              sx={fieldSx}
             />
 
             <TextField
@@ -130,20 +133,11 @@ export function LoginPage() {
               type="password"
               value={formData.password}
               onChange={handleChange}
-              margin="normal"
+              margin="dense"
               variant="outlined"
               required
               disabled={loading}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '&:hover fieldset': {
-                    borderColor: '#C41E3A',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#C41E3A',
-                  },
-                },
-              }}
+              sx={fieldSx}
             />
 
             <Button
@@ -164,26 +158,24 @@ export function LoginPage() {
                   backgroundColor: '#A01A2E',
                   boxShadow: '0 6px 20px rgba(196, 30, 58, 0.3)',
                 },
-                '&:disabled': {
-                  opacity: 0.7,
-                },
+                '&:disabled': { opacity: 0.7 },
               }}
             >
               {loading ? (
-                <Box className="login-spinner">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <CircularProgress size={20} color="inherit" />
-                  Iniciando sesión...
+                  Registrando...
                 </Box>
               ) : (
-                'Iniciar Sesión'
+                'Registrarse'
               )}
             </Button>
           </form>
 
           <Typography variant="body2" sx={{ textAlign: 'center', color: '#666666' }}>
-            ¿No tienes cuenta?{' '}
-            <Link to="/registro" style={{ color: '#C41E3A', fontWeight: 600, textDecoration: 'none' }}>
-              Regístrate
+            ¿Ya tienes cuenta?{' '}
+            <Link to="/login" style={{ color: '#C41E3A', fontWeight: 600, textDecoration: 'none' }}>
+              Inicia sesión
             </Link>
           </Typography>
         </Card>
@@ -192,4 +184,4 @@ export function LoginPage() {
   );
 }
 
-export default LoginPage;
+export default RegisterPage;

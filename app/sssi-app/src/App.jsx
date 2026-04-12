@@ -5,6 +5,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import theme from './common/theme';
 import { SidebarProvider } from './common/context/SidebarContext';
 import LoginPage from './features/auth/pages/LoginPage';
+import RegisterPage from './features/auth/pages/RegisterPage';
 import InventoryPage from './features/inventory/pages/InventoryPage';
 import AssetPage from './features/inventory/pages/AssetPage';
 import UserPage from './features/security/pages/UserPage';
@@ -20,6 +21,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/registro" element={<RegisterPage />} />
             <Route
               path="/inventario"
               element={
