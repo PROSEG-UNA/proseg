@@ -4,7 +4,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.config.server.EnableConfigServer;
 
-// It allows the application to serve configuration properties to other microservices in a centralized manner.
 @EnableConfigServer
 @SpringBootApplication
 public class MsvcConfigApplication {
