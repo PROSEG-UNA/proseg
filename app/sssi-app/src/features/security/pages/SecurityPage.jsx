@@ -1,16 +1,9 @@
 import { useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Typography,
-  Button,
-  Container,
-  Card,
-  CardContent,
-  CardActions,
-} from '@mui/material';
+import { Box, Typography, Container } from '@mui/material';
 import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import { Header } from '../../../common/components/Header';
+import { FeatureCard } from '../../../common/components/FeatureCard';
 import '../css/SecurityPage.css';
 
 export function SecurityPage() {
@@ -38,47 +31,20 @@ export function SecurityPage() {
             </Typography>
 
             <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, flexWrap: 'wrap' }}>
-              <Card sx={{ width: { xs: '100%', sm: '45%', md: '400px' }, display: 'flex', flexDirection: 'column' }}>
-                <CardContent sx={{ flex: 1, textAlign: 'center' }}>
-                  <PeopleIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
-                    Gestión de Usuarios
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    Administra los usuarios de la organización
-                  </Typography>
-                </CardContent>
-                <CardActions sx={{ justifyContent: 'center' }}>
-                  <Button
-                    variant="contained"
-                    sx={{ backgroundColor: 'primary.main' }}
-                    onClick={() => navigate('/seguridad/usuarios')}
-                  >
-                    Ir a Usuarios
-                  </Button>
-                </CardActions>
-              </Card>
-
-              <Card sx={{ width: { xs: '100%', sm: '45%', md: '400px' }, display: 'flex', flexDirection: 'column' }}>
-                <CardContent sx={{ flex: 1, textAlign: 'center' }}>
-                  <VerifiedUserIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
-                    Gestión de Roles
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    Administra los roles y permisos del sistema
-                  </Typography>
-                </CardContent>
-                <CardActions sx={{ justifyContent: 'center' }}>
-                  <Button
-                    variant="contained"
-                    sx={{ backgroundColor: 'primary.main' }}
-                    onClick={() => navigate('/seguridad/roles')}
-                  >
-                    Ir a Roles
-                  </Button>
-                </CardActions>
-              </Card>
+              <FeatureCard
+                icon={<PeopleIcon fontSize="inherit" />}
+                title="Gestión de Usuarios"
+                description="Administra los usuarios de la organización"
+                buttonLabel="Ir a Usuarios"
+                onNavigate={() => navigate('/seguridad/usuarios')}
+              />
+              <FeatureCard
+                icon={<VerifiedUserIcon fontSize="inherit" />}
+                title="Gestión de Roles"
+                description="Administra los roles y permisos del sistema"
+                buttonLabel="Ir a Roles"
+                onNavigate={() => navigate('/seguridad/roles')}
+              />
             </Box>
           </Box>
         </Container>

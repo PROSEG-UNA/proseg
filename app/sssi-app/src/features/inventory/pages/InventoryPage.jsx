@@ -1,18 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Typography,
-  Button,
-  Container,
-  Card,
-  CardContent,
-  CardActions,
-  useMediaQuery,
-  useTheme,
-} from '@mui/material';
+import { Box, Typography, Container, useMediaQuery, useTheme } from '@mui/material';
 import StorageIcon from '@mui/icons-material/Storage';
-import { alpha } from '@mui/material/styles';
+import { FeatureCard } from '../../../common/components/FeatureCard';
 import { Header } from '../../../common/components/Header';
 import { NavDrawer } from '../../../common/components/NavDrawer';
 import '../css/InventoryPage.css';
@@ -63,48 +53,13 @@ export function InventoryPage() {
             </Typography>
 
             <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-              <Card
-                sx={(theme) => ({
-                  width: { xs: '100%', sm: '90%', md: '400px' },
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  transition: 'box-shadow 0.3s ease',
-                  '&:hover': {
-                    boxShadow: `0 8px 16px ${alpha(theme.palette.primary.main, 0.15)}`,
-                  },
-                })}
-              >
-                <CardContent sx={{ flex: 1, textAlign: 'center' }}>
-                  <StorageIcon sx={{ fontSize: { xs: 50, sm: 60 }, color: 'primary.main', mb: 2 }} />
-                  <Typography
-                    variant="h6"
-                    sx={{ fontWeight: 'bold', mb: 1, color: 'text.primary' }}
-                  >
-                    Gestión de Activos
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{ color: 'text.secondary', fontSize: { xs: '0.85rem', sm: '0.875rem' } }}
-                  >
-                    Administra todos los activos de la organización
-                  </Typography>
-                </CardContent>
-                <CardActions sx={{ justifyContent: 'center', pb: 2 }}>
-                  <Button
-                    variant="contained"
-                    sx={{
-                      backgroundColor: 'primary.main',
-                      '&:hover': { backgroundColor: 'primary.dark' },
-                      textTransform: 'none',
-                      fontWeight: 600,
-                    }}
-                    onClick={() => navigate('/inventario/activos')}
-                  >
-                    Ir a Activos
-                  </Button>
-                </CardActions>
-              </Card>
+              <FeatureCard
+                icon={<StorageIcon fontSize="inherit" />}
+                title="Gestión de Activos"
+                description="Administra todos los activos de la organización"
+                buttonLabel="Ir a Activos"
+                onNavigate={() => navigate('/inventario/activos')}
+              />
             </Box>
           </Box>
         </Container>
