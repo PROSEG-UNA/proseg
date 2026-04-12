@@ -3,11 +3,17 @@ eureka:
     register-with-eureka: false
 
 server:
-  port: 8080
+  port: 8081
 
 spring:
   application:
     name: msvc-gateway
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/sssi-realm}
 
   cloud:
     gateway:
@@ -20,3 +26,19 @@ spring:
           uri: http://localhost:8090
           predicates:
             - Path=/api/auth/**
+          filters:
+            - StripPrefix=0
+
+        - id: gateway-actuator
+          uri: http://localhost:8081
+          predicates:
+            - Path=/actuator/**
+          filters:
+            - StripPrefix=0
+
+        - id: msvc-email
+          uri: http://localhost:9090
+          predicates:
+            - Path=/api/email/**
+          filters:
+            - StripPrefix=2
