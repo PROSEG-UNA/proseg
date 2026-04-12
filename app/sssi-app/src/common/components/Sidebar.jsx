@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
@@ -10,6 +10,8 @@ import {
   Button,
   Typography,
   IconButton,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -27,6 +29,19 @@ export function Sidebar() {
   const location = useLocation();
   const [expandedMenu, setExpandedMenu] = useState(null);
   const { isMinimized, setIsMinimized } = useContext(SidebarContext);
+  const theme = useTheme();
+  
+  // Detectar si es pantalla pequeña (tablet/móvil)
+  const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
+
+  // Minimizar sidebar en pantallas pequeñas y expandir en grandes
+  useEffect(() => {
+    if (isMediumOrDown) {
+      setIsMinimized(true);
+    } else {
+      setIsMinimized(false);
+    }
+  }, [isMediumOrDown, setIsMinimized]);
 
   const toggleMenu = (menu) => {
     setExpandedMenu(expandedMenu === menu ? null : menu);

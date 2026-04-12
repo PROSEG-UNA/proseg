@@ -13,8 +13,9 @@
 .role-header-section {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 2rem;
+  gap: 1.5rem;
 }
 
 .role-table-container {
@@ -24,6 +25,17 @@
   overflow: hidden;
 }
 
+@media (max-width: 1024px) {
+  .role-header-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .role-header-section > button {
+    width: 100%;
+  }
+}
+
 @media (max-width: 768px) {
   .role-content {
     padding: 1rem;
@@ -31,7 +43,6 @@
 
   .role-header-section {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
+    align-items: stretch;
   }
 }
