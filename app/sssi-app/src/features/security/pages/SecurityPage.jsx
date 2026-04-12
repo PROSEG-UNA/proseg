@@ -1,19 +1,16 @@
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
-  AppBar,
-  Toolbar,
   Typography,
   Button,
   Container,
   Card,
   CardContent,
   CardActions,
-  IconButton,
 } from '@mui/material';
-import LogoutIcon from '@mui/icons-material/Logout';
 import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
+import { Header } from '../../../common/components/Header';
 import '../css/SecurityPage.css';
 
 export function SecurityPage() {
@@ -25,33 +22,11 @@ export function SecurityPage() {
 
   return (
     <Box className="security-page">
-        <AppBar position="static" sx={{ backgroundColor: 'primary.main' }}>
-          <Toolbar>
-            <Typography
-              variant="h5"
-              sx={{
-                flexGrow: 1,
-                fontWeight: 700,
-                fontSize: '1.5rem',
-                letterSpacing: '0.5px',
-                textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
-                color: 'primary.contrastText',
-              }}
-            >
-              Gestión de Seguridad
-            </Typography>
-            <Button
-              color="inherit"
-              onClick={() => navigate('/inventario/activos')}
-              sx={{ mr: 2, textTransform: 'none', fontSize: '1rem' }}
-            >
-              Inventario
-            </Button>
-            <IconButton color="inherit" onClick={handleLogout}>
-              <LogoutIcon />
-            </IconButton>
-          </Toolbar>
-        </AppBar>
+        <Header
+          title="Gestión de Seguridad"
+          navButtons={[{ label: 'Inventario', onClick: () => navigate('/inventario/activos') }]}
+          onLogout={handleLogout}
+        />
 
         <Container maxWidth="lg" className="security-content">
           <Box sx={{ py: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
