@@ -36,9 +36,6 @@ public class KeycloakAuthService {
         this.objectMapper = objectMapper;
     }
 
-    /**
-     * Obtiene un token JWT de Keycloak usando Direct Grant Flow (Resource Owner Password Credentials)
-     */
     public String getToken(String username, String password) throws Exception {
         try {
             String tokenUrl = keycloakServerUrl + "/realms/" + realm + "/protocol/openid-connect/token";

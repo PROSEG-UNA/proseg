@@ -68,9 +68,6 @@ public class KeycloakAdminService {
         }
     }
 
-    /**
-     * Registra un nuevo usuario en Keycloak
-     */
     public void registerUser(String username, String email, String password, String firstName, String lastName) throws Exception {
         try {
             String adminToken = getAdminToken();
@@ -102,7 +99,6 @@ public class KeycloakAdminService {
             }
             log.info("Usuario creado en Keycloak: {}", username);
 
-            // 2. Obtener ID del usuario creado (con reintentos)
             String userId = null;
             for (int i = 0; i < 3; i++) {
                 try {
@@ -128,7 +124,6 @@ public class KeycloakAdminService {
                 throw new Exception("No se pudo obtener el ID del usuario después de creación");
             }
 
-            // 3. Establecer contraseña usando el endpoint correcto
             String passwordUrl = createUserUrl + "/" + userId + "/reset-password";
 
             Map<String, Object> credentialMap = new HashMap<>();
@@ -147,7 +142,6 @@ public class KeycloakAdminService {
                 throw new Exception("Error al establecer la contraseña del usuario");
             }
 
-            // Pequeño delay para asegurar que el usuario esté completamente propagado
             Thread.sleep(1000);
 
         } catch (Exception e) {
