@@ -22,6 +22,8 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
+import { alpha } from '@mui/material/styles';
+import AppTheme from '../theme/AppTheme';
 
 export function MobileNavbar() {
   const navigate = useNavigate();
@@ -50,203 +52,205 @@ export function MobileNavbar() {
   };
 
   return (
-    <>
-      {/* AppBar con hamburguesa */}
-      <AppBar position="static" sx={{ backgroundColor: '#C41E3A' }}>
-        <Toolbar>
-          <IconButton
-            edge="start"
-            color="inherit"
-            aria-label="menu"
-            onClick={toggleDrawer(true)}
-            sx={{ mr: 2 }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography 
-            variant="h6" 
-            sx={{ 
-              flexGrow: 1, 
-              fontWeight: 700, 
-              fontSize: { xs: '0.75rem', sm: '0.95rem' },
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            Sistema de Sección de Seguridad Institucional
-          </Typography>
-        </Toolbar>
-      </AppBar>
-
-      {/* Drawer con navegación */}
-      <Drawer anchor="left" open={drawerOpen} onClose={toggleDrawer(false)}>
-        <Box
-          sx={{
-            width: 280,
-            backgroundColor: '#ece3e3',
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-          role="presentation"
-        >
-          {/* Header del drawer */}
-          <Box
-            sx={{
-              p: 2,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              borderBottom: '1px solid rgba(0,0,0,0.1)',
-            }}
-          >
-            <img
-              src="/logo_una.png"
-              alt="Logo UNA"
-              style={{
-                maxWidth: '50%',
-                height: 'auto',
-                maxHeight: '50px',
-              }}
-            />
-            <IconButton onClick={toggleDrawer(false)} sx={{ color: '#C41E3A' }}>
-              <CloseIcon />
+    <AppTheme>
+      <>
+        {/* AppBar con hamburguesa */}
+        <AppBar position="static" sx={{ backgroundColor: 'primary.main' }}>
+          <Toolbar>
+            <IconButton
+              edge="start"
+              color="inherit"
+              aria-label="menu"
+              onClick={toggleDrawer(true)}
+              sx={{ mr: 2 }}
+            >
+              <MenuIcon />
             </IconButton>
-          </Box>
-
-          {/* Contenido del drawer */}
-          <List sx={{ flex: 1, overflowY: 'auto', p: 0 }}>
-            {/* Inventarios */}
-            <ListItem disablePadding sx={{ display: 'block' }}>
-              <ListItemButton
-                onClick={() => toggleMenu('inventory')}
-                sx={{
-                  borderBottom: '1px solid rgba(0,0,0,0.1)',
-                  color: '#333',
-                  '&:hover': {
-                    backgroundColor: 'rgba(196, 30, 58, 0.05)',
-                  },
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <WarehouseIcon sx={{ mr: 2, fontSize: 20 }} />
-                    <ListItemText primary="Gestión Inventarios" />
-                  </Box>
-                  {expandedMenu === 'inventory' ? (
-                    <ExpandLessIcon sx={{ color: '#333' }} />
-                  ) : (
-                    <ExpandMoreIcon sx={{ color: '#333' }} />
-                  )}
-                </Box>
-              </ListItemButton>
-              <Collapse in={expandedMenu === 'inventory'} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding sx={{ backgroundColor: 'rgba(196, 30, 58, 0.05)' }}>
-                  <ListItem disablePadding>
-                    <ListItemButton
-                      onClick={() => handleNavigation('/inventario/activos')}
-                      sx={{
-                        pl: 4,
-                        color: '#333',
-                        '&:hover': {
-                          backgroundColor: 'rgba(196, 30, 58, 0.1)',
-                          fontWeight: 600,
-                        },
-                      }}
-                    >
-                      <ListItemText primary="Activos" />
-                    </ListItemButton>
-                  </ListItem>
-                </List>
-              </Collapse>
-            </ListItem>
-
-            {/* Seguridad */}
-            <ListItem disablePadding sx={{ display: 'block' }}>
-              <ListItemButton
-                onClick={() => toggleMenu('security')}
-                sx={{
-                  borderBottom: '1px solid rgba(0,0,0,0.1)',
-                  color: '#333',
-                  '&:hover': {
-                    backgroundColor: 'rgba(196, 30, 58, 0.05)',
-                  },
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <VerifiedUserIcon sx={{ mr: 2, fontSize: 20 }} />
-                    <ListItemText primary="Gestión Seguridad" />
-                  </Box>
-                  {expandedMenu === 'security' ? (
-                    <ExpandLessIcon sx={{ color: '#333' }} />
-                  ) : (
-                    <ExpandMoreIcon sx={{ color: '#333' }} />
-                  )}
-                </Box>
-              </ListItemButton>
-              <Collapse in={expandedMenu === 'security'} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding sx={{ backgroundColor: 'rgba(196, 30, 58, 0.05)' }}>
-                  <ListItem disablePadding>
-                    <ListItemButton
-                      onClick={() => handleNavigation('/seguridad/usuarios')}
-                      sx={{
-                        pl: 4,
-                        color: '#333',
-                        '&:hover': {
-                          backgroundColor: 'rgba(196, 30, 58, 0.1)',
-                          fontWeight: 600,
-                        },
-                      }}
-                    >
-                      <PeopleIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                      <ListItemText primary="Usuarios" />
-                    </ListItemButton>
-                  </ListItem>
-                  <ListItem disablePadding>
-                    <ListItemButton
-                      onClick={() => handleNavigation('/seguridad/roles')}
-                      sx={{
-                        pl: 4,
-                        color: '#333',
-                        '&:hover': {
-                          backgroundColor: 'rgba(196, 30, 58, 0.1)',
-                          fontWeight: 600,
-                        },
-                      }}
-                    >
-                      <VerifiedUserIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                      <ListItemText primary="Roles" />
-                    </ListItemButton>
-                  </ListItem>
-                </List>
-              </Collapse>
-            </ListItem>
-          </List>
-
-          {/* Footer con logout */}
-          <Box sx={{ p: 2, borderTop: '1px solid rgba(0,0,0,0.1)' }}>
-            <Button
-              fullWidth
-              variant="contained"
-              startIcon={<LogoutIcon />}
-              onClick={handleLogout}
+            <Typography
+              variant="h6"
               sx={{
-                backgroundColor: '#C41E3A',
-                color: '#FFFFFF',
-                '&:hover': {
-                  backgroundColor: '#A01A2E',
-                },
-                fontWeight: 600,
+                flexGrow: 1,
+                fontWeight: 700,
+                fontSize: { xs: '0.75rem', sm: '0.95rem' },
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}
             >
-              Cerrar Sesión
-            </Button>
+              Sistema de Sección de Seguridad Institucional
+            </Typography>
+          </Toolbar>
+        </AppBar>
+
+        {/* Drawer con navegación */}
+        <Drawer anchor="left" open={drawerOpen} onClose={toggleDrawer(false)}>
+          <Box
+            sx={{
+              width: 280,
+              backgroundColor: 'background.paper',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+            role="presentation"
+          >
+            {/* Header del drawer */}
+            <Box
+              sx={{
+                p: 2,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderBottom: '1px solid rgba(0,0,0,0.1)',
+              }}
+            >
+              <img
+                src="/logo_una.png"
+                alt="Logo UNA"
+                style={{
+                  maxWidth: '50%',
+                  height: 'auto',
+                  maxHeight: '50px',
+                }}
+              />
+              <IconButton onClick={toggleDrawer(false)} sx={{ color: 'primary.main' }}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+
+            {/* Contenido del drawer */}
+            <List sx={{ flex: 1, overflowY: 'auto', p: 0 }}>
+              {/* Inventarios */}
+              <ListItem disablePadding sx={{ display: 'block' }}>
+                <ListItemButton
+                  onClick={() => toggleMenu('inventory')}
+                  sx={(theme) => ({
+                    borderBottom: '1px solid rgba(0,0,0,0.1)',
+                    color: 'text.primary',
+                    '&:hover': {
+                      backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                    },
+                  })}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <WarehouseIcon sx={{ mr: 2, fontSize: 20 }} />
+                      <ListItemText primary="Gestión Inventarios" />
+                    </Box>
+                    {expandedMenu === 'inventory' ? (
+                      <ExpandLessIcon sx={{ color: 'text.primary' }} />
+                    ) : (
+                      <ExpandMoreIcon sx={{ color: 'text.primary' }} />
+                    )}
+                  </Box>
+                </ListItemButton>
+                <Collapse in={expandedMenu === 'inventory'} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding sx={(theme) => ({ backgroundColor: alpha(theme.palette.primary.main, 0.05) })}>
+                    <ListItem disablePadding>
+                      <ListItemButton
+                        onClick={() => handleNavigation('/inventario/activos')}
+                        sx={(theme) => ({
+                          pl: 4,
+                          color: 'text.primary',
+                          '&:hover': {
+                            backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                            fontWeight: 600,
+                          },
+                        })}
+                      >
+                        <ListItemText primary="Activos" />
+                      </ListItemButton>
+                    </ListItem>
+                  </List>
+                </Collapse>
+              </ListItem>
+
+              {/* Seguridad */}
+              <ListItem disablePadding sx={{ display: 'block' }}>
+                <ListItemButton
+                  onClick={() => toggleMenu('security')}
+                  sx={(theme) => ({
+                    borderBottom: '1px solid rgba(0,0,0,0.1)',
+                    color: 'text.primary',
+                    '&:hover': {
+                      backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                    },
+                  })}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <VerifiedUserIcon sx={{ mr: 2, fontSize: 20 }} />
+                      <ListItemText primary="Gestión Seguridad" />
+                    </Box>
+                    {expandedMenu === 'security' ? (
+                      <ExpandLessIcon sx={{ color: 'text.primary' }} />
+                    ) : (
+                      <ExpandMoreIcon sx={{ color: 'text.primary' }} />
+                    )}
+                  </Box>
+                </ListItemButton>
+                <Collapse in={expandedMenu === 'security'} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding sx={(theme) => ({ backgroundColor: alpha(theme.palette.primary.main, 0.05) })}>
+                    <ListItem disablePadding>
+                      <ListItemButton
+                        onClick={() => handleNavigation('/seguridad/usuarios')}
+                        sx={(theme) => ({
+                          pl: 4,
+                          color: 'text.primary',
+                          '&:hover': {
+                            backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                            fontWeight: 600,
+                          },
+                        })}
+                      >
+                        <PeopleIcon sx={{ mr: 1.5, fontSize: 20 }} />
+                        <ListItemText primary="Usuarios" />
+                      </ListItemButton>
+                    </ListItem>
+                    <ListItem disablePadding>
+                      <ListItemButton
+                        onClick={() => handleNavigation('/seguridad/roles')}
+                        sx={(theme) => ({
+                          pl: 4,
+                          color: 'text.primary',
+                          '&:hover': {
+                            backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                            fontWeight: 600,
+                          },
+                        })}
+                      >
+                        <VerifiedUserIcon sx={{ mr: 1.5, fontSize: 20 }} />
+                        <ListItemText primary="Roles" />
+                      </ListItemButton>
+                    </ListItem>
+                  </List>
+                </Collapse>
+              </ListItem>
+            </List>
+
+            {/* Footer con logout */}
+            <Box sx={{ p: 2, borderTop: '1px solid rgba(0,0,0,0.1)' }}>
+              <Button
+                fullWidth
+                variant="contained"
+                startIcon={<LogoutIcon />}
+                onClick={handleLogout}
+                sx={{
+                  backgroundColor: 'primary.main',
+                  color: 'primary.contrastText',
+                  '&:hover': {
+                    backgroundColor: 'primary.dark',
+                  },
+                  fontWeight: 600,
+                }}
+              >
+                Cerrar Sesión
+              </Button>
+            </Box>
           </Box>
-        </Box>
-      </Drawer>
-    </>
+        </Drawer>
+      </>
+    </AppTheme>
   );
 }
 
