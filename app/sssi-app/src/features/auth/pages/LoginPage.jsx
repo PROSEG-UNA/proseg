@@ -59,7 +59,7 @@ export function LoginPage() {
                 <Container maxWidth="sm" className="login-container">
                     <Card
                         sx={{
-                            padding: 4,
+                            padding: 3,
                             boxShadow: 1,
                             borderRadius: 2,
                             backgroundColor: 'rgba(255, 255, 255, 0.98)',
@@ -67,18 +67,18 @@ export function LoginPage() {
                             borderTopColor: 'primary.main',
                         }}
                     >
-                        <Box sx={{ textAlign: 'center', mb: 3 }}>
+                        <Box sx={{ textAlign: 'center', mb: 2 }}>
                             <Box
                                 sx={{
-                                    width: 60,
-                                    height: 60,
+                                    width: 50,
+                                    height: 50,
                                     bgcolor: 'primary.main',
                                     borderRadius: '50%',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     margin: '0 auto',
-                                    mb: 2,
+                                    mb: 1,
                                 }}
                             >
                                 <LoginIcon sx={{ fontSize: 35, color: 'primary.contrastText' }} />
@@ -108,7 +108,7 @@ export function LoginPage() {
                                 type="email"
                                 value={formData.email}
                                 onChange={handleChange}
-                                margin="normal"
+                                margin="dense"
                                 variant="outlined"
                                 required
                                 disabled={loading}
@@ -121,7 +121,7 @@ export function LoginPage() {
                                 type="password"
                                 value={formData.password}
                                 onChange={handleChange}
-                                margin="normal"
+                                margin="dense"
                                 variant="outlined"
                                 required
                                 disabled={loading}
