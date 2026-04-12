@@ -54,7 +54,6 @@ export function MobileNavbar() {
   return (
     <AppTheme>
       <>
-        {/* AppBar con hamburguesa */}
         <AppBar position="static" sx={{ backgroundColor: 'primary.main' }}>
           <Toolbar>
             <IconButton
@@ -82,7 +81,6 @@ export function MobileNavbar() {
           </Toolbar>
         </AppBar>
 
-        {/* Drawer con navegación */}
         <Drawer anchor="left" open={drawerOpen} onClose={toggleDrawer(false)}>
           <Box
             sx={{
@@ -94,7 +92,6 @@ export function MobileNavbar() {
             }}
             role="presentation"
           >
-            {/* Header del drawer */}
             <Box
               sx={{
                 p: 2,
@@ -118,9 +115,7 @@ export function MobileNavbar() {
               </IconButton>
             </Box>
 
-            {/* Contenido del drawer */}
             <List sx={{ flex: 1, overflowY: 'auto', p: 0 }}>
-              {/* Inventarios */}
               <ListItem disablePadding sx={{ display: 'block' }}>
                 <ListItemButton
                   onClick={() => toggleMenu('inventory')}
@@ -165,7 +160,6 @@ export function MobileNavbar() {
                 </Collapse>
               </ListItem>
 
-              {/* Seguridad */}
               <ListItem disablePadding sx={{ display: 'block' }}>
                 <ListItemButton
                   onClick={() => toggleMenu('security')}
@@ -228,7 +222,6 @@ export function MobileNavbar() {
               </ListItem>
             </List>
 
-            {/* Footer con logout */}
             <Box sx={{ p: 2, borderTop: '1px solid rgba(0,0,0,0.1)' }}>
               <Button
                 fullWidth

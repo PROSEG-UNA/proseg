@@ -95,7 +95,6 @@ export function InventoryPage() {
           </Toolbar>
         </AppBar>
 
-        {/* Drawer para móviles */}
         <Drawer anchor="left" open={drawerOpen} onClose={toggleDrawer(false)}>
           <Box
             sx={{ width: 280, backgroundColor: 'background.paper', height: '100%', display: 'flex', flexDirection: 'column' }}
