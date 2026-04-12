@@ -12,8 +12,9 @@ import {
     Link,
 } from '@mui/material';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import { alpha } from '@mui/material/styles';
 import AppTheme from '../../../common/theme/AppTheme';
-import './RegisterPage.css';
+import '../css/RegisterPage.css';
 
 const fieldSx = (theme) => ({
     '& .MuiOutlinedInput-root': {
@@ -48,7 +49,12 @@ export function RegisterPage() {
 
     return (
         <AppTheme>
-            <Box className="register-page">
+            <Box
+                className="register-page"
+                sx={(theme) => ({
+                    '&::before': { backgroundColor: alpha(theme.palette.primary.main, 0.15) },
+                })}
+            >
                 <Container maxWidth="sm" className="register-container">
                     <Card
                         sx={{
