@@ -1,30 +1,35 @@
 import { useContext } from 'react';
 import { Sidebar } from '../common/components/Sidebar';
 import { SidebarContext } from '../common/context/SidebarContext';
-import { Box } from '@mui/material';
+import { Box, useMediaQuery, useTheme } from '@mui/material';
 
 export function DashboardLayout({ children }) {
   const { isMinimized } = useContext(SidebarContext);
-  const marginLeft = isMinimized ? '80px' : '280px';
+  const theme = useTheme();
+  const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
+  
+  const marginLeft = !isMediumOrDown ? (isMinimized ? '80px' : '280px') : '0px';
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar />
-      <Box
-        component="main"
-        sx={{
-          flex: 1,
-          marginLeft: marginLeft,
-          display: 'flex',
-          flexDirection: 'column',
-          backgroundColor: '#f8f9fa',
-          transition: 'margin-left 0.3s ease-in-out',
-          '@media (max-width: 768px)': {
-            marginLeft: 0,
-          },
-        }}
-      >
-        {children}
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <Box sx={{ display: 'flex', flex: 1 }}>
+        {/* Sidebar se muestra solo en pantallas grandes */}
+        {!isMediumOrDown && <Sidebar />}
+        
+        <Box
+          component="main"
+          sx={{
+            flex: 1,
+            marginLeft: marginLeft,
+            display: 'flex',
+            flexDirection: 'column',
+            backgroundColor: '#f8f9fa',
+            transition: 'margin-left 0.3s ease-in-out',
+            overflow: 'auto',
+          }}
+        >
+          {children}
+        </Box>
       </Box>
     </Box>
   );
