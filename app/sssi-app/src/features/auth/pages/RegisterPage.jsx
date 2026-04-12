@@ -12,8 +12,8 @@ import {
     Link,
 } from '@mui/material';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
-import AppTheme from '../../../common/theme/AppTheme';
-import './RegisterPage.css';
+import { alpha } from '@mui/material/styles';
+import '../css/RegisterPage.css';
 
 const fieldSx = (theme) => ({
     '& .MuiOutlinedInput-root': {
@@ -47,8 +47,12 @@ export function RegisterPage() {
     };
 
     return (
-        <AppTheme>
-            <Box className="register-page">
+        <Box
+                className="register-page"
+                sx={(theme) => ({
+                    '&::before': { backgroundColor: alpha(theme.palette.primary.main, 0.15) },
+                })}
+            >
                 <Container maxWidth="sm" className="register-container">
                     <Card
                         sx={{
@@ -87,7 +91,7 @@ export function RegisterPage() {
                                 variant="body2"
                                 sx={{ color: 'text.secondary', mt: 0.5, fontSize: '0.95rem', fontWeight: 500 }}
                             >
-                                Crear nueva cuenta
+                                Sistema de Sección de Seguridad Institucional
                             </Typography>
                         </Box>
 
@@ -173,8 +177,7 @@ export function RegisterPage() {
                         </Typography>
                     </Card>
                 </Container>
-            </Box>
-        </AppTheme>
+        </Box>
     );
 }
 
