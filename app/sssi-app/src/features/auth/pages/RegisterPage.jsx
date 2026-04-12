@@ -93,7 +93,7 @@ export function RegisterPage() {
                                 variant="body2"
                                 sx={{ color: 'text.secondary', mt: 0.5, fontSize: '0.95rem', fontWeight: 500 }}
                             >
-                                Crear nueva cuenta
+                                Sistema de Sección de Seguridad Institucional
                             </Typography>
                         </Box>
 
