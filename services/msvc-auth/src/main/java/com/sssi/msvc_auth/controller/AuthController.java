@@ -5,6 +5,7 @@ import com.sssi.msvc_auth.dto.LoginRequest;
 import com.sssi.msvc_auth.dto.RegisterRequest;
 import com.sssi.msvc_auth.service.KeycloakAdminService;
 import com.sssi.msvc_auth.service.KeycloakAuthService;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -29,7 +30,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
         try {
             log.info("Login attempt for user: {}", loginRequest.getUsername());
 
@@ -53,7 +54,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest registerRequest) {
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest registerRequest) {
         try {
             log.info("Register attempt for user: {}", registerRequest.getUsername());
 
