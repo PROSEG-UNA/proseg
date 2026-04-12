@@ -14,7 +14,7 @@ import DashboardLayout from './layouts/DashboardLayout';
 
 function App() {
   return (
-    <AppTheme>
+    <AppTheme defaultColorScheme="light">
       <CssBaseline />
       <SidebarProvider>
         <Router>
