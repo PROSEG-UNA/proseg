@@ -1,0 +1,36 @@
+.register-page {
+  background-image: url(/src/assets/fondo_login.jpg);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.register-page::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(196, 30, 58, 0.15);
+  z-index: 1;
+}
+
+.register-container {
+  position: relative;
+  z-index: 2;
+  max-width: 500px;
+  width: 100%;
+}
+
+@media (max-width: 600px) {
+  .register-container {
+    padding: 0 1rem;
+  }
+}
