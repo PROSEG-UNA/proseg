@@ -8,6 +8,7 @@ import LoginPage from './features/auth/pages/LoginPage';
 import RegisterPage from './features/auth/pages/RegisterPage';
 import InventoryPage from './features/inventory/pages/InventoryPage';
 import AssetPage from './features/inventory/pages/AssetPage';
+import SecurityPage from './features/security/pages/SecurityPage';
 import UserPage from './features/security/pages/UserPage';
 import RolePage from './features/security/pages/RolePage';
 import DashboardLayout from './layouts/DashboardLayout';
@@ -35,6 +36,14 @@ function App() {
               element={
                 <DashboardLayout>
                   <AssetPage />
+                </DashboardLayout>
+              }
+            />
+            <Route
+              path="/seguridad"
+              element={
+                <DashboardLayout>
+                  <SecurityPage />
                 </DashboardLayout>
               }
             />
