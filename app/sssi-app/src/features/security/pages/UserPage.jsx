@@ -37,7 +37,9 @@ import WarehouseIcon from '@mui/icons-material/Warehouse';
 import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import AppsIcon from '@mui/icons-material/Apps';
+import { alpha } from '@mui/material/styles';
 import { FilterAccordion } from '../../../common/components/FilterAccordion';
+import AppTheme from '../../../common/theme/AppTheme';
 import '../css/UserPage.css';
 
 const mockUsers = [
@@ -97,233 +99,254 @@ export function UserPage() {
   };
 
   return (
-    <Box className="user-page">
-      <AppBar position="static" sx={{ backgroundColor: '#C41E3A' }}>
-        <Toolbar>
-          {isMediumOrDown && (
-            <IconButton
-              edge="start"
-              color="inherit"
-              onClick={toggleDrawer(true)}
-              sx={{ mr: 1 }}
+    <AppTheme>
+      <Box className="user-page">
+        <AppBar position="static" sx={{ backgroundColor: 'primary.main' }}>
+          <Toolbar>
+            {isMediumOrDown && (
+              <IconButton
+                edge="start"
+                color="inherit"
+                onClick={toggleDrawer(true)}
+                sx={{ mr: 1 }}
+              >
+                <MenuIcon />
+              </IconButton>
+            )}
+            <Typography
+              variant="h5"
+              sx={{
+                flexGrow: 1,
+                fontWeight: 700,
+                fontSize: { xs: '1.2rem', sm: '1.5rem' },
+                letterSpacing: '0.5px',
+                textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+                color: 'primary.contrastText',
+              }}
             >
-              <MenuIcon />
+              Gestión de Usuarios
+            </Typography>
+            <IconButton color="inherit" onClick={handleLogout}>
+              <LogoutIcon />
             </IconButton>
-          )}
-          <Typography 
-            variant="h5" 
-            sx={{ 
-              flexGrow: 1, 
-              fontWeight: 700,
-              fontSize: { xs: '1.2rem', sm: '1.5rem' },
-              letterSpacing: '0.5px',
-              textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
-              color: '#FFFFFF',
-            }}
+          </Toolbar>
+        </AppBar>
+
+        {/* Drawer para móviles */}
+        <Drawer anchor="left" open={drawerOpen} onClose={toggleDrawer(false)}>
+          <Box
+            sx={{ width: 280, backgroundColor: 'background.paper', height: '100%', display: 'flex', flexDirection: 'column' }}
+            role="presentation"
           >
-            Gestión de Usuarios
-          </Typography>
-          <IconButton color="inherit" onClick={handleLogout}>
-            <LogoutIcon />
-          </IconButton>
-        </Toolbar>
-      </AppBar>
-
-      {/* Drawer para móviles */}
-      <Drawer anchor="left" open={drawerOpen} onClose={toggleDrawer(false)}>
-        <Box sx={{ width: 280, backgroundColor: '#ece3e3', height: '100%', display: 'flex', flexDirection: 'column' }} role="presentation">
-          <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(0,0,0,0.1)' }}>
-            <img src="/logo_una.png" alt="Logo UNA" style={{ maxWidth: '50%', height: 'auto', maxHeight: '50px' }} />
-            <IconButton onClick={toggleDrawer(false)} sx={{ color: '#C41E3A' }}>
-              <CloseIcon />
-            </IconButton>
-          </Box>
-          <List sx={{ flex: 1, overflowY: 'auto', p: 0 }}>
-            <ListItem disablePadding sx={{ display: 'block' }}>
-              <ListItemButton onClick={() => toggleMenu('inventory')} sx={{ borderBottom: '1px solid rgba(0,0,0,0.1)', color: '#333', '&:hover': { backgroundColor: 'rgba(196, 30, 58, 0.05)' } }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <WarehouseIcon sx={{ mr: 2, fontSize: 20 }} />
-                    <ListItemText primary="Gestión Inventarios" />
+            <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(0,0,0,0.1)' }}>
+              <img src="/logo_una.png" alt="Logo UNA" style={{ maxWidth: '50%', height: 'auto', maxHeight: '50px' }} />
+              <IconButton onClick={toggleDrawer(false)} sx={{ color: 'primary.main' }}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+            <List sx={{ flex: 1, overflowY: 'auto', p: 0 }}>
+              <ListItem disablePadding sx={{ display: 'block' }}>
+                <ListItemButton
+                  onClick={() => toggleMenu('inventory')}
+                  sx={(theme) => ({ borderBottom: '1px solid rgba(0,0,0,0.1)', color: 'text.primary', '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.05) } })}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <WarehouseIcon sx={{ mr: 2, fontSize: 20 }} />
+                      <ListItemText primary="Gestión Inventarios" />
+                    </Box>
+                    {expandedMenu === 'inventory' ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                   </Box>
-                  {expandedMenu === 'inventory' ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                </Box>
-              </ListItemButton>
-              <Collapse in={expandedMenu === 'inventory'} timeout="auto" unmountOnExit>
-                <Box sx={{ backgroundColor: 'rgba(196, 30, 58, 0.05)' }}>
-                  <Box 
-                    onClick={() => handleNavigation('/inventario/activos')} 
-                    sx={{ 
-                      pl: 4, 
-                      color: '#333', 
-                      '&:hover': { backgroundColor: 'rgba(196, 30, 58, 0.1)' }, 
-                      display: 'flex',
-                      alignItems: 'center',
-                      width: '100%',
-                      py: 1.5,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <AppsIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                    <ListItemText primary="Activos" />
+                </ListItemButton>
+                <Collapse in={expandedMenu === 'inventory'} timeout="auto" unmountOnExit>
+                  <Box sx={(theme) => ({ backgroundColor: alpha(theme.palette.primary.main, 0.05) })}>
+                    <Box
+                      onClick={() => handleNavigation('/inventario/activos')}
+                      sx={(theme) => ({
+                        pl: 4,
+                        color: 'text.primary',
+                        '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.1) },
+                        display: 'flex',
+                        alignItems: 'center',
+                        width: '100%',
+                        py: 1.5,
+                        cursor: 'pointer',
+                      })}
+                    >
+                      <AppsIcon sx={{ mr: 1.5, fontSize: 20 }} />
+                      <ListItemText primary="Activos" />
+                    </Box>
                   </Box>
-                </Box>
-              </Collapse>
-            </ListItem>
-            <ListItem disablePadding sx={{ display: 'block' }}>
-              <ListItemButton onClick={() => toggleMenu('security')} sx={{ borderBottom: '1px solid rgba(0,0,0,0.1)', color: '#333', '&:hover': { backgroundColor: 'rgba(196, 30, 58, 0.05)' } }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <VerifiedUserIcon sx={{ mr: 2, fontSize: 20 }} />
-                    <ListItemText primary="Gestión Seguridad" />
+                </Collapse>
+              </ListItem>
+              <ListItem disablePadding sx={{ display: 'block' }}>
+                <ListItemButton
+                  onClick={() => toggleMenu('security')}
+                  sx={(theme) => ({ borderBottom: '1px solid rgba(0,0,0,0.1)', color: 'text.primary', '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.05) } })}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <VerifiedUserIcon sx={{ mr: 2, fontSize: 20 }} />
+                      <ListItemText primary="Gestión Seguridad" />
+                    </Box>
+                    {expandedMenu === 'security' ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                   </Box>
-                  {expandedMenu === 'security' ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                </Box>
-              </ListItemButton>
-              <Collapse in={expandedMenu === 'security'} timeout="auto" unmountOnExit>
-                <Box sx={{ backgroundColor: 'rgba(196, 30, 58, 0.05)' }}>
-                  <Box 
-                    onClick={() => handleNavigation('/seguridad/usuarios')} 
-                    sx={{ 
-                      pl: 4, 
-                      color: '#333', 
-                      '&:hover': { backgroundColor: 'rgba(196, 30, 58, 0.1)' }, 
-                      display: 'flex',
-                      alignItems: 'center',
-                      width: '100%',
-                      py: 1.5,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <PeopleIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                    <ListItemText primary="Usuarios" />
+                </ListItemButton>
+                <Collapse in={expandedMenu === 'security'} timeout="auto" unmountOnExit>
+                  <Box sx={(theme) => ({ backgroundColor: alpha(theme.palette.primary.main, 0.05) })}>
+                    <Box
+                      onClick={() => handleNavigation('/seguridad/usuarios')}
+                      sx={(theme) => ({
+                        pl: 4,
+                        color: 'text.primary',
+                        '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.1) },
+                        display: 'flex',
+                        alignItems: 'center',
+                        width: '100%',
+                        py: 1.5,
+                        cursor: 'pointer',
+                      })}
+                    >
+                      <PeopleIcon sx={{ mr: 1.5, fontSize: 20 }} />
+                      <ListItemText primary="Usuarios" />
+                    </Box>
+                    <Box
+                      onClick={() => handleNavigation('/seguridad/roles')}
+                      sx={(theme) => ({
+                        pl: 4,
+                        color: 'text.primary',
+                        '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.1) },
+                        display: 'flex',
+                        alignItems: 'center',
+                        width: '100%',
+                        py: 1.5,
+                        cursor: 'pointer',
+                      })}
+                    >
+                      <VerifiedUserIcon sx={{ mr: 1.5, fontSize: 20 }} />
+                      <ListItemText primary="Roles" />
+                    </Box>
                   </Box>
-                  <Box 
-                    onClick={() => handleNavigation('/seguridad/roles')} 
-                    sx={{ 
-                      pl: 4, 
-                      color: '#333', 
-                      '&:hover': { backgroundColor: 'rgba(196, 30, 58, 0.1)' }, 
-                      display: 'flex',
-                      alignItems: 'center',
-                      width: '100%',
-                      py: 1.5,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <VerifiedUserIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                    <ListItemText primary="Roles" />
-                  </Box>
-                </Box>
-              </Collapse>
-            </ListItem>
-          </List>
-          <Box sx={{ p: 2, borderTop: '1px solid rgba(0,0,0,0.1)' }}>
-            <Button fullWidth variant="contained" startIcon={<LogoutIcon />} onClick={() => { handleLogout(); setDrawerOpen(false); }} sx={{ backgroundColor: '#C41E3A', color: '#FFFFFF', '&:hover': { backgroundColor: '#A01A2E' }, fontWeight: 600 }}>
-              Cerrar Sesión
-            </Button>
-          </Box>
-        </Box>
-      </Drawer>
-
-      <Container maxWidth="lg" className="user-content">
-        <Box sx={{ mb: 3 }}>
-          <Typography 
-            variant="h5" 
-            sx={{ 
-              fontWeight: 700,
-              color: '#C41E3A',
-              fontSize: '1.8rem',
-              letterSpacing: '0.3px',
-            }}
-          >
-            Lista de Usuarios
-          </Typography>
-        </Box>
-
-        <Box className="user-header-section" sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', mb: 2, flexDirection: { xs: 'column', sm: 'row' }, width: '100%' }}>
-          <FilterAccordion title="Filtros">
-            <TextField
-              label="Nombre"
-              size="small"
-              value={filters.nameFilter}
-              onChange={(e) => handleFilterChange('nameFilter', e.target.value)}
-              placeholder="Buscar por nombre"
-              sx={{ width: '100%' }}
-            />
-            <TextField
-              label="Email"
-              size="small"
-              value={filters.emailFilter}
-              onChange={(e) => handleFilterChange('emailFilter', e.target.value)}
-              placeholder="Buscar por email"
-              sx={{ width: '100%' }}
-            />
-            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', width: '100%', mt: 1 }}>
-              <Button 
-                variant="outlined" 
-                size="small"
-                onClick={handleClearFilters}
-                sx={{ color: '#666', borderColor: '#ccc' }}
+                </Collapse>
+              </ListItem>
+            </List>
+            <Box sx={{ p: 2, borderTop: '1px solid rgba(0,0,0,0.1)' }}>
+              <Button
+                fullWidth
+                variant="contained"
+                startIcon={<LogoutIcon />}
+                onClick={() => { handleLogout(); setDrawerOpen(false); }}
+                sx={{ backgroundColor: 'primary.main', color: 'primary.contrastText', '&:hover': { backgroundColor: 'primary.dark' }, fontWeight: 600 }}
               >
-                Limpiar
-              </Button>
-              <Button 
-                variant="contained" 
-                size="small"
-                onClick={handleSearch}
-                sx={{ backgroundColor: '#C41E3A' }}
-              >
-                Buscar
+                Cerrar Sesión
               </Button>
             </Box>
-          </FilterAccordion>
-          <Button 
-            variant="contained"
-            startIcon={<AddIcon />}
-            sx={{ backgroundColor: '#C41E3A', textTransform: 'none', mt: 0 }}
-          >
-            Agregar
-          </Button>
-        </Box>
+          </Box>
+        </Drawer>
 
-        <TableContainer component={Paper} className="user-table-container">
-          <Table>
-            <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid #C41E3A' }}>Nombre</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 'bold', borderBottom: '2px solid #C41E3A' }}>
-                  Email
-                </TableCell>
-                <TableCell align="center" sx={{ fontWeight: 'bold', borderBottom: '2px solid #C41E3A' }}>
-                  Rol
-                </TableCell>
-                <TableCell align="center" sx={{ fontWeight: 'bold', borderBottom: '2px solid #C41E3A' }}>
-                  Acciones
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {users.map(user => (
-                <TableRow key={user.id} hover>
-                  <TableCell>{user.name}</TableCell>
-                  <TableCell align="center">{user.email}</TableCell>
-                  <TableCell align="center">{user.role}</TableCell>
-                  <TableCell align="center">
-                    <IconButton size="small" sx={{ color: '#C41E3A' }}>
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton size="small" sx={{ color: '#d32f2f' }}>
-                      <DeleteIcon />
-                    </IconButton>
+        <Container maxWidth="lg" className="user-content">
+          <Box sx={{ mb: 3 }}>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: 'primary.main',
+                fontSize: '1.8rem',
+                letterSpacing: '0.3px',
+              }}
+            >
+              Lista de Usuarios
+            </Typography>
+          </Box>
+
+          <Box className="user-header-section" sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', mb: 2, flexDirection: { xs: 'column', sm: 'row' }, width: '100%' }}>
+            <FilterAccordion title="Filtros">
+              <TextField
+                label="Nombre"
+                size="small"
+                value={filters.nameFilter}
+                onChange={(e) => handleFilterChange('nameFilter', e.target.value)}
+                placeholder="Buscar por nombre"
+                sx={{ width: '100%' }}
+              />
+              <TextField
+                label="Email"
+                size="small"
+                value={filters.emailFilter}
+                onChange={(e) => handleFilterChange('emailFilter', e.target.value)}
+                placeholder="Buscar por email"
+                sx={{ width: '100%' }}
+              />
+              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', width: '100%', mt: 1 }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={handleClearFilters}
+                  sx={{ color: 'text.secondary', borderColor: 'divider' }}
+                >
+                  Limpiar
+                </Button>
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={handleSearch}
+                  sx={{ backgroundColor: 'primary.main' }}
+                >
+                  Buscar
+                </Button>
+              </Box>
+            </FilterAccordion>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              sx={{ backgroundColor: 'primary.main', textTransform: 'none', mt: 0 }}
+            >
+              Agregar
+            </Button>
+          </Box>
+
+          <TableContainer
+            component={Paper}
+            className="user-table-container"
+            sx={{ backgroundColor: 'background.paper', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}
+          >
+            <Table sx={{ '& .MuiTableCell-body': { borderColor: 'grey.300' } }}>
+              <TableHead sx={{ backgroundColor: 'background.paper' }}>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderBottomColor: 'primary.main' }}>Nombre</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderBottomColor: 'primary.main' }}>
+                    Email
+                  </TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderBottomColor: 'primary.main' }}>
+                    Rol
+                  </TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 'bold', borderBottom: '2px solid', borderBottomColor: 'primary.main' }}>
+                    Acciones
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Container>
-    </Box>
+              </TableHead>
+              <TableBody>
+                {users.map(user => (
+                  <TableRow key={user.id} hover>
+                    <TableCell>{user.name}</TableCell>
+                    <TableCell align="center">{user.email}</TableCell>
+                    <TableCell align="center">{user.role}</TableCell>
+                    <TableCell align="center">
+                      <IconButton size="small" sx={{ color: 'primary.main' }}>
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton size="small" sx={{ color: 'error.main' }}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Container>
+      </Box>
+    </AppTheme>
   );
 }
 
