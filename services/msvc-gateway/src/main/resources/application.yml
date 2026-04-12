@@ -1,21 +1,5 @@
-server:
-  port: 8080
-
 spring:
   application:
     name: msvc-gateway
-
-  cloud:
-    gateway:
-      discovery:
-        locator:
-          enabled: true
-
-      routes:
-        - id: msvc-auth
-          uri: http://localhost:8090
-          predicates:
-            - Path=/api/auth/**
-
   config:
     import: optional:configserver:http://localhost:8888
