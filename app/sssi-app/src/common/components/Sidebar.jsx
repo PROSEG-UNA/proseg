@@ -1,17 +1,17 @@
 import { useState, useContext, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Box,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
-  Collapse,
-  Button,
-  Typography,
-  IconButton,
-  useMediaQuery,
-  useTheme,
+    Box,
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemText,
+    Collapse,
+    Button,
+    Typography,
+    IconButton,
+    useMediaQuery,
+    useTheme,
 } from '@mui/material';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -21,292 +21,295 @@ import MenuIcon from '@mui/icons-material/Menu';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
-import { alpha } from '@mui/material/styles';
+import { alpha, useColorScheme } from '@mui/material/styles';
 import { SidebarContext } from '../context/SidebarContext';
 import '../css/Sidebar.css';
 
 export function Sidebar() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [expandedMenu, setExpandedMenu] = useState(null);
-  const { isMinimized, setIsMinimized } = useContext(SidebarContext);
-  const theme = useTheme();
-  
-  // Detectar si es pantalla pequeña (tablet/móvil)
-  const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [expandedMenu, setExpandedMenu] = useState(null);
+    const { isMinimized, setIsMinimized } = useContext(SidebarContext);
+    const theme = useTheme();
+    const { mode } = useColorScheme();
 
-  // Minimizar sidebar en pantallas pequeñas y expandir en grandes
-  useEffect(() => {
-    if (isMediumOrDown) {
-      setIsMinimized(true);
-    } else {
-      setIsMinimized(false);
-    }
-  }, [isMediumOrDown, setIsMinimized]);
+    // Detectar si es pantalla pequeña (tablet/móvil)
+    const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
 
-  const toggleMenu = (menu) => {
-    setExpandedMenu(expandedMenu === menu ? null : menu);
-  };
+    // Minimizar sidebar en pantallas pequeñas y expandir en grandes
+    useEffect(() => {
+        if (isMediumOrDown) {
+            setIsMinimized(true);
+        } else {
+            setIsMinimized(false);
+        }
+    }, [isMediumOrDown, setIsMinimized]);
 
-  const isActive = (path) => location.pathname === path;
-  const sidebarWidth = isMinimized ? 80 : 280;
+    const toggleMenu = (menu) => {
+        setExpandedMenu(expandedMenu === menu ? null : menu);
+    };
 
-  return (
-    <Box
-      component="nav"
-      className="sidebar"
-      sx={{
-        width: sidebarWidth,
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        backgroundColor: 'background.paper',
-        boxShadow: '2px 0 8px rgba(0, 0, 0, 0.1)',
-        zIndex: 1210,
-        position: 'fixed',
-        left: 0,
-        top: 0,
-        overflowY: 'auto',
-        transition: 'width 0.3s ease-in-out',
-      }}
-    >
-      <Box
-        className="sidebar-logo"
-        sx={{
-          backgroundColor: 'background.paper',
-          p: 2,
-          textAlign: 'center',
-          borderBottom: '1px solid rgba(0,0,0,0.1)',
-          display: 'flex',
-          flexDirection: isMinimized ? 'column' : 'row',
-          alignItems: 'center',
-          justifyContent: isMinimized ? 'center' : 'space-between',
-          gap: isMinimized ? 1 : 3,
-        }}
-      >
-        {!isMinimized && (
-          <img
-            src="/logo_una.png"
-            alt="Logo UNA"
-            style={{
-              maxWidth: '60%',
-              height: 'auto',
-              maxHeight: '60px',
+    const isActive = (path) => location.pathname === path;
+    const sidebarWidth = isMinimized ? 80 : 280;
+
+    return (
+        <Box
+            component="nav"
+            className="sidebar"
+            sx={{
+                width: sidebarWidth,
+                height: '100vh',
+                display: 'flex',
+                flexDirection: 'column',
+                backgroundColor: 'background.paper',
+                boxShadow: '2px 0 8px rgba(0, 0, 0, 0.1)',
+                zIndex: 1210,
+                position: 'fixed',
+                left: 0,
+                top: 0,
+                overflowY: 'auto',
+                transition: 'width 0.3s ease-in-out',
             }}
-          />
-        )}
-        <IconButton
-          onClick={() => setIsMinimized(!isMinimized)}
-          sx={(theme) => ({
-            color: 'primary.main',
-            width: isMinimized ? 48 : 'auto',
-            '&:hover': {
-              backgroundColor: alpha(theme.palette.primary.main, 0.1),
-            },
-          })}
         >
-          {isMinimized ? <MenuOpenIcon /> : <MenuIcon />}
-        </IconButton>
-      </Box>
-
-      {!isMinimized && (
-        <Box className="sidebar-nav" sx={{ flex: 1, overflowY: 'auto', p: 0, display: 'block' }}>
-          <List sx={{ p: 0 }}>
-            <ListItem disablePadding className="sidebar-menu" sx={{ display: 'block' }}>
-              <ListItemButton
-                className="sidebar-menu-title"
-                onClick={() => toggleMenu('inventory')}
-                sx={(theme) => ({
-                  borderBottom: '1px solid rgba(0,0,0,0.1)',
-                  color: 'text.primary',
-                  '&:hover': {
-                    backgroundColor: alpha(theme.palette.primary.main, 0.05),
-                  },
-                })}
-              >
-                <ListItemText 
-                  primary="Gestión Inventarios"
-                  sx={{ color: 'text.primary' }}
-                />
-                {expandedMenu === 'inventory' ? (
-                  <ExpandLessIcon sx={{ color: 'text.primary' }} />
-                ) : (
-                  <ExpandMoreIcon sx={{ color: 'text.primary' }} />
-                )}
-              </ListItemButton>
-              <Collapse in={expandedMenu === 'inventory'} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding sx={(theme) => ({ backgroundColor: alpha(theme.palette.primary.main, 0.05) })}>
-                  <ListItem disablePadding>
-                    <ListItemButton 
-                      className="sidebar-item"
-                      onClick={() => navigate('/inventario/activos')}
-                      sx={(theme) => ({
-                        pl: 4,
-                        color: 'text.primary',
-                        '&:hover': {
-                          backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                          fontWeight: 600,
-                        }
-                      })}
-                    >
-                      <WarehouseIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                      <ListItemText primary="Activos" />
-                    </ListItemButton>
-                  </ListItem>
-                </List>
-              </Collapse>
-            </ListItem>
-
-            <ListItem disablePadding className="sidebar-menu" sx={{ display: 'block' }}>
-              <ListItemButton
-                className="sidebar-menu-title"
-                onClick={() => toggleMenu('security')}
-                sx={(theme) => ({
-                  borderBottom: '1px solid rgba(0,0,0,0.1)',
-                  color: 'text.primary',
-                  '&:hover': {
-                    backgroundColor: alpha(theme.palette.primary.main, 0.05),
-                  },
-                })}
-              >
-                <ListItemText 
-                  primary="Gestión Seguridad"
-                  sx={{ color: 'text.primary' }}
-                />
-                {expandedMenu === 'security' ? (
-                  <ExpandLessIcon sx={{ color: 'text.primary' }} />
-                ) : (
-                  <ExpandMoreIcon sx={{ color: 'text.primary' }} />
-                )}
-              </ListItemButton>
-              <Collapse in={expandedMenu === 'security'} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding sx={(theme) => ({ backgroundColor: alpha(theme.palette.primary.main, 0.05) })}>
-                  <ListItem disablePadding>
-                    <ListItemButton 
-                      className="sidebar-item"
-                      onClick={() => navigate('/seguridad/usuarios')}
-                      sx={(theme) => ({
-                        pl: 4,
-                        color: 'text.primary',
-                        '&:hover': {
-                          backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                          fontWeight: 600,
-                        }
-                      })}
-                    >
-                      <PeopleIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                      <ListItemText primary="Usuarios" />
-                    </ListItemButton>
-                  </ListItem>
-                  <ListItem disablePadding>
-                    <ListItemButton 
-                      className="sidebar-item"
-                      onClick={() => navigate('/seguridad/roles')}
-                      sx={(theme) => ({
-                        pl: 4,
-                        color: 'text.primary',
-                        '&:hover': {
-                          backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                          fontWeight: 600,
-                        }
-                      })}
-                    >
-                      <VerifiedUserIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                      <ListItemText primary="Roles" />
-                    </ListItemButton>
-                  </ListItem>
-                </List>
-              </Collapse>
-            </ListItem>
-          </List>
-        </Box>
-      )}
-
-      {isMinimized && (
-        <Box className="sidebar-nav-minimized" sx={{ flex: 1, overflowY: 'auto', p: 1, display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center' }}>
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 1,
-              width: '100%',
-            }}
-          >
-            <IconButton
-              onClick={() => {
-                setIsMinimized(false);
-                toggleMenu('inventory');
-              }}
-              title="Gestión Inventarios"
-              sx={(theme) => ({
-                color: 'text.primary',
-                width: 50,
-                height: 50,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                '&:hover': {
-                  backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                },
-              })}
+            <Box
+                className="sidebar-logo"
+                sx={{
+                    backgroundColor: 'background.paper',
+                    p: 2,
+                    textAlign: 'center',
+                    borderBottom: '1px solid', borderBottomColor: 'divider',
+                    display: 'flex',
+                    flexDirection: isMinimized ? 'column' : 'row',
+                    alignItems: 'center',
+                    justifyContent: isMinimized ? 'center' : 'space-between',
+                    gap: isMinimized ? 1 : 3,
+                }}
             >
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-                <WarehouseIcon sx={{ fontSize: 24 }} />
-                <ExpandMoreIcon sx={{ fontSize: 16 }} />
-              </Box>
-            </IconButton>
+                {!isMinimized && (
+                    <img
+                        src={mode === 'dark' ? '/logo_una_blanco.png' : '/logo_una.png'}
+                        alt="Logo UNA"
+                        style={{
+                            maxWidth: '60%',
+                            height: 'auto',
+                            maxHeight: '60px',
+                        }}
+                    />
+                )}
+                <IconButton
+                    onClick={() => setIsMinimized(!isMinimized)}
+                    sx={(theme) => ({
+                        color: 'primary.icon',
+                        width: isMinimized ? 48 : 'auto',
+                        '&:hover': {
+                            backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                        },
+                    })}
+                >
+                    {isMinimized ? <MenuOpenIcon /> : <MenuIcon />}
+                </IconButton>
+            </Box>
 
-            <IconButton
-              onClick={() => {
-                setIsMinimized(false);
-                toggleMenu('security');
-              }}
-              title="Gestión Seguridad"
-              sx={(theme) => ({
-                color: 'text.primary',
-                width: 50,
-                height: 50,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                '&:hover': {
-                  backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                },
-              })}
-            >
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-                <VerifiedUserIcon sx={{ fontSize: 24 }} />
-                <ExpandMoreIcon sx={{ fontSize: 16 }} />
-              </Box>
-            </IconButton>
-          </Box>
-        </Box>
-      )}
+            {!isMinimized && (
+                <Box className="sidebar-nav" sx={{ flex: 1, overflowY: 'auto', p: 0, display: 'block' }}>
+                    <List sx={{ p: 0 }}>
+                        <ListItem disablePadding className="sidebar-menu" sx={{ display: 'block' }}>
+                            <ListItemButton
+                                className="sidebar-menu-title"
+                                onClick={() => toggleMenu('inventory')}
+                                sx={(theme) => ({
+                                    borderBottom: '1px solid', borderBottomColor: 'divider',
+                                    color: 'text.primary',
+                                    '&:hover': {
+                                        backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                                    },
+                                })}
+                            >
+                                <ListItemText
+                                    primary="Gestión Inventarios"
+                                    sx={{ color: 'text.primary' }}
+                                />
+                                {expandedMenu === 'inventory' ? (
+                                    <ExpandLessIcon sx={{ color: 'text.primary' }} />
+                                ) : (
+                                    <ExpandMoreIcon sx={{ color: 'text.primary' }} />
+                                )}
+                            </ListItemButton>
+                            <Collapse in={expandedMenu === 'inventory'} timeout="auto" unmountOnExit>
+                                <List component="div" disablePadding sx={(theme) => ({ backgroundColor: alpha(theme.palette.primary.main, 0.05) })}>
+                                    <ListItem disablePadding>
+                                        <ListItemButton
+                                            className="sidebar-item"
+                                            onClick={() => navigate('/inventario/activos')}
+                                            sx={(theme) => ({
+                                                pl: 4,
+                                                color: 'text.primary',
+                                                '&:hover': {
+                                                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                                                    fontWeight: 600,
+                                                }
+                                            })}
+                                        >
+                                            <WarehouseIcon sx={{ mr: 1.5, fontSize: 20 }} />
+                                            <ListItemText primary="Activos" />
+                                        </ListItemButton>
+                                    </ListItem>
+                                </List>
+                            </Collapse>
+                        </ListItem>
 
-      {!isMinimized && (
-        <Box className="sidebar-footer" sx={{ p: 2, borderTop: '1px solid rgba(0,0,0,0.1)' }}>
-          <Button
-            className="sidebar-logout"
-            fullWidth
-            variant="contained"
-            startIcon={<LogoutIcon />}
-            onClick={() => navigate('/login')}
-            sx={{
-              backgroundColor: 'primary.main',
-              color: 'primary.contrastText',
-              '&:hover': {
-                backgroundColor: 'primary.dark',
-              },
-              fontWeight: 600,
-            }}
-          >
-            Cerrar Sesión
-          </Button>
+                        <ListItem disablePadding className="sidebar-menu" sx={{ display: 'block' }}>
+                            <ListItemButton
+                                className="sidebar-menu-title"
+                                onClick={() => toggleMenu('security')}
+                                sx={(theme) => ({
+                                    borderBottom: '1px solid', borderBottomColor: 'divider',
+                                    color: 'text.primary',
+                                    '&:hover': {
+                                        backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                                    },
+                                })}
+                            >
+                                <ListItemText
+                                    primary="Gestión Seguridad"
+                                    sx={{ color: 'text.primary' }}
+                                />
+                                {expandedMenu === 'security' ? (
+                                    <ExpandLessIcon sx={{ color: 'text.primary' }} />
+                                ) : (
+                                    <ExpandMoreIcon sx={{ color: 'text.primary' }} />
+                                )}
+                            </ListItemButton>
+                            <Collapse in={expandedMenu === 'security'} timeout="auto" unmountOnExit>
+                                <List component="div" disablePadding sx={(theme) => ({ backgroundColor: alpha(theme.palette.primary.main, 0.05) })}>
+                                    <ListItem disablePadding>
+                                        <ListItemButton
+                                            className="sidebar-item"
+                                            onClick={() => navigate('/seguridad/usuarios')}
+                                            sx={(theme) => ({
+                                                pl: 4,
+                                                color: 'text.primary',
+                                                '&:hover': {
+                                                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                                                    fontWeight: 600,
+                                                }
+                                            })}
+                                        >
+                                            <PeopleIcon sx={{ mr: 1.5, fontSize: 20 }} />
+                                            <ListItemText primary="Usuarios" />
+                                        </ListItemButton>
+                                    </ListItem>
+                                    <ListItem disablePadding>
+                                        <ListItemButton
+                                            className="sidebar-item"
+                                            onClick={() => navigate('/seguridad/roles')}
+                                            sx={(theme) => ({
+                                                pl: 4,
+                                                color: 'text.primary',
+                                                '&:hover': {
+                                                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                                                    fontWeight: 600,
+                                                }
+                                            })}
+                                        >
+                                            <VerifiedUserIcon sx={{ mr: 1.5, fontSize: 20 }} />
+                                            <ListItemText primary="Roles" />
+                                        </ListItemButton>
+                                    </ListItem>
+                                </List>
+                            </Collapse>
+                        </ListItem>
+                    </List>
+                </Box>
+            )}
+
+            {isMinimized && (
+                <Box className="sidebar-nav-minimized" sx={{ flex: 1, overflowY: 'auto', p: 1, display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center' }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: 1,
+                            width: '100%',
+                        }}
+                    >
+                        <IconButton
+                            onClick={() => {
+                                setIsMinimized(false);
+                                toggleMenu('inventory');
+                            }}
+                            title="Gestión Inventarios"
+                            sx={(theme) => ({
+                                color: 'text.primary',
+                                width: 50,
+                                height: 50,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: 2,
+                                '&:hover': {
+                                    backgroundColor: alpha(theme.palette.primary.main, 0.12),
+                                },
+                            })}
+                        >
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                                <WarehouseIcon sx={{ fontSize: 24 }} />
+                                <ExpandMoreIcon sx={{ fontSize: 16 }} />
+                            </Box>
+                        </IconButton>
+
+                        <IconButton
+                            onClick={() => {
+                                setIsMinimized(false);
+                                toggleMenu('security');
+                            }}
+                            title="Gestión Seguridad"
+                            sx={(theme) => ({
+                                color: 'text.primary',
+                                width: 50,
+                                height: 50,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: 2,
+                                '&:hover': {
+                                    backgroundColor: alpha(theme.palette.primary.main, 0.12),
+                                },
+                            })}
+                        >
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                                <VerifiedUserIcon sx={{ fontSize: 24 }} />
+                                <ExpandMoreIcon sx={{ fontSize: 16 }} />
+                            </Box>
+                        </IconButton>
+                    </Box>
+                </Box>
+            )}
+
+            {!isMinimized && (
+                <Box className="sidebar-footer" sx={{ p: 2, borderTop: '1px solid', borderTopColor: 'divider' }}>
+                    <Button
+                        className="sidebar-logout"
+                        fullWidth
+                        variant="contained"
+                        startIcon={<LogoutIcon />}
+                        onClick={() => navigate('/login')}
+                        sx={{
+                            backgroundColor: 'primary.main',
+                            color: 'primary.contrastText',
+                            '&:hover': {
+                                backgroundColor: 'primary.dark',
+                            },
+                            fontWeight: 600,
+                        }}
+                    >
+                        Cerrar Sesión
+                    </Button>
+                </Box>
+            )}
         </Box>
-      )}
-    </Box>
-  );
+    );
 }
 
 export default Sidebar;

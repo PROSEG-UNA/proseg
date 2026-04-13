@@ -79,7 +79,7 @@ export function AssetPage() {
               variant="h5"
               sx={{
                 fontWeight: 700,
-                color: 'primary.main',
+                color: 'primary.icon',
                 fontSize: '1.8rem',
                 letterSpacing: '0.3px',
               }}
@@ -161,10 +161,10 @@ export function AssetPage() {
                     <TableCell align="center">{asset.category}</TableCell>
                     <TableCell align="center">{asset.status}</TableCell>
                     <TableCell align="center">
-                      <IconButton size="small" sx={{ color: 'primary.main' }}>
+                      <IconButton size="small" sx={{ color: 'primary.icon' }}>
                         <EditIcon />
                       </IconButton>
-                      <IconButton size="small" sx={{ color: 'error.main' }}>
+                      <IconButton size="small" sx={{ color: 'primary.icon' }}>
                         <DeleteIcon />
                       </IconButton>
                     </TableCell>
