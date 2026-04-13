@@ -4,16 +4,6 @@ server:
 spring:
   application:
     name: msvc-auth
-  datasource:
-    driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/auth_db
-    username: sssi_user
-    password: root
-  jpa:
-    hibernate:
-      ddl-auto: create
-    database: PostgreSQL
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
 
 eureka:
   instance:
@@ -22,12 +12,18 @@ eureka:
     service-url:
       defaultZone: http://localhost:8761/eureka
 
-# ROUTES
-
 api:
   prefix: /api
 
 routes:
-  auth:
-    ${api.prefix}/auth
+  auth: ${api.prefix}/auth
 
+keycloak:
+  server-url: ${KEYCLOAK_SERVER_URL:http://localhost:8080}
+  realm: ${KEYCLOAK_REALM:sssi-realm}
+  client:
+    id: ${KEYCLOAK_CLIENT_ID:sssi-app}
+    secret: ${KEYCLOAK_CLIENT_SECRET:}
+  admin:
+    username: ${KEYCLOAK_ADMIN_USERNAME:sssi-system}
+    password: ${KEYCLOAK_ADMIN_PASSWORD:sssi-system}
