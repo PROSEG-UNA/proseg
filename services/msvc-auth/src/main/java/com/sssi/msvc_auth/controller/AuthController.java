@@ -58,7 +58,7 @@ public class AuthController {
                     .build();
 
             kafkaTemplate.send(
-                    KafkaTopics.USER_LOGIN_EVENT,
+                    KafkaTopics.USER_LOGIN_TOPIC,
                     event
             );
 

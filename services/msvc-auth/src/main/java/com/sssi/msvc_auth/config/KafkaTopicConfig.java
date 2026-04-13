@@ -26,7 +26,7 @@ public class KafkaTopicConfig {
         // Tamaño maximo de cada mensaje
         configurations.put(TopicConfig.MAX_MESSAGE_BYTES_CONFIG, "1000012");
 
-        return TopicBuilder.name(KafkaTopics.USER_LOGIN_EVENT)
+        return TopicBuilder.name(KafkaTopics.USER_LOGIN_TOPIC)
                 .partitions(2)
                 .replicas(2)
                 .configs(configurations)

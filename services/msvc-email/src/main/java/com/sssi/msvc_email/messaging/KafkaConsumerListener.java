@@ -16,7 +16,7 @@ public class KafkaConsumerListener {
     private final EmailEventService emailEventService;
 
     @KafkaListener(
-            topics = KafkaTopics.USER_LOGIN_EVENT,
+            topics = KafkaTopics.USER_LOGIN_TOPIC,
             groupId = "msvc-email-group"
     )
     public void onUserLogin(UserLoginEvent event) {
