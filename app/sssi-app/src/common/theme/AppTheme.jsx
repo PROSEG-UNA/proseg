@@ -7,7 +7,7 @@ import { navigationCustomizations } from './customizations/navigation';
 import { surfacesCustomizations } from './customizations/surfaces';
 import { colorSchemes, typography, shadows, shape } from './themePrimitives';
 
-export default function AppTheme({ children, disableCustomTheme, themeComponents }) {
+export default function AppTheme({ children, disableCustomTheme, themeComponents, defaultColorScheme = 'light' }) {
   const theme = React.useMemo(() => {
     return disableCustomTheme
       ? {}
@@ -34,7 +34,7 @@ export default function AppTheme({ children, disableCustomTheme, themeComponents
     return <React.Fragment>{children}</React.Fragment>;
   }
   return (
-    <ThemeProvider theme={theme} disableTransitionOnChange>
+    <ThemeProvider theme={theme} defaultMode={defaultColorScheme} disableTransitionOnChange>
       {children}
     </ThemeProvider>
   );

@@ -1,6 +1,18 @@
 import { AppBar, Toolbar, Typography, IconButton, Button } from '@mui/material';
+import { useColorScheme } from '@mui/material/styles';
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import LightModeIcon from '@mui/icons-material/LightMode';
+
+function ColorModeToggle() {
+  const { mode, setMode } = useColorScheme();
+  return (
+    <IconButton color="inherit" onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')} sx={{ mr: 1 }}>
+      {mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
+    </IconButton>
+  );
+}
 
 export function Header({ title, onMenuClick, navButtons = [], onLogout }) {
   return (
@@ -34,6 +46,7 @@ export function Header({ title, onMenuClick, navButtons = [], onLogout }) {
             {btn.label}
           </Button>
         ))}
+        <ColorModeToggle />
         <IconButton color="inherit" onClick={onLogout}>
           <LogoutIcon />
         </IconButton>
