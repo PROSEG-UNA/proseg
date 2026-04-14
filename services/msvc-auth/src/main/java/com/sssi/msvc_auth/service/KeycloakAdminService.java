@@ -15,6 +15,8 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @Slf4j
@@ -167,5 +169,86 @@ public class KeycloakAdminService {
             log.error("Error checking if user exists: ", e);
             return false;
         }
+    }
+
+    public List<Map<String, Object>> getRoles() throws Exception {
+        String adminToken = getAdminToken();
+        String rolesUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + adminToken);
+
+        HttpEntity<String> request = new HttpEntity<>("", headers);
+        String response = restTemplate.exchange(rolesUrl, HttpMethod.GET, request, String.class).getBody();
+
+        return objectMapper.readValue(response, List.class);
+    }
+
+    public void createCompositeRole(String roleName, List<String> privileges) throws Exception {
+        String adminToken = getAdminToken();
+        String rolesUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Bearer " + adminToken);
+
+        Map<String, Object> roleMap = new HashMap<>();
+        roleMap.put("name", roleName);
+        roleMap.put("composite", true);
+
+        HttpEntity<String> createRequest = new HttpEntity<>(objectMapper.writeValueAsString(roleMap), headers);
+        restTemplate.exchange(rolesUrl, HttpMethod.POST, createRequest, String.class);
+
+        List<Map<String, Object>> privilegeRoles = new ArrayList<>();
+        for (String privilege : privileges) {
+            String roleUrl = rolesUrl + "/" + privilege;
+            HttpEntity<String> request = new HttpEntity<>("", headers);
+            String response = restTemplate.exchange(roleUrl, HttpMethod.GET, request, String.class).getBody();
+            privilegeRoles.add(objectMapper.readValue(response, Map.class));
+        }
+
+        String compositeUrl = rolesUrl + "/" + roleName + "/composites";
+        HttpEntity<String> compositeRequest = new HttpEntity<>(objectMapper.writeValueAsString(privilegeRoles), headers);
+        restTemplate.exchange(compositeUrl, HttpMethod.POST, compositeRequest, String.class);
+    }
+
+    public void updateRole(String roleName, List<String> newPrivileges) throws Exception {
+        String adminToken = getAdminToken();
+        String rolesUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Bearer " + adminToken);
+
+        String compositeUrl = rolesUrl + "/" + roleName + "/composites";
+        HttpEntity<String> request = new HttpEntity<>("", headers);
+        String currentResponse = restTemplate.exchange(compositeUrl, HttpMethod.GET, request, String.class).getBody();
+        List<Map<String, Object>> currentPrivileges = objectMapper.readValue(currentResponse, List.class);
+
+        if (!currentPrivileges.isEmpty()) {
+            HttpEntity<String> deleteRequest = new HttpEntity<>(objectMapper.writeValueAsString(currentPrivileges), headers);
+            restTemplate.exchange(compositeUrl, HttpMethod.DELETE, deleteRequest, String.class);
+        }
+
+        List<Map<String, Object>> newPrivilegeRoles = new ArrayList<>();
+        for (String privilege : newPrivileges) {
+            String roleUrl = rolesUrl + "/" + privilege;
+            String response = restTemplate.exchange(roleUrl, HttpMethod.GET, request, String.class).getBody();
+            newPrivilegeRoles.add(objectMapper.readValue(response, Map.class));
+        }
+
+        HttpEntity<String> compositeRequest = new HttpEntity<>(objectMapper.writeValueAsString(newPrivilegeRoles), headers);
+        restTemplate.exchange(compositeUrl, HttpMethod.POST, compositeRequest, String.class);
+    }
+
+    public void deleteRole(String roleName) throws Exception {
+        String adminToken = getAdminToken();
+        String roleUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles/" + roleName;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + adminToken);
+
+        HttpEntity<String> request = new HttpEntity<>("", headers);
+        restTemplate.exchange(roleUrl, HttpMethod.DELETE, request, String.class);
     }
 }
