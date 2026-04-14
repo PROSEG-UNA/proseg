@@ -2,6 +2,8 @@ package com.sssi.msvc_auth.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sssi.msvc_auth.exception.AuthenticationException;
+import com.sssi.msvc_auth.exception.TokenException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -36,7 +38,7 @@ public class KeycloakAuthService {
         this.objectMapper = objectMapper;
     }
 
-    public String getToken(String username, String password) throws Exception {
+    public String getToken(String username, String password) {
         try {
             String tokenUrl = keycloakServerUrl + "/realms/" + realm + "/protocol/openid-connect/token";
 
@@ -54,27 +56,27 @@ public class KeycloakAuthService {
             body.add("scope", "openid profile email");
 
             HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
-
             String response = restTemplate.postForObject(tokenUrl, request, String.class);
-
             JsonNode jsonNode = objectMapper.readTree(response);
 
             if (jsonNode.has("access_token")) {
                 log.info("Token obtenido exitosamente para usuario: {}", username);
                 return jsonNode.get("access_token").asText();
-            } else if (jsonNode.has("error")) {
-                log.error("Error de Keycloak: {} - {}", jsonNode.get("error").asText(),
-                        jsonNode.get("error_description").asText());
-                throw new Exception("Invalid credentials or user does not exist");
-            } else {
-                log.error("Respuesta inesperada de Keycloak: {}", response);
-                throw new Exception("Unexpected response from Keycloak");
             }
-        } catch (Exception e) {
-            log.error("Error en getToken: ", e);
+
+            if (jsonNode.has("error")) {
+                String error = jsonNode.get("error").asText();
+                log.warn("Error de Keycloak para usuario {}: {}", username, error);
+                throw AuthenticationException.invalidCredentials();
+            }
+
+            throw TokenException.malformed();
+
+        } catch (AuthenticationException | TokenException e) {
             throw e;
+        } catch (Exception e) {
+            log.error("Error inesperado obteniendo token para usuario {}: {}", username, e.getMessage());
+            throw TokenException.malformed();
         }
     }
-
 }
-
