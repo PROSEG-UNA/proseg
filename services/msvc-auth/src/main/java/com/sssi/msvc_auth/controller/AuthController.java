@@ -49,9 +49,6 @@ public class AuthController {
             response.setSuccess(true);
             response.setMessage("Login exitoso");
 
-            // =========================
-            // EVENTO KAFKA
-            // =========================
             UserLoginEvent event = UserLoginEvent.builder()
                     .email(loginRequest.getUsername())
                     .timestamp(Instant.now().toEpochMilli())
