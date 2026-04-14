@@ -33,7 +33,7 @@ export function InventoryPage() {
               sx={{
                 fontWeight: 'bold',
                 mb: 3,
-                color: 'primary.main',
+                color: 'primary.icon',
                 fontSize: { xs: '1.8rem', sm: '2.2rem' },
                 letterSpacing: '0.3px',
               }}

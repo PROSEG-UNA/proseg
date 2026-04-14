@@ -1,6 +1,7 @@
 import './App.css';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import CssBaseline from '@mui/material/CssBaseline';
+import Box from '@mui/material/Box';
 import AppTheme from './common/theme/AppTheme';
 import { SidebarProvider } from './common/context/SidebarContext';
 import LoginPage from './features/auth/pages/LoginPage';
@@ -14,8 +15,9 @@ import DashboardLayout from './layouts/DashboardLayout';
 
 function App() {
   return (
-    <AppTheme defaultColorScheme="light">
+    <AppTheme defaultColorScheme="dark">
       <CssBaseline />
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <SidebarProvider>
         <Router>
           <Routes>
@@ -65,6 +67,7 @@ function App() {
           </Routes>
         </Router>
       </SidebarProvider>
+      </Box>
     </AppTheme>
   );
 }

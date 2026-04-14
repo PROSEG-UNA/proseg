@@ -19,11 +19,12 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
-import { alpha } from '@mui/material/styles';
+import { alpha, useColorScheme } from '@mui/material/styles';
 
 export function NavDrawer({ open, onClose, onLogout }) {
   const navigate = useNavigate();
   const [expandedMenu, setExpandedMenu] = useState(null);
+  const { mode } = useColorScheme();
 
   const toggleMenu = (menu) => {
     setExpandedMenu(expandedMenu === menu ? null : menu);
@@ -41,8 +42,8 @@ export function NavDrawer({ open, onClose, onLogout }) {
         role="presentation"
       >
         <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(0,0,0,0.1)' }}>
-          <img src="/logo_una.png" alt="Logo UNA" style={{ maxWidth: '50%', height: 'auto', maxHeight: '50px' }} />
-          <IconButton onClick={onClose} sx={{ color: 'primary.main' }}>
+          <img src={mode === 'dark' ? '/logo_una_blanco.png' : '/logo_una.png'} alt="Logo UNA" style={{ maxWidth: '50%', height: 'auto', maxHeight: '50px' }} />
+          <IconButton onClick={onClose} sx={{ color: 'primary.icon' }}>
             <CloseIcon />
           </IconButton>
         </Box>

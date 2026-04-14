@@ -7,15 +7,14 @@ export function DashboardLayout({ children }) {
   const { isMinimized } = useContext(SidebarContext);
   const theme = useTheme();
   const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
-  
+
   const marginLeft = !isMediumOrDown ? (isMinimized ? '80px' : '280px') : '0px';
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Box sx={{ display: 'flex', flex: 1 }}>
-        {/* Sidebar se muestra solo en pantallas grandes */}
         {!isMediumOrDown && <Sidebar />}
-        
+
         <Box
           component="main"
           sx={{
@@ -23,7 +22,7 @@ export function DashboardLayout({ children }) {
             marginLeft: marginLeft,
             display: 'flex',
             flexDirection: 'column',
-            backgroundColor: '#f8f9fa',
+            backgroundColor: 'background.default',
             transition: 'margin-left 0.3s ease-in-out',
             overflow: 'auto',
           }}

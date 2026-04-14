@@ -57,23 +57,23 @@ export const orange = {
 };
 
 export const red = {
-  50: 'hsl(0, 100%, 97%)',
-  100: 'hsl(0, 92%, 90%)',
-  200: 'hsl(0, 94%, 80%)',
-  300: 'hsl(0, 90%, 65%)',
-  400: 'hsl(0, 90%, 40%)',
-  500: 'hsl(0, 90%, 30%)',
-  600: 'hsl(0, 91%, 25%)',
-  700: 'hsl(0, 94%, 18%)',
-  800: 'hsl(0, 95%, 12%)',
-  900: 'hsl(0, 93%, 6%)',
+  50:  'hsl(0, 70%, 97%)',
+  100: 'hsl(0, 70%, 92%)',
+  200: 'hsl(0, 72%, 82%)',
+  300: 'hsl(0, 72%, 68%)',
+  400: 'hsl(0, 68%, 52%)',
+  500: 'hsl(0, 65%, 42%)',
+  600: 'hsl(0, 63%, 34%)',
+  700: 'hsl(0, 62%, 24%)',
+  800: 'hsl(0, 60%, 14%)',
+  900: 'hsl(0, 58%, 8%)',
 };
 
 export const getDesignTokens = (mode) => {
   customShadows[1] =
-    mode === 'dark'
-      ? 'hsla(220, 30%, 5%, 0.7) 0px 4px 16px 0px, hsla(220, 25%, 10%, 0.8) 0px 8px 16px -5px'
-      : 'hsla(220, 30%, 5%, 0.07) 0px 4px 16px 0px, hsla(220, 25%, 10%, 0.07) 0px 8px 16px -5px';
+      mode === 'dark'
+          ? 'hsla(220, 30%, 5%, 0.7) 0px 4px 16px 0px, hsla(220, 25%, 10%, 0.8) 0px 8px 16px -5px'
+          : 'hsla(220, 30%, 5%, 0.07) 0px 4px 16px 0px, hsla(220, 25%, 10%, 0.07) 0px 8px 16px -5px';
 
   return {
     palette: {
@@ -181,7 +181,7 @@ export const getDesignTokens = (mode) => {
 export const colorSchemes = {
   light: {
     palette: {
-      primary: { light: red[200], main: red[400], dark: red[700], contrastText: red[50] },
+      primary: { light: red[200], main: red[400], dark: red[700], contrastText: red[50], icon: red[400] },
       info: { light: red[100], main: red[300], dark: red[600], contrastText: gray[50] },
       warning: { light: orange[300], main: orange[400], dark: orange[800] },
       error: { light: red[300], main: red[400], dark: red[800] },
@@ -192,12 +192,12 @@ export const colorSchemes = {
       text: { primary: gray[800], secondary: gray[600], warning: orange[400] },
       action: { hover: alpha(gray[200], 0.2), selected: `${alpha(gray[200], 0.3)}` },
       baseShadow:
-        'hsla(220, 30%, 5%, 0.07) 0px 4px 16px 0px, hsla(220, 25%, 10%, 0.07) 0px 8px 16px -5px',
+          'hsla(220, 30%, 5%, 0.07) 0px 4px 16px 0px, hsla(220, 25%, 10%, 0.07) 0px 8px 16px -5px',
     },
   },
   dark: {
     palette: {
-      primary: { contrastText: red[50], light: red[300], main: red[400], dark: red[700] },
+      primary: { contrastText: red[50], light: red[300], main: red[400], dark: red[700], icon: 'hsl(0, 0%, 100%)' },
       info: { contrastText: red[300], light: red[500], main: red[700], dark: red[900] },
       warning: { light: orange[400], main: orange[500], dark: orange[700] },
       error: { light: red[400], main: red[500], dark: red[700] },
@@ -208,7 +208,7 @@ export const colorSchemes = {
       text: { primary: 'hsl(0, 0%, 100%)', secondary: gray[400] },
       action: { hover: alpha(gray[600], 0.2), selected: alpha(gray[600], 0.3) },
       baseShadow:
-        'hsla(220, 30%, 5%, 0.7) 0px 4px 16px 0px, hsla(220, 25%, 10%, 0.8) 0px 8px 16px -5px',
+          'hsla(220, 30%, 5%, 0.7) 0px 4px 16px 0px, hsla(220, 25%, 10%, 0.8) 0px 8px 16px -5px',
     },
   },
 };

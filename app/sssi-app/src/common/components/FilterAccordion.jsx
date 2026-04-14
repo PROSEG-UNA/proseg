@@ -26,7 +26,7 @@ export function FilterAccordion({ children, title = 'Filtros' }) {
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <TuneIcon sx={{ color: 'primary.main' }} />
+            <TuneIcon sx={{ color: 'primary.icon' }} />
             <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>
               {title}
             </Typography>
