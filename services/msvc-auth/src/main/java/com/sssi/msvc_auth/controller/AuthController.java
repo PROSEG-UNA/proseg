@@ -108,6 +108,18 @@ public class AuthController {
         }
     }
 
+    @GetMapping("/roles/base")
+    public ResponseEntity<?> getBaseRoles() {
+        try {
+            List<Map<String, Object>> roles = keycloakAdminService.getBaseRoles();
+            return ResponseEntity.ok(roles);
+        } catch (Exception e) {
+            log.error("Error obteniendo roles base: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al obtener roles base: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/roles")
     public ResponseEntity<?> createRole(@Valid @RequestBody CreateRoleRequest request) {
         try {

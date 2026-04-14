@@ -184,6 +184,22 @@ public class KeycloakAdminService {
         return objectMapper.readValue(response, List.class);
     }
 
+    public List<Map<String, Object>> getBaseRoles() throws Exception {
+        String adminToken = getAdminToken();
+        String rolesUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + adminToken);
+
+        HttpEntity<String> request = new HttpEntity<>("", headers);
+        String response = restTemplate.exchange(rolesUrl, HttpMethod.GET, request, String.class).getBody();
+
+        List<Map<String, Object>> allRoles = objectMapper.readValue(response, List.class);
+        return allRoles.stream()
+                .filter(role -> !(Boolean) role.getOrDefault("composite", false))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
     public void createCompositeRole(String roleName, List<String> privileges) throws Exception {
         String adminToken = getAdminToken();
         String rolesUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles";
