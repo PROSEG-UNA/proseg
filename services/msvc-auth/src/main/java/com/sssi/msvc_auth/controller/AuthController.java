@@ -11,6 +11,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.sssi.msvc_auth.dto.CreateRoleRequest;
+
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("${routes.auth}")
@@ -89,6 +93,56 @@ public class AuthController {
             response.setSuccess(false);
             response.setMessage("Error en el registro: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+    }
+
+    @GetMapping("/roles")
+    public ResponseEntity<?> getRoles() {
+        try {
+            List<Map<String, Object>> roles = keycloakAdminService.getRoles();
+            return ResponseEntity.ok(roles);
+        } catch (Exception e) {
+            log.error("Error obteniendo roles: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al obtener roles: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/roles")
+    public ResponseEntity<?> createRole(@Valid @RequestBody CreateRoleRequest request) {
+        try {
+            keycloakAdminService.createCompositeRole(request.getRoleName(), request.getPrivileges());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body("Rol " + request.getRoleName() + " creado exitosamente");
+        } catch (Exception e) {
+            log.error("Error creando rol: ", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Error al crear rol: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/roles/{roleName}")
+    public ResponseEntity<?> updateRole(@PathVariable String roleName,
+                                        @Valid @RequestBody CreateRoleRequest request) {
+        try {
+            keycloakAdminService.updateRole(roleName, request.getPrivileges());
+            return ResponseEntity.ok("Rol " + roleName + " actualizado exitosamente");
+        } catch (Exception e) {
+            log.error("Error actualizando rol: ", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Error al actualizar rol: " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/roles/{roleName}")
+    public ResponseEntity<?> deleteRole(@PathVariable String roleName) {
+        try {
+            keycloakAdminService.deleteRole(roleName);
+            return ResponseEntity.ok("Rol " + roleName + " eliminado exitosamente");
+        } catch (Exception e) {
+            log.error("Error eliminando rol: ", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Error al eliminar rol: " + e.getMessage());
         }
     }
 }
