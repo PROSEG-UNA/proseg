@@ -28,6 +28,7 @@
         <module>msvc-config</module>
         <module>msvc-auth</module>
         <module>msvc-email</module>
+        <module>msvc-common</module>
     </modules>
 
     <properties>
