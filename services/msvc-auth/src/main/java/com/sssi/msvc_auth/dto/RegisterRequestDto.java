@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class RegisterRequest {
+public class RegisterRequestDto {
 
     @NotBlank(message = "El username no puede estar vacío")
     @Size(min = 3, max = 50, message = "El username debe tener entre 3 y 50 caracteres")

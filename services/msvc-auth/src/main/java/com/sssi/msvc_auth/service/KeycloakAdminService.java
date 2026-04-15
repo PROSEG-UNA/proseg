@@ -2,6 +2,7 @@ package com.sssi.msvc_auth.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sssi.msvc_auth.exception.UserException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -40,7 +41,7 @@ public class KeycloakAdminService {
         this.objectMapper = objectMapper;
     }
 
-    private String getAdminToken() throws Exception {
+    private String getAdminToken() {
         try {
             String tokenUrl = keycloakServerUrl + "/realms/master/protocol/openid-connect/token";
 
@@ -55,26 +56,32 @@ public class KeycloakAdminService {
 
             HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
             String response = restTemplate.postForObject(tokenUrl, request, String.class);
-
             JsonNode jsonNode = objectMapper.readTree(response);
+
             if (jsonNode.has("access_token")) {
                 return jsonNode.get("access_token").asText();
-            } else {
-                throw new Exception("Failed to get admin token");
             }
-        } catch (Exception e) {
-            log.error("Error getting admin token: ", e);
+
+            throw new IllegalStateException("Keycloak no retornó access_token de administrador");
+
+        } catch (IllegalStateException e) {
             throw e;
+        } catch (Exception e) {
+            log.error("Error obteniendo token de administrador: {}", e.getMessage());
+            throw new IllegalStateException("No se pudo autenticar con Keycloak admin", e);
         }
     }
 
-    public void registerUser(String username, String email, String password, String firstName, String lastName) throws Exception {
+    public void registerUser(String username, String email, String password,
+                             String firstName, String lastName) {
+        String adminToken = getAdminToken();
+        String createUserUrl = keycloakServerUrl + "/admin/realms/" + realm + "/users";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Bearer " + adminToken);
+
         try {
-            String adminToken = getAdminToken();
-
-            // 1. Crear usuario
-            String createUserUrl = keycloakServerUrl + "/admin/realms/" + realm + "/users";
-
             Map<String, Object> userMap = new HashMap<>();
             userMap.put("username", username);
             userMap.put("email", email);
@@ -82,49 +89,61 @@ public class KeycloakAdminService {
             userMap.put("lastName", lastName);
             userMap.put("enabled", true);
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer " + adminToken);
-
             String userJson = objectMapper.writeValueAsString(userMap);
-            HttpEntity<String> createUserRequest = new HttpEntity<>(userJson, headers);
+            restTemplate.exchange(createUserUrl, HttpMethod.POST,
+                    new HttpEntity<>(userJson, headers), String.class);
 
-            try {
-                restTemplate.exchange(createUserUrl, HttpMethod.POST, createUserRequest, String.class);
-            } catch (Exception e) {
-                if (e.getMessage().contains("409")) {
-                    throw new Exception("El usuario ya existe");
-                }
-                throw e;
-            }
             log.info("Usuario creado en Keycloak: {}", username);
 
-            String userId = null;
-            for (int i = 0; i < 3; i++) {
-                try {
-                    String searchUrl = createUserUrl + "?username=" + username;
-                    HttpEntity<String> searchRequest = new HttpEntity<>("", headers);
-                    String searchResponse = restTemplate.exchange(searchUrl, HttpMethod.GET, searchRequest, String.class).getBody();
+        } catch (Exception e) {
+            if (e.getMessage() != null && e.getMessage().contains("409")) {
+                throw UserException.userAlreadyExists(username);
+            }
+            log.error("Error creando usuario en Keycloak: {}", e.getMessage());
+            throw new IllegalStateException("Error al crear el usuario en Keycloak", e);
+        }
 
-                    JsonNode users = objectMapper.readTree(searchResponse);
-                    if (users.isArray() && users.size() > 0) {
-                        userId = users.get(0).get("id").asText();
-                        log.info("Usuario ID obtenido: {}", userId);
-                        break;
-                    }
-                } catch (Exception e) {
-                    log.warn("Intento {} de obtener usuario ID falló, reintentando...", i + 1);
-                    if (i < 2) {
-                        Thread.sleep(500); // Esperar 500ms antes de reintentar
-                    }
+        String userId = resolveUserId(username, createUserUrl, headers);
+        setPassword(userId, username, password, createUserUrl, headers);
+
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private String resolveUserId(String username, String baseUrl, HttpHeaders headers) {
+        for (int i = 0; i < 3; i++) {
+            try {
+                String searchUrl = baseUrl + "?username=" + username;
+                String response = restTemplate.exchange(
+                        searchUrl, HttpMethod.GET,
+                        new HttpEntity<>("", headers), String.class).getBody();
+
+                JsonNode users = objectMapper.readTree(response);
+                if (users.isArray() && users.size() > 0) {
+                    String userId = users.get(0).get("id").asText();
+                    log.info("Usuario ID obtenido: {}", userId);
+                    return userId;
+                }
+            } catch (Exception e) {
+                log.warn("Intento {} de obtener usuario ID falló: {}", i + 1, e.getMessage());
+            }
+
+            if (i < 2) {
+                try { Thread.sleep(500); } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
                 }
             }
+        }
+        throw UserException.notFound(username);
+    }
 
-            if (userId == null) {
-                throw new Exception("No se pudo obtener el ID del usuario después de creación");
-            }
-
-            String passwordUrl = createUserUrl + "/" + userId + "/reset-password";
+    private void setPassword(String userId, String username, String password,
+                             String baseUrl, HttpHeaders headers) {
+        try {
+            String passwordUrl = baseUrl + "/" + userId + "/reset-password";
 
             Map<String, Object> credentialMap = new HashMap<>();
             credentialMap.put("type", "password");
@@ -132,21 +151,14 @@ public class KeycloakAdminService {
             credentialMap.put("temporary", false);
 
             String credentialJson = objectMapper.writeValueAsString(credentialMap);
-            HttpEntity<String> passwordRequest = new HttpEntity<>(credentialJson, headers);
+            restTemplate.exchange(passwordUrl, HttpMethod.PUT,
+                    new HttpEntity<>(credentialJson, headers), String.class);
 
-            try {
-                restTemplate.exchange(passwordUrl, HttpMethod.PUT, passwordRequest, String.class);
-                log.info("Contraseña establecida para usuario: {}", username);
-            } catch (Exception e) {
-                log.error("Error estableciendo contraseña: ", e);
-                throw new Exception("Error al establecer la contraseña del usuario");
-            }
-
-            Thread.sleep(1000);
+            log.info("Contraseña establecida para usuario: {}", username);
 
         } catch (Exception e) {
-            log.error("Error en registerUser: ", e);
-            throw e;
+            log.error("Error estableciendo contraseña para {}: {}", username, e.getMessage());
+            throw new IllegalStateException("Error al establecer la contraseña del usuario", e);
         }
     }
 
@@ -158,13 +170,15 @@ public class KeycloakAdminService {
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + adminToken);
 
-            HttpEntity<String> request = new HttpEntity<>("", headers);
-            String response = restTemplate.exchange(searchUrl, HttpMethod.GET, request, String.class).getBody();
+            String response = restTemplate.exchange(
+                    searchUrl, HttpMethod.GET,
+                    new HttpEntity<>("", headers), String.class).getBody();
 
             JsonNode users = objectMapper.readTree(response);
             return users.isArray() && users.size() > 0;
+
         } catch (Exception e) {
-            log.error("Error checking if user exists: ", e);
+            log.error("Error verificando existencia de usuario {}: {}", username, e.getMessage());
             return false;
         }
     }
