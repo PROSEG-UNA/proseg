@@ -4,9 +4,15 @@ import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
 import com.sssi.common.kafka.events.UserLoginEvent;
 import com.sssi.common.kafka.topics.KafkaTopics;
-import com.sssi.msvc_auth.dto.*;
+import com.sssi.msvc_auth.dto.LoginRequestDto;
+import com.sssi.msvc_auth.dto.LoginResponseDto;
+import com.sssi.msvc_auth.dto.RegisterRequestDto;
+import com.sssi.msvc_auth.dto.RegisterResponseDto;
+import com.sssi.msvc_auth.dto.UserApprovalRequestDto;
+import com.sssi.msvc_auth.entity.User;
 import com.sssi.msvc_auth.service.KeycloakAdminService;
 import com.sssi.msvc_auth.service.KeycloakAuthService;
+import com.sssi.msvc_auth.service.UserApprobationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +21,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("${routes.auth}")
@@ -24,6 +31,7 @@ public class AuthController {
 
     private final KeycloakAuthService keycloakAuthService;
     private final KeycloakAdminService keycloakAdminService;
+    private final UserApprobationService userApprobationService;
     private final KafkaTemplate<String, UserLoginEvent> kafkaTemplate;
 
     @GetMapping
@@ -43,7 +51,7 @@ public class AuthController {
         kafkaTemplate.send(
                 KafkaTopics.USER_LOGIN_TOPIC,
                 UserLoginEvent.builder()
-                        .email(request.getIdentifier()) // FIXME: Identifier can be username or email
+                        .email(request.getIdentifier())
                         .timestamp(Instant.now().toEpochMilli())
                         .build()
         );
@@ -63,13 +71,15 @@ public class AuthController {
     public ResponseEntity<ApiResponse<RegisterResponseDto>> register(@Valid @RequestBody RegisterRequestDto request) {
         log.info("Register attempt for user: {}", request.getUsername());
 
-        keycloakAdminService.registerUser(
+        String keycloakUserId = keycloakAdminService.registerUser(
                 request.getUsername(),
                 request.getEmail(),
                 request.getPassword(),
                 request.getFirstName(),
                 request.getLastName()
         );
+
+        userApprobationService.createPendingUser(keycloakUserId);
 
         String token = keycloakAuthService.getToken(
                 request.getUsername(),
@@ -85,6 +95,19 @@ public class AuthController {
                         .email(request.getEmail())
                         .build(),
                 "Registro exitoso"
+        );
+    }
+
+    @PatchMapping("/users/{id}/approval")
+    public ResponseEntity<ApiResponse<String>> updateUserApproval(
+            @PathVariable UUID id,
+            @Valid @RequestBody UserApprovalRequestDto request
+    ) {
+        User updatedUser = userApprobationService.updateStatus(id, request.getStatus());
+
+        return ApiResponseBuilder.ok(
+                updatedUser.getStatus().name(),
+                "Estado del usuario actualizado"
         );
     }
 }

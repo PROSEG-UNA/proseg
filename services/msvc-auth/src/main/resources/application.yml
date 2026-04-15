@@ -3,3 +3,16 @@ spring:
     name: msvc-auth
   config:
     import: optional:configserver:http://localhost:8888
+  datasource:
+    url: jdbc:postgresql://76.13.124.126:5432/sssi-bd
+    username: sssi_user
+    password: sssi_user
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
