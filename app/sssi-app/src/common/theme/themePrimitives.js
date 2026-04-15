@@ -61,9 +61,9 @@ export const red = {
   100: 'hsl(0, 70%, 92%)',
   200: 'hsl(0, 72%, 82%)',
   300: 'hsl(0, 72%, 68%)',
-  400: 'hsl(0, 68%, 52%)',  // botones principales — más luminoso y menos agresivo
-  500: 'hsl(0, 65%, 42%)',  // hover states
-  600: 'hsl(0, 63%, 34%)',  // progresión coherente
+  400: 'hsl(0, 68%, 52%)',
+  500: 'hsl(0, 65%, 42%)',
+  600: 'hsl(0, 63%, 34%)',
   700: 'hsl(0, 62%, 24%)',
   800: 'hsl(0, 60%, 14%)',
   900: 'hsl(0, 58%, 8%)',

@@ -13,7 +13,6 @@ export function DashboardLayout({ children }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Box sx={{ display: 'flex', flex: 1 }}>
-        {/* Sidebar se muestra solo en pantallas grandes */}
         {!isMediumOrDown && <Sidebar />}
 
         <Box
