@@ -16,6 +16,7 @@ import com.sssi.msvc_auth.service.UserApprobationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -41,22 +42,26 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponseDto>> login(@Valid @RequestBody LoginRequestDto request) {
-        log.info("Login attempt for user: {}", request.getIdentifier());
+        log.info("Login attempt for identifier: {}", request.getIdentifier());
 
         String token = keycloakAuthService.getToken(
                 request.getIdentifier(),
                 request.getPassword()
         );
 
+        String keycloakUserId = keycloakAuthService.extractUserIdFromToken(token);
+        userApprobationService.assertUserIsApproved(keycloakUserId);
+
         kafkaTemplate.send(
                 KafkaTopics.USER_LOGIN_TOPIC,
                 UserLoginEvent.builder()
-                        .email(request.getIdentifier())
+                        .userId(keycloakUserId)
+                        .identifier(request.getIdentifier())
                         .timestamp(Instant.now().toEpochMilli())
                         .build()
         );
 
-        log.info("Login exitoso para usuario: {}", request.getIdentifier());
+        log.info("Login exitoso para identifier: {}", request.getIdentifier());
 
         return ApiResponseBuilder.ok(
                 LoginResponseDto.builder()
@@ -67,10 +72,11 @@ public class AuthController {
         );
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<ApiResponse<RegisterResponseDto>> register(@Valid @RequestBody RegisterRequestDto request) {
-        log.info("Register attempt for user: {}", request.getUsername());
-
+    @PostMapping(value = "/register", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<RegisterResponseDto>> register(
+            @Valid @RequestBody RegisterRequestDto request,
+            @RequestHeader(value = "Accept", required = false) String acceptHeader
+    ) {
         String keycloakUserId = keycloakAdminService.registerUser(
                 request.getUsername(),
                 request.getEmail(),
@@ -81,20 +87,12 @@ public class AuthController {
 
         userApprobationService.createPendingUser(keycloakUserId);
 
-        String token = keycloakAuthService.getToken(
-                request.getUsername(),
-                request.getPassword()
-        );
-
-        log.info("Registro exitoso para usuario: {}", request.getUsername());
-
         return ApiResponseBuilder.created(
                 RegisterResponseDto.builder()
-                        .token(token)
                         .username(request.getUsername())
                         .email(request.getEmail())
                         .build(),
-                "Registro exitoso"
+                "Registro exitoso. Pendiente de aprobacion"
         );
     }
 
@@ -104,6 +102,12 @@ public class AuthController {
             @Valid @RequestBody UserApprovalRequestDto request
     ) {
         User updatedUser = userApprobationService.updateStatus(id, request.getStatus());
+
+        if (updatedUser.getStatus() == User.UserStatus.APPROVED) {
+            keycloakAdminService.enableUser(updatedUser.getKeycloakUserId());
+        } else {
+            keycloakAdminService.disableUser(updatedUser.getKeycloakUserId());
+        }
 
         return ApiResponseBuilder.ok(
                 updatedUser.getStatus().name(),

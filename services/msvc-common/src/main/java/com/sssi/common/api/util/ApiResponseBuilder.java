@@ -1,7 +1,9 @@
 package com.sssi.common.api.util;
 
 import com.sssi.common.api.response.ApiResponse;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 import java.util.List;
@@ -39,6 +41,8 @@ public class ApiResponseBuilder {
                 status.value()
         );
 
-        return ResponseEntity.status(status).body(response);
+        return ResponseEntity.status(status)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(response);
     }
 }
