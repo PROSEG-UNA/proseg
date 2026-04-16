@@ -3,7 +3,6 @@ import { menuItemClasses } from '@mui/material/MenuItem';
 import { pickerDayClasses, yearCalendarClasses } from '@mui/x-date-pickers';
 import { gray, brand } from '../themePrimitives';
 
-/* eslint-disable import/prefer-default-export */
 export const datePickersCustomizations = {
   MuiPickerPopper: {
     styleOverrides: {
