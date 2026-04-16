@@ -5,7 +5,7 @@ spring:
   application:
     name: msvc-auth
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: 76.13.124.126:9094
 
 eureka:
   instance:
@@ -21,11 +21,11 @@ routes:
   auth: ${api.prefix}/auth
 
 keycloak:
-  server-url: ${KEYCLOAK_SERVER_URL:http://localhost:8080}
+  server-url: ${KEYCLOAK_SERVER_URL:https://auth.devbychris.com}
   realm: ${KEYCLOAK_REALM:sssi-realm}
   client:
     id: ${KEYCLOAK_CLIENT_ID:sssi-app}
-    secret: ${KEYCLOAK_CLIENT_SECRET:}
+    secret: ${KEYCLOAK_CLIENT_SECRET:Dl8QcQxHHmu6qERkUMmUJ0qWSulRRx6y}
   admin:
-    username: ${KEYCLOAK_ADMIN_USERNAME:sssi-system}
-    password: ${KEYCLOAK_ADMIN_PASSWORD:sssi-system}
+    username: ${KEYCLOAK_ADMIN_USERNAME:admin}
+    password: ${KEYCLOAK_ADMIN_PASSWORD:sssi_user}
