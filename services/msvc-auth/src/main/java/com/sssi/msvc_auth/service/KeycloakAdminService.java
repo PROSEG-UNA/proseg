@@ -2,7 +2,7 @@ package com.sssi.msvc_auth.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sssi.msvc_auth.dto.RoleDto;
+import com.sssi.msvc_auth.dto.RoleResponseDto;
 import com.sssi.msvc_auth.exception.UserException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -179,7 +179,7 @@ public class KeycloakAdminService {
                 || name.equals("uma_authorization");
     }
 
-    public List<RoleDto> getBaseRoles() {
+    public List<RoleResponseDto> getBaseRoles() {
         String adminToken = getAdminToken();
         String rolesUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles";
 
@@ -192,12 +192,12 @@ public class KeycloakAdminService {
                     new HttpEntity<>("", headers), String.class).getBody();
 
             JsonNode rolesNode = objectMapper.readTree(response);
-            List<RoleDto> roles = new ArrayList<>();
+            List<RoleResponseDto> roles = new ArrayList<>();
 
             for (JsonNode node : rolesNode) {
                 String name = node.path("name").asText();
                 if (!node.path("composite").asBoolean(false) && !isInternalRole(name)) {
-                    roles.add(RoleDto.builder()
+                    roles.add(RoleResponseDto.builder()
                             .id(node.path("id").asText())
                             .name(name)
                             .description(node.path("description").asText(null))
@@ -215,7 +215,7 @@ public class KeycloakAdminService {
         }
     }
 
-    public List<RoleDto> getCompositeRoles() {
+    public List<RoleResponseDto> getCompositeRoles() {
         String adminToken = getAdminToken();
         String rolesUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles";
 
@@ -228,12 +228,12 @@ public class KeycloakAdminService {
                     new HttpEntity<>("", headers), String.class).getBody();
 
             JsonNode rolesNode = objectMapper.readTree(response);
-            List<RoleDto> roles = new ArrayList<>();
+            List<RoleResponseDto> roles = new ArrayList<>();
 
             for (JsonNode node : rolesNode) {
                 String name = node.path("name").asText();
                 if (node.path("composite").asBoolean(false) && !isInternalRole(name)) {
-                    roles.add(RoleDto.builder()
+                    roles.add(RoleResponseDto.builder()
                             .id(node.path("id").asText())
                             .name(name)
                             .description(node.path("description").asText(null))
@@ -251,7 +251,7 @@ public class KeycloakAdminService {
         }
     }
 
-    public List<RoleDto> getRoleComposites(String roleName) {
+    public List<RoleResponseDto> getRoleComposites(String roleName) {
         String adminToken = getAdminToken();
         String compositeUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles/" + roleName + "/composites";
 
@@ -264,12 +264,12 @@ public class KeycloakAdminService {
                     new HttpEntity<>("", headers), String.class).getBody();
 
             JsonNode rolesNode = objectMapper.readTree(response);
-            List<RoleDto> roles = new ArrayList<>();
+            List<RoleResponseDto> roles = new ArrayList<>();
 
             for (JsonNode node : rolesNode) {
                 String name = node.path("name").asText();
                 if (!isInternalRole(name)) {
-                    roles.add(RoleDto.builder()
+                    roles.add(RoleResponseDto.builder()
                             .id(node.path("id").asText())
                             .name(name)
                             .description(node.path("description").asText(null))

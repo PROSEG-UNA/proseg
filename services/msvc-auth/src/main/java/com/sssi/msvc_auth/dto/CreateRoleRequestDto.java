@@ -11,7 +11,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class CreateRoleRequest {
+public class CreateRoleRequestDto {
     @NotBlank(message = "El nombre del rol no puede estar vacío")
     private String roleName;
 
