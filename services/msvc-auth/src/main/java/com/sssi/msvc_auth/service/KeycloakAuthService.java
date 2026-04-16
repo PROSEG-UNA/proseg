@@ -15,6 +15,9 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+
 @Service
 @Slf4j
 public class KeycloakAuthService {
@@ -124,6 +127,30 @@ public class KeycloakAuthService {
         } catch (Exception e) {
             log.error("Error inesperado obteniendo token para usuario {}: {}", username, e.getMessage(), e);
             throw new IllegalStateException("Error inesperado al obtener token desde Keycloak", e);
+        }
+    }
+
+    public String extractUserIdFromToken(String token) {
+        try {
+            String[] tokenParts = token.split("\\.");
+            if (tokenParts.length < 2) {
+                throw TokenException.malformed();
+            }
+
+            String payload = new String(Base64.getUrlDecoder().decode(tokenParts[1]), StandardCharsets.UTF_8);
+            JsonNode payloadNode = objectMapper.readTree(payload);
+            String userId = payloadNode.path("sub").asText("");
+
+            if (userId.isBlank()) {
+                throw TokenException.malformed();
+            }
+
+            return userId;
+        } catch (TokenException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("No se pudo extraer el userId desde el token: {}", e.getMessage(), e);
+            throw TokenException.malformed();
         }
     }
 }

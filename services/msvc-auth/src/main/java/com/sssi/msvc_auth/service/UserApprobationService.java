@@ -1,6 +1,7 @@
 package com.sssi.msvc_auth.service;
 
 import com.sssi.msvc_auth.entity.User;
+import com.sssi.msvc_auth.exception.AuthorizationException;
 import com.sssi.msvc_auth.exception.UserException;
 import com.sssi.msvc_auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,15 @@ public class UserApprobationService {
 
     @Transactional
     public User createPendingUser(String keycloakUserId) {
+        UUID sharedUserId;
+        try {
+            sharedUserId = UUID.fromString(keycloakUserId);
+        } catch (IllegalArgumentException ex) {
+            throw UserException.invalidUserIdFormat(keycloakUserId);
+        }
+
         User user = User.builder()
+                .id(sharedUserId)
                 .keycloakUserId(keycloakUserId)
                 .status(User.UserStatus.PENDING)
                 .build();
@@ -32,6 +41,16 @@ public class UserApprobationService {
 
         user.setStatus(status);
         return userRepository.save(user);
+    }
+
+    @Transactional(readOnly = true)
+    public void assertUserIsApproved(String keycloakUserId) {
+        User user = userRepository.findByKeycloakUserId(keycloakUserId)
+                .orElseThrow(() -> AuthorizationException.accountNotApproved(User.UserStatus.PENDING.name()));
+
+        if (user.getStatus() != User.UserStatus.APPROVED) {
+            throw AuthorizationException.accountNotApproved(user.getStatus().name());
+        }
     }
 }
 
