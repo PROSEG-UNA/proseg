@@ -13,7 +13,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/sssi-realm}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:https://auth.devbychris.com/realms/sssi-realm}
 
   cloud:
     gateway:

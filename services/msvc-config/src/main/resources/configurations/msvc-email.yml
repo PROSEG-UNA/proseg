@@ -5,7 +5,7 @@ spring:
   application:
     name: msvc-email
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: 76.13.124.126:9094
   mail:
     host: smtp.gmail.com
     port: 587

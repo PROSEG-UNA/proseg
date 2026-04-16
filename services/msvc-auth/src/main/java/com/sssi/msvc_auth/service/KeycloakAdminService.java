@@ -24,7 +24,7 @@ import java.util.Map;
 @Slf4j
 public class KeycloakAdminService {
 
-    @Value("${keycloak.server-url:http://localhost:8080}")
+    @Value("${keycloak.server-url:https://auth.devbychris.com}")
     private String keycloakServerUrl;
 
     @Value("${keycloak.realm:sssi-realm}")
@@ -33,7 +33,7 @@ public class KeycloakAdminService {
     @Value("${keycloak.admin.username:admin}")
     private String adminUsername;
 
-    @Value("${keycloak.admin.password:admin}")
+    @Value("${keycloak.admin.password:sssi_user}")
     private String adminPassword;
 
     private final RestTemplate restTemplate;
@@ -75,8 +75,8 @@ public class KeycloakAdminService {
         }
     }
 
-    public void registerUser(String username, String email, String password,
-                             String firstName, String lastName) {
+    public String registerUser(String username, String email, String password,
+                               String firstName, String lastName) {
         String adminToken = getAdminToken();
         String createUserUrl = keycloakServerUrl + "/admin/realms/" + realm + "/users";
 
@@ -102,22 +102,29 @@ public class KeycloakAdminService {
             if (e.getMessage() != null && e.getMessage().contains("409")) {
                 throw UserException.userAlreadyExists(username);
             }
-            log.error("Error creando usuario en Keycloak: {}", e.getMessage());
+            log.error("Error creando usuario en Keycloak: {}", e.getMessage(), e);
             throw new IllegalStateException("Error al crear el usuario en Keycloak", e);
         }
 
-        String userId = resolveUserId(username, createUserUrl, headers);
-        setPassword(userId, username, password, createUserUrl, headers);
-
         try {
-            Thread.sleep(1000);
+            Thread.sleep(1500);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+
+        log.info("Iniciando resolveUserId para {}", username);
+        String userId = resolveUserId(username, createUserUrl, headers);
+        log.info("resolveUserId exitoso para {} con id {}", username, userId);
+
+        log.info("Iniciando setPassword para {}", username);
+        setPassword(userId, username, password, createUserUrl, headers);
+        log.info("setPassword exitoso para {}", username);
+
+        return userId;
     }
 
     private String resolveUserId(String username, String baseUrl, HttpHeaders headers) {
-        for (int i = 0; i < 3; i++) {
+        for (int intento = 0; intento < 5; intento++) {
             try {
                 String searchUrl = baseUrl + "?username=" + username;
                 String response = restTemplate.exchange(
@@ -131,16 +138,17 @@ public class KeycloakAdminService {
                     return userId;
                 }
             } catch (Exception e) {
-                log.warn("Intento {} de obtener usuario ID falló: {}", i + 1, e.getMessage());
+                log.warn("Intento {} de obtener usuario ID falló: {}", intento + 1, e.getMessage());
             }
 
-            if (i < 2) {
-                try { Thread.sleep(500); } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                }
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
         }
-        throw UserException.notFound(username);
+
+        throw new IllegalStateException("Usuario creado pero no fue posible obtener su ID en Keycloak");
     }
 
     private void setPassword(String userId, String username, String password,
