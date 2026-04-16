@@ -15,6 +15,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.util.List;
 
 @RestController
 @RequestMapping("${routes.auth}")
@@ -40,13 +41,17 @@ public class AuthController {
                 request.getPassword()
         );
 
-        kafkaTemplate.send(
-                KafkaTopics.USER_LOGIN_TOPIC,
-                UserLoginEvent.builder()
-                        .email(request.getIdentifier()) // FIXME: Identifier can be username or email
-                        .timestamp(Instant.now().toEpochMilli())
-                        .build()
-        );
+        try {
+            kafkaTemplate.send(
+                    KafkaTopics.USER_LOGIN_TOPIC,
+                    UserLoginEvent.builder()
+                            .email(request.getIdentifier()) // FIXME: Identifier can be username or email
+                            .timestamp(Instant.now().toEpochMilli())
+                            .build()
+            );
+        } catch (Exception e) {
+            log.warn("No se pudo enviar evento de login a Kafka: {}", e.getMessage());
+        }
 
         log.info("Login exitoso para usuario: {}", request.getIdentifier());
 
@@ -57,6 +62,49 @@ public class AuthController {
                         .build(),
                 "Login exitoso"
         );
+    }
+
+    @GetMapping("/roles/base")
+    public ResponseEntity<ApiResponse<List<RoleDto>>> getBaseRoles() {
+        log.info("Obteniendo roles base de Keycloak");
+        List<RoleDto> roles = keycloakAdminService.getBaseRoles();
+        return ApiResponseBuilder.ok(roles, "Roles base obtenidos exitosamente");
+    }
+
+    @GetMapping("/roles/composite")
+    public ResponseEntity<ApiResponse<List<RoleDto>>> getCompositeRoles() {
+        log.info("Obteniendo roles compuestos de Keycloak");
+        List<RoleDto> roles = keycloakAdminService.getCompositeRoles();
+        return ApiResponseBuilder.ok(roles, "Roles compuestos obtenidos exitosamente");
+    }
+
+    @GetMapping("/roles/{roleName}/composites")
+    public ResponseEntity<ApiResponse<List<RoleDto>>> getRoleComposites(@PathVariable String roleName) {
+        log.info("Obteniendo composites del rol: {}", roleName);
+        List<RoleDto> roles = keycloakAdminService.getRoleComposites(roleName);
+        return ApiResponseBuilder.ok(roles, "Composites del rol obtenidos exitosamente");
+    }
+
+    @PostMapping("/roles")
+    public ResponseEntity<ApiResponse<Void>> createRole(@Valid @RequestBody CreateRoleRequest request) {
+        log.info("Creando rol: {}", request.getRoleName());
+        keycloakAdminService.createCompositeRole(request.getRoleName(), request.getPrivileges());
+        return ApiResponseBuilder.created(null, "Rol " + request.getRoleName() + " creado exitosamente");
+    }
+
+    @PutMapping("/roles/{roleName}")
+    public ResponseEntity<ApiResponse<Void>> updateRole(@PathVariable String roleName,
+                                                        @Valid @RequestBody CreateRoleRequest request) {
+        log.info("Actualizando rol: {}", roleName);
+        keycloakAdminService.updateRole(roleName, request.getPrivileges());
+        return ApiResponseBuilder.noContent("Rol " + roleName + " actualizado exitosamente");
+    }
+
+    @DeleteMapping("/roles/{roleName}")
+    public ResponseEntity<ApiResponse<Void>> deleteRole(@PathVariable String roleName) {
+        log.info("Eliminando rol: {}", roleName);
+        keycloakAdminService.deleteRole(roleName);
+        return ApiResponseBuilder.noContent("Rol " + roleName + " eliminado exitosamente");
     }
 
     @PostMapping("/register")
