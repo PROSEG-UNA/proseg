@@ -20,9 +20,7 @@ public class KafkaConsumerListener {
             groupId = "msvc-email-group"
     )
     public void onUserLogin(UserLoginEvent event) {
-
-        log.info("LOGIN EVENT RECIBIDO: {}", event);
-
+        log.info("LOGIN EVENT: {}", event);
         emailEventService.sendLoginEmail(event);
     }
 }

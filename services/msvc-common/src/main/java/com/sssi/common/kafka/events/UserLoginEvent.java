@@ -11,6 +11,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UserLoginEvent {
     private String userId;
-    private long timestamp;
     private String identifier;
+    private long timestamp;
 }
