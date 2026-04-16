@@ -2,6 +2,7 @@ package com.sssi.msvc_email.notificacion.template.impl;
 
 import com.sssi.msvc_email.notificacion.exception.EmailTemplateException;
 import com.sssi.msvc_email.notificacion.template.EmailTemplateDefinition;
+import com.sssi.msvc_email.notificacion.util.TemplateValidator;
 import lombok.Builder;
 import org.thymeleaf.context.Context;
 
@@ -38,17 +39,10 @@ public class GenericEmailTemplate implements EmailTemplateDefinition {
     }
 
     private void validate() {
-        if (userName == null || userName.isBlank()) {
-            throw new EmailTemplateException(
-                    "GenericEmailTemplate: 'userName' es requerido");
-        }
-        if (emailTitle == null || emailTitle.isBlank()) {
-            throw new EmailTemplateException(
-                    "GenericEmailTemplate: 'emailTitle' es requerido");
-        }
-        if (emailContent == null || emailContent.isBlank()) {
-            throw new EmailTemplateException(
-                    "GenericEmailTemplate: 'emailContent' es requerido");
-        }
+        String template = "GenericEmailTemplate";
+
+        TemplateValidator.requireNotBlank(userName, "userName", template);
+        TemplateValidator.requireNotBlank(emailTitle, "emailTitle", template);
+        TemplateValidator.requireNotBlank(emailContent, "emailContent", template);
     }
 }

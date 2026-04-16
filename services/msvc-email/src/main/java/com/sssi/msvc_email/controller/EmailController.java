@@ -6,6 +6,8 @@ import com.sssi.msvc_email.notificacion.template.impl.GenericEmailTemplate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/email")
 @RequiredArgsConstructor
@@ -16,7 +18,7 @@ public class EmailController {
     @GetMapping("/test")
     public String send() {
         Email email = Email.builder()
-                .to("PUT YOUR EMAIL TU TEST")
+                .to(List.of("isaacfelibrenes1904@gmail.com"))
                 .subject("Test")
                 .templateDefinition(
                             GenericEmailTemplate.builder()

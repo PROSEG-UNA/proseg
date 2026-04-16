@@ -1,4 +1,4 @@
-package com.sssi.msvc_email.notificacion.service;
+package com.sssi.msvc_email.notificacion.util;
 
 import com.sssi.msvc_email.notificacion.exception.EmailTemplateException;
 import org.springframework.stereotype.Component;
