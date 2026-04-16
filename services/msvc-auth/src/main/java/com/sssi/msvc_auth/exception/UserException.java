@@ -36,4 +36,12 @@ public class UserException extends BaseException {
                 "WEAK_PASSWORD", "La contraseña no cumple los requisitos de seguridad"
         );
     }
+
+    public static UserException invalidUserIdFormat(String userId) {
+        return new UserException(
+                HttpStatus.BAD_REQUEST,
+                "INVALID_USER_ID",
+                "El id de usuario devuelto por Keycloak no es UUID válido: " + userId
+        );
+    }
 }

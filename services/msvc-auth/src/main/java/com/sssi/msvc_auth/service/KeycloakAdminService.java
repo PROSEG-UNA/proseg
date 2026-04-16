@@ -13,7 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -189,5 +191,49 @@ public class KeycloakAdminService {
             log.error("Error verificando existencia de usuario {}: {}", username, e.getMessage());
             return false;
         }
+    }
+
+    public String findUserIdByIdentifier(String identifier) {
+        try {
+            String adminToken = getAdminToken();
+            String encodedIdentifier = UriUtils.encodeQueryParam(identifier, StandardCharsets.UTF_8);
+            String usersUrl = keycloakServerUrl + "/admin/realms/" + realm + "/users";
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + adminToken);
+
+            String userId = extractFirstUserId(usersUrl + "?username=" + encodedIdentifier + "&exact=true", headers);
+            if (userId != null) {
+                return userId;
+            }
+
+            userId = extractFirstUserId(usersUrl + "?email=" + encodedIdentifier + "&exact=true", headers);
+            if (userId != null) {
+                return userId;
+            }
+
+            throw UserException.notFound(identifier);
+        } catch (UserException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error buscando userId en Keycloak para {}: {}", identifier, e.getMessage(), e);
+            throw new IllegalStateException("No se pudo resolver el usuario en Keycloak", e);
+        }
+    }
+
+    private String extractFirstUserId(String searchUrl, HttpHeaders headers) throws Exception {
+        String response = restTemplate.exchange(
+                searchUrl,
+                HttpMethod.GET,
+                new HttpEntity<>("", headers),
+                String.class
+        ).getBody();
+
+        JsonNode users = objectMapper.readTree(response);
+        if (users.isArray() && users.size() > 0 && users.get(0).has("id")) {
+            return users.get(0).get("id").asText();
+        }
+
+        return null;
     }
 }

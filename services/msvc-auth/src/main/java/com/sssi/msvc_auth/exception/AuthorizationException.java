@@ -20,4 +20,11 @@ public class AuthorizationException extends BaseException {
                 "ROLE_NOT_ALLOWED", "El rol '" + role + "' no tiene acceso a este recurso"
         );
     }
+
+    public static AuthorizationException accountNotApproved(String status) {
+        return new AuthorizationException(
+                "ACCOUNT_NOT_APPROVED",
+                "La cuenta no esta aprobada para iniciar sesion. Estado actual: " + status
+        );
+    }
 }

@@ -16,6 +16,7 @@ import com.sssi.msvc_auth.service.UserApprobationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -43,6 +44,9 @@ public class AuthController {
     public ResponseEntity<ApiResponse<LoginResponseDto>> login(@Valid @RequestBody LoginRequestDto request) {
         log.info("Login attempt for user: {}", request.getIdentifier());
 
+        String keycloakUserId = keycloakAdminService.findUserIdByIdentifier(request.getIdentifier());
+        userApprobationService.assertUserIsApproved(keycloakUserId);
+
         String token = keycloakAuthService.getToken(
                 request.getIdentifier(),
                 request.getPassword()
@@ -67,10 +71,11 @@ public class AuthController {
         );
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<ApiResponse<RegisterResponseDto>> register(@Valid @RequestBody RegisterRequestDto request) {
-        log.info("Register attempt for user: {}", request.getUsername());
-
+    @PostMapping(value = "/register", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<RegisterResponseDto>> register(
+            @Valid @RequestBody RegisterRequestDto request,
+            @RequestHeader(value = "Accept", required = false) String acceptHeader
+    ) {
         String keycloakUserId = keycloakAdminService.registerUser(
                 request.getUsername(),
                 request.getEmail(),
@@ -81,20 +86,12 @@ public class AuthController {
 
         userApprobationService.createPendingUser(keycloakUserId);
 
-        String token = keycloakAuthService.getToken(
-                request.getUsername(),
-                request.getPassword()
-        );
-
-        log.info("Registro exitoso para usuario: {}", request.getUsername());
-
         return ApiResponseBuilder.created(
                 RegisterResponseDto.builder()
-                        .token(token)
                         .username(request.getUsername())
                         .email(request.getEmail())
                         .build(),
-                "Registro exitoso"
+                "Registro exitoso. Pendiente de aprobación"
         );
     }
 
