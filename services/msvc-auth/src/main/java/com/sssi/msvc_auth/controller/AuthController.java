@@ -4,11 +4,7 @@ import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
 import com.sssi.common.kafka.events.UserLoginEvent;
 import com.sssi.common.kafka.topics.KafkaTopics;
-import com.sssi.msvc_auth.dto.LoginRequestDto;
-import com.sssi.msvc_auth.dto.LoginResponseDto;
-import com.sssi.msvc_auth.dto.RegisterRequestDto;
-import com.sssi.msvc_auth.dto.RegisterResponseDto;
-import com.sssi.msvc_auth.dto.UserApprovalRequestDto;
+import com.sssi.msvc_auth.dto.*;
 import com.sssi.msvc_auth.entity.User;
 import com.sssi.msvc_auth.service.KeycloakAdminService;
 import com.sssi.msvc_auth.service.KeycloakAuthService;
@@ -76,13 +72,32 @@ public class AuthController {
     public ResponseEntity<ApiResponse<RegisterResponseDto>> register(@Valid @RequestBody RegisterRequestDto request) {
         log.info("Register attempt for user: {}", request.getUsername());
 
-        keycloakAdminService.registerUser(
+        String keycloakUserId = keycloakAdminService.registerUser(
                 request.getUsername(),
                 request.getEmail(),
                 request.getPassword(),
                 request.getFirstName(),
                 request.getLastName()
         );
+
+        userApprobationService.createPendingUser(keycloakUserId);
+
+        String token = keycloakAuthService.getToken(
+                request.getUsername(),
+                request.getPassword()
+        );
+
+        log.info("Registro exitoso para usuario: {}", request.getUsername());
+
+        return ApiResponseBuilder.created(
+                RegisterResponseDto.builder()
+                        .token(token)
+                        .username(request.getUsername())
+                        .email(request.getEmail())
+                        .build(),
+                "Registro exitoso"
+        );
+    }
 
     @GetMapping("/roles/base")
     public ResponseEntity<ApiResponse<List<RoleDto>>> getBaseRoles() {
@@ -125,28 +140,6 @@ public class AuthController {
         log.info("Eliminando rol: {}", roleName);
         keycloakAdminService.deleteRole(roleName);
         return ApiResponseBuilder.noContent("Rol " + roleName + " eliminado exitosamente");
-    }
-
-
-        String keycloakUserId = keycloakAdminService.registerUser(
-
-        userApprobationService.createPendingUser(keycloakUserId);
-
-        String token = keycloakAuthService.getToken(
-                request.getUsername(),
-                request.getPassword()
-        );
-
-        log.info("Registro exitoso para usuario: {}", request.getUsername());
-
-        return ApiResponseBuilder.created(
-                RegisterResponseDto.builder()
-                        .token(token)
-                        .username(request.getUsername())
-                        .email(request.getEmail())
-                        .build(),
-                "Registro exitoso"
-        );
     }
 
     @PatchMapping("/users/{id}/approval")
