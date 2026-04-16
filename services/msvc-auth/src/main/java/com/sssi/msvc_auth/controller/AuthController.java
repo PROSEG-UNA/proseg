@@ -42,25 +42,26 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponseDto>> login(@Valid @RequestBody LoginRequestDto request) {
-        log.info("Login attempt for user: {}", request.getIdentifier());
-
-        String keycloakUserId = keycloakAdminService.findUserIdByIdentifier(request.getIdentifier());
-        userApprobationService.assertUserIsApproved(keycloakUserId);
+        log.info("Login attempt for identifier: {}", request.getIdentifier());
 
         String token = keycloakAuthService.getToken(
                 request.getIdentifier(),
                 request.getPassword()
         );
 
+        String keycloakUserId = keycloakAuthService.extractUserIdFromToken(token);
+        userApprobationService.assertUserIsApproved(keycloakUserId);
+
         kafkaTemplate.send(
                 KafkaTopics.USER_LOGIN_TOPIC,
                 UserLoginEvent.builder()
-                        .email(request.getIdentifier())
+                        .userId(keycloakUserId)
+                        .identifier(request.getIdentifier())
                         .timestamp(Instant.now().toEpochMilli())
                         .build()
         );
 
-        log.info("Login exitoso para usuario: {}", request.getIdentifier());
+        log.info("Login exitoso para identifier: {}", request.getIdentifier());
 
         return ApiResponseBuilder.ok(
                 LoginResponseDto.builder()
@@ -91,7 +92,7 @@ public class AuthController {
                         .username(request.getUsername())
                         .email(request.getEmail())
                         .build(),
-                "Registro exitoso. Pendiente de aprobación"
+                "Registro exitoso. Pendiente de aprobacion"
         );
     }
 
@@ -101,6 +102,12 @@ public class AuthController {
             @Valid @RequestBody UserApprovalRequestDto request
     ) {
         User updatedUser = userApprobationService.updateStatus(id, request.getStatus());
+
+        if (updatedUser.getStatus() == User.UserStatus.APPROVED) {
+            keycloakAdminService.enableUser(updatedUser.getKeycloakUserId());
+        } else {
+            keycloakAdminService.disableUser(updatedUser.getKeycloakUserId());
+        }
 
         return ApiResponseBuilder.ok(
                 updatedUser.getStatus().name(),
