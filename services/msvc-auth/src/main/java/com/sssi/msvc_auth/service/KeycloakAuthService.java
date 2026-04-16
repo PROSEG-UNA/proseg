@@ -21,7 +21,7 @@ public class KeycloakAuthService {
     @Value("${keycloak.server-url:http://localhost:8080}")
     private String keycloakServerUrl;
 
-    @Value("${keycloak.realm:sssi}")
+    @Value("${keycloak.realm:sssi-realm}")
     private String realm;
 
     @Value("${keycloak.client.id:sssi-app}")
