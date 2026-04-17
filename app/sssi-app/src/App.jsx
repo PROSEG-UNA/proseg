@@ -15,7 +15,7 @@ import DashboardLayout from './layouts/DashboardLayout';
 
 function App() {
   return (
-    <AppTheme defaultColorScheme="dark">
+    <AppTheme defaultColorScheme="light">
       <CssBaseline />
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <SidebarProvider>

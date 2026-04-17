@@ -18,6 +18,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -92,6 +93,49 @@ public class AuthController {
         );
     }
 
+    @GetMapping("/roles/base")
+    public ResponseEntity<ApiResponse<List<RoleResponseDto>>> getBaseRoles() {
+        log.info("Obteniendo roles base de Keycloak");
+        List<RoleResponseDto> roles = keycloakAdminService.getBaseRoles();
+        return ApiResponseBuilder.ok(roles, "Roles base obtenidos exitosamente");
+    }
+
+    @GetMapping("/roles/composite")
+    public ResponseEntity<ApiResponse<List<RoleResponseDto>>> getCompositeRoles() {
+        log.info("Obteniendo roles compuestos de Keycloak");
+        List<RoleResponseDto> roles = keycloakAdminService.getCompositeRoles();
+        return ApiResponseBuilder.ok(roles, "Roles compuestos obtenidos exitosamente");
+    }
+
+    @GetMapping("/roles/{roleName}/composites")
+    public ResponseEntity<ApiResponse<List<RoleResponseDto>>> getRoleComposites(@PathVariable String roleName) {
+        log.info("Obteniendo composites del rol: {}", roleName);
+        List<RoleResponseDto> roles = keycloakAdminService.getRoleComposites(roleName);
+        return ApiResponseBuilder.ok(roles, "Composites del rol obtenidos exitosamente");
+    }
+
+    @PostMapping("/roles")
+    public ResponseEntity<ApiResponse<Void>> createRole(@Valid @RequestBody CreateRoleRequestDto request) {
+        log.info("Creando rol: {}", request.getRoleName());
+        keycloakAdminService.createCompositeRole(request.getRoleName(), request.getPrivileges());
+        return ApiResponseBuilder.created(null, "Rol " + request.getRoleName() + " creado exitosamente");
+    }
+
+    @PutMapping("/roles/{roleName}")
+    public ResponseEntity<ApiResponse<Void>> updateRole(@PathVariable String roleName,
+                                                        @Valid @RequestBody CreateRoleRequestDto request) {
+        log.info("Actualizando rol: {}", roleName);
+        keycloakAdminService.updateRole(roleName, request.getPrivileges());
+        return ApiResponseBuilder.noContent("Rol " + roleName + " actualizado exitosamente");
+    }
+
+    @DeleteMapping("/roles/{roleName}")
+    public ResponseEntity<ApiResponse<Void>> deleteRole(@PathVariable String roleName) {
+        log.info("Eliminando rol: {}", roleName);
+        keycloakAdminService.deleteRole(roleName);
+        return ApiResponseBuilder.noContent("Rol " + roleName + " eliminado exitosamente");
+    }
+
     @PatchMapping("/users/{id}/approval")
     public ResponseEntity<ApiResponse<String>> updateUserApproval(
             @PathVariable UUID id,
@@ -113,12 +157,7 @@ public class AuthController {
 
     @GetMapping("/users/keycloak/{id}")
     public ResponseEntity<ApiResponse<KeycloakUserResponseDto>> getUserById(@PathVariable String id) {
-
         KeycloakUserResponseDto user = keycloakAdminService.getUserById(id);
-
-        return ApiResponseBuilder.ok(
-                user,
-                "Usuario obtenido correctamente"
-        );
+        return ApiResponseBuilder.ok(user, "Usuario obtenido correctamente");
     }
 }

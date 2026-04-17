@@ -3,3 +3,6 @@ spring:
     name: msvc-gateway
   config:
     import: optional:configserver:http://localhost:8888
+
+cors:
+  allowed-origins: http://localhost:5173
