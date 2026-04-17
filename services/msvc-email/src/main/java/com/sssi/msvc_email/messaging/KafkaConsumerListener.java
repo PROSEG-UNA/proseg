@@ -1,6 +1,7 @@
 package com.sssi.msvc_email.messaging;
 
 import com.sssi.common.kafka.events.UserLoginEvent;
+import com.sssi.common.kafka.events.UserRegisteredEvent;
 import com.sssi.common.kafka.topics.KafkaTopics;
 import com.sssi.msvc_email.notificacion.service.EmailEventService;
 import lombok.RequiredArgsConstructor;
@@ -17,10 +18,22 @@ public class KafkaConsumerListener {
 
     @KafkaListener(
             topics = KafkaTopics.USER_LOGIN_TOPIC,
-            groupId = "msvc-email-group"
+            groupId = "msvc-email-group",
+            containerFactory = "userLoginListenerFactory"
     )
     public void onUserLogin(UserLoginEvent event) {
         log.info("LOGIN EVENT: {}", event);
         emailEventService.sendLoginEmail(event);
+    }
+
+    @KafkaListener(
+            topics = KafkaTopics.USER_REGISTERED_TOPIC,
+            groupId = "msvc-email-group",
+            containerFactory = "userRegisteredListenerFactory"
+    )
+    public void onUserRegistered(UserRegisteredEvent event) {
+        log.info("REGISTER EVENT: {}", event);
+        emailEventService.sendRegisteredEmail(event);
+        emailEventService.sendApprovalEmails(event);
     }
 }
