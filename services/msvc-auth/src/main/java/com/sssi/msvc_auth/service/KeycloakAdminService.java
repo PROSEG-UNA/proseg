@@ -33,7 +33,7 @@ public class KeycloakAdminService {
     @Value("${keycloak.admin.username:admin}")
     private String adminUsername;
 
-    @Value("${keycloak.admin.password:}")
+    @Value("${keycloak.admin.password}")
     private String adminPassword;
 
     private final RestTemplate restTemplate;
@@ -166,7 +166,7 @@ public class KeycloakAdminService {
             String currentUserResponse = restTemplate.exchange(
                     userUrl,
                     HttpMethod.GET,
-                    new HttpEntity<>("", headers),
+                    new HttpEntity<>(headers),
                     String.class
             ).getBody();
 
@@ -292,7 +292,7 @@ public class KeycloakAdminService {
             for (String privilege : privileges) {
                 String roleUrl = rolesUrl + "/" + privilege;
                 String response = restTemplate.exchange(roleUrl, HttpMethod.GET,
-                        new HttpEntity<>("", headers), String.class).getBody();
+                        new HttpEntity<>(headers), String.class).getBody();
                 JsonNode node = objectMapper.readTree(response);
                 Map<String, Object> roleData = new HashMap<>();
                 roleData.put("id", node.path("id").asText());
@@ -320,7 +320,7 @@ public class KeycloakAdminService {
         try {
             String compositeUrl = rolesUrl + "/" + roleName + "/composites";
             String currentResponse = restTemplate.exchange(compositeUrl, HttpMethod.GET,
-                    new HttpEntity<>("", headers), String.class).getBody();
+                    new HttpEntity<>(headers), String.class).getBody();
 
             JsonNode currentNode = objectMapper.readTree(currentResponse);
             List<Map<String, Object>> currentPrivileges = new ArrayList<>();
@@ -340,7 +340,7 @@ public class KeycloakAdminService {
             for (String privilege : newPrivileges) {
                 String roleUrl = rolesUrl + "/" + privilege;
                 String response = restTemplate.exchange(roleUrl, HttpMethod.GET,
-                        new HttpEntity<>("", headers), String.class).getBody();
+                        new HttpEntity<>(headers), String.class).getBody();
                 JsonNode node = objectMapper.readTree(response);
                 Map<String, Object> roleData = new HashMap<>();
                 roleData.put("id", node.path("id").asText());

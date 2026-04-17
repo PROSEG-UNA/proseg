@@ -9,6 +9,15 @@ const getAuthHeaders = () => {
     };
 };
 
+const parseResponse = async (response) => {
+    const body = await response.json();
+    if (!response.ok) {
+        const message = body?.message || body?.errors?.join(', ') || `HTTP ${response.status}`;
+        throw new Error(message);
+    }
+    return body;
+};
+
 export const authAPI = {
     login: async (identifier, password) => {
         const response = await fetch(`${BASE_URL}/login`, {
@@ -16,7 +25,7 @@ export const authAPI = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ identifier, password }),
         });
-        return response.json();
+        return parseResponse(response);
     },
 
     register: async ({ username, email, password, firstName, lastName }) => {
@@ -25,13 +34,13 @@ export const authAPI = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, email, password, firstName, lastName }),
         });
-        return response.json();
+        return parseResponse(response);
     },
 
     getCurrentUser: async () => {
         const response = await fetch(`${BASE_URL}/me`, {
             headers: getAuthHeaders(),
         });
-        return response.json();
+        return parseResponse(response);
     },
 };

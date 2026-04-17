@@ -39,16 +39,10 @@ export function RegisterPage() {
         setLoading(true);
         setError('');
         try {
-            const result = await authAPI.register(formData);
-            if (result?.success) {
-                navigate('/login');
-            } else {
-                const msgs = result?.errors?.join(', ') || result?.message || 'Error al registrar el usuario.';
-                setError(msgs);
-            }
+            await authAPI.register(formData);
+            navigate('/login');
         } catch (err) {
-            setError('Error al registrar el usuario. Intenta de nuevo.');
-            console.error(err);
+            setError(err.message || 'Error al registrar el usuario. Intenta de nuevo.');
         } finally {
             setLoading(false);
         }

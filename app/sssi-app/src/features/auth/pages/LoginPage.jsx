@@ -34,16 +34,11 @@ export function LoginPage() {
         setError('');
         try {
             const result = await authAPI.login(formData.identifier, formData.password);
-            if (result?.data?.token) {
-                const tokenKey = import.meta.env.VITE_AUTH_BEARER_TOKEN_KEY || 'auth_token';
-                localStorage.setItem(tokenKey, result.data.token);
-                navigate('/inventario');
-            } else {
-                setError(result?.message || 'Error en la autenticación. Intenta de nuevo.');
-            }
+            const tokenKey = import.meta.env.VITE_AUTH_BEARER_TOKEN_KEY || 'auth_token';
+            localStorage.setItem(tokenKey, result.data.token);
+            navigate('/inventario');
         } catch (err) {
-            setError('Error en la autenticación. Intenta de nuevo.');
-            console.error(err);
+            setError(err.message || 'Error en la autenticación. Intenta de nuevo.');
         } finally {
             setLoading(false);
         }
