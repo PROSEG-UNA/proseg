@@ -17,15 +17,6 @@ const config = {
     info:    { icon: InfoOutlinedIcon,        color: 'info.main',    title: 'Información' },
 };
 
-/**
- * Modal de alerta reutilizable.
- *
- * @param {'success'|'error'|'warning'|'info'} type
- * @param {string}   title    - Sobreescribe el título por defecto del tipo.
- * @param {string}   message  - Mensaje a mostrar.
- * @param {boolean}  open
- * @param {function} onClose
- */
 export default function AlertModal({ type = 'info', title, message, open, onClose }) {
     const { icon: Icon, color, title: defaultTitle } = config[type] ?? config.info;
 
