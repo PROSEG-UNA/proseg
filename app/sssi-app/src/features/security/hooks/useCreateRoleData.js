@@ -8,26 +8,23 @@ export function useCreateRoleData() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    useEffect(() => {
-        async function load() {
-            try {
-                setLoading(true);
-                const privileges = await fetchAllPrivileges();
-                setAllPrivileges(
-                    privileges.map((p) => ({
-                        id: p.id,
-                        name: p.name,
-                        description: p.description || '—',
-                    }))
-                );
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'Error al cargar privilegios');
-            } finally {
-                setLoading(false);
-            }
+    const load = async () => {
+        try {
+            setLoading(true);
+            const privileges = await fetchAllPrivileges();
+            setAllPrivileges(
+                privileges.map((p) => ({
+                    id: p.id,
+                    name: p.name,
+                    description: p.description || '—',
+                }))
+            );
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Error al cargar privilegios');
+        } finally {
+            setLoading(false);
         }
-        load();
-    }, []);
+    };
 
     const save = async () => {
         const privilegeNames = selectedIds
@@ -35,6 +32,10 @@ export function useCreateRoleData() {
             .filter(Boolean);
         await createRole(roleName.trim(), privilegeNames);
     };
+
+    useEffect(() => {
+        void load();
+    }, []);
 
     return { allPrivileges, selectedIds, setSelectedIds, roleName, setRoleName, loading, error, save };
 }
