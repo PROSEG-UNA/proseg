@@ -3,6 +3,8 @@ package com.sssi.msvc_email.notificacion.model;
 import com.sssi.msvc_email.notificacion.template.EmailTemplateDefinition;
 import lombok.*;
 
+import java.util.List;
+
 /**
  * Minimal representation of an outbound email request.
  *
@@ -15,8 +17,8 @@ import lombok.*;
 @AllArgsConstructor
 public class Email {
 
-    /** Recipient email address. */
-    private String to;
+    /** Recipients email addresses */
+    private List<String> to;
 
     /** Email subject line. */
     private String subject;

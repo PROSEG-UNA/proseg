@@ -19,5 +19,5 @@ public final class KafkaTopics {
      * Produced by: msvc-auth
      * Consumed by: msvc-email (and other services if needed)
      */
-    public static final String USER_LOGIN_TOPIC = "user-login-topic";
+    public static final String USER_LOGIN_TOPIC = "user-login-1";
 }

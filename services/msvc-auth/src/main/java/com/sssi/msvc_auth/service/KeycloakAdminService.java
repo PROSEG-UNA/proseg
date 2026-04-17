@@ -2,6 +2,7 @@ package com.sssi.msvc_auth.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sssi.msvc_auth.dto.KeycloakUserResponseDto;
 import com.sssi.msvc_auth.exception.UserException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -65,6 +66,47 @@ public class KeycloakAdminService {
         } catch (Exception e) {
             log.error("Error obteniendo token de administrador: {}", e.getMessage(), e);
             throw new IllegalStateException("No se pudo autenticar con Keycloak admin", e);
+        }
+    }
+
+    public KeycloakUserResponseDto getUserById(String userId) {
+        String adminToken = getAdminToken();
+        String url = keycloakServerUrl + "/admin/realms/" + realm + "/users/" + userId;
+
+        HttpHeaders headers = buildJsonHeaders(adminToken);
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    String.class
+            );
+
+            JsonNode node = objectMapper.readTree(response.getBody());
+
+            return KeycloakUserResponseDto.builder()
+                    .id(node.path("id").asText())
+                    .username(node.path("username").asText())
+                    .email(node.path("email").asText())
+                    .firstName(node.path("firstName").asText())
+                    .lastName(node.path("lastName").asText())
+                    .build();
+
+        } catch (HttpStatusCodeException e) {
+
+            if (e.getStatusCode().value() == 404) {
+                throw UserException.notFound(userId);
+            }
+
+            log.error("Error HTTP obteniendo usuario {}: {} - {}",
+                    userId, e.getStatusCode(), e.getResponseBodyAsString());
+
+            throw new IllegalStateException("Error consultando usuario en Keycloak", e);
+
+        } catch (Exception e) {
+            log.error("Error inesperado obteniendo usuario {}: {}", userId, e.getMessage(), e);
+            throw new IllegalStateException("Error inesperado consultando Keycloak", e);
         }
     }
 

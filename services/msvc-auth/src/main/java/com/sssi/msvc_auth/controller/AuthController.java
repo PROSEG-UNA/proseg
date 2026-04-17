@@ -4,11 +4,7 @@ import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
 import com.sssi.common.kafka.events.UserLoginEvent;
 import com.sssi.common.kafka.topics.KafkaTopics;
-import com.sssi.msvc_auth.dto.LoginRequestDto;
-import com.sssi.msvc_auth.dto.LoginResponseDto;
-import com.sssi.msvc_auth.dto.RegisterRequestDto;
-import com.sssi.msvc_auth.dto.RegisterResponseDto;
-import com.sssi.msvc_auth.dto.UserApprovalRequestDto;
+import com.sssi.msvc_auth.dto.*;
 import com.sssi.msvc_auth.entity.User;
 import com.sssi.msvc_auth.service.KeycloakAdminService;
 import com.sssi.msvc_auth.service.KeycloakAuthService;
@@ -112,6 +108,17 @@ public class AuthController {
         return ApiResponseBuilder.ok(
                 updatedUser.getStatus().name(),
                 "Estado del usuario actualizado"
+        );
+    }
+
+    @GetMapping("/users/keycloak/{id}")
+    public ResponseEntity<ApiResponse<KeycloakUserResponseDto>> getUserById(@PathVariable String id) {
+
+        KeycloakUserResponseDto user = keycloakAdminService.getUserById(id);
+
+        return ApiResponseBuilder.ok(
+                user,
+                "Usuario obtenido correctamente"
         );
     }
 }

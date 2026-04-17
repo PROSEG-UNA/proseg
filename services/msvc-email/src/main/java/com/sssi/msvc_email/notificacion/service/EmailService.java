@@ -1,7 +1,9 @@
 package com.sssi.msvc_email.notificacion.service;
 
+import com.sssi.msvc_email.notificacion.exception.EmailSendingException;
 import com.sssi.msvc_email.notificacion.model.Email;
 import com.sssi.msvc_email.notificacion.template.EmailTemplateDefinition;
+import com.sssi.msvc_email.notificacion.util.EmailValidator;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,21 +29,14 @@ public class EmailService {
     @Value("${spring.mail.username}")
     private String sender;
 
-    /**
-     * Sends an email using the template definition embedded in the request.
-     * <p>
-     * The service is responsible for:
-     * 1. Validating addresses
-     * 2. Delegating context construction to the template
-     * 3. Rendering HTML via Thymeleaf
-     * 4. Attaching inline images declared by the template
-     * 5. Dispatching the message
-     * <p>
-     * It does NOT know anything about individual template variables.
-     */
     public void sendEmail(Email email) {
         emailValidator.validate(sender);
-        emailValidator.validate(email.getTo());
+
+        if (email.getTo() == null || email.getTo().isEmpty()) {
+            throw new EmailSendingException("Email debe tener al menos un destinatario");
+        }
+
+        email.getTo().forEach(emailValidator::validate);
 
         EmailTemplateDefinition template = email.getTemplateDefinition();
 
@@ -54,18 +49,21 @@ public class EmailService {
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
             helper.setFrom(sender);
-            helper.setTo(email.getTo());
+            helper.setTo(email.getTo().toArray(new String[0]));
             helper.setSubject(email.getSubject());
             helper.setText(html, true);
 
             attachInlineImages(helper, template.getInlineImages());
 
             mailSender.send(message);
-            log.info("Email enviado a {} usando template {}", email.getTo(), email.getTemplateDefinition().getTemplateName());
+
+            log.info("Email enviado a {} usando template {}",
+                    String.join(", ", email.getTo()),
+                    template.getTemplateName());
 
         } catch (Exception e) {
-            throw new RuntimeException(
-                    "Error enviando email a " + email.getTo() + ": " + e.getMessage(), e);
+            throw new EmailSendingException(
+                    "Error enviando email a " + email.getTo(), e);
         }
     }
 
