@@ -13,18 +13,13 @@ import {
 } from '@mui/material';
 import LoginIcon from '@mui/icons-material/Login';
 import { alpha } from '@mui/material/styles';
+import { authAPI } from '../services/authAPI';
+import { fieldSx } from '../../../common/utils';
 import '../css/LoginPage.css';
-
-const fieldSx = (theme) => ({
-    '& .MuiOutlinedInput-root': {
-        '& fieldset': { borderColor: theme.palette.grey[400] },
-        '&:hover fieldset': { borderColor: theme.palette.primary.main },
-    },
-});
 
 export function LoginPage() {
     const navigate = useNavigate();
-    const [formData, setFormData] = useState({ email: '', password: '' });
+    const [formData, setFormData] = useState({ identifier: '', password: '' });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -38,10 +33,17 @@ export function LoginPage() {
         setLoading(true);
         setError('');
         try {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            navigate('/inventario');
+            const result = await authAPI.login(formData.identifier, formData.password);
+            if (result?.data?.token) {
+                const tokenKey = import.meta.env.VITE_AUTH_BEARER_TOKEN_KEY || 'auth_token';
+                localStorage.setItem(tokenKey, result.data.token);
+                navigate('/inventario');
+            } else {
+                setError(result?.message || 'Error en la autenticación. Intenta de nuevo.');
+            }
         } catch (err) {
-            setError('Error en la autenticación. Intenta de nuevo.', err);
+            setError('Error en la autenticación. Intenta de nuevo.');
+            console.error(err);
         } finally {
             setLoading(false);
         }
@@ -101,10 +103,10 @@ export function LoginPage() {
                         <form onSubmit={handleSubmit}>
                             <TextField
                                 fullWidth
-                                label="Email"
-                                name="email"
-                                type="email"
-                                value={formData.email}
+                                label="Usuario o Email"
+                                name="identifier"
+                                type="text"
+                                value={formData.identifier}
                                 onChange={handleChange}
                                 margin="dense"
                                 variant="outlined"

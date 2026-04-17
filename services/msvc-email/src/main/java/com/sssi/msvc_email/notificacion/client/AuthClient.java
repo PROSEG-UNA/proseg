@@ -7,12 +7,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 @FeignClient(
-        name = "msvc-auth",
-        url = "localhost:8081/api/auth"
+        name = "msvc-auth"
 )
 public interface AuthClient {
 
-    @GetMapping("/users/keycloak/{id}")
+    @GetMapping("/api/auth/users/keycloak/{id}")
     ApiResponse<KeycloakUserDto> getUserById(@PathVariable String id);
 
 }

@@ -33,7 +33,7 @@ public class KeycloakAdminService {
     @Value("${keycloak.admin.username:admin}")
     private String adminUsername;
 
-    @Value("${keycloak.admin.password:sssi_user}")
+    @Value("${keycloak.admin.password:}")
     private String adminPassword;
 
     private final RestTemplate restTemplate;
@@ -189,72 +189,52 @@ public class KeycloakAdminService {
     }
 
     public List<RoleResponseDto> getBaseRoles() {
-        String adminToken = getAdminToken();
-        String rolesUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + adminToken);
-
-        try {
-            String response = restTemplate.exchange(
-                    rolesUrl, HttpMethod.GET,
-                    new HttpEntity<>("", headers), String.class).getBody();
-
-            JsonNode rolesNode = objectMapper.readTree(response);
-            List<RoleResponseDto> roles = new ArrayList<>();
-
-            for (JsonNode node : rolesNode) {
-                String name = node.path("name").asText();
-                if (!node.path("composite").asBoolean(false) && !isInternalRole(name)) {
-                    roles.add(RoleResponseDto.builder()
-                            .id(node.path("id").asText())
-                            .name(name)
-                            .description(node.path("description").asText(null))
-                            .composite(false)
-                            .build());
-                }
-            }
-
-            log.info("Roles base obtenidos: {}", roles.size());
-            return roles;
-        } catch (Exception e) {
-            log.error("Error obteniendo roles base: {}", e.getMessage());
-            throw new IllegalStateException("Error al obtener los roles base de Keycloak", e);
-        }
+        List<RoleResponseDto> roles = fetchAllKeycloakRoles();
+        List<RoleResponseDto> result = roles.stream()
+                .filter(r -> !r.isComposite())
+                .toList();
+        log.info("Roles base obtenidos: {}", result.size());
+        return result;
     }
 
     public List<RoleResponseDto> getCompositeRoles() {
+        List<RoleResponseDto> roles = fetchAllKeycloakRoles();
+        List<RoleResponseDto> result = roles.stream()
+                .filter(RoleResponseDto::isComposite)
+                .toList();
+        log.info("Roles compuestos obtenidos: {}", result.size());
+        return result;
+    }
+
+    private List<RoleResponseDto> fetchAllKeycloakRoles() {
         String adminToken = getAdminToken();
         String rolesUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + adminToken);
+        HttpHeaders headers = buildJsonHeaders(adminToken);
 
         try {
             String response = restTemplate.exchange(
                     rolesUrl, HttpMethod.GET,
-                    new HttpEntity<>("", headers), String.class).getBody();
+                    new HttpEntity<>(headers), String.class).getBody();
 
             JsonNode rolesNode = objectMapper.readTree(response);
             List<RoleResponseDto> roles = new ArrayList<>();
 
             for (JsonNode node : rolesNode) {
                 String name = node.path("name").asText();
-                if (node.path("composite").asBoolean(false) && !isInternalRole(name)) {
+                if (!isInternalRole(name)) {
                     roles.add(RoleResponseDto.builder()
                             .id(node.path("id").asText())
                             .name(name)
                             .description(node.path("description").asText(null))
-                            .composite(true)
+                            .composite(node.path("composite").asBoolean(false))
                             .build());
                 }
             }
 
-            log.info("Roles compuestos obtenidos: {}", roles.size());
             return roles;
         } catch (Exception e) {
-            log.error("Error obteniendo roles compuestos: {}", e.getMessage());
-            throw new IllegalStateException("Error al obtener los roles compuestos de Keycloak", e);
+            log.error("Error obteniendo roles de Keycloak: {}", e.getMessage());
+            throw new IllegalStateException("Error al obtener los roles de Keycloak", e);
         }
     }
 
@@ -262,13 +242,12 @@ public class KeycloakAdminService {
         String adminToken = getAdminToken();
         String compositeUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles/" + roleName + "/composites";
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + adminToken);
+        HttpHeaders headers = buildJsonHeaders(adminToken);
 
         try {
             String response = restTemplate.exchange(
                     compositeUrl, HttpMethod.GET,
-                    new HttpEntity<>("", headers), String.class).getBody();
+                    new HttpEntity<>(headers), String.class).getBody();
 
             JsonNode rolesNode = objectMapper.readTree(response);
             List<RoleResponseDto> roles = new ArrayList<>();
@@ -297,9 +276,7 @@ public class KeycloakAdminService {
         String adminToken = getAdminToken();
         String rolesUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles";
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("Authorization", "Bearer " + adminToken);
+        HttpHeaders headers = buildJsonHeaders(adminToken);
 
         try {
             Map<String, Object> roleMap = new HashMap<>();
@@ -338,9 +315,7 @@ public class KeycloakAdminService {
         String adminToken = getAdminToken();
         String rolesUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles";
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("Authorization", "Bearer " + adminToken);
+        HttpHeaders headers = buildJsonHeaders(adminToken);
 
         try {
             String compositeUrl = rolesUrl + "/" + roleName + "/composites";
@@ -387,12 +362,11 @@ public class KeycloakAdminService {
         String adminToken = getAdminToken();
         String roleUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles/" + roleName;
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + adminToken);
+        HttpHeaders headers = buildJsonHeaders(adminToken);
 
         try {
             restTemplate.exchange(roleUrl, HttpMethod.DELETE,
-                    new HttpEntity<>("", headers), String.class);
+                    new HttpEntity<>(headers), String.class);
             log.info("Rol {} eliminado de Keycloak", roleName);
         } catch (Exception e) {
             log.error("Error eliminando rol {}: {}", roleName, e.getMessage());
@@ -405,12 +379,11 @@ public class KeycloakAdminService {
             String adminToken = getAdminToken();
             String searchUrl = keycloakServerUrl + "/admin/realms/" + realm + "/users?username=" + username;
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", "Bearer " + adminToken);
+            HttpHeaders headers = buildJsonHeaders(adminToken);
 
             String response = restTemplate.exchange(
                     searchUrl, HttpMethod.GET,
-                    new HttpEntity<>("", headers), String.class).getBody();
+                    new HttpEntity<>(headers), String.class).getBody();
 
             JsonNode users = objectMapper.readTree(response);
             return users.isArray() && users.size() > 0;

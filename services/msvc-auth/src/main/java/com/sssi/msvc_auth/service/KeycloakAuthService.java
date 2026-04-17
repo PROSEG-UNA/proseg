@@ -31,7 +31,7 @@ public class KeycloakAuthService {
     @Value("${keycloak.client.id:sssi-app}")
     private String clientId;
 
-    @Value("${keycloak.client.secret:Dl8QcQxHHmu6qERkUMmUJ0qWSulRRx6y}")
+    @Value("${keycloak.client.secret:}")
     private String clientSecret;
 
     private final RestTemplate restTemplate;
@@ -52,7 +52,6 @@ public class KeycloakAuthService {
             MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
             body.add("grant_type", "password");
             if (clientSecret != null && !clientSecret.isEmpty()) {
-                log.info("Client secret presente: {}", clientSecret != null && !clientSecret.isBlank());
                 body.add("client_secret", clientSecret);
             }
             body.add("client_id", clientId);
@@ -65,7 +64,6 @@ public class KeycloakAuthService {
             log.info("Client ID: {}", clientId);
             log.info("Client secret presente: {}", clientSecret != null && !clientSecret.isBlank());
             log.info("Username: {}", username);
-            log.info("Password presente: {}", password != null && !password.isBlank());
 
             HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
             String response = restTemplate.postForObject(tokenUrl, request, String.class);
@@ -112,9 +110,7 @@ public class KeycloakAuthService {
 
                     throw new IllegalStateException("Error de Keycloak: " + error + " - " + description);
 
-                } catch (AuthenticationException e1) {
-                    throw e1;
-                } catch (IllegalStateException e1) {
+                } catch (AuthenticationException | IllegalStateException e1) {
                     throw e1;
                 } catch (Exception parseEx) {
                     log.warn("No se pudo parsear el body de error de Keycloak: {}", parseEx.getMessage());

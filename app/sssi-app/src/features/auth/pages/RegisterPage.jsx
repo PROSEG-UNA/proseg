@@ -13,18 +13,19 @@ import {
 } from '@mui/material';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import { alpha } from '@mui/material/styles';
+import { authAPI } from '../services/authAPI';
+import { fieldSx } from '../../../common/utils';
 import '../css/RegisterPage.css';
-
-const fieldSx = (theme) => ({
-    '& .MuiOutlinedInput-root': {
-        '& fieldset': { borderColor: theme.palette.grey[400] },
-        '&:hover fieldset': { borderColor: theme.palette.primary.main },
-    },
-});
 
 export function RegisterPage() {
     const navigate = useNavigate();
-    const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+    const [formData, setFormData] = useState({
+        username: '',
+        firstName: '',
+        lastName: '',
+        email: '',
+        password: '',
+    });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -38,10 +39,17 @@ export function RegisterPage() {
         setLoading(true);
         setError('');
         try {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            navigate('/login');
+            const result = await authAPI.register(formData);
+            if (result?.success) {
+                navigate('/login');
+            } else {
+                const msgs = result?.errors?.join(', ') || result?.message || 'Error al registrar el usuario.';
+                setError(msgs);
+            }
         } catch (err) {
-            setError('Error al registrar el usuario. Intenta de nuevo. ', err);
+            setError('Error al registrar el usuario. Intenta de nuevo.');
+            console.error(err);
+        } finally {
             setLoading(false);
         }
     };
@@ -100,10 +108,36 @@ export function RegisterPage() {
                         <form onSubmit={handleSubmit}>
                             <TextField
                                 fullWidth
-                                label="Nombre completo"
-                                name="name"
+                                label="Nombre de usuario"
+                                name="username"
                                 type="text"
-                                value={formData.name}
+                                value={formData.username}
+                                onChange={handleChange}
+                                margin="dense"
+                                variant="outlined"
+                                required
+                                disabled={loading}
+                                sx={fieldSx}
+                            />
+                            <TextField
+                                fullWidth
+                                label="Nombre"
+                                name="firstName"
+                                type="text"
+                                value={formData.firstName}
+                                onChange={handleChange}
+                                margin="dense"
+                                variant="outlined"
+                                required
+                                disabled={loading}
+                                sx={fieldSx}
+                            />
+                            <TextField
+                                fullWidth
+                                label="Apellido"
+                                name="lastName"
+                                type="text"
+                                value={formData.lastName}
                                 onChange={handleChange}
                                 margin="dense"
                                 variant="outlined"
