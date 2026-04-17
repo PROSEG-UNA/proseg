@@ -1,8 +1,10 @@
 package com.sssi.msvc_auth.controller;
 
 import com.sssi.common.api.response.ApiResponse;
+import com.sssi.common.api.response.PagedResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
 import com.sssi.common.kafka.events.UserLoginEvent;
+import com.sssi.common.kafka.events.UserRegisteredEvent;
 import com.sssi.common.kafka.topics.KafkaTopics;
 import com.sssi.msvc_auth.dto.*;
 import com.sssi.msvc_auth.entity.User;
@@ -12,6 +14,8 @@ import com.sssi.msvc_auth.service.UserApprobationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -30,7 +34,7 @@ public class AuthController {
     private final KeycloakAuthService keycloakAuthService;
     private final KeycloakAdminService keycloakAdminService;
     private final UserApprobationService userApprobationService;
-    private final KafkaTemplate<String, UserLoginEvent> kafkaTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @GetMapping
     public String health() {
@@ -83,6 +87,18 @@ public class AuthController {
         );
 
         userApprobationService.createPendingUser(keycloakUserId);
+
+        kafkaTemplate.send(
+                KafkaTopics.USER_REGISTERED_TOPIC,
+                UserRegisteredEvent.builder()
+                        .userId(keycloakUserId)
+                        .username(request.getUsername())
+                        .email(request.getEmail())
+                        .firstName(request.getFirstName())
+                        .lastName(request.getLastName())
+                        .timestamp(Instant.now().toEpochMilli())
+                        .build()
+        );
 
         return ApiResponseBuilder.created(
                 RegisterResponseDto.builder()
@@ -159,5 +175,32 @@ public class AuthController {
     public ResponseEntity<ApiResponse<KeycloakUserResponseDto>> getUserById(@PathVariable String id) {
         KeycloakUserResponseDto user = keycloakAdminService.getUserById(id);
         return ApiResponseBuilder.ok(user, "Usuario obtenido correctamente");
+    }
+
+    @GetMapping("/users")
+    public ResponseEntity<ApiResponse<PagedResponse<KeycloakUserResponseDto>>> getAllUsers(
+            @PageableDefault(size = 10, page = 0) Pageable pageable
+    ) {
+        log.info("Obteniendo usuarios paginados - page: {}, size: {}",
+                pageable.getPageNumber(), pageable.getPageSize());
+        PagedResponse<KeycloakUserResponseDto> response = keycloakAdminService.getAllUsers(pageable);
+        return ApiResponseBuilder.ok(response, "Usuarios obtenidos correctamente");
+    }
+
+    @GetMapping("/roles/{roleName}/users")
+    public ResponseEntity<ApiResponse<List<KeycloakUserResponseDto>>> getUsersByRole(@PathVariable String roleName) {
+        log.info("Obteniendo usuarios con rol: {}", roleName);
+        List<KeycloakUserResponseDto> users = keycloakAdminService.getUsersByRole(roleName);
+        return ApiResponseBuilder.ok(users, "Usuarios obtenidos correctamente");
+    }
+
+    @PostMapping("/users/{userId}/roles/{roleName}")
+    public ResponseEntity<ApiResponse<Void>> assignRoleToUser(
+            @PathVariable String userId,
+            @PathVariable String roleName
+    ) {
+        log.info("Asignando rol {} al usuario {}", roleName, userId);
+        keycloakAdminService.assignRoleToUser(userId, roleName);
+        return ApiResponseBuilder.ok(null, "Rol asignado correctamente");
     }
 }
