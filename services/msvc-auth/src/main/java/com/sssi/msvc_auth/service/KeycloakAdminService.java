@@ -2,11 +2,14 @@ package com.sssi.msvc_auth.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sssi.common.api.response.PagedResponse;
 import com.sssi.msvc_auth.dto.KeycloakUserResponseDto;
+import com.sssi.msvc_auth.exception.KeycloakException;
 import com.sssi.msvc_auth.dto.RoleResponseDto;
 import com.sssi.msvc_auth.exception.UserException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -97,12 +100,16 @@ public class KeycloakAdminService {
                     .build();
 
         } catch (HttpStatusCodeException e) {
+
             if (e.getStatusCode().value() == 404) {
                 throw UserException.notFound(userId);
             }
+
             log.error("Error HTTP obteniendo usuario {}: {} - {}",
                     userId, e.getStatusCode(), e.getResponseBodyAsString());
+
             throw new IllegalStateException("Error consultando usuario en Keycloak", e);
+
         } catch (Exception e) {
             log.error("Error inesperado obteniendo usuario {}: {}", userId, e.getMessage(), e);
             throw new IllegalStateException("Error inesperado consultando Keycloak", e);
@@ -417,6 +424,172 @@ public class KeycloakAdminService {
         } catch (Exception e) {
             log.error("Error verificando existencia de usuario {}: {}", username, e.getMessage());
             return false;
+        }
+    }
+
+    public PagedResponse<KeycloakUserResponseDto> getAllUsers(Pageable pageable) {
+        String adminToken = getAdminToken();
+
+        int page = pageable.getPageNumber();
+        int size = pageable.getPageSize();
+        int first = page * size;
+
+        HttpHeaders headers = buildJsonHeaders(adminToken);
+
+        try {
+            String usersUrl = keycloakServerUrl + "/admin/realms/" + realm +
+                    "/users?first=" + first + "&max=" + size;
+
+            String usersResponse = restTemplate.exchange(
+                    usersUrl,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    String.class
+            ).getBody();
+
+            JsonNode usersNode = objectMapper.readTree(usersResponse);
+            List<KeycloakUserResponseDto> users = new ArrayList<>();
+
+            for (JsonNode node : usersNode) {
+                users.add(KeycloakUserResponseDto.builder()
+                        .id(node.path("id").asText())
+                        .username(node.path("username").asText())
+                        .email(node.path("email").asText(null))
+                        .firstName(node.path("firstName").asText(null))
+                        .lastName(node.path("lastName").asText(null))
+                        .build());
+            }
+
+            String countUrl = keycloakServerUrl + "/admin/realms/" + realm + "/users/count";
+
+            String countResponse = restTemplate.exchange(
+                    countUrl,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    String.class
+            ).getBody();
+
+            long total = Long.parseLong(countResponse);
+            int totalPages = (int) Math.ceil((double) total / size);
+
+            return PagedResponse.<KeycloakUserResponseDto>builder()
+                    .content(users)
+                    .page(page)
+                    .size(size)
+                    .totalElements(total)
+                    .totalPages(totalPages)
+                    .last(page >= totalPages - 1)
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Error obteniendo usuarios paginados: {}", e.getMessage(), e);
+            throw new IllegalStateException("Error al obtener usuarios de Keycloak", e);
+        }
+    }
+
+    public List<KeycloakUserResponseDto> getUsersByRole(String roleName) {
+        String adminToken = getAdminToken();
+        String url = keycloakServerUrl + "/admin/realms/" + realm + "/roles/" + roleName + "/users";
+
+        HttpHeaders headers = buildJsonHeaders(adminToken);
+
+        try {
+            String response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    String.class
+            ).getBody();
+
+            JsonNode usersNode = objectMapper.readTree(response);
+            List<KeycloakUserResponseDto> users = new ArrayList<>();
+
+            for (JsonNode node : usersNode) {
+                users.add(KeycloakUserResponseDto.builder()
+                        .id(node.path("id").asText())
+                        .username(node.path("username").asText())
+                        .email(node.path("email").asText(null))
+                        .firstName(node.path("firstName").asText(null))
+                        .lastName(node.path("lastName").asText(null))
+                        .build());
+            }
+
+            log.info("Usuarios con rol {} obtenidos: {}", roleName, users.size());
+            return users;
+
+        } catch (Exception e) {
+            log.error("Error obteniendo usuarios con rol {}: {}", roleName, e.getMessage());
+            throw new IllegalStateException("Error al obtener usuarios con rol " + roleName, e);
+        }
+    }
+
+    public void assignRoleToUser(String userId, String roleName) {
+        String adminToken = getAdminToken();
+
+        String rolesUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles/" + roleName;
+        String assignRoleUrl = keycloakServerUrl + "/admin/realms/" + realm +
+                "/users/" + userId + "/role-mappings/realm";
+
+        HttpHeaders headers = buildJsonHeaders(adminToken);
+
+        try {
+            String roleResponse = restTemplate.exchange(
+                    rolesUrl,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    String.class
+            ).getBody();
+
+            JsonNode roleNode = objectMapper.readTree(roleResponse);
+
+            Map<String, Object> roleMap = new HashMap<>();
+            roleMap.put("id", roleNode.path("id").asText());
+            roleMap.put("name", roleNode.path("name").asText());
+
+            List<Map<String, Object>> roles = List.of(roleMap);
+
+            restTemplate.exchange(
+                    assignRoleUrl,
+                    HttpMethod.POST,
+                    new HttpEntity<>(objectMapper.writeValueAsString(roles), headers),
+                    String.class
+            );
+
+            log.info("Rol {} asignado al usuario {}", roleName, userId);
+
+        } catch (HttpStatusCodeException e) {
+            log.error("Error asignando rol {} al usuario {}: {} - {}",
+                    roleName, userId, e.getStatusCode(), e.getResponseBodyAsString());
+
+            handleKeycloakError(e, roleName, userId);
+
+        } catch (Exception e) {
+            log.error("Error inesperado asignando rol {} al usuario {}: {}",
+                    roleName, userId, e.getMessage(), e);
+
+            throw KeycloakException.generic("Error procesando respuesta de Keycloak");
+        }
+    }
+
+    private void handleKeycloakError(HttpStatusCodeException e, String roleName, String userId) {
+        String body = e.getResponseBodyAsString();
+
+        try {
+            JsonNode errorNode = objectMapper.readTree(body);
+            String error = errorNode.path("error").asText();
+
+            if ("Could not find role".equalsIgnoreCase(error)) {
+                throw KeycloakException.roleNotFound(roleName);
+            }
+
+            if (error.toLowerCase().contains("user")) {
+                throw KeycloakException.userNotFound(userId);
+            }
+
+            throw KeycloakException.assignmentError(error);
+
+        } catch (Exception parseEx) {
+            throw KeycloakException.generic(body);
         }
     }
 
