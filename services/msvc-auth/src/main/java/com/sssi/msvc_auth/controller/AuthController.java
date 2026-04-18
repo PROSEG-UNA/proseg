@@ -63,14 +63,18 @@ public class AuthController {
         String keycloakUserId = keycloakAuthService.extractUserIdFromToken(token);
         userApprobationService.assertUserIsApproved(keycloakUserId);
 
-        kafkaTemplate.send(
-                KafkaTopics.USER_LOGIN_TOPIC,
-                UserLoginEvent.builder()
-                        .userId(keycloakUserId)
-                        .identifier(request.getIdentifier())
-                        .timestamp(Instant.now().toEpochMilli())
-                        .build()
-        );
+        try {
+            kafkaTemplate.send(
+                    KafkaTopics.USER_LOGIN_TOPIC,
+                    UserLoginEvent.builder()
+                            .userId(keycloakUserId)
+                            .identifier(request.getIdentifier())
+                            .timestamp(Instant.now().toEpochMilli())
+                            .build()
+            );
+        } catch (Exception kafkaEx) {
+            log.warn("No se pudo enviar evento de login a Kafka: {}", kafkaEx.getMessage());
+        }
 
         ResponseCookie cookie = ResponseCookie.from("auth_token", token)
                 .httpOnly(true)
@@ -118,17 +122,21 @@ public class AuthController {
 
         userApprobationService.createPendingUser(keycloakUserId);
 
-        kafkaTemplate.send(
-                KafkaTopics.USER_REGISTERED_TOPIC,
-                UserRegisteredEvent.builder()
-                        .userId(keycloakUserId)
-                        .username(request.getUsername())
-                        .email(request.getEmail())
-                        .firstName(request.getFirstName())
-                        .lastName(request.getLastName())
-                        .timestamp(Instant.now().toEpochMilli())
-                        .build()
-        );
+        try {
+            kafkaTemplate.send(
+                    KafkaTopics.USER_REGISTERED_TOPIC,
+                    UserRegisteredEvent.builder()
+                            .userId(keycloakUserId)
+                            .username(request.getUsername())
+                            .email(request.getEmail())
+                            .firstName(request.getFirstName())
+                            .lastName(request.getLastName())
+                            .timestamp(Instant.now().toEpochMilli())
+                            .build()
+            );
+        } catch (Exception kafkaEx) {
+            log.warn("No se pudo enviar evento de registro a Kafka: {}", kafkaEx.getMessage());
+        }
 
         return ApiResponseBuilder.created(
                 RegisterResponseDto.builder()
