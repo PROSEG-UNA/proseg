@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import {
     Container,
     Box,
@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import { alpha } from '@mui/material/styles';
+import { useAuth } from '../hooks/useAuth';
 import '../css/RegisterPage.css';
 
 const fieldSx = (theme) => ({
@@ -23,27 +24,17 @@ const fieldSx = (theme) => ({
 });
 
 export function RegisterPage() {
-    const navigate = useNavigate();
-    const [formData, setFormData] = useState({ name: '', email: '', password: '' });
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+    const [formData, setFormData] = useState({ username: '', email: '', password: '', firstName: '', lastName: '' });
+    const { loading, error, handleRegister } = useAuth();
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
-        setLoading(true);
-        setError('');
-        try {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            navigate('/login');
-        } catch (err) {
-            setError('Error al registrar el usuario. Intenta de nuevo. ', err);
-            setLoading(false);
-        }
+        handleRegister(formData);
     };
 
     return (
@@ -100,10 +91,36 @@ export function RegisterPage() {
                         <form onSubmit={handleSubmit}>
                             <TextField
                                 fullWidth
-                                label="Nombre completo"
-                                name="name"
+                                label="Nombre de usuario"
+                                name="username"
                                 type="text"
-                                value={formData.name}
+                                value={formData.username}
+                                onChange={handleChange}
+                                margin="dense"
+                                variant="outlined"
+                                required
+                                disabled={loading}
+                                sx={fieldSx}
+                            />
+                            <TextField
+                                fullWidth
+                                label="Nombre"
+                                name="firstName"
+                                type="text"
+                                value={formData.firstName}
+                                onChange={handleChange}
+                                margin="dense"
+                                variant="outlined"
+                                required
+                                disabled={loading}
+                                sx={fieldSx}
+                            />
+                            <TextField
+                                fullWidth
+                                label="Apellido"
+                                name="lastName"
+                                type="text"
+                                value={formData.lastName}
                                 onChange={handleChange}
                                 margin="dense"
                                 variant="outlined"
