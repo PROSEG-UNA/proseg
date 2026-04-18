@@ -13,7 +13,8 @@ export function useAuth() {
         try {
             await login(identifier, password);
             navigate('/inventario');
-        } catch {
+        } catch (err) {
+            console.error('[useAuth] login error:', err?.response?.status, err?.response?.data?.errors, err?.message);
             setError('Error en la autenticación. Intenta de nuevo.');
         } finally {
             setLoading(false);
