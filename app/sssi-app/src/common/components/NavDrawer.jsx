@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../features/auth/hooks/useAuth';
 import {
   Box,
   Button,
@@ -21,7 +22,8 @@ import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import { alpha, useColorScheme } from '@mui/material/styles';
 
-export function NavDrawer({ open, onClose, onLogout }) {
+export function NavDrawer({ open, onClose }) {
+  const { handleLogout } = useAuth();
   const navigate = useNavigate();
   const [expandedMenu, setExpandedMenu] = useState(null);
   const { mode } = useColorScheme();
@@ -126,7 +128,7 @@ export function NavDrawer({ open, onClose, onLogout }) {
             fullWidth
             variant="contained"
             startIcon={<LogoutIcon />}
-            onClick={onLogout}
+            onClick={handleLogout}
             sx={{ backgroundColor: 'primary.main', color: 'primary.contrastText', '&:hover': { backgroundColor: 'primary.dark' }, fontWeight: 600 }}
           >
             Cerrar Sesión

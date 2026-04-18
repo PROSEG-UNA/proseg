@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { login, register } from '../services/authService';
+import { login, register, logout } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
 
 export function useAuth() {
@@ -34,5 +34,19 @@ export function useAuth() {
         }
     };
 
-    return { loading, error, handleLogin, handleRegister };
+    const handleLogout = async () => {
+        setLoading(true);
+        setError('');
+        try {
+            await logout();
+            navigate('/login');
+        } catch (err) {
+            console.error('[useAuth] logout error:', err?.response?.status, err?.message);
+            setError('Error al cerrar sesión. Intenta de nuevo.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return { loading, error, handleLogin, handleRegister, handleLogout };
 }

@@ -14,18 +14,13 @@ export function SecurityPage() {
   const theme = useTheme();
   const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
 
-  const handleLogout = () => {
-    navigate('/login');
-  };
-
   return (
     <Box className="security-page">
         <Header
           title="Gestión de Seguridad"
           onMenuClick={isMediumOrDown ? () => setDrawerOpen(true) : undefined}
-          onLogout={handleLogout}
         />
-      <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} onLogout={handleLogout} />
+      <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
 
       <Container maxWidth="lg" className="security-content">
