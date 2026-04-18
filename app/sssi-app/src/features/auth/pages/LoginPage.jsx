@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import LoginIcon from '@mui/icons-material/Login';
 import { alpha } from '@mui/material/styles';
+import { useAuth } from '../hooks/useAuth';
 import '../css/LoginPage.css';
 
 const fieldSx = (theme) => ({
@@ -23,28 +24,17 @@ const fieldSx = (theme) => ({
 });
 
 export function LoginPage() {
-    const navigate = useNavigate();
-    const [formData, setFormData] = useState({ email: '', password: '' });
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+    const [formData, setFormData] = useState({ identifier: '', password: '' });
+    const { loading, error, handleLogin } = useAuth();
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
-        setLoading(true);
-        setError('');
-        try {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            navigate('/inventario');
-        } catch (err) {
-            setError('Error en la autenticación. Intenta de nuevo.', err);
-        } finally {
-            setLoading(false);
-        }
+        handleLogin(formData.identifier, formData.password);
     };
 
     return (
@@ -101,10 +91,10 @@ export function LoginPage() {
                         <form onSubmit={handleSubmit}>
                             <TextField
                                 fullWidth
-                                label="Email"
-                                name="email"
-                                type="email"
-                                value={formData.email}
+                                label="Usuario o Email"
+                                name="identifier"
+                                type="text"
+                                value={formData.identifier}
                                 onChange={handleChange}
                                 margin="dense"
                                 variant="outlined"

@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -16,7 +15,6 @@ import RolesTable from '../components/RolesTable.jsx';
 import CreateRoleModal from '../components/CreateRoleModal.jsx';
 
 export function RolePage() {
-  const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -25,18 +23,13 @@ export function RolePage() {
   const theme = useTheme();
   const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
 
-  const handleLogout = () => {
-    navigate('/login');
-  };
-
   return (
       <Box className="role-page">
         <Header
             title="Gestión de Roles"
             onMenuClick={isMediumOrDown ? () => setDrawerOpen(true) : undefined}
-            onLogout={handleLogout}
         />
-        <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} onLogout={handleLogout} />
+        <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
         <Container maxWidth="lg" className="role-content">
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>

@@ -13,18 +13,13 @@ export function InventoryPage() {
   const theme = useTheme();
   const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
 
-  const handleLogout = () => {
-    navigate('/login');
-  };
-
   return (
     <Box className="inventory-page">
         <Header
           title="Gestión de Inventario"
           onMenuClick={isMediumOrDown ? () => setDrawerOpen(true) : undefined}
-          onLogout={handleLogout}
         />
-        <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} onLogout={handleLogout} />
+        <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
         <Container maxWidth="lg" className="inventory-content">
           <Box sx={{ py: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>

@@ -4,6 +4,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
+import { useAuth } from '../../features/auth/hooks/useAuth';
 
 function ColorModeToggle() {
   const { mode, setMode } = useColorScheme();
@@ -14,7 +15,8 @@ function ColorModeToggle() {
   );
 }
 
-export function Header({ title, onMenuClick, navButtons = [], onLogout }) {
+export function Header({ title, onMenuClick, navButtons = [] }) {
+  const { handleLogout } = useAuth();
   return (
     <AppBar position="static" sx={{ backgroundColor: 'primary.main' }}>
       <Toolbar>
@@ -47,7 +49,7 @@ export function Header({ title, onMenuClick, navButtons = [], onLogout }) {
           </Button>
         ))}
         <ColorModeToggle />
-        <IconButton color="inherit" onClick={onLogout}>
+        <IconButton color="inherit" onClick={handleLogout}>
           <LogoutIcon />
         </IconButton>
       </Toolbar>

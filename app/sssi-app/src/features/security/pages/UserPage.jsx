@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -32,7 +31,6 @@ const mockUsers = [
 ];
 
 export function UserPage() {
-  const navigate = useNavigate();
   const [users] = useState(mockUsers);
   const [filters, setFilters] = useState({
     nameFilter: '',
@@ -41,10 +39,6 @@ export function UserPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const theme = useTheme();
   const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
-
-  const handleLogout = () => {
-    navigate('/login');
-  };
 
   const handleFilterChange = (field, value) => {
     setFilters(prev => ({
@@ -69,9 +63,8 @@ export function UserPage() {
         <Header
           title="Gestión de Usuarios"
           onMenuClick={isMediumOrDown ? () => setDrawerOpen(true) : undefined}
-          onLogout={handleLogout}
         />
-        <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} onLogout={handleLogout} />
+        <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
         <Container maxWidth="lg" className="user-content">
           <Box sx={{ mb: 3 }}>
