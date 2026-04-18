@@ -1,6 +1,7 @@
 package com.sssi.msvc_email.config;
 
 import com.sssi.common.kafka.events.UserLoginEvent;
+import com.sssi.common.kafka.events.UserRegisteredEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,7 +12,6 @@ import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
@@ -20,33 +20,44 @@ public class KafkaConsumerConfig {
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
-    @Bean
-    public ConsumerFactory<String, UserLoginEvent> userLoginConsumerFactory() {
-        JsonDeserializer<UserLoginEvent> deserializer =
-                new JsonDeserializer<>(UserLoginEvent.class);
+    private Map<String, Object> baseConsumerProps() {
+        return Map.of(
+                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,          bootstrapServers,
+                ConsumerConfig.GROUP_ID_CONFIG,                   "msvc-email-group",
+                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,     StringDeserializer.class,
+                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,   JsonDeserializer.class,
+                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,          "earliest"
+        );
+    }
 
-        // Permite recibir el tipo sin importar el header __TypeId__
+    private <T> ConsumerFactory<String, T> consumerFactory(Class<T> targetType) {
+        JsonDeserializer<T> deserializer = new JsonDeserializer<>(targetType);
         deserializer.addTrustedPackages("*");
         deserializer.ignoreTypeHeaders();
 
-        Map<String, Object> props = new HashMap<>();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,  bootstrapServers);
-        props.put(ConsumerConfig.GROUP_ID_CONFIG,           "msvc-email-group");
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,   StringDeserializer.class);
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,  "earliest");
+        return new DefaultKafkaConsumerFactory<>(
+                baseConsumerProps(),
+                new StringDeserializer(),
+                deserializer
+        );
+    }
 
-        return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
+    private <T> ConcurrentKafkaListenerContainerFactory<String, T> listenerFactory(Class<T> targetType) {
+        ConcurrentKafkaListenerContainerFactory<String, T> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(consumerFactory(targetType));
+        return factory;
     }
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, UserLoginEvent>
-    kafkaListenerContainerFactory() {
+    userLoginListenerFactory() {
+        return listenerFactory(UserLoginEvent.class);
+    }
 
-        ConcurrentKafkaListenerContainerFactory<String, UserLoginEvent> factory =
-                new ConcurrentKafkaListenerContainerFactory<>();
-
-        factory.setConsumerFactory(userLoginConsumerFactory());
-        return factory;
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, UserRegisteredEvent>
+    userRegisteredListenerFactory() {
+        return listenerFactory(UserRegisteredEvent.class);
     }
 }

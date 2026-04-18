@@ -9,20 +9,18 @@ import org.thymeleaf.context.Context;
 import java.util.List;
 
 @Builder
-public class UserApprovalEmailTemplate implements EmailTemplateDefinition {
+public class UserRegisteredEmailTemplate implements EmailTemplateDefinition {
+
     private final String firstName;
     private final String lastName;
     private final String username;
     private final String email;
-    private final String approvalUrl;
+    private final String loginUrl;
     private final long timestamp;
-
-    private final String adminFirstName;
-    private final String adminLastName;
 
     @Override
     public String getTemplateName() {
-        return "user-approval-email";
+        return "user-registered-email";
     }
 
     @Override
@@ -35,10 +33,8 @@ public class UserApprovalEmailTemplate implements EmailTemplateDefinition {
         ctx.setVariable("lastName", lastName);
         ctx.setVariable("username", username);
         ctx.setVariable("email", email);
-        ctx.setVariable("approvalUrl", approvalUrl);
+        ctx.setVariable("loginUrl", loginUrl);
         ctx.setVariable("timestamp", DateUtils.formatReadable(timestamp));
-        ctx.setVariable("adminFirstName", adminFirstName);
-        ctx.setVariable("adminLastName", adminLastName);
 
         return ctx;
     }
@@ -49,15 +45,13 @@ public class UserApprovalEmailTemplate implements EmailTemplateDefinition {
     }
 
     private void validate() {
-        String template = "UserApprovalEmailTemplate";
+        String template = "UserRegisteredEmailTemplate";
 
-        TemplateValidator.requireNotBlank(firstName,      "firstName",      template);
-        TemplateValidator.requireNotBlank(lastName,       "lastName",       template);
-        TemplateValidator.requireNotBlank(username,       "username",       template);
-        TemplateValidator.requireNotBlank(email,          "email",          template);
-        TemplateValidator.requireNotBlank(approvalUrl,    "approvalUrl",    template);
-        TemplateValidator.requireNotBlank(adminFirstName, "adminFirstName", template);
-        TemplateValidator.requireNotBlank(adminLastName,  "adminLastName",  template);
+        TemplateValidator.requireNotBlank(firstName, "firstName", template);
+        TemplateValidator.requireNotBlank(lastName, "lastName", template);
+        TemplateValidator.requireNotBlank(username, "username", template);
+        TemplateValidator.requireNotBlank(email, "email", template);
+        TemplateValidator.requireNotBlank(loginUrl, "loginUrl", template);
 
         if (timestamp <= 0) {
             throw new IllegalArgumentException(

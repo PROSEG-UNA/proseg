@@ -61,8 +61,36 @@
             color: #444;
         }
 
+        .greeting {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a1a2e;
+            margin-bottom: 6px;
+        }
+
+        .admin-info {
+            margin-bottom: 20px;
+            padding: 12px 14px;
+            background-color: #f0f4ff;
+            border-radius: 8px;
+            border-left: 3px solid #0f3460;
+        }
+
+        .admin-info p {
+            font-size: 13px;
+            color: #1a1a2e;
+        }
+
+        .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #888;
+            margin: 20px 0 10px;
+        }
+
         .user-info {
-            margin: 16px 0;
             padding: 12px;
             background-color: #f9f9f9;
             border-radius: 8px;
@@ -73,13 +101,35 @@
             margin-bottom: 6px;
         }
 
+        .user-info p:last-child {
+            margin-bottom: 0;
+        }
+
         .label {
             font-weight: 600;
             color: #1a1a2e;
         }
 
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-no-roles {
+            background-color: #f8d7da;
+            color: #842029;
+        }
+
         .btn-container {
-            margin-top: 20px;
+            margin-top: 24px;
             text-align: center;
         }
 
@@ -125,18 +175,44 @@
     <div class="content">
         <div class="accent"></div>
 
-        <p>Se ha registrado un nuevo usuario en el sistema que requiere aprobación y asignación de roles.</p>
+        <p class="greeting">Estimado/a, <span th:text="${adminFirstName} + ' ' + ${adminLastName}"></span></p>
 
-        <div class="user-info">
-            <p><span class="label">Nombre:</span> <span th:text="${firstName} + ' ' + ${lastName}"></span></p>
-            <p><span class="label">Username:</span> <span th:text="${username}"></span></p>
-            <p><span class="label">Email:</span> <span th:text="${email}"></span></p>
-            <p><span class="label">Estado:</span> Pendiente</p>
-            <p><span class="label">Roles:</span> Sin asignar</p>
-            <p><span class="label">Fecha de registro:</span> <span th:text="${timestamp}"></span></p>
+        <div class="admin-info">
+            <p>Eres notificado como <strong>Super Administrador</strong> del sistema SSSI.</p>
         </div>
 
-        <p>
+        <p>Se ha registrado un nuevo usuario que requiere tu aprobación y asignación de roles.</p>
+
+        <div class="section-label">Información del nuevo usuario</div>
+
+        <div class="user-info">
+            <p>
+                <span class="label">Nombre:</span>
+                <span th:text="${firstName} + ' ' + ${lastName}"></span>
+            </p>
+            <p>
+                <span class="label">Username:</span>
+                <span th:text="${username}"></span>
+            </p>
+            <p>
+                <span class="label">Email:</span>
+                <span th:text="${email}"></span>
+            </p>
+            <p>
+                <span class="label">Estado:</span>
+                <span class="badge badge-pending">Pendiente</span>
+            </p>
+            <p>
+                <span class="label">Roles:</span>
+                <span class="badge badge-no-roles">Sin asignar</span>
+            </p>
+            <p>
+                <span class="label">Fecha de registro:</span>
+                <span th:text="${timestamp}"></span>
+            </p>
+        </div>
+
+        <p style="margin-top: 16px;">
             Por favor revisa la solicitud, aprueba el usuario y asigna los roles correspondientes
             según sus permisos dentro del sistema.
         </p>
