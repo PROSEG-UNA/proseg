@@ -1,6 +1,7 @@
 package com.sssi.msvc_email.notificacion.client;
 
 import com.sssi.common.api.response.ApiResponse;
+import com.sssi.msvc_email.config.FeignConfig;
 import com.sssi.msvc_email.notificacion.dto.KeycloakUserDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,7 +11,8 @@ import java.util.List;
 
 @FeignClient(
         name = "msvc-auth",
-        url = "localhost:8081/api/auth"
+        url = "localhost:8081/api/auth",
+        configuration = FeignConfig.class
 )
 public interface AuthClient {
 
