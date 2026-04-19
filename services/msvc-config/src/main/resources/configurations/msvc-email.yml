@@ -2,6 +2,17 @@ server:
   port: 9090
 
 spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: msvc-email
+            client-secret: 0wqysXJSiZurqXEE9TZSzDk4rhHq2kKY
+            authorization-grant-type: client_credentials
+        provider:
+          keycloak:
+            token-uri: https://auth.devbychris.com/realms/sssi-realm/protocol/openid-connect/token
   application:
     name: msvc-email
   kafka:
