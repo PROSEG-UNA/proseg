@@ -8,25 +8,16 @@ import java.util.List;
 @Data
 public class ApiResponse<T> {
 
-    private boolean success;
+    private boolean success = true;
     private String message;
     private T data;
-    private List<String> errors;
     private int status;
     private LocalDateTime timestamp;
 
-    public ApiResponse() {
-        this.timestamp = LocalDateTime.now();
-    }
-
-    public ApiResponse(boolean success, String message, T data,
-                       List<String> errors, int status) {
-        this.success = success;
+    public ApiResponse(String message, T data, int status) {
         this.message = message;
         this.data = data;
-        this.errors = errors;
         this.status = status;
         this.timestamp = LocalDateTime.now();
     }
-
 }

@@ -1,5 +1,6 @@
 package com.sssi.common.api.util;
 
+import com.sssi.common.api.response.ApiErrorResponse;
 import com.sssi.common.api.response.ApiResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -11,38 +12,34 @@ import java.util.List;
 public class ApiResponseBuilder {
 
     public static <T> ResponseEntity<ApiResponse<T>> ok(T data, String message) {
-        return build(true, data, message, null, HttpStatus.OK);
+        return buildSuccess(data, message, HttpStatus.OK);
     }
 
     public static <T> ResponseEntity<ApiResponse<T>> created(T data, String message) {
-        return build(true, data, message, null, HttpStatus.CREATED);
+        return buildSuccess(data, message, HttpStatus.CREATED);
     }
 
-    public static <T> ResponseEntity<ApiResponse<T>> noContent(String message) {
-        return build(true, null, message, null, HttpStatus.NO_CONTENT);
+    public static ResponseEntity<ApiResponse<Void>> noContent(String message) {
+        return buildSuccess(null, message, HttpStatus.NO_CONTENT);
     }
 
-    public static <T> ResponseEntity<ApiResponse<T>> error(List<String> errors, String message, HttpStatus status) {
-        return build(false, null, message, errors, status);
+    public static ResponseEntity<ApiErrorResponse> error(String message, List<String> errors, HttpStatus status) {
+        return buildError(message, errors, status);
     }
 
-    private static <T> ResponseEntity<ApiResponse<T>> build(
-            boolean success,
-            T data,
-            String message,
-            List<String> errors,
-            HttpStatus status
-    ) {
-        ApiResponse<T> response = new ApiResponse<>(
-                success,
-                message,
-                data,
-                errors,
-                status.value()
-        );
+    public static ResponseEntity<ApiErrorResponse> error(String message, HttpStatus status) {
+        return buildError(message, List.of(), status);
+    }
 
+    private static <T> ResponseEntity<ApiResponse<T>> buildSuccess(T data, String message, HttpStatus status) {
         return ResponseEntity.status(status)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(response);
+                .body(new ApiResponse<>(message, data, status.value()));
+    }
+
+    private static ResponseEntity<ApiErrorResponse> buildError(String message, List<String> errors, HttpStatus status) {
+        return ResponseEntity.status(status)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new ApiErrorResponse(message, errors, status.value()));
     }
 }
