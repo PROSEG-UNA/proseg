@@ -1,6 +1,7 @@
 package com.sssi.msvc_gateway.config;
 
 import org.springframework.http.HttpCookie;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken;
 import org.springframework.security.web.server.authentication.ServerAuthenticationConverter;
@@ -17,10 +18,24 @@ public class CookieBearerTokenConverter implements ServerAuthenticationConverter
 
     @Override
     public Mono<Authentication> convert(ServerWebExchange exchange) {
-        HttpCookie cookie = exchange.getRequest().getCookies().getFirst(cookieName);
-        if (cookie == null || cookie.getValue().isBlank()) {
-            return Mono.empty();
+
+        String authHeader = exchange.getRequest()
+                .getHeaders()
+                .getFirst(HttpHeaders.AUTHORIZATION);
+
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            return Mono.just(new BearerTokenAuthenticationToken(token));
         }
-        return Mono.just(new BearerTokenAuthenticationToken(cookie.getValue()));
+
+        HttpCookie cookie = exchange.getRequest()
+                .getCookies()
+                .getFirst(cookieName);
+
+        if (cookie != null && !cookie.getValue().isBlank()) {
+            return Mono.just(new BearerTokenAuthenticationToken(cookie.getValue()));
+        }
+
+        return Mono.empty();
     }
 }
