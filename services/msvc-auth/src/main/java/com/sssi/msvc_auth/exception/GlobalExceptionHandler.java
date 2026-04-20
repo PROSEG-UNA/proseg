@@ -37,25 +37,52 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiErrorResponse> handleResponseStatusException(ResponseStatusException ex) {
+
+        HttpStatus status = HttpStatus.resolve(ex.getStatusCode().value());
+        if (status == null) {
+            status = HttpStatus.INTERNAL_SERVER_ERROR;
+        }
+
         return ApiResponseBuilder.error(
                 ex.getReason() != null ? ex.getReason() : ex.getMessage(),
                 List.of("SPRING_ERROR"),
-                HttpStatus.valueOf(ex.getStatusCode().value())
+                status
         );
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiErrorResponse> handleAnnotatedExceptions(Exception ex) throws Exception {
-        var annotation = ex.getClass().getAnnotation(ResponseStatus.class);
+    public ResponseEntity<ApiErrorResponse> handleGeneric(Exception ex) {
 
-        if (annotation != null) {
+        HttpStatus status;
+
+        if (ex instanceof ResponseStatusException rse) {
+            status = HttpStatus.valueOf(rse.getStatusCode().value());
+            String reason = rse.getReason() != null ? rse.getReason() : ex.getMessage();
+
             return ApiResponseBuilder.error(
-                    annotation.reason().isBlank() ? ex.getMessage() : annotation.reason(),
+                    reason,
                     List.of("SPRING_ERROR"),
-                    annotation.value()
+                    status
             );
         }
 
-        throw ex;
+        var annotation = ex.getClass().getAnnotation(ResponseStatus.class);
+        if (annotation != null) {
+            status = annotation.value();
+
+            return ApiResponseBuilder.error(
+                    annotation.reason().isBlank() ? ex.getMessage() : annotation.reason(),
+                    List.of("SPRING_ERROR"),
+                    status
+            );
+        }
+
+        status = HttpStatus.INTERNAL_SERVER_ERROR;
+
+        return ApiResponseBuilder.error(
+                ex.getMessage(),
+                List.of("SPRING_ERROR"),
+                status
+        );
     }
 }

@@ -20,7 +20,7 @@ public class ApiResponseBuilder {
     }
 
     public static ResponseEntity<ApiResponse<Void>> noContent(String message) {
-        return buildSuccess(null, message, HttpStatus.NO_CONTENT);
+        return buildSuccess(null, message, HttpStatus.OK);
     }
 
     public static ResponseEntity<ApiErrorResponse> error(String message, List<String> errors, HttpStatus status) {

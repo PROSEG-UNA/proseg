@@ -18,6 +18,10 @@ public class JwtAuthenticationEntryPoint implements ServerAuthenticationEntryPoi
 
     private final ObjectMapper objectMapper;
 
+    public JwtAuthenticationEntryPoint(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
+
     public JwtAuthenticationEntryPoint() {
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
