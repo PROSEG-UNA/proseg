@@ -6,17 +6,17 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
-public class ApiResponse<T> {
+public class ApiErrorResponse {
 
-    private boolean success = true;
+    private boolean success = false;
     private String message;
-    private T data;
+    private List<String> errors;
     private int status;
     private LocalDateTime timestamp;
 
-    public ApiResponse(String message, T data, int status) {
+    public ApiErrorResponse(String message, List<String> errors, int status) {
         this.message = message;
-        this.data = data;
+        this.errors = errors;
         this.status = status;
         this.timestamp = LocalDateTime.now();
     }
