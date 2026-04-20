@@ -7,13 +7,13 @@ import {
     Button,
     Card,
     CircularProgress,
-    Alert,
     Typography,
     Link,
 } from '@mui/material';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import { alpha } from '@mui/material/styles';
 import { useAuth } from '../hooks/useAuth';
+import AlertModal from '../../../common/components/AlertModal.jsx';
 import '../css/RegisterPage.css';
 
 const fieldSx = (theme) => ({
@@ -25,7 +25,7 @@ const fieldSx = (theme) => ({
 
 export function RegisterPage() {
     const [formData, setFormData] = useState({ username: '', email: '', password: '', firstName: '', lastName: '' });
-    const { loading, error, handleRegister } = useAuth();
+    const { loading, alert, handleAlertClose, handleRegister } = useAuth();
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -85,8 +85,6 @@ export function RegisterPage() {
                                 Sistema de Sección de Seguridad Institucional
                             </Typography>
                         </Box>
-
-                        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
                         <form onSubmit={handleSubmit}>
                             <TextField
@@ -194,6 +192,13 @@ export function RegisterPage() {
                         </Typography>
                     </Card>
                 </Container>
+
+                <AlertModal
+                    open={!!alert}
+                    type={alert?.type}
+                    message={alert?.message}
+                    onClose={handleAlertClose}
+                />
         </Box>
     );
 }

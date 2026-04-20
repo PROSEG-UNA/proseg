@@ -5,17 +5,20 @@ import { useNavigate } from 'react-router-dom';
 export function useAuth() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+    const [alert, setAlert] = useState(null);
+
+    const handleAlertClose = () => {
+        setAlert(null);
+    };
 
     const handleLogin = async (identifier, password) => {
         setLoading(true);
-        setError('');
+        setAlert(null);
         try {
             await login(identifier, password);
             navigate('/inventario');
         } catch (err) {
-            console.error('[useAuth] login error:', err?.response?.status, err?.response?.data?.errors, err?.message);
-            setError('Error en la autenticación. Intenta de nuevo.');
+            setAlert({ type: 'error', message: err instanceof Error ? err.message : 'Error al iniciar sesión' });
         } finally {
             setLoading(false);
         }
@@ -23,12 +26,12 @@ export function useAuth() {
 
     const handleRegister = async ({ username, password, email, firstName, lastName }) => {
         setLoading(true);
-        setError('');
+        setAlert(null);
         try {
             await register(username, password, email, firstName, lastName);
             navigate('/login');
-        } catch {
-            setError('Error al registrar el usuario. Intenta de nuevo.');
+        } catch (err) {
+            setAlert({ type: 'error', message: err instanceof Error ? err.message : 'Error al registrar el usuario' });
         } finally {
             setLoading(false);
         }
@@ -36,17 +39,16 @@ export function useAuth() {
 
     const handleLogout = async () => {
         setLoading(true);
-        setError('');
+        setAlert(null);
         try {
             await logout();
             navigate('/login');
         } catch (err) {
-            console.error('[useAuth] logout error:', err?.response?.status, err?.message);
-            setError('Error al cerrar sesión. Intenta de nuevo.');
+            setAlert({ type: 'error', message: err instanceof Error ? err.message : 'Error al cerrar sesión. Intenta de nuevo.' });
         } finally {
             setLoading(false);
         }
     };
 
-    return { loading, error, handleLogin, handleRegister, handleLogout };
+    return { loading, alert, handleAlertClose, handleLogin, handleRegister, handleLogout };
 }

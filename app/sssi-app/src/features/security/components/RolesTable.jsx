@@ -50,6 +50,9 @@ export default function RolesTable({ refreshKey, onRefresh }) {
                     onEdit: handleEdit,
                     onDelete: handleDelete,
                 })}
+                tableOptions={{
+                    positionActionsColumn: 'last',
+                }}
                 enableGlobalFilter
             />
 

@@ -1,13 +1,11 @@
 package com.sssi.msvc_auth.controller;
 
 import com.sssi.common.api.response.ApiResponse;
-import com.sssi.common.api.response.PagedResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
 import com.sssi.common.kafka.events.UserLoginEvent;
 import com.sssi.common.kafka.events.UserRegisteredEvent;
 import com.sssi.common.kafka.topics.KafkaTopics;
 import com.sssi.msvc_auth.dto.*;
-import com.sssi.msvc_auth.entity.User;
 import com.sssi.msvc_auth.service.KeycloakAdminService;
 import com.sssi.msvc_auth.service.KeycloakAuthService;
 import com.sssi.msvc_auth.service.UserApprobationService;
@@ -16,8 +14,6 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
@@ -26,8 +22,6 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("${routes.auth}")
@@ -147,98 +141,4 @@ public class AuthController {
         );
     }
 
-    @GetMapping("/roles/base")
-    public ResponseEntity<ApiResponse<List<RoleResponseDto>>> getBaseRoles() {
-        log.info("Obteniendo roles base de Keycloak");
-        List<RoleResponseDto> roles = keycloakAdminService.getBaseRoles();
-        return ApiResponseBuilder.ok(roles, "Roles base obtenidos exitosamente");
-    }
-
-    @GetMapping("/roles/composite")
-    public ResponseEntity<ApiResponse<List<RoleResponseDto>>> getCompositeRoles() {
-        log.info("Obteniendo roles compuestos de Keycloak");
-        List<RoleResponseDto> roles = keycloakAdminService.getCompositeRoles();
-        return ApiResponseBuilder.ok(roles, "Roles compuestos obtenidos exitosamente");
-    }
-
-    @GetMapping("/roles/{roleName}/composites")
-    public ResponseEntity<ApiResponse<List<RoleResponseDto>>> getRoleComposites(@PathVariable String roleName) {
-        log.info("Obteniendo composites del rol: {}", roleName);
-        List<RoleResponseDto> roles = keycloakAdminService.getRoleComposites(roleName);
-        return ApiResponseBuilder.ok(roles, "Composites del rol obtenidos exitosamente");
-    }
-
-    @PostMapping("/roles")
-    public ResponseEntity<ApiResponse<Void>> createRole(@Valid @RequestBody CreateRoleRequestDto request) {
-        log.info("Creando rol: {}", request.getRoleName());
-        keycloakAdminService.createCompositeRole(request.getRoleName(), request.getPrivileges());
-        return ApiResponseBuilder.created(null, "Rol " + request.getRoleName() + " creado exitosamente");
-    }
-
-    @PutMapping("/roles/{roleName}")
-    public ResponseEntity<ApiResponse<Void>> updateRole(@PathVariable String roleName,
-                                                        @Valid @RequestBody CreateRoleRequestDto request) {
-        log.info("Actualizando rol: {}", roleName);
-        keycloakAdminService.updateRole(roleName, request.getPrivileges());
-        return ApiResponseBuilder.noContent("Rol " + roleName + " actualizado exitosamente");
-    }
-
-    @DeleteMapping("/roles/{roleName}")
-    public ResponseEntity<ApiResponse<Void>> deleteRole(@PathVariable String roleName) {
-        log.info("Eliminando rol: {}", roleName);
-        keycloakAdminService.deleteRole(roleName);
-        return ApiResponseBuilder.noContent("Rol " + roleName + " eliminado exitosamente");
-    }
-
-    @PatchMapping("/users/{id}/approval")
-    public ResponseEntity<ApiResponse<String>> updateUserApproval(
-            @PathVariable UUID id,
-            @Valid @RequestBody UserApprovalRequestDto request
-    ) {
-        User updatedUser = userApprobationService.updateStatus(id, request.getStatus());
-
-        if (updatedUser.getStatus() == User.UserStatus.APPROVED) {
-            keycloakAdminService.enableUser(updatedUser.getKeycloakUserId());
-        } else {
-            keycloakAdminService.disableUser(updatedUser.getKeycloakUserId());
-        }
-
-        return ApiResponseBuilder.ok(
-                updatedUser.getStatus().name(),
-                "Estado del usuario actualizado"
-        );
-    }
-
-    @GetMapping("/users/keycloak/{id}")
-    public ResponseEntity<ApiResponse<KeycloakUserResponseDto>> getUserById(@PathVariable String id) {
-        KeycloakUserResponseDto user = keycloakAdminService.getUserById(id);
-        return ApiResponseBuilder.ok(user, "Usuario obtenido correctamente");
-    }
-
-    @GetMapping("/users")
-    public ResponseEntity<ApiResponse<PagedResponse<KeycloakUserResponseDto>>> getAllUsers(
-            @PageableDefault(size = 10, page = 0) Pageable pageable
-    ) {
-        log.info("Obteniendo usuarios paginados - page: {}, size: {}",
-                pageable.getPageNumber(), pageable.getPageSize());
-        PagedResponse<KeycloakUserResponseDto> response = keycloakAdminService.getAllUsers(pageable);
-        return ApiResponseBuilder.ok(response, "Usuarios obtenidos correctamente");
-    }
-
-    @GetMapping("/roles/{roleName}/users")
-    public ResponseEntity<ApiResponse<List<KeycloakUserResponseDto>>> getUsersByRole(@PathVariable String roleName) {
-        log.info("Obteniendo usuarios con rol: {}", roleName);
-        List<KeycloakUserResponseDto> users = keycloakAdminService.getUsersByRole(roleName);
-        return ApiResponseBuilder.ok(users, "Usuarios obtenidos correctamente");
-    }
-
-    @PostMapping("/users/{userId}/roles/{roleName}")
-    public ResponseEntity<ApiResponse<Void>> assignRoleToUser(
-            @PathVariable String userId,
-            @PathVariable String roleName
-    ) {
-        log.info("Asignando rol {} al usuario {}", roleName, userId);
-        keycloakAdminService.assignRoleToUser(userId, roleName);
-        return ApiResponseBuilder.ok(null, "Rol asignado correctamente");
-    }
 }

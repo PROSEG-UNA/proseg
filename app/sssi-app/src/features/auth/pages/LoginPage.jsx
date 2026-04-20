@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import {
     Container,
     Box,
@@ -7,13 +7,13 @@ import {
     Button,
     Card,
     CircularProgress,
-    Alert,
     Typography,
     Link,
 } from '@mui/material';
 import LoginIcon from '@mui/icons-material/Login';
 import { alpha } from '@mui/material/styles';
 import { useAuth } from '../hooks/useAuth';
+import AlertModal from '../../../common/components/AlertModal.jsx';
 import '../css/LoginPage.css';
 
 const fieldSx = (theme) => ({
@@ -25,7 +25,7 @@ const fieldSx = (theme) => ({
 
 export function LoginPage() {
     const [formData, setFormData] = useState({ identifier: '', password: '' });
-    const { loading, error, handleLogin } = useAuth();
+    const { loading, alert, handleAlertClose, handleLogin } = useAuth();
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -85,8 +85,6 @@ export function LoginPage() {
                                 Sistema de Sección de Seguridad Institucional
                             </Typography>
                         </Box>
-
-                        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
                         <form onSubmit={handleSubmit}>
                             <TextField
@@ -155,6 +153,13 @@ export function LoginPage() {
                         </Typography>
                     </Card>
                 </Container>
+
+                <AlertModal
+                    open={!!alert}
+                    type={alert?.type}
+                    message={alert?.message}
+                    onClose={handleAlertClose}
+                />
         </Box>
     );
 }

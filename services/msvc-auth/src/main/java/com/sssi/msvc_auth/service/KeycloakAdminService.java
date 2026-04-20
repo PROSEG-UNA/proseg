@@ -6,7 +6,9 @@ import com.sssi.common.api.response.PagedResponse;
 import com.sssi.msvc_auth.dto.KeycloakUserResponseDto;
 import com.sssi.msvc_auth.exception.KeycloakException;
 import com.sssi.msvc_auth.dto.RoleResponseDto;
+import com.sssi.msvc_auth.entity.User;
 import com.sssi.msvc_auth.exception.UserException;
+import com.sssi.msvc_auth.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -41,10 +44,12 @@ public class KeycloakAdminService {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final UserRepository userRepository;
 
-    public KeycloakAdminService(RestTemplate restTemplate, ObjectMapper objectMapper) {
+    public KeycloakAdminService(RestTemplate restTemplate, ObjectMapper objectMapper, UserRepository userRepository) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
+        this.userRepository = userRepository;
     }
 
     private String getAdminToken() {
@@ -460,6 +465,18 @@ public class KeycloakAdminService {
                         .build());
             }
 
+                List<String> keycloakUserIds = users.stream()
+                    .map(KeycloakUserResponseDto::getId)
+                    .toList();
+
+                Map<String, User.UserStatus> statusByKeycloakId = userRepository.findAllByKeycloakUserIdIn(keycloakUserIds)
+                    .stream()
+                    .collect(Collectors.toMap(User::getKeycloakUserId, User::getStatus));
+
+                users.forEach(user -> user.setStatus(
+                    statusByKeycloakId.getOrDefault(user.getId(), User.UserStatus.PENDING).name()
+                ));
+
             String countUrl = keycloakServerUrl + "/admin/realms/" + realm + "/users/count";
 
             String countResponse = restTemplate.exchange(
@@ -523,10 +540,52 @@ public class KeycloakAdminService {
         }
     }
 
-    public void assignRoleToUser(String userId, String roleName) {
+    public List<RoleResponseDto> getRolesByUserId(String userId) {
+        String adminToken = getAdminToken();
+        String url = keycloakServerUrl + "/admin/realms/" + realm + "/users/" + userId + "/role-mappings/realm";
+
+        HttpHeaders headers = buildJsonHeaders(adminToken);
+
+        try {
+            String response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    String.class
+            ).getBody();
+
+            JsonNode rolesNode = objectMapper.readTree(response);
+            List<RoleResponseDto> roles = new ArrayList<>();
+
+            for (JsonNode node : rolesNode) {
+                String name = node.path("name").asText();
+                if (!isInternalRole(name)) {
+                    roles.add(RoleResponseDto.builder()
+                            .id(node.path("id").asText())
+                            .name(name)
+                            .description(node.path("description").asText(null))
+                            .composite(node.path("composite").asBoolean(false))
+                            .build());
+                }
+            }
+
+            log.info("Roles del usuario {} obtenidos: {}", userId, roles.size());
+            return roles;
+
+        } catch (HttpStatusCodeException e) {
+            log.error("Error obteniendo roles del usuario {}: {} - {}",
+                    userId, e.getStatusCode(), e.getResponseBodyAsString());
+            throw new IllegalStateException("Error al obtener roles del usuario " + userId, e);
+        } catch (Exception e) {
+            log.error("Error inesperado obteniendo roles del usuario {}: {}", userId, e.getMessage(), e);
+            throw new IllegalStateException("Error al obtener roles del usuario " + userId, e);
+        }
+    }
+
+    public void assignRoleToUser(String userId, String roleId) {
         String adminToken = getAdminToken();
 
-        String rolesUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles/" + roleName;
+        String rolesByIdUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles-by-id/" + roleId;
         String assignRoleUrl = keycloakServerUrl + "/admin/realms/" + realm +
                 "/users/" + userId + "/role-mappings/realm";
 
@@ -534,7 +593,7 @@ public class KeycloakAdminService {
 
         try {
             String roleResponse = restTemplate.exchange(
-                    rolesUrl,
+                    rolesByIdUrl,
                     HttpMethod.GET,
                     new HttpEntity<>(headers),
                     String.class
@@ -555,39 +614,90 @@ public class KeycloakAdminService {
                     String.class
             );
 
-            log.info("Rol {} asignado al usuario {}", roleName, userId);
+            log.info("RoleId {} asignado al usuario {}", roleId, userId);
 
         } catch (HttpStatusCodeException e) {
-            log.error("Error asignando rol {} al usuario {}: {} - {}",
-                    roleName, userId, e.getStatusCode(), e.getResponseBodyAsString());
+            log.error("Error asignando roleId {} al usuario {}: {} - {}",
+                    roleId, userId, e.getStatusCode(), e.getResponseBodyAsString());
 
-            handleKeycloakError(e, roleName, userId);
+            handleKeycloakError(e, roleId, userId);
 
         } catch (Exception e) {
-            log.error("Error inesperado asignando rol {} al usuario {}: {}",
-                    roleName, userId, e.getMessage(), e);
+            log.error("Error inesperado asignando roleId {} al usuario {}: {}",
+                    roleId, userId, e.getMessage(), e);
 
             throw KeycloakException.generic("Error procesando respuesta de Keycloak");
         }
     }
 
-    private void handleKeycloakError(HttpStatusCodeException e, String roleName, String userId) {
+    public void removeRoleFromUser(String userId, String roleId) {
+        String adminToken = getAdminToken();
+
+        String rolesByIdUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles-by-id/" + roleId;
+        String removeRoleUrl = keycloakServerUrl + "/admin/realms/" + realm +
+                "/users/" + userId + "/role-mappings/realm";
+
+        HttpHeaders headers = buildJsonHeaders(adminToken);
+
+        try {
+            String roleResponse = restTemplate.exchange(
+                    rolesByIdUrl,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    String.class
+            ).getBody();
+
+            JsonNode roleNode = objectMapper.readTree(roleResponse);
+
+            Map<String, Object> roleMap = new HashMap<>();
+            roleMap.put("id", roleNode.path("id").asText());
+            roleMap.put("name", roleNode.path("name").asText());
+
+            List<Map<String, Object>> roles = List.of(roleMap);
+
+            restTemplate.exchange(
+                    removeRoleUrl,
+                    HttpMethod.DELETE,
+                    new HttpEntity<>(objectMapper.writeValueAsString(roles), headers),
+                    String.class
+            );
+
+            log.info("RoleId {} removido del usuario {}", roleId, userId);
+
+        } catch (HttpStatusCodeException e) {
+            log.error("Error removiendo roleId {} del usuario {}: {} - {}",
+                    roleId, userId, e.getStatusCode(), e.getResponseBodyAsString());
+
+            handleKeycloakError(e, roleId, userId);
+
+        } catch (Exception e) {
+            log.error("Error inesperado removiendo roleId {} del usuario {}: {}",
+                    roleId, userId, e.getMessage(), e);
+
+            throw KeycloakException.generic("Error procesando respuesta de Keycloak");
+        }
+    }
+
+    private void handleKeycloakError(HttpStatusCodeException e, String roleId, String userId) {
         String body = e.getResponseBodyAsString();
 
         try {
             JsonNode errorNode = objectMapper.readTree(body);
             String error = errorNode.path("error").asText();
+            String normalizedError = error == null ? "" : error.toLowerCase();
 
-            if ("Could not find role".equalsIgnoreCase(error)) {
-                throw KeycloakException.roleNotFound(roleName);
+            if (normalizedError.contains("role")) {
+                throw KeycloakException.roleNotFound(roleId);
             }
 
-            if (error.toLowerCase().contains("user")) {
+            if (normalizedError.contains("user")) {
                 throw KeycloakException.userNotFound(userId);
             }
 
             throw KeycloakException.assignmentError(error);
 
+        } catch (KeycloakException ex) {
+            throw ex;
         } catch (Exception parseEx) {
             throw KeycloakException.generic(body);
         }

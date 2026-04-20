@@ -29,6 +29,20 @@ spring:
           filters:
             - StripPrefix=0
 
+        - id: msvc-auth-user
+          uri: http://localhost:8090
+          predicates:
+            - Path=/api/user/**
+          filters:
+            - StripPrefix=0
+
+        - id: msvc-auth-role
+          uri: http://localhost:8090
+          predicates:
+            - Path=/api/role/**
+          filters:
+            - StripPrefix=0
+
         - id: gateway-actuator
           uri: http://localhost:8081
           predicates:

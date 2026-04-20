@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = '/api/auth/roles';
+const BASE_URL = '/api/role';
 
 const config = { withCredentials: true };
 
@@ -16,6 +16,11 @@ export async function fetchPermissionsByRole(roleName) {
 
 export async function fetchAllPrivileges() {
     const { data } = await axios.get(`${BASE_URL}/base`, config);
+    return data.data;
+}
+
+export async function fetchUsersByRole(roleName) {
+    const { data } = await axios.get(`${BASE_URL}/${roleName}/users`, config);
     return data.data;
 }
 
