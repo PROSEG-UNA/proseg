@@ -31,23 +31,28 @@ export default function TableBase({
     const theme = useTheme();
 
     const stableColumns = useMemo(() => columns, [columns]);
+    const tableOptionsState = tableOptions.state ?? {};
+    const tableOptionsInitialState = tableOptions.initialState ?? {};
+
+    const mergedState = {
+        ...tableOptionsState,
+        isLoading: loading,
+        showLoadingOverlay: loading,
+        showProgressBars: loading,
+        showAlertBanner: !!error,
+        ...(enableRowSelection && rowSelection != null ? { rowSelection } : {}),
+    };
 
     const table = useMaterialReactTable({
+        ...tableOptions,
         columns: stableColumns,
         data: data ?? [],
         getRowId: (row) => row.id,
-        state: {
-            isLoading: loading,
-            showAlertBanner: !!error,
-            ...(enableRowSelection && rowSelection != null
-                ? { rowSelection }
-                : {}),
-            ...tableOptions.state,
-        },
+        state: mergedState,
 
         enableRowActions,
         renderRowActions,
-        positionActionsColumn: 'last',
+        positionActionsColumn: tableOptions.positionActionsColumn ?? 'last',
         enableRowSelection,
         onRowSelectionChange,
         enablePagination,
@@ -75,7 +80,7 @@ export default function TableBase({
             density: 'compact',
             pagination: { pageIndex: 0, pageSize: 10 },
             showColumnFilters: false,
-            ...tableOptions.initialState,
+            ...tableOptionsInitialState,
         },
 
         localization: MRT_Localization_ES,
@@ -163,15 +168,16 @@ export default function TableBase({
 
         displayColumnDefOptions: {
             'mrt-row-actions': {
-                header: 'Acciones',
+                header: 'Acción',
                 size: 120,
                 grow: false,
                 muiTableHeadCellProps: { align: 'center' },
                 muiTableBodyCellProps: { align: 'center' },
+                ...(tableOptions.displayColumnDefOptions?.['mrt-row-actions'] ?? {}),
             },
+            ...(tableOptions.displayColumnDefOptions ?? {}),
         },
 
-        ...tableOptions,
     });
 
     return <MaterialReactTable table={table} />;

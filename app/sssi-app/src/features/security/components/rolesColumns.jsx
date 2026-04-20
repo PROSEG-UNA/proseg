@@ -1,8 +1,6 @@
-import IconButton from '@mui/material/IconButton';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import Tooltip from '@mui/material/Tooltip';
-import Box from '@mui/material/Box';
+import RowActionsMenu from '../../../common/components/RowActionsMenu.jsx';
 
 export function getRolesColumns() {
     return [
@@ -18,30 +16,27 @@ export function getRolesColumns() {
             size: 160,
             grow: 2,
         },
-        {
-            accessorKey: 'permissionCount',
-            header: '# Permisos',
-            size: 120,
-            grow: false,
-            muiTableHeadCellProps: { align: 'center' },
-            muiTableBodyCellProps: { align: 'center' },
-        },
     ];
 }
 
 export function renderRolesActions({ onEdit, onDelete }) {
-    return ({ row }) => (
-        <Box sx={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
-            <Tooltip title="Editar">
-                <IconButton size="small" onClick={() => onEdit(row.original)}>
-                    <EditIcon fontSize="small" sx={{ color: 'primary.icon' }} />
-                </IconButton>
-            </Tooltip>
-            <Tooltip title="Eliminar">
-                <IconButton size="small" onClick={() => onDelete(row.original)}>
-                    <DeleteIcon fontSize="small" sx={{ color: 'primary.icon' }} />
-                </IconButton>
-            </Tooltip>
-        </Box>
-    );
+    return ({ row }) => {
+        const actions = [
+            {
+                key: 'edit',
+                label: 'Editar',
+                icon: <EditIcon fontSize="small" />,
+                onClick: () => onEdit(row.original),
+            },
+            {
+                key: 'delete',
+                label: 'Eliminar',
+                icon: <DeleteIcon fontSize="small" />,
+                color: 'error',
+                onClick: () => onDelete(row.original),
+            },
+        ];
+
+        return <RowActionsMenu actions={actions} tooltip="Ver acción" />;
+    };
 }
