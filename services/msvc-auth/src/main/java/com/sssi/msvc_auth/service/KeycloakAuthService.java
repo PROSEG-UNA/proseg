@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sssi.msvc_auth.exception.AuthenticationException;
 import com.sssi.msvc_auth.exception.TokenException;
+import com.sssi.msvc_auth.dto.KeycloakTokenDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -14,6 +15,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -42,7 +44,7 @@ public class KeycloakAuthService {
         this.objectMapper = objectMapper;
     }
 
-    public String getToken(String username, String password) {
+    public KeycloakTokenDto getToken(String username, String password) {
         try {
             String tokenUrl = keycloakServerUrl + "/realms/" + realm + "/protocol/openid-connect/token";
 
@@ -73,7 +75,10 @@ public class KeycloakAuthService {
 
             if (jsonNode.has("access_token")) {
                 log.info("Token obtenido exitosamente para usuario: {}", username);
-                return jsonNode.get("access_token").asText();
+                return KeycloakTokenDto.builder()
+                        .accessToken(jsonNode.get("access_token").asText())
+                        .refreshToken(jsonNode.path("refresh_token").asText(""))
+                        .build();
             }
 
             if (jsonNode.has("error")) {
@@ -127,6 +132,61 @@ public class KeycloakAuthService {
         } catch (Exception e) {
             log.error("Error inesperado obteniendo token para usuario {}: {}", username, e.getMessage(), e);
             throw new IllegalStateException("Error inesperado al obtener token desde Keycloak", e);
+        }
+    }
+
+    public KeycloakTokenDto refreshToken(String refreshToken) {
+        try {
+            String tokenUrl = keycloakServerUrl + "/realms/" + realm + "/protocol/openid-connect/token";
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+            body.add("grant_type", "refresh_token");
+            body.add("refresh_token", refreshToken);
+            body.add("client_id", clientId);
+            body.add("client_secret", clientSecret);
+
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
+            String response = restTemplate.postForObject(tokenUrl, request, String.class);
+            JsonNode jsonNode = objectMapper.readTree(response);
+
+            if (jsonNode.has("access_token")) {
+                log.info("Token renovado exitosamente");
+                return KeycloakTokenDto.builder()
+                        .accessToken(jsonNode.get("access_token").asText())
+                        .refreshToken(jsonNode.path("refresh_token").asText(""))
+                        .build();
+            }
+
+            throw TokenException.refreshTokenExpired();
+
+        } catch (HttpStatusCodeException e) {
+            String responseBody = e.getResponseBodyAsString();
+            log.warn("Error renovando token. Status: {}. Body: {}", e.getStatusCode(), responseBody);
+
+            if (!responseBody.isBlank()) {
+                try {
+                    JsonNode errorNode = objectMapper.readTree(responseBody);
+                    String error = errorNode.path("error").asText("");
+
+                    if ("invalid_grant".equals(error)) {
+                        throw TokenException.refreshTokenExpired();
+                    }
+                } catch (TokenException te) {
+                    throw te;
+                } catch (Exception parseEx) {
+                    log.warn("No se pudo parsear el error de renovacion: {}", parseEx.getMessage());
+                }
+            }
+
+            throw TokenException.refreshTokenExpired();
+        } catch (TokenException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error inesperado renovando token: {}", e.getMessage(), e);
+            throw new IllegalStateException("Error inesperado al renovar token desde Keycloak", e);
         }
     }
 
