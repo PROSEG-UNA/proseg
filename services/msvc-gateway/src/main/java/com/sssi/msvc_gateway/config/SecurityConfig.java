@@ -51,7 +51,8 @@ public class SecurityConfig {
                         .pathMatchers(
                                 "/api/auth/login",
                                 "/api/auth/register",
-                                "/api/auth/logout"
+                                "/api/auth/logout",
+                                "/api/auth/refresh"
                         ).permitAll()
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2
