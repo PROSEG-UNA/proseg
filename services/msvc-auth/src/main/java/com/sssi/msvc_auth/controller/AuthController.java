@@ -20,6 +20,8 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.time.Instant;
 
@@ -49,12 +51,12 @@ public class AuthController {
     ) {
         log.info("Login attempt for identifier: {}", request.getIdentifier());
 
-        String token = keycloakAuthService.getToken(
+        KeycloakTokenDto tokens = keycloakAuthService.getToken(
                 request.getIdentifier(),
                 request.getPassword()
         );
 
-        String keycloakUserId = keycloakAuthService.extractUserIdFromToken(token);
+        String keycloakUserId = keycloakAuthService.extractUserIdFromToken(tokens.getAccessToken());
         userApprobationService.assertUserIsApproved(keycloakUserId);
 
         try {
@@ -70,13 +72,8 @@ public class AuthController {
             log.warn("No se pudo enviar evento de login a Kafka: {}", kafkaEx.getMessage());
         }
 
-        ResponseCookie cookie = ResponseCookie.from("auth_token", token)
-                .httpOnly(true)
-                .secure(secureCookie)
-                .path("/")
-                .sameSite("Strict")
-                .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, buildCookie("auth_token", tokens.getAccessToken()).toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, buildCookie("refresh_token", tokens.getRefreshToken()).toString());
 
         log.info("Login exitoso para identifier: {}", request.getIdentifier());
 
@@ -90,15 +87,56 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Void>> logout(HttpServletResponse response) {
-        ResponseCookie cookie = ResponseCookie.from("auth_token", "")
+        response.addHeader(HttpHeaders.SET_COOKIE, expireCookie("auth_token").toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, expireCookie("refresh_token").toString());
+        return ApiResponseBuilder.ok(null, "Logout exitoso");
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<KeycloakTokenDto>> refresh(
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) {
+        String refreshTokenValue = null;
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("refresh_token".equals(cookie.getName())) {
+                    refreshTokenValue = cookie.getValue();
+                    break;
+                }
+            }
+        }
+
+        if (refreshTokenValue == null || refreshTokenValue.isBlank()) {
+            throw com.sssi.msvc_auth.exception.TokenException.refreshTokenNotFound();
+        }
+
+        KeycloakTokenDto tokens = keycloakAuthService.refreshToken(refreshTokenValue);
+
+        response.addHeader(HttpHeaders.SET_COOKIE, buildCookie("auth_token", tokens.getAccessToken()).toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, buildCookie("refresh_token", tokens.getRefreshToken()).toString());
+
+        log.info("Token renovado exitosamente");
+        return ApiResponseBuilder.ok(tokens, "Token renovado exitosamente");
+    }
+
+    private ResponseCookie buildCookie(String name, String value) {
+        return ResponseCookie.from(name, value)
+                .httpOnly(true)
+                .secure(secureCookie)
+                .path("/")
+                .sameSite("Strict")
+                .build();
+    }
+
+    private ResponseCookie expireCookie(String name) {
+        return ResponseCookie.from(name, "")
                 .httpOnly(true)
                 .secure(secureCookie)
                 .path("/")
                 .maxAge(0)
                 .sameSite("Strict")
                 .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-        return ApiResponseBuilder.ok(null, "Logout exitoso");
     }
 
     @PostMapping(value = "/register", produces = MediaType.APPLICATION_JSON_VALUE)

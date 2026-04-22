@@ -8,7 +8,16 @@ import org.springframework.security.web.server.authentication.ServerAuthenticati
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+import java.util.Set;
+
 public class CookieBearerTokenConverter implements ServerAuthenticationConverter {
+
+    private static final Set<String> PUBLIC_PATHS = Set.of(
+            "/api/auth/login",
+            "/api/auth/register",
+            "/api/auth/logout",
+            "/api/auth/refresh"
+    );
 
     private final String cookieName;
 
@@ -18,6 +27,10 @@ public class CookieBearerTokenConverter implements ServerAuthenticationConverter
 
     @Override
     public Mono<Authentication> convert(ServerWebExchange exchange) {
+        String path = exchange.getRequest().getPath().value();
+        if (PUBLIC_PATHS.contains(path)) {
+            return Mono.empty();
+        }
 
         String authHeader = exchange.getRequest()
                 .getHeaders()
