@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import LoginPage from '../features/auth/pages/LoginPage';
 import RegisterPage from '../features/auth/pages/RegisterPage';
 import InventoryPage from '../features/inventory/pages/InventoryPage';
@@ -21,8 +21,12 @@ export const router = createBrowserRouter([
     element: <RegisterPage />,
   },
   {
-    path: '/inventario',
+    path: '/home',
     element: <InventoryPage />,
+  },
+  {
+    path: '/inventario',
+    element: <Navigate to="/home" replace />,
   },
   {
     path: '/inventario/activos',

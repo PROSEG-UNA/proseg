@@ -31,7 +31,7 @@ export function UserPage() {
               sx={{
                 fontWeight: 700,
                 color: 'primary.icon',
-                fontSize: '1.8rem',
+                fontSize: '1.65rem',
                 letterSpacing: '0.3px',
               }}
             >

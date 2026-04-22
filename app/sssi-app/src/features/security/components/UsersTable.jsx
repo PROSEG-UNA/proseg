@@ -48,7 +48,20 @@ export default function UsersTable({ refreshKey = 0 }) {
         }
     };
 
-    const columns = useMemo(() => getUsersColumns(), []);
+    const columns = useMemo(
+        () =>
+            getUsersColumns().map((column) => ({
+                ...column,
+                muiTableBodyCellProps: {
+                    ...(column.muiTableBodyCellProps ?? {}),
+                    sx: {
+                        ...(column.muiTableBodyCellProps?.sx ?? {}),
+                        py: 1.15,
+                    },
+                },
+            })),
+        []
+    );
 
     return (
         <>
@@ -69,6 +82,13 @@ export default function UsersTable({ refreshKey = 0 }) {
                     rowCount: totalElements,
                     onPaginationChange: setPagination,
                     state: { pagination },
+                    displayColumnDefOptions: {
+                        'mrt-row-actions': {
+                            muiTableBodyCellProps: {
+                                sx: { py: 1.15 },
+                            },
+                        },
+                    },
                 }}
                 enableColumnFilters={false}
                 enableGlobalFilter

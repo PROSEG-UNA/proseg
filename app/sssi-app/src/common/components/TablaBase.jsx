@@ -123,7 +123,7 @@ export default function TableBase({
             sx: {
                 backgroundColor: 'background.paper',
                 fontWeight: 600,
-                fontSize: '0.8125rem',
+                fontSize: '0.9rem',
                 border: 'none',
                 '&:focus, &:focus-within': { outline: 'none' },
             },
@@ -132,7 +132,7 @@ export default function TableBase({
         muiTableBodyCellProps: {
             sx: {
                 backgroundColor: 'background.default',
-                fontSize: '0.8125rem',
+                fontSize: '0.9rem',
                 borderTop: '1px solid',
                 borderTopColor: 'divider',
                 '&:focus, &:focus-within': { outline: 'none' },

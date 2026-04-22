@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Typography, Container, useMediaQuery, useTheme } from '@mui/material';
 import StorageIcon from '@mui/icons-material/Storage';
+import PeopleIcon from '@mui/icons-material/People';
+import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import { FeatureCard } from '../../../common/components/FeatureCard';
 import { Header } from '../../../common/components/Header';
 import { NavDrawer } from '../../../common/components/NavDrawer';
@@ -16,7 +18,7 @@ export function InventoryPage() {
   return (
     <Box className="inventory-page">
         <Header
-          title="Gestión de Inventario"
+          title="Sistema de Sección de Seguridad Institucional"
           onMenuClick={isMediumOrDown ? () => setDrawerOpen(true) : undefined}
         />
         <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
@@ -40,20 +42,34 @@ export function InventoryPage() {
               sx={{
                 color: 'text.secondary',
                 mb: 4,
-                maxWidth: '600px',
+                maxWidth: '760px',
                 fontSize: { xs: '0.9rem', sm: '1rem' },
               }}
             >
-              Selecciona una opción para comenzar a gestionar los activos de tu organización.
+              El SSSI es una plataforma institucional para digitalizar la gestión de activos y seguridad de la Universidad Nacional de Costa Rica, centralizando usuarios, roles y trazabilidad de movimientos, mantenimiento y estado de los recursos para mejorar el control operativo y la toma de decisiones.
             </Typography>
 
-            <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, width: '100%', flexWrap: 'wrap' }}>
               <FeatureCard
                 icon={<StorageIcon fontSize="inherit" />}
                 title="Gestión de Activos"
                 description="Administra todos los activos de la organización"
                 buttonLabel="Ir a Activos"
                 onNavigate={() => navigate('/inventario/activos')}
+              />
+              <FeatureCard
+                icon={<PeopleIcon fontSize="inherit" />}
+                title="Gestión de Usuarios"
+                description="Administra usuarios y su estado dentro del sistema"
+                buttonLabel="Ir a Usuarios"
+                onNavigate={() => navigate('/seguridad/usuarios')}
+              />
+              <FeatureCard
+                icon={<VerifiedUserIcon fontSize="inherit" />}
+                title="Gestión de Roles"
+                description="Administra roles y permisos de acceso"
+                buttonLabel="Ir a Roles"
+                onNavigate={() => navigate('/seguridad/roles')}
               />
             </Box>
           </Box>
