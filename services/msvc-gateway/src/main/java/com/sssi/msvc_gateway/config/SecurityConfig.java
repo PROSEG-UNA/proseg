@@ -13,8 +13,6 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
-import static org.springframework.security.config.Customizer.withDefaults;
-
 @Configuration
 @EnableWebFluxSecurity
 public class SecurityConfig {
@@ -42,6 +40,10 @@ public class SecurityConfig {
         return http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(new JwtAuthenticationEntryPoint())
+                        .accessDeniedHandler(new JwtAccessDeniedHandler())
+                )
                 .authorizeExchange(exchange -> exchange
                         .pathMatchers(
                                 "/actuator/health",
@@ -54,11 +56,14 @@ public class SecurityConfig {
                                 "/api/auth/logout",
                                 "/api/auth/refresh"
                         ).permitAll()
+                        .pathMatchers("/api/test/admin").hasRole("ADMINISTRADOR")
+                        .pathMatchers("/api/test/user").hasAnyRole("ACTIVOS_EDITAR")
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .bearerTokenConverter(new CookieBearerTokenConverter(AUTH_COOKIE_NAME))
-                        .jwt(withDefaults())
-                        .authenticationEntryPoint(new JwtAuthenticationEntryPoint()))
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(new ReactiveKeycloakJwtConverter()))
+                        .authenticationEntryPoint(new JwtAuthenticationEntryPoint())
+                )
                 .build();
     }
 }
