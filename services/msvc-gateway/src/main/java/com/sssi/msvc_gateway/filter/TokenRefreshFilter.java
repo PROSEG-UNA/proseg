@@ -97,6 +97,10 @@ public class TokenRefreshFilter implements WebFilter {
                 })
                 .onErrorResume(WebClientResponseException.class, ex -> {
                     log.warn("Error renovando token ({}), continuando sin renovar", ex.getStatusCode());
+                    if (ex.getStatusCode().value() == 400 || ex.getStatusCode().value() == 401) {
+                        exchange.getResponse().addCookie(expireCookie(AUTH_COOKIE));
+                        exchange.getResponse().addCookie(expireCookie(REFRESH_COOKIE));
+                    }
                     return chain.filter(exchange);
                 })
                 .onErrorResume(ex -> {
@@ -114,7 +118,7 @@ public class TokenRefreshFilter implements WebFilter {
             JsonNode claims = objectMapper.readTree(payload);
 
             long exp = claims.path("exp").asLong(0);
-            return exp == 0 || Instant.now().getEpochSecond() >= exp;
+            return exp == 0 || Instant.now().getEpochSecond() >= (exp - 30);
         } catch (Exception e) {
             log.warn("No se pudo verificar expiración del token: {}", e.getMessage());
             return true;
@@ -131,6 +135,16 @@ public class TokenRefreshFilter implements WebFilter {
                             return entry.getKey() + "=" + value;
                         }))
                 .collect(Collectors.joining("; "));
+    }
+
+    private ResponseCookie expireCookie(String name) {
+        return ResponseCookie.from(name, "")
+                .httpOnly(true)
+                .secure(secureCookie)
+                .path("/")
+                .maxAge(0)
+                .sameSite("Strict")
+                .build();
     }
 
     private ResponseCookie buildCookie(String name, String value) {
