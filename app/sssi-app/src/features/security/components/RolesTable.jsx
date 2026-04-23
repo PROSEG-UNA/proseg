@@ -22,7 +22,7 @@ export default function RolesTable({ refreshKey, onRefresh }) {
     const [editingRole, setEditingRole] = useState(null);
     const [deletingRole, setDeletingRole] = useState(null);
     const [deleting, setDeleting] = useState(false);
-    const [alert, setAlert] = useState(null); // { type, message }
+    const [alert, setAlert] = useState(null);
 
     const handleEdit = (row) => setEditingRole(row);
     const handleDelete = (row) => setDeletingRole(row);
