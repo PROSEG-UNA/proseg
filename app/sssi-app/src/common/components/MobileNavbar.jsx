@@ -102,10 +102,12 @@ export function MobileNavbar() {
               <img
                 src="/logo_una.png"
                 alt="Logo UNA"
+                onClick={() => handleNavigation('/home')}
                 style={{
                   maxWidth: '50%',
                   height: 'auto',
                   maxHeight: '50px',
+                  cursor: 'pointer',
                 }}
               />
               <IconButton onClick={toggleDrawer(false)} sx={{ color: 'primary.main' }}>
@@ -118,6 +120,10 @@ export function MobileNavbar() {
                 <ListItemButton
                   onClick={() => toggleMenu('inventory')}
                   sx={(theme) => ({
+                    '&&': {
+                      py: 3,
+                      minHeight: 72,
+                    },
                     borderBottom: '1px solid rgba(0,0,0,0.1)',
                     color: 'text.primary',
                     '&:hover': {
@@ -128,7 +134,10 @@ export function MobileNavbar() {
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <WarehouseIcon sx={{ mr: 2, fontSize: 20 }} />
-                      <ListItemText primary="Gestión Inventarios" />
+                      <ListItemText
+                        primary="Gestión Inventarios"
+                        sx={{ '& .MuiListItemText-primary': { fontSize: '1.05rem', fontWeight: 600, lineHeight: 1.2 } }}
+                      />
                     </Box>
                     {expandedMenu === 'inventory' ? (
                       <ExpandLessIcon sx={{ color: 'text.primary' }} />
@@ -143,7 +152,11 @@ export function MobileNavbar() {
                       <ListItemButton
                         onClick={() => handleNavigation('/inventario/activos')}
                         sx={(theme) => ({
-                          pl: 4,
+                          '&&': {
+                            py: 2,
+                            minHeight: 56,
+                          },
+                          pl: 6,
                           color: 'text.primary',
                           '&:hover': {
                             backgroundColor: alpha(theme.palette.primary.main, 0.1),
@@ -151,7 +164,10 @@ export function MobileNavbar() {
                           },
                         })}
                       >
-                        <ListItemText primary="Activos" />
+                        <ListItemText
+                          primary="Activos"
+                          sx={{ '& .MuiListItemText-primary': { fontSize: '0.98rem', fontWeight: 500 } }}
+                        />
                       </ListItemButton>
                     </ListItem>
                   </List>
@@ -162,6 +178,10 @@ export function MobileNavbar() {
                 <ListItemButton
                   onClick={() => toggleMenu('security')}
                   sx={(theme) => ({
+                    '&&': {
+                      py: 3,
+                      minHeight: 72,
+                    },
                     borderBottom: '1px solid rgba(0,0,0,0.1)',
                     color: 'text.primary',
                     '&:hover': {
@@ -172,7 +192,10 @@ export function MobileNavbar() {
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <VerifiedUserIcon sx={{ mr: 2, fontSize: 20 }} />
-                      <ListItemText primary="Gestión Seguridad" />
+                      <ListItemText
+                        primary="Gestión Seguridad"
+                        sx={{ '& .MuiListItemText-primary': { fontSize: '1.05rem', fontWeight: 600, lineHeight: 1.2 } }}
+                      />
                     </Box>
                     {expandedMenu === 'security' ? (
                       <ExpandLessIcon sx={{ color: 'text.primary' }} />
@@ -187,7 +210,11 @@ export function MobileNavbar() {
                       <ListItemButton
                         onClick={() => handleNavigation('/seguridad/usuarios')}
                         sx={(theme) => ({
-                          pl: 4,
+                          '&&': {
+                            py: 2,
+                            minHeight: 56,
+                          },
+                          pl: 6,
                           color: 'text.primary',
                           '&:hover': {
                             backgroundColor: alpha(theme.palette.primary.main, 0.1),
@@ -196,14 +223,21 @@ export function MobileNavbar() {
                         })}
                       >
                         <PeopleIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                        <ListItemText primary="Usuarios" />
+                        <ListItemText
+                          primary="Usuarios"
+                          sx={{ '& .MuiListItemText-primary': { fontSize: '0.98rem', fontWeight: 500 } }}
+                        />
                       </ListItemButton>
                     </ListItem>
                     <ListItem disablePadding>
                       <ListItemButton
                         onClick={() => handleNavigation('/seguridad/roles')}
                         sx={(theme) => ({
-                          pl: 4,
+                          '&&': {
+                            py: 2,
+                            minHeight: 56,
+                          },
+                          pl: 6,
                           color: 'text.primary',
                           '&:hover': {
                             backgroundColor: alpha(theme.palette.primary.main, 0.1),
@@ -212,7 +246,10 @@ export function MobileNavbar() {
                         })}
                       >
                         <VerifiedUserIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                        <ListItemText primary="Roles" />
+                        <ListItemText
+                          primary="Roles"
+                          sx={{ '& .MuiListItemText-primary': { fontSize: '0.98rem', fontWeight: 500 } }}
+                        />
                       </ListItemButton>
                     </ListItem>
                   </List>

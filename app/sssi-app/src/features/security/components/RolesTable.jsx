@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -36,7 +36,20 @@ export default function RolesTable({ refreshKey, onRefresh }) {
         }
     };
 
-    const columns = getRolesColumns();
+    const columns = useMemo(
+        () =>
+            getRolesColumns().map((column) => ({
+                ...column,
+                muiTableBodyCellProps: {
+                    ...(column.muiTableBodyCellProps ?? {}),
+                    sx: {
+                        ...(column.muiTableBodyCellProps?.sx ?? {}),
+                        py: 1.15,
+                    },
+                },
+            })),
+        []
+    );
 
     return (
         <>
@@ -52,6 +65,13 @@ export default function RolesTable({ refreshKey, onRefresh }) {
                 })}
                 tableOptions={{
                     positionActionsColumn: 'last',
+                    displayColumnDefOptions: {
+                        'mrt-row-actions': {
+                            muiTableBodyCellProps: {
+                                sx: { py: 1.15 },
+                            },
+                        },
+                    },
                 }}
                 enableGlobalFilter
             />
