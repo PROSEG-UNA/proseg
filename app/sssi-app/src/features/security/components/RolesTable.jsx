@@ -13,7 +13,12 @@ import RoleFormModal from './RoleFormModal.jsx';
 import AlertModal from '../../../common/components/AlertModal.jsx';
 
 export default function RolesTable({ refreshKey, onRefresh }) {
-    const { rows, loading, error } = useRolesData(refreshKey);
+    const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
+    const { rows, loading, error, totalElements } = useRolesData({
+        pageIndex: pagination.pageIndex,
+        pageSize: pagination.pageSize,
+        refreshKey,
+    });
     const [editingRole, setEditingRole] = useState(null);
     const [deletingRole, setDeletingRole] = useState(null);
     const [deleting, setDeleting] = useState(false);
@@ -52,6 +57,10 @@ export default function RolesTable({ refreshKey, onRefresh }) {
                 })}
                 tableOptions={{
                     positionActionsColumn: 'last',
+                    manualPagination: true,
+                    rowCount: totalElements,
+                    onPaginationChange: setPagination,
+                    state: { pagination },
                 }}
                 enableGlobalFilter
             />

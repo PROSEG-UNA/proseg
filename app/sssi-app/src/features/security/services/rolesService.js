@@ -4,9 +4,12 @@ const BASE_URL = '/api/role';
 
 const config = { withCredentials: true };
 
-export async function fetchRoles() {
-    const { data } = await axios.get(`${BASE_URL}/composite`, config);
-    return data.data;
+export async function fetchRoles({ page = 0, size = 10 } = {}) {
+    const { data } = await axios.get(`${BASE_URL}/composite`, {
+        ...config,
+        params: { page, size },
+    });
+    return data?.data ?? { content: [], page, size, totalElements: 0, totalPages: 0, last: true };
 }
 
 export async function fetchPermissionsByRole(roleName) {

@@ -1,18 +1,23 @@
 import { useState, useEffect } from 'react';
 import { fetchRoles, fetchPermissionsByRole } from '../services/rolesService';
 
-export function useRolesData(refreshKey = 0) {
+export function useRolesData({ pageIndex = 0, pageSize = 10, refreshKey = 0 } = {}) {
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [totalElements, setTotalElements] = useState(0);
 
-    const loadRoles = async (ignore) => {
+    const loadRoles = async (page, size, ignore) => {
         try {
             setLoading(true);
-            const roles = await fetchRoles();
+            setError(null);
+
+            const response = await fetchRoles({ page, size });
+
+            if (ignore) return;
 
             const rolesWithPermissions = await Promise.all(
-                roles.map(async (role) => {
+                (response.content ?? []).map(async (role) => {
                     const permissions = await fetchPermissionsByRole(role.name);
                     return {
                         id: role.id,
@@ -25,6 +30,7 @@ export function useRolesData(refreshKey = 0) {
 
             if (!ignore) {
                 setRows(rolesWithPermissions);
+                setTotalElements(response.totalElements ?? 0);
             }
         } catch (err) {
             if (!ignore) setError(err.message);
@@ -35,9 +41,9 @@ export function useRolesData(refreshKey = 0) {
 
     useEffect(() => {
         let ignore = false;
-        void loadRoles(ignore);
+        void loadRoles(pageIndex, pageSize, ignore);
         return () => { ignore = true; };
-    }, [refreshKey]);
+    }, [pageIndex, pageSize, refreshKey]);
 
-    return { rows, loading, error };
+    return { rows, loading, error, totalElements };
 }
