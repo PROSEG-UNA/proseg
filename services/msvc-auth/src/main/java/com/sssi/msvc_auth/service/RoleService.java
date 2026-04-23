@@ -29,12 +29,12 @@ public class RoleService {
         return keycloakAdminService.getRoleComposites(roleName);
     }
 
-    public void createCompositeRole(String roleName, List<String> privileges) {
-        keycloakAdminService.createCompositeRole(roleName, privileges);
+    public void createCompositeRole(String roleName, String description, List<String> privileges) {
+        keycloakAdminService.createCompositeRole(roleName, description, privileges);
     }
 
-    public void updateRole(String roleName, List<String> privileges) {
-        keycloakAdminService.updateRole(roleName, privileges);
+    public void updateRole(String roleName, String newRoleName, String description, List<String> privileges) {
+        keycloakAdminService.updateRole(roleName, newRoleName, description, privileges);
     }
 
     public void deleteRole(String roleName) {

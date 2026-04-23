@@ -5,6 +5,7 @@ import com.sssi.common.api.util.ApiResponseBuilder;
 import com.sssi.msvc_auth.dto.CreateRoleRequestDto;
 import com.sssi.msvc_auth.dto.KeycloakUserResponseDto;
 import com.sssi.msvc_auth.dto.RoleResponseDto;
+import com.sssi.msvc_auth.dto.UpdateRoleRequestDto;
 import com.sssi.msvc_auth.service.RoleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -46,17 +47,17 @@ public class RoleController {
     @PostMapping
     public ResponseEntity<ApiResponse<Void>> createRole(@Valid @RequestBody CreateRoleRequestDto request) {
         log.info("Creando rol: {}", request.getRoleName());
-        roleService.createCompositeRole(request.getRoleName(), request.getPrivileges());
+        roleService.createCompositeRole(request.getRoleName(), request.getDescription(), request.getPrivileges());
         return ApiResponseBuilder.created(null, "Rol " + request.getRoleName() + " creado exitosamente");
     }
 
     @PutMapping("/{roleName}")
     public ResponseEntity<ApiResponse<Void>> updateRole(
             @PathVariable String roleName,
-            @Valid @RequestBody CreateRoleRequestDto request
+            @RequestBody UpdateRoleRequestDto request
     ) {
         log.info("Actualizando rol: {}", roleName);
-        roleService.updateRole(roleName, request.getPrivileges());
+        roleService.updateRole(roleName, request.getRoleName(), request.getDescription(), request.getPrivileges());
         return ApiResponseBuilder.noContent("Rol " + roleName + " actualizado exitosamente");
     }
 
