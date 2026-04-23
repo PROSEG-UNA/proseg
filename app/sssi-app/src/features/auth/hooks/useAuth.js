@@ -16,7 +16,7 @@ export function useAuth() {
         setAlert(null);
         try {
             await login(identifier, password);
-            navigate('/inventario');
+            navigate('/home');
         } catch (err) {
             setAlert({ type: 'error', message: err instanceof Error ? err.message : 'Error al iniciar sesión' });
         } finally {

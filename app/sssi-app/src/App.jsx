@@ -25,13 +25,14 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/registro" element={<RegisterPage />} />
             <Route
-              path="/inventario"
+              path="/home"
               element={
                 <DashboardLayout>
                   <InventoryPage />
                 </DashboardLayout>
               }
             />
+            <Route path="/inventario" element={<Navigate to="/home" replace />} />
             <Route
               path="/inventario/activos"
               element={

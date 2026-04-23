@@ -9,8 +9,12 @@ import {
     CircularProgress,
     Typography,
     Link,
+    IconButton,
+    InputAdornment,
 } from '@mui/material';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { alpha } from '@mui/material/styles';
 import { useAuth } from '../hooks/useAuth';
 import AlertModal from '../../../common/components/AlertModal.jsx';
@@ -18,6 +22,22 @@ import '../css/RegisterPage.css';
 
 const fieldSx = (theme) => ({
     '& .MuiOutlinedInput-root': {
+        '& .MuiInputAdornment-root': {
+            marginLeft: 0,
+            backgroundColor: 'transparent',
+        },
+        '& .MuiIconButton-root': {
+            backgroundColor: 'transparent !important',
+        },
+        '& .MuiOutlinedInput-input': {
+            backgroundColor: 'transparent',
+        },
+        '& .MuiOutlinedInput-input:-webkit-autofill': {
+            WebkitBoxShadow: '0 0 0 1000px transparent inset',
+            WebkitTextFillColor: 'inherit',
+            transition: 'background-color 9999s ease-out 0s',
+            caretColor: 'inherit',
+        },
         '& fieldset': { borderColor: theme.palette.grey[400] },
         '&:hover fieldset': { borderColor: theme.palette.primary.main },
     },
@@ -25,6 +45,7 @@ const fieldSx = (theme) => ({
 
 export function RegisterPage() {
     const [formData, setFormData] = useState({ username: '', email: '', password: '', firstName: '', lastName: '' });
+    const [showPassword, setShowPassword] = useState(false);
     const { loading, alert, handleAlertClose, handleRegister } = useAuth();
 
     const handleChange = (e) => {
@@ -35,6 +56,10 @@ export function RegisterPage() {
     const handleSubmit = (e) => {
         e.preventDefault();
         handleRegister(formData);
+    };
+
+    const handleTogglePasswordVisibility = () => {
+        setShowPassword((prev) => !prev);
     };
 
     return (
@@ -143,13 +168,37 @@ export function RegisterPage() {
                                 fullWidth
                                 label="Contraseña"
                                 name="password"
-                                type="password"
+                                type={showPassword ? 'text' : 'password'}
                                 value={formData.password}
                                 onChange={handleChange}
                                 margin="dense"
                                 variant="outlined"
                                 required
                                 disabled={loading}
+                                slotProps={{
+                                    input: {
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                <IconButton
+                                                    onClick={handleTogglePasswordVisibility}
+                                                    edge="end"
+                                                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                                    disableRipple
+                                                    sx={{
+                                                        p: 0.5,
+                                                        color: 'text.secondary',
+                                                        '&:hover': {
+                                                            backgroundColor: 'transparent',
+                                                            color: 'text.primary',
+                                                        },
+                                                    }}
+                                                >
+                                                    {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                                                </IconButton>
+                                            </InputAdornment>
+                                        ),
+                                    },
+                                }}
                                 sx={fieldSx}
                             />
                             <Button

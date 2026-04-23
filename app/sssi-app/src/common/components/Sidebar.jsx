@@ -89,10 +89,12 @@ export function Sidebar() {
                     <img
                         src={mode === 'dark' ? '/logo_una_blanco.png' : '/logo_una.png'}
                         alt="Logo UNA"
+                        onClick={() => navigate('/home')}
                         style={{
                             maxWidth: '60%',
                             height: 'auto',
                             maxHeight: '60px',
+                            cursor: 'pointer',
                         }}
                     />
                 )}
@@ -118,6 +120,10 @@ export function Sidebar() {
                                 className="sidebar-menu-title"
                                 onClick={() => toggleMenu('inventory')}
                                 sx={(theme) => ({
+                                    '&&': {
+                                        py: 3,
+                                        minHeight: 72,
+                                    },
                                     borderBottom: '1px solid', borderBottomColor: 'divider',
                                     color: 'text.primary',
                                     '&:hover': {
@@ -127,7 +133,15 @@ export function Sidebar() {
                             >
                                 <ListItemText
                                     primary="Gestión Inventarios"
-                                    sx={{ color: 'text.primary' }}
+                                    sx={{
+                                        color: 'text.primary',
+                                        '& .MuiListItemText-primary': {
+                                            fontSize: '1.05rem',
+                                            fontWeight: 600,
+                                            lineHeight: 1.2,
+                                            px: 2,
+                                        },
+                                    }}
                                 />
                                 {expandedMenu === 'inventory' ? (
                                     <ExpandLessIcon sx={{ color: 'text.primary' }} />
@@ -142,7 +156,12 @@ export function Sidebar() {
                                             className="sidebar-item"
                                             onClick={() => navigate('/inventario/activos')}
                                             sx={(theme) => ({
-                                                pl: 4,
+                                                '&&': {
+                                                    py: 2,
+                                                    minHeight: 56,
+                                                    px: 4,
+                                                },
+                                                pl: 5,
                                                 color: 'text.primary',
                                                 '&:hover': {
                                                     backgroundColor: alpha(theme.palette.primary.main, 0.1),
@@ -151,7 +170,15 @@ export function Sidebar() {
                                             })}
                                         >
                                             <WarehouseIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                                            <ListItemText primary="Activos" />
+                                            <ListItemText
+                                                primary="Activos"
+                                                sx={{
+                                                    '& .MuiListItemText-primary': {
+                                                        fontSize: '0.98rem',
+                                                        fontWeight: 500,
+                                                    },
+                                                }}
+                                            />
                                         </ListItemButton>
                                     </ListItem>
                                 </List>
@@ -163,6 +190,10 @@ export function Sidebar() {
                                 className="sidebar-menu-title"
                                 onClick={() => toggleMenu('security')}
                                 sx={(theme) => ({
+                                    '&&': {
+                                        py: 3,
+                                        minHeight: 72,
+                                    },
                                     borderBottom: '1px solid', borderBottomColor: 'divider',
                                     color: 'text.primary',
                                     '&:hover': {
@@ -172,7 +203,15 @@ export function Sidebar() {
                             >
                                 <ListItemText
                                     primary="Gestión Seguridad"
-                                    sx={{ color: 'text.primary' }}
+                                    sx={{
+                                        color: 'text.primary',
+                                        '& .MuiListItemText-primary': {
+                                            fontSize: '1.05rem',
+                                            fontWeight: 600,
+                                            lineHeight: 1.2,
+                                            px: 2,
+                                        },
+                                    }}
                                 />
                                 {expandedMenu === 'security' ? (
                                     <ExpandLessIcon sx={{ color: 'text.primary' }} />
@@ -187,7 +226,12 @@ export function Sidebar() {
                                             className="sidebar-item"
                                             onClick={() => navigate('/seguridad/usuarios')}
                                             sx={(theme) => ({
-                                                pl: 4,
+                                                '&&': {
+                                                    py: 2,
+                                                    minHeight: 56,
+                                                    px: 4,
+                                                },
+                                                pl: 5,
                                                 color: 'text.primary',
                                                 '&:hover': {
                                                     backgroundColor: alpha(theme.palette.primary.main, 0.1),
@@ -196,7 +240,15 @@ export function Sidebar() {
                                             })}
                                         >
                                             <PeopleIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                                            <ListItemText primary="Usuarios" />
+                                            <ListItemText
+                                                primary="Usuarios"
+                                                sx={{
+                                                    '& .MuiListItemText-primary': {
+                                                        fontSize: '0.98rem',
+                                                        fontWeight: 500,
+                                                    },
+                                                }}
+                                            />
                                         </ListItemButton>
                                     </ListItem>
                                     <ListItem disablePadding>
@@ -204,7 +256,12 @@ export function Sidebar() {
                                             className="sidebar-item"
                                             onClick={() => navigate('/seguridad/roles')}
                                             sx={(theme) => ({
-                                                pl: 4,
+                                                '&&': {
+                                                    py: 2,
+                                                    minHeight: 56,
+                                                    px: 4,
+                                                },
+                                                pl: 5,
                                                 color: 'text.primary',
                                                 '&:hover': {
                                                     backgroundColor: alpha(theme.palette.primary.main, 0.1),
@@ -213,7 +270,15 @@ export function Sidebar() {
                                             })}
                                         >
                                             <VerifiedUserIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                                            <ListItemText primary="Roles" />
+                                            <ListItemText
+                                                primary="Roles"
+                                                sx={{
+                                                    '& .MuiListItemText-primary': {
+                                                        fontSize: '0.98rem',
+                                                        fontWeight: 500,
+                                                    },
+                                                }}
+                                            />
                                         </ListItemButton>
                                     </ListItem>
                                 </List>

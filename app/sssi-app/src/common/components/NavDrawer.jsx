@@ -44,7 +44,12 @@ export function NavDrawer({ open, onClose }) {
         role="presentation"
       >
         <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(0,0,0,0.1)' }}>
-          <img src={mode === 'dark' ? '/logo_una_blanco.png' : '/logo_una.png'} alt="Logo UNA" style={{ maxWidth: '50%', height: 'auto', maxHeight: '50px' }} />
+          <img
+            src={mode === 'dark' ? '/logo_una_blanco.png' : '/logo_una.png'}
+            alt="Logo UNA"
+            onClick={() => handleNavigation('/home')}
+            style={{ maxWidth: '50%', height: 'auto', maxHeight: '50px', cursor: 'pointer' }}
+          />
           <IconButton onClick={onClose} sx={{ color: 'primary.icon' }}>
             <CloseIcon />
           </IconButton>
@@ -54,12 +59,20 @@ export function NavDrawer({ open, onClose }) {
           <ListItem disablePadding sx={{ display: 'block' }}>
             <ListItemButton
               onClick={() => toggleMenu('inventory')}
-              sx={(theme) => ({ borderBottom: '1px solid rgba(0,0,0,0.1)', color: 'text.primary', '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.05) } })}
+              sx={(theme) => ({
+                '&&': { py: 3, minHeight: 72 },
+                borderBottom: '1px solid rgba(0,0,0,0.1)',
+                color: 'text.primary',
+                '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.05) },
+              })}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <WarehouseIcon sx={{ mr: 2, fontSize: 20 }} />
-                  <ListItemText primary="Gestión Inventarios" />
+                  <ListItemText
+                    primary="Gestión Inventarios"
+                    sx={{ '& .MuiListItemText-primary': { fontSize: '1.05rem', fontWeight: 600, lineHeight: 1.2 } }}
+                  />
                 </Box>
                 {expandedMenu === 'inventory' ? <ExpandLessIcon /> : <ExpandMoreIcon />}
               </Box>
@@ -69,13 +82,16 @@ export function NavDrawer({ open, onClose }) {
                 <Box
                   onClick={() => handleNavigation('/inventario/activos')}
                   sx={(theme) => ({
-                    pl: 4, color: 'text.primary',
+                    pl: 8, color: 'text.primary',
                     '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.1) },
-                    display: 'flex', alignItems: 'center', width: '100%', py: 1.5, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', width: '100%', py: 2.2, minHeight: 56, cursor: 'pointer',
                   })}
                 >
                   <AppsIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                  <ListItemText primary="Activos" />
+                  <ListItemText
+                    primary="Activos"
+                    sx={{ '& .MuiListItemText-primary': { fontSize: '0.98rem', fontWeight: 500 } }}
+                  />
                 </Box>
               </Box>
             </Collapse>
@@ -84,12 +100,20 @@ export function NavDrawer({ open, onClose }) {
           <ListItem disablePadding sx={{ display: 'block' }}>
             <ListItemButton
               onClick={() => toggleMenu('security')}
-              sx={(theme) => ({ borderBottom: '1px solid rgba(0,0,0,0.1)', color: 'text.primary', '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.05) } })}
+              sx={(theme) => ({
+                '&&': { py: 3, minHeight: 72 },
+                borderBottom: '1px solid rgba(0,0,0,0.1)',
+                color: 'text.primary',
+                '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.05) },
+              })}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <VerifiedUserIcon sx={{ mr: 2, fontSize: 20 }} />
-                  <ListItemText primary="Gestión Seguridad" />
+                  <ListItemText
+                    primary="Gestión Seguridad"
+                    sx={{ '& .MuiListItemText-primary': { fontSize: '1.05rem', fontWeight: 600, lineHeight: 1.2 } }}
+                  />
                 </Box>
                 {expandedMenu === 'security' ? <ExpandLessIcon /> : <ExpandMoreIcon />}
               </Box>
@@ -99,24 +123,30 @@ export function NavDrawer({ open, onClose }) {
                 <Box
                   onClick={() => handleNavigation('/seguridad/usuarios')}
                   sx={(theme) => ({
-                    pl: 4, color: 'text.primary',
+                    pl: 8, color: 'text.primary',
                     '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.1) },
-                    display: 'flex', alignItems: 'center', width: '100%', py: 1.5, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', width: '100%', py: 2.2, minHeight: 56, cursor: 'pointer',
                   })}
                 >
                   <PeopleIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                  <ListItemText primary="Usuarios" />
+                  <ListItemText
+                    primary="Usuarios"
+                    sx={{ '& .MuiListItemText-primary': { fontSize: '0.98rem', fontWeight: 500 } }}
+                  />
                 </Box>
                 <Box
                   onClick={() => handleNavigation('/seguridad/roles')}
                   sx={(theme) => ({
-                    pl: 4, color: 'text.primary',
+                    pl: 6, color: 'text.primary',
                     '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.1) },
-                    display: 'flex', alignItems: 'center', width: '100%', py: 1.5, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', width: '100%', py: 2.2, minHeight: 56, cursor: 'pointer',
                   })}
                 >
                   <VerifiedUserIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                  <ListItemText primary="Roles" />
+                  <ListItemText
+                    primary="Roles"
+                    sx={{ '& .MuiListItemText-primary': { fontSize: '0.98rem', fontWeight: 500 } }}
+                  />
                 </Box>
               </Box>
             </Collapse>
