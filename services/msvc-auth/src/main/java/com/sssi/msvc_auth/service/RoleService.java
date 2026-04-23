@@ -1,8 +1,10 @@
 package com.sssi.msvc_auth.service;
 
+import com.sssi.common.api.response.PagedResponse;
 import com.sssi.msvc_auth.dto.KeycloakUserResponseDto;
 import com.sssi.msvc_auth.dto.RoleResponseDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,8 +22,8 @@ public class RoleService {
     }
 
     @Transactional(readOnly = true)
-    public List<RoleResponseDto> getCompositeRoles() {
-        return keycloakAdminService.getCompositeRoles();
+    public PagedResponse<RoleResponseDto> getCompositeRoles(Pageable pageable) {
+        return keycloakAdminService.getCompositeRoles(pageable);
     }
 
     @Transactional(readOnly = true)

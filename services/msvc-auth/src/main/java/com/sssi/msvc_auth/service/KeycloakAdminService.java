@@ -235,7 +235,7 @@ public class KeycloakAdminService {
         }
     }
 
-    public List<RoleResponseDto> getCompositeRoles() {
+    public PagedResponse<RoleResponseDto> getCompositeRoles(Pageable pageable) {
         String adminToken = getAdminToken();
         String rolesUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles";
 
@@ -248,12 +248,12 @@ public class KeycloakAdminService {
                     new HttpEntity<>("", headers), String.class).getBody();
 
             JsonNode rolesNode = objectMapper.readTree(response);
-            List<RoleResponseDto> roles = new ArrayList<>();
+            List<RoleResponseDto> allRoles = new ArrayList<>();
 
             for (JsonNode node : rolesNode) {
                 String name = node.path("name").asText();
                 if (node.path("composite").asBoolean(false) && !isInternalRole(name)) {
-                    roles.add(RoleResponseDto.builder()
+                    allRoles.add(RoleResponseDto.builder()
                             .id(node.path("id").asText())
                             .name(name)
                             .description(node.path("description").asText(null))
@@ -262,8 +262,23 @@ public class KeycloakAdminService {
                 }
             }
 
-            log.info("Roles compuestos obtenidos: {}", roles.size());
-            return roles;
+            int total = allRoles.size();
+            int page = pageable.getPageNumber();
+            int size = pageable.getPageSize();
+            int fromIndex = page * size;
+            int toIndex = Math.min(fromIndex + size, total);
+            List<RoleResponseDto> pageContent = fromIndex >= total ? List.of() : allRoles.subList(fromIndex, toIndex);
+            int totalPages = size == 0 ? 0 : (int) Math.ceil((double) total / size);
+
+            log.info("Roles compuestos obtenidos: {}, pagina: {}/{}", total, page + 1, totalPages);
+            return PagedResponse.<RoleResponseDto>builder()
+                    .content(pageContent)
+                    .page(page)
+                    .size(size)
+                    .totalElements(total)
+                    .totalPages(totalPages)
+                    .last(page >= totalPages - 1)
+                    .build();
         } catch (Exception e) {
             log.error("Error obteniendo roles compuestos: {}", e.getMessage());
             throw new IllegalStateException("Error al obtener los roles compuestos de Keycloak", e);

@@ -1,6 +1,7 @@
 package com.sssi.msvc_auth.controller;
 
 import com.sssi.common.api.response.ApiResponse;
+import com.sssi.common.api.response.PagedResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
 import com.sssi.msvc_auth.dto.CreateRoleRequestDto;
 import com.sssi.msvc_auth.dto.KeycloakUserResponseDto;
@@ -10,6 +11,8 @@ import com.sssi.msvc_auth.service.RoleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,9 +34,11 @@ public class RoleController {
     }
 
     @GetMapping("/composite")
-    public ResponseEntity<ApiResponse<List<RoleResponseDto>>> getCompositeRoles() {
+    public ResponseEntity<ApiResponse<PagedResponse<RoleResponseDto>>> getCompositeRoles(
+            @PageableDefault(size = 10, page = 0) Pageable pageable
+    ) {
         log.info("Obteniendo roles compuestos de Keycloak");
-        List<RoleResponseDto> roles = roleService.getCompositeRoles();
+        PagedResponse<RoleResponseDto> roles = roleService.getCompositeRoles(pageable);
         return ApiResponseBuilder.ok(roles, "Roles compuestos obtenidos exitosamente");
     }
 
