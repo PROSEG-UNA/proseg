@@ -9,7 +9,7 @@ import { useRolesData } from '../hooks/useRolesData';
 import { deleteRole } from '../services/rolesService';
 import { getRolesColumns, renderRolesActions } from './rolesColumns.jsx';
 import TableBase from '../../../common/components/TablaBase.jsx';
-import EditRoleModal from './EditRoleModal.jsx';
+import RoleFormModal from './RoleFormModal.jsx';
 import AlertModal from '../../../common/components/AlertModal.jsx';
 
 export default function RolesTable({ refreshKey, onRefresh }) {
@@ -56,7 +56,7 @@ export default function RolesTable({ refreshKey, onRefresh }) {
                 enableGlobalFilter
             />
 
-            <EditRoleModal
+            <RoleFormModal
                 role={editingRole}
                 open={!!editingRole}
                 onClose={() => setEditingRole(null)}

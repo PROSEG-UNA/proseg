@@ -24,13 +24,13 @@ export async function fetchUsersByRole(roleName) {
     return data.data;
 }
 
-export async function updateRole(roleName, privileges) {
-    const { data } = await axios.put(`${BASE_URL}/${roleName}`, { roleName, privileges }, config);
+export async function updateRole(currentName, newName, description, privileges) {
+    const { data } = await axios.put(`${BASE_URL}/${currentName}`, { roleName: newName, description, privileges }, config);
     return data;
 }
 
-export async function createRole(roleName, privileges) {
-    const { data } = await axios.post(BASE_URL, { roleName, privileges }, config);
+export async function createRole(roleName, description, privileges) {
+    const { data } = await axios.post(BASE_URL, { roleName, description, privileges }, config);
     return data;
 }
 
