@@ -429,6 +429,9 @@ public class KeycloakAdminService {
     }
 
     public void deleteRole(String roleName) {
+        if ("SUPER_ADMINISTRADOR".equals(roleName.toUpperCase())) {
+            throw new IllegalArgumentException("El rol SUPER_ADMINISTRADOR no puede ser eliminado");
+        }
         String adminToken = getAdminToken();
         String roleUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles/" + roleName;
 
