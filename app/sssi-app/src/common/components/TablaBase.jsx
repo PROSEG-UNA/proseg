@@ -72,7 +72,7 @@ export default function TableBase({
         muiTableContainerProps: {
             sx: maxHeight
                 ? { maxHeight, overflow: 'auto' }
-                : { height: '600px', overflow: 'auto' },
+                : { height: 'calc(100vh - 300px)', overflow: 'auto' },
         },
 
         paginationDisplayMode: 'pages',

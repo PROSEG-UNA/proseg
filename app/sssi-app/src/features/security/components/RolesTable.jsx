@@ -35,7 +35,7 @@ export default function RolesTable({ refreshKey, onRefresh }) {
             onRefresh();
         } catch (err) {
             setDeletingRole(null);
-            setAlert({ type: 'error', message: err instanceof Error ? err.message : 'Error al eliminar el rol' });
+            setAlert({ type: 'error', message: err.response?.data?.message ?? err.message ?? 'Error al eliminar el rol' });
         } finally {
             setDeleting(false);
         }
