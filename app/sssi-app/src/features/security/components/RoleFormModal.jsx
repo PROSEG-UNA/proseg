@@ -15,8 +15,8 @@ import TableBase from '../../../common/components/TablaBase.jsx';
 import AlertModal from '../../../common/components/AlertModal.jsx';
 
 const textFieldSx = {
-    '& .MuiInputBase-input': { color: 'primary.icon' },
-    '& .MuiInputLabel-root': { color: 'primary.icon' },
+    '& .MuiInputBase-input': { color: 'text.primary' },
+    '& .MuiInputLabel-root': { color: 'text.primary' },
     '& .MuiInputLabel-root.Mui-focused': { color: 'primary.icon' },
     '& .MuiOutlinedInput-notchedOutline': { borderColor: 'primary.icon' },
     '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'primary.icon' },
