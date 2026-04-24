@@ -28,7 +28,7 @@ public class EmailEventService {
     @Value("${app.urls.login:https://sssi.com/login}")
     private String loginUrl;
 
-    @Value("${app.urls.approvals:https://sssi.com/admin/approvals}")
+    @Value("${app.urls.approvals:http://localhost:5173/login}")
     private String approvalsBaseUrl;
 
     public void sendLoginEmail(UserLoginEvent event) {
@@ -80,7 +80,8 @@ public class EmailEventService {
     }
 
     public void sendApprovalEmails(UserRegisteredEvent event) {
-        ApiResponse<List<KeycloakUserDto>> response = authClient.getUsersByRole("Administrador");
+
+        ApiResponse<List<KeycloakUserDto>> response = authClient.getUsersByRole("SUPER_ADMINISTRADOR");
         List<KeycloakUserDto> superAdmins = response.getData();
 
         if (superAdmins == null || superAdmins.isEmpty()) {
@@ -88,30 +89,39 @@ public class EmailEventService {
             return;
         }
 
-        String approvalUrl = approvalsBaseUrl + "/" + event.getUserId();
+        String approvalUrl = approvalsBaseUrl;
 
-        superAdmins.forEach(admin -> {
-            UserApprovalEmailTemplate template = UserApprovalEmailTemplate.builder()
-                    .firstName(event.getFirstName())
-                    .lastName(event.getLastName())
-                    .username(event.getUsername())
-                    .email(event.getEmail())
-                    .approvalUrl(approvalUrl)
-                    .timestamp(event.getTimestamp())
-                    .adminFirstName(admin.getFirstName())
-                    .adminLastName(admin.getLastName())
-                    .build();
+        superAdmins.stream()
+                .filter(admin -> admin.getUsername() != null && !admin.getUsername().startsWith("service-account"))
+                .filter(admin -> admin.getEmail() != null && !admin.getEmail().isBlank())
+                .forEach(admin -> {
+                    try {
 
-            emailService.sendEmail(
-                    Email.builder()
-                            .to(List.of(admin.getEmail()))
-                            .subject("Nuevo usuario requiere aprobación - SSSI")
-                            .templateDefinition(template)
-                            .build()
-            );
+                        UserApprovalEmailTemplate template = UserApprovalEmailTemplate.builder()
+                                .firstName(event.getFirstName())
+                                .lastName(event.getLastName())
+                                .username(event.getUsername())
+                                .email(event.getEmail())
+                                .approvalUrl(approvalUrl)
+                                .timestamp(event.getTimestamp())
+                                .adminFirstName(admin.getFirstName())
+                                .adminLastName(admin.getLastName())
+                                .build();
 
-            log.info("Email de aprobación enviado a admin [{}] por registro de [{}]",
-                    admin.getEmail(), event.getUsername());
-        });
+                        emailService.sendEmail(
+                                Email.builder()
+                                        .to(List.of(admin.getEmail()))
+                                        .subject("Nuevo usuario requiere aprobación - SSSI")
+                                        .templateDefinition(template)
+                                        .build()
+                        );
+
+                        log.info("Email de aprobación enviado a admin [{}] por registro de [{}]",
+                                admin.getEmail(), event.getUsername());
+
+                    } catch (Exception e) {
+                        log.error("Error enviando email a [{}]", admin.getEmail(), e);
+                    }
+                });
     }
 }

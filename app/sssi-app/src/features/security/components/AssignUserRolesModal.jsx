@@ -48,12 +48,12 @@ export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
                 setSelectedIds([]);
 
                 const [rolesResponse, assignedRoles] = await Promise.all([
-                    fetchRoles(),
+                    fetchRoles({ size: 200 }),
                     fetchRolesByUserId(user.id),
                 ]);
                 if (ignore) return;
 
-                const mappedRoles = (rolesResponse ?? []).map((role) => ({
+                const mappedRoles = (rolesResponse.content ?? []).map((role) => ({
                     id: role.id,
                     name: role.name,
                     description: role.description || '—',

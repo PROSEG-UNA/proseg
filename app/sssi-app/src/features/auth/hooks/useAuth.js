@@ -18,7 +18,8 @@ export function useAuth() {
             await login(identifier, password);
             navigate('/home');
         } catch (err) {
-            setAlert({ type: 'error', message: err instanceof Error ? err.message : 'Error al iniciar sesión' });
+            const message = err.response?.data?.message || err.message || 'Error al iniciar sesión';
+            setAlert({ type: 'error', message });
         } finally {
             setLoading(false);
         }
@@ -31,7 +32,8 @@ export function useAuth() {
             await register(username, password, email, firstName, lastName);
             navigate('/login');
         } catch (err) {
-            setAlert({ type: 'error', message: err instanceof Error ? err.message : 'Error al registrar el usuario' });
+            const message = err.response?.data?.message || err.message || 'Error al registrar el usuario';
+            setAlert({ type: 'error', message });
         } finally {
             setLoading(false);
         }
@@ -44,7 +46,8 @@ export function useAuth() {
             await logout();
             navigate('/login');
         } catch (err) {
-            setAlert({ type: 'error', message: err instanceof Error ? err.message : 'Error al cerrar sesión. Intenta de nuevo.' });
+            const message = err.response?.data?.message || err.message || 'Error al cerrar sesión. Intenta de nuevo.';
+            setAlert({ type: 'error', message });
         } finally {
             setLoading(false);
         }
