@@ -6,6 +6,16 @@ spring:
     name: msvc-auth
   kafka:
     bootstrap-servers: 76.13.124.126:9094
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://auth.devbychris.com/realms/sssi-realm
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2.jwt: DEBUG
 
 eureka:
   instance:
