@@ -11,14 +11,14 @@ import java.util.List;
 
 @FeignClient(
         name = "msvc-auth",
-        url = "localhost:8081/api/auth",
+        url = "localhost:8081/api",
         configuration = FeignConfig.class
 )
 public interface AuthClient {
 
-    @GetMapping("/users/keycloak/{id}")
+    @GetMapping("/user/keycloak/{id}")
     ApiResponse<KeycloakUserDto> getUserById(@PathVariable String id);
 
-    @GetMapping("/roles/{roleName}/users")
+    @GetMapping("/role/{roleName}/users")
     ApiResponse<List<KeycloakUserDto>> getUsersByRole(@PathVariable String roleName);
 }
