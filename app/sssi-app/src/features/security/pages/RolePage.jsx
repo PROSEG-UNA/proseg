@@ -12,7 +12,7 @@ import { Header } from '../../../common/components/Header';
 import { NavDrawer } from '../../../common/components/NavDrawer';
 import '../css/RolePage.css';
 import RolesTable from '../components/RolesTable.jsx';
-import CreateRoleModal from '../components/CreateRoleModal.jsx';
+import RoleFormModal from '../components/RoleFormModal.jsx';
 
 export function RolePage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -50,7 +50,7 @@ export function RolePage() {
           </Box>
 
           <RolesTable refreshKey={refreshKey} onRefresh={handleRefresh} />
-          <CreateRoleModal open={createOpen} onClose={() => setCreateOpen(false)} onSaved={handleRefresh} />
+          <RoleFormModal open={createOpen} onClose={() => setCreateOpen(false)} onSaved={handleRefresh} />
         </Container>
       </Box>
   );

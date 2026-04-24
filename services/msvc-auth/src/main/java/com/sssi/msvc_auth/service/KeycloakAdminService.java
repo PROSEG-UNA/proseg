@@ -235,7 +235,7 @@ public class KeycloakAdminService {
         }
     }
 
-    public List<RoleResponseDto> getCompositeRoles() {
+    public PagedResponse<RoleResponseDto> getCompositeRoles(Pageable pageable) {
         String adminToken = getAdminToken();
         String rolesUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles";
 
@@ -248,12 +248,12 @@ public class KeycloakAdminService {
                     new HttpEntity<>("", headers), String.class).getBody();
 
             JsonNode rolesNode = objectMapper.readTree(response);
-            List<RoleResponseDto> roles = new ArrayList<>();
+            List<RoleResponseDto> allRoles = new ArrayList<>();
 
             for (JsonNode node : rolesNode) {
                 String name = node.path("name").asText();
                 if (node.path("composite").asBoolean(false) && !isInternalRole(name)) {
-                    roles.add(RoleResponseDto.builder()
+                    allRoles.add(RoleResponseDto.builder()
                             .id(node.path("id").asText())
                             .name(name)
                             .description(node.path("description").asText(null))
@@ -262,8 +262,23 @@ public class KeycloakAdminService {
                 }
             }
 
-            log.info("Roles compuestos obtenidos: {}", roles.size());
-            return roles;
+            int total = allRoles.size();
+            int page = pageable.getPageNumber();
+            int size = pageable.getPageSize();
+            int fromIndex = page * size;
+            int toIndex = Math.min(fromIndex + size, total);
+            List<RoleResponseDto> pageContent = fromIndex >= total ? List.of() : allRoles.subList(fromIndex, toIndex);
+            int totalPages = size == 0 ? 0 : (int) Math.ceil((double) total / size);
+
+            log.info("Roles compuestos obtenidos: {}, pagina: {}/{}", total, page + 1, totalPages);
+            return PagedResponse.<RoleResponseDto>builder()
+                    .content(pageContent)
+                    .page(page)
+                    .size(size)
+                    .totalElements(total)
+                    .totalPages(totalPages)
+                    .last(page >= totalPages - 1)
+                    .build();
         } catch (Exception e) {
             log.error("Error obteniendo roles compuestos: {}", e.getMessage());
             throw new IllegalStateException("Error al obtener los roles compuestos de Keycloak", e);
@@ -305,7 +320,7 @@ public class KeycloakAdminService {
         }
     }
 
-    public void createCompositeRole(String roleName, List<String> privileges) {
+    public void createCompositeRole(String roleName, String description, List<String> privileges) {
         String adminToken = getAdminToken();
         String rolesUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles";
 
@@ -317,6 +332,9 @@ public class KeycloakAdminService {
             Map<String, Object> roleMap = new HashMap<>();
             roleMap.put("name", roleName);
             roleMap.put("composite", true);
+            if (description != null && !description.isBlank()) {
+                roleMap.put("description", description);
+            }
 
             restTemplate.exchange(rolesUrl, HttpMethod.POST,
                     new HttpEntity<>(objectMapper.writeValueAsString(roleMap), headers), String.class);
@@ -346,7 +364,7 @@ public class KeycloakAdminService {
         }
     }
 
-    public void updateRole(String roleName, List<String> newPrivileges) {
+    public void updateRole(String roleName, String newRoleName, String description, List<String> newPrivileges) {
         String adminToken = getAdminToken();
         String rolesUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles";
 
@@ -355,40 +373,55 @@ public class KeycloakAdminService {
         headers.set("Authorization", "Bearer " + adminToken);
 
         try {
-            String compositeUrl = rolesUrl + "/" + roleName + "/composites";
-            String currentResponse = restTemplate.exchange(compositeUrl, HttpMethod.GET,
+            String currentRoleResponse = restTemplate.exchange(rolesUrl + "/" + roleName, HttpMethod.GET,
                     new HttpEntity<>("", headers), String.class).getBody();
+            JsonNode currentRole = objectMapper.readTree(currentRoleResponse);
 
-            JsonNode currentNode = objectMapper.readTree(currentResponse);
-            List<Map<String, Object>> currentPrivileges = new ArrayList<>();
-            for (JsonNode node : currentNode) {
-                Map<String, Object> roleData = new HashMap<>();
-                roleData.put("id", node.path("id").asText());
-                roleData.put("name", node.path("name").asText());
-                currentPrivileges.add(roleData);
-            }
+            String effectiveName = (newRoleName != null && !newRoleName.isBlank()) ? newRoleName : roleName;
+            String effectiveDescription = (description != null && !description.isBlank()) ? description : currentRole.path("description").asText("");
 
-            if (!currentPrivileges.isEmpty()) {
-                restTemplate.exchange(compositeUrl, HttpMethod.DELETE,
-                        new HttpEntity<>(objectMapper.writeValueAsString(currentPrivileges), headers), String.class);
-            }
+            Map<String, Object> roleMap = new HashMap<>();
+            roleMap.put("name", effectiveName);
+            roleMap.put("description", effectiveDescription);
+            restTemplate.exchange(rolesUrl + "/" + roleName, HttpMethod.PUT,
+                    new HttpEntity<>(objectMapper.writeValueAsString(roleMap), headers), String.class);
 
-            List<Map<String, Object>> newPrivilegeRoles = new ArrayList<>();
-            for (String privilege : newPrivileges) {
-                String roleUrl = rolesUrl + "/" + privilege;
-                String response = restTemplate.exchange(roleUrl, HttpMethod.GET,
+            if (newPrivileges != null && !newPrivileges.isEmpty()) {
+                String compositeUrl = rolesUrl + "/" + effectiveName + "/composites";
+                String currentResponse = restTemplate.exchange(compositeUrl, HttpMethod.GET,
                         new HttpEntity<>("", headers), String.class).getBody();
-                JsonNode node = objectMapper.readTree(response);
-                Map<String, Object> roleData = new HashMap<>();
-                roleData.put("id", node.path("id").asText());
-                roleData.put("name", node.path("name").asText());
-                newPrivilegeRoles.add(roleData);
+
+                JsonNode currentNode = objectMapper.readTree(currentResponse);
+                List<Map<String, Object>> currentPrivileges = new ArrayList<>();
+                for (JsonNode node : currentNode) {
+                    Map<String, Object> roleData = new HashMap<>();
+                    roleData.put("id", node.path("id").asText());
+                    roleData.put("name", node.path("name").asText());
+                    currentPrivileges.add(roleData);
+                }
+
+                if (!currentPrivileges.isEmpty()) {
+                    restTemplate.exchange(compositeUrl, HttpMethod.DELETE,
+                            new HttpEntity<>(objectMapper.writeValueAsString(currentPrivileges), headers), String.class);
+                }
+
+                List<Map<String, Object>> newPrivilegeRoles = new ArrayList<>();
+                for (String privilege : newPrivileges) {
+                    String roleUrl = rolesUrl + "/" + privilege;
+                    String response = restTemplate.exchange(roleUrl, HttpMethod.GET,
+                            new HttpEntity<>("", headers), String.class).getBody();
+                    JsonNode node = objectMapper.readTree(response);
+                    Map<String, Object> roleData = new HashMap<>();
+                    roleData.put("id", node.path("id").asText());
+                    roleData.put("name", node.path("name").asText());
+                    newPrivilegeRoles.add(roleData);
+                }
+
+                restTemplate.exchange(compositeUrl, HttpMethod.POST,
+                        new HttpEntity<>(objectMapper.writeValueAsString(newPrivilegeRoles), headers), String.class);
             }
 
-            restTemplate.exchange(compositeUrl, HttpMethod.POST,
-                    new HttpEntity<>(objectMapper.writeValueAsString(newPrivilegeRoles), headers), String.class);
-
-            log.info("Rol {} actualizado con privilegios: {}", roleName, newPrivileges);
+            log.info("Rol {} actualizado exitosamente", effectiveName);
         } catch (Exception e) {
             log.error("Error actualizando rol {}: {}", roleName, e.getMessage());
             throw new IllegalStateException("Error al actualizar el rol " + roleName, e);

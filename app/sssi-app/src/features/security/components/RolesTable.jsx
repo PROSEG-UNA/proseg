@@ -9,15 +9,20 @@ import { useRolesData } from '../hooks/useRolesData';
 import { deleteRole } from '../services/rolesService';
 import { getRolesColumns, renderRolesActions } from './rolesColumns.jsx';
 import TableBase from '../../../common/components/TablaBase.jsx';
-import EditRoleModal from './EditRoleModal.jsx';
+import RoleFormModal from './RoleFormModal.jsx';
 import AlertModal from '../../../common/components/AlertModal.jsx';
 
 export default function RolesTable({ refreshKey, onRefresh }) {
-    const { rows, loading, error } = useRolesData(refreshKey);
+    const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
+    const { rows, loading, error, totalElements } = useRolesData({
+        pageIndex: pagination.pageIndex,
+        pageSize: pagination.pageSize,
+        refreshKey,
+    });
     const [editingRole, setEditingRole] = useState(null);
     const [deletingRole, setDeletingRole] = useState(null);
     const [deleting, setDeleting] = useState(false);
-    const [alert, setAlert] = useState(null); // { type, message }
+    const [alert, setAlert] = useState(null);
 
     const handleEdit = (row) => setEditingRole(row);
     const handleDelete = (row) => setDeletingRole(row);
@@ -65,6 +70,10 @@ export default function RolesTable({ refreshKey, onRefresh }) {
                 })}
                 tableOptions={{
                     positionActionsColumn: 'last',
+                    manualPagination: true,
+                    rowCount: totalElements,
+                    onPaginationChange: setPagination,
+                    state: { pagination },
                     displayColumnDefOptions: {
                         'mrt-row-actions': {
                             muiTableBodyCellProps: {
@@ -76,7 +85,7 @@ export default function RolesTable({ refreshKey, onRefresh }) {
                 enableGlobalFilter
             />
 
-            <EditRoleModal
+            <RoleFormModal
                 role={editingRole}
                 open={!!editingRole}
                 onClose={() => setEditingRole(null)}
