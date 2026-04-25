@@ -50,6 +50,7 @@ export function useAuth() {
             setAlert({ type: 'error', message });
         } finally {
             setLoading(false);
+            navigate('/login')
         }
     };
 

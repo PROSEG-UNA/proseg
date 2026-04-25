@@ -35,7 +35,6 @@ public class TokenRefreshFilter implements WebFilter {
     private static final Set<String> SKIP_PATHS = Set.of(
             "/api/auth/login",
             "/api/auth/register",
-            "/api/auth/logout",
             "/api/auth/refresh"
     );
 
