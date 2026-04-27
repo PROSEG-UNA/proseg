@@ -1,6 +1,5 @@
 package com.sssi.msvc_email.notificacion.template.impl;
 
-import com.sssi.msvc_email.notificacion.exception.EmailTemplateException;
 import com.sssi.msvc_email.notificacion.template.EmailTemplateDefinition;
 import com.sssi.msvc_email.notificacion.util.TemplateValidator;
 import lombok.Builder;

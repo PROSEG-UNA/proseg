@@ -86,7 +86,15 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout(HttpServletResponse response) {
+    public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request, HttpServletResponse response) {
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("refresh_token".equals(cookie.getName())) {
+                    keycloakAuthService.logout(cookie.getValue());
+                    break;
+                }
+            }
+        }
         response.addHeader(HttpHeaders.SET_COOKIE, expireCookie("auth_token").toString());
         response.addHeader(HttpHeaders.SET_COOKIE, expireCookie("refresh_token").toString());
         return ApiResponseBuilder.ok(null, "Logout exitoso");

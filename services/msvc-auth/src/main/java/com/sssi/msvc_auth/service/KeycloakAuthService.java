@@ -190,6 +190,27 @@ public class KeycloakAuthService {
         }
     }
 
+    public void logout(String refreshToken) {
+        try {
+            String logoutUrl = keycloakServerUrl + "/realms/" + realm + "/protocol/openid-connect/logout";
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+            body.add("client_id", clientId);
+            body.add("client_secret", clientSecret);
+            body.add("refresh_token", refreshToken);
+
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
+            restTemplate.postForObject(logoutUrl, request, String.class);
+
+            log.info("Sesion revocada en Keycloak exitosamente");
+        } catch (Exception e) {
+            log.warn("No se pudo revocar la sesion en Keycloak: {}", e.getMessage());
+        }
+    }
+
     public String extractUserIdFromToken(String token) {
         try {
             String[] tokenParts = token.split("\\.");
