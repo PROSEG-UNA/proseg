@@ -19,6 +19,11 @@ export async function fetchUsers({ page = 0, size = 10 } = {}) {
     };
 }
 
+export async function fetchUserStatuses() {
+    const { data } = await axios.get(`${BASE_URL}/statuses`, config);
+    return Array.isArray(data?.data) ? data.data : [];
+}
+
 export async function updateUserApproval(userId, status) {
     const { data } = await axios.patch(`${BASE_URL}/approval/${userId}`, { status }, config);
     return data;

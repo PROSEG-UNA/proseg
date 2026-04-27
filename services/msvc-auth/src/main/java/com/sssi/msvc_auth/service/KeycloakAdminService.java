@@ -178,22 +178,65 @@ public class KeycloakAdminService {
             String currentUserResponse = restTemplate.exchange(
                     userUrl,
                     HttpMethod.GET,
-                    new HttpEntity<>("", headers),
+                    new HttpEntity<>(headers),
                     String.class
             ).getBody();
 
             JsonNode userNode = objectMapper.readTree(currentUserResponse);
-            Map<String, Object> userMap = objectMapper.convertValue(userNode, Map.class);
-            userMap.put("enabled", enabled);
+
+            // Construimos un payload acotado para evitar enviar campos de solo lectura.
+            Map<String, Object> userPayload = new HashMap<>();
+            String username = userNode.path("username").asText("");
+
+            if (username.isBlank()) {
+                throw new IllegalStateException("El usuario de Keycloak no contiene username");
+            }
+
+            userPayload.put("id", userId);
+            userPayload.put("username", username);
+            userPayload.put("enabled", enabled);
+
+            if (userNode.hasNonNull("firstName")) {
+                userPayload.put("firstName", userNode.get("firstName").asText());
+            }
+            if (userNode.hasNonNull("lastName")) {
+                userPayload.put("lastName", userNode.get("lastName").asText());
+            }
+            if (userNode.hasNonNull("email")) {
+                userPayload.put("email", userNode.get("email").asText());
+            }
+            if (userNode.has("emailVerified")) {
+                userPayload.put("emailVerified", userNode.path("emailVerified").asBoolean(false));
+            }
+            if (userNode.has("attributes")) {
+                userPayload.put("attributes", objectMapper.convertValue(userNode.get("attributes"), Map.class));
+            }
+            if (userNode.has("requiredActions")) {
+                userPayload.put("requiredActions", objectMapper.convertValue(userNode.get("requiredActions"), List.class));
+            }
 
             restTemplate.exchange(
                     userUrl,
                     HttpMethod.PUT,
-                    new HttpEntity<>(objectMapper.writeValueAsString(userMap), headers),
+                    new HttpEntity<>(objectMapper.writeValueAsString(userPayload), headers),
                     String.class
             );
 
             log.info("Usuario {} en Keycloak con enabled={}", userId, enabled);
+        } catch (HttpStatusCodeException e) {
+            log.error(
+                    "Error HTTP actualizando enabled del usuario {} en Keycloak: {} - {}",
+                    userId,
+                    e.getStatusCode(),
+                    e.getResponseBodyAsString(),
+                    e
+            );
+
+            if (e.getStatusCode().value() == 404) {
+                throw KeycloakException.userNotFound(userId);
+            }
+
+            throw new IllegalStateException("No se pudo actualizar el estado del usuario en Keycloak", e);
         } catch (Exception e) {
             log.error("Error actualizando enabled del usuario {} en Keycloak: {}", userId, e.getMessage(), e);
             throw new IllegalStateException("No se pudo actualizar el estado del usuario en Keycloak", e);

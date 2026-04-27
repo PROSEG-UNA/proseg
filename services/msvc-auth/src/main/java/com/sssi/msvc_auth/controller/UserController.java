@@ -50,6 +50,12 @@ public class UserController {
         return ApiResponseBuilder.ok(roles, "Roles del usuario obtenidos correctamente");
     }
 
+    @GetMapping("/statuses")
+    public ResponseEntity<ApiResponse<List<String>>> getUserStatuses() {
+        List<String> statuses = userService.getAvailableStatuses();
+        return ApiResponseBuilder.ok(statuses, "Estados de usuario obtenidos correctamente");
+    }
+
     @PatchMapping("/approval/{id}")
     public ResponseEntity<ApiResponse<String>> updateUserApproval(
             @PathVariable UUID id,

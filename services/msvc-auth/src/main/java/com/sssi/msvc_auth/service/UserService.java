@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -56,6 +57,13 @@ public class UserService {
     @Transactional(readOnly = true)
     public List<RoleResponseDto> getRolesByUserId(String userId) {
         return keycloakAdminService.getRolesByUserId(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getAvailableStatuses() {
+        return Arrays.stream(User.UserStatus.values())
+                .map(Enum::name)
+                .toList();
     }
 }
 
