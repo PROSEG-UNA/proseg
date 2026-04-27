@@ -1,16 +1,34 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
+import { Box, Tab, Tabs } from '@mui/material';
 import TableBase from '../../../common/components/TablaBase.jsx';
 import AlertModal from '../../../common/components/AlertModal.jsx';
 import { useUsersData } from '../hooks/useUsersData';
-import { updateUserApproval } from '../services/usersService';
+import { fetchUserStatuses, updateUserApproval } from '../services/usersService';
 import { getUsersColumns, renderUsersActions } from './usersColumns.jsx';
 import AssignUserRolesModal from './AssignUserRolesModal.jsx';
+
+const ALL_TAB_VALUE = 'ALL';
+
+function toStatusLabel(status) {
+    switch (status) {
+        case 'APPROVED':
+            return 'Activos';
+        case 'REJECTED':
+            return 'Inactivos';
+        case 'PENDING':
+            return 'Pendientes';
+        default:
+            return status;
+    }
+}
 
 export default function UsersTable({ refreshKey = 0 }) {
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
     const [selectedUser, setSelectedUser] = useState(null);
     const [localRefreshKey, setLocalRefreshKey] = useState(0);
     const [alert, setAlert] = useState(null);
+    const [statusTab, setStatusTab] = useState(ALL_TAB_VALUE);
+    const [availableStatuses, setAvailableStatuses] = useState(['PENDING', 'APPROVED', 'REJECTED']);
 
     const triggerRefresh = useCallback(() => {
         setLocalRefreshKey((k) => k + 1);
@@ -21,6 +39,27 @@ export default function UsersTable({ refreshKey = 0 }) {
         pageSize: pagination.pageSize,
         refreshKey: refreshKey + localRefreshKey,
     });
+
+    useEffect(() => {
+        let ignore = false;
+
+        const loadStatuses = async () => {
+            try {
+                const statuses = await fetchUserStatuses();
+                if (!ignore && statuses.length > 0) {
+                    setAvailableStatuses(statuses);
+                }
+            } catch {
+                // Si falla endpoint, mantenemos fallback local.
+            }
+        };
+
+        void loadStatuses();
+
+        return () => {
+            ignore = true;
+        };
+    }, []);
 
     const handleApprove = async (user) => {
         try {
@@ -63,11 +102,45 @@ export default function UsersTable({ refreshKey = 0 }) {
         []
     );
 
+    const filteredRows = useMemo(() => {
+        if (statusTab === ALL_TAB_VALUE) {
+            return rows;
+        }
+
+        return rows.filter((row) => row.statusRaw === statusTab);
+    }, [rows, statusTab]);
+
+    const tabItems = useMemo(
+        () => [ALL_TAB_VALUE, ...availableStatuses],
+        [availableStatuses]
+    );
+
     return (
         <>
+            <Box sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
+                <Tabs
+                    value={statusTab}
+                    onChange={(_, newValue) => {
+                        setStatusTab(newValue);
+                        setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+                    }}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    aria-label="Filtros por estado de usuario"
+                >
+                    {tabItems.map((status) => (
+                        <Tab
+                            key={status}
+                            value={status}
+                            label={status === ALL_TAB_VALUE ? 'Todos' : toStatusLabel(status)}
+                        />
+                    ))}
+                </Tabs>
+            </Box>
+
             <TableBase
                 columns={columns}
-                data={rows}
+                data={filteredRows}
                 loading={loading}
                 error={error}
                 enableRowActions
@@ -79,7 +152,7 @@ export default function UsersTable({ refreshKey = 0 }) {
                 tableOptions={{
                     positionActionsColumn: 'last',
                     manualPagination: true,
-                    rowCount: totalElements,
+                    rowCount: statusTab === ALL_TAB_VALUE ? totalElements : filteredRows.length,
                     onPaginationChange: setPagination,
                     state: { pagination },
                     displayColumnDefOptions: {
