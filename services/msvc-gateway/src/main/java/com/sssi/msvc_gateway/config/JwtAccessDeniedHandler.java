@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.sssi.common.api.response.ApiErrorResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -17,6 +19,7 @@ import java.util.List;
 public class JwtAccessDeniedHandler implements ServerAccessDeniedHandler {
 
     private final ObjectMapper objectMapper;
+    private static final Logger log = LoggerFactory.getLogger(JwtAccessDeniedHandler.class);
 
     public JwtAccessDeniedHandler() {
         this.objectMapper = new ObjectMapper();
@@ -30,6 +33,7 @@ public class JwtAccessDeniedHandler implements ServerAccessDeniedHandler {
         exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
         exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
 
+        log.info("REQUEST ENTERED GATEWAY: {}", exchange.getRequest().getURI());
         ApiErrorResponse response = new ApiErrorResponse(
                 "Acceso denegado",
                 List.of(ex.getMessage() != null ? ex.getMessage() : "No tiene permisos para acceder a este recurso"),

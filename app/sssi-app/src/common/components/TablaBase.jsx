@@ -3,7 +3,7 @@ import {
     MaterialReactTable,
     useMaterialReactTable,
 } from 'material-react-table';
-import { useTheme } from '@mui/material/styles';
+import {alpha, useTheme} from '@mui/material/styles';
 import { MRT_Localization_ES } from 'material-react-table/locales/es';
 
 export default function TableBase({
@@ -33,6 +33,12 @@ export default function TableBase({
     const stableColumns = useMemo(() => columns, [columns]);
     const tableOptionsState = tableOptions.state ?? {};
     const tableOptionsInitialState = tableOptions.initialState ?? {};
+
+    const isDark = theme.palette.mode === 'dark';
+
+    const surfaceElevated = isDark
+        ? alpha('#ffffff', 0.04)
+        : alpha('#000000', 0.015);
 
     const mergedState = {
         ...tableOptionsState,
@@ -146,6 +152,9 @@ export default function TableBase({
                 '&:last-of-type td': {
                     borderBottom: '1px solid',
                     borderBottomColor: 'divider',
+                },
+                '&:nth-of-type(odd) td': {
+                    backgroundColor: surfaceElevated,
                 },
             },
         },

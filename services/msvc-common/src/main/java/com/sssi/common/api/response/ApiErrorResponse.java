@@ -12,12 +12,12 @@ public class ApiErrorResponse {
     private String message;
     private List<String> errors;
     private int status;
-    private LocalDateTime timestamp;
+    private String timestamp;
 
     public ApiErrorResponse(String message, List<String> errors, int status) {
         this.message = message;
         this.errors = errors;
         this.status = status;
-        this.timestamp = LocalDateTime.now();
+        this.timestamp = LocalDateTime.now().toString();
     }
 }

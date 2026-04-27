@@ -6,3 +6,6 @@ spring:
 
 cors:
   allowed-origins: http://localhost:5173
+
+keycloak:
+  client-id: sssi-app
