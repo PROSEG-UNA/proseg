@@ -16,10 +16,25 @@ public class UserException extends BaseException {
         );
     }
 
-    public static UserException userAlreadyExists(String email) {
+    public static UserException userAlreadyExists(String username) {
         return new UserException(
                 HttpStatus.CONFLICT,
-                "EMAIL_ALREADY_EXISTS", "El usuario '" + email + "' ya está registrado"
+                "USERNAME_ALREADY_EXISTS", "El nombre de usuario '" + username + "' ya está registrado"
+        );
+    }
+
+    public static UserException emailAlreadyExists(String email) {
+        return new UserException(
+                HttpStatus.CONFLICT,
+                "EMAIL_ALREADY_EXISTS", "El correo '" + email + "' ya está registrado"
+        );
+    }
+
+    public static UserException userOrEmailAlreadyExists(String username, String email) {
+        return new UserException(
+                HttpStatus.CONFLICT,
+                "USER_OR_EMAIL_ALREADY_EXISTS",
+                "El nombre de usuario '" + username + "' o el correo '" + email + "' ya está registrado"
         );
     }
 

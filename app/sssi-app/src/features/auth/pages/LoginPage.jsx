@@ -101,7 +101,7 @@ export function LoginPage() {
                                 component="h1"
                                 sx={{ fontWeight: 'bold', color: 'primary.main', letterSpacing: '1px' }}
                             >
-                                SSSI
+                                SPSG
                             </Typography>
                             <Typography
                                 variant="body2"

@@ -74,7 +74,7 @@ export function MobileNavbar() {
                 whiteSpace: 'nowrap',
               }}
             >
-              Sistema de Sección de Seguridad Institucional
+              Sistema Programa Servicios Generales
             </Typography>
           </Toolbar>
         </AppBar>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
     Container,
@@ -19,6 +19,9 @@ import { alpha } from '@mui/material/styles';
 import { useAuth } from '../hooks/useAuth';
 import AlertModal from '../../../common/components/AlertModal.jsx';
 import '../css/RegisterPage.css';
+
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAADEo_zmnakZDiJdz';
+const TURNSTILE_SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
 
 const fieldSx = (theme) => ({
     '& .MuiOutlinedInput-root': {
@@ -44,9 +47,69 @@ const fieldSx = (theme) => ({
 });
 
 export function RegisterPage() {
-    const [formData, setFormData] = useState({ username: '', email: '', password: '', firstName: '', lastName: '' });
+    const [formData, setFormData] = useState({
+        username: '',
+        email: '',
+        password: '',
+        firstName: '',
+        lastName: '',
+        captchaToken: '',
+    });
     const [showPassword, setShowPassword] = useState(false);
+    const [turnstileReady, setTurnstileReady] = useState(false);
+    const [turnstileError, setTurnstileError] = useState('');
+    const turnstileContainerRef = useRef(null);
+    const turnstileWidgetIdRef = useRef(null);
     const { loading, alert, handleAlertClose, handleRegister } = useAuth();
+
+    useEffect(() => {
+        const renderTurnstile = () => {
+            if (!window.turnstile || !turnstileContainerRef.current || turnstileWidgetIdRef.current !== null) {
+                return;
+            }
+
+            turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
+                sitekey: TURNSTILE_SITE_KEY,
+                callback: (token) => {
+                    setFormData((prev) => ({ ...prev, captchaToken: token }));
+                },
+                'expired-callback': () => {
+                    setFormData((prev) => ({ ...prev, captchaToken: '' }));
+                },
+                'error-callback': () => {
+                    setFormData((prev) => ({ ...prev, captchaToken: '' }));
+                    setTurnstileError('No se pudo cargar el captcha. Intenta nuevamente.');
+                },
+            });
+
+            setTurnstileReady(true);
+            setTurnstileError('');
+        };
+
+        const existingScript = document.querySelector(`script[src="${TURNSTILE_SCRIPT_SRC}"]`);
+
+        if (!existingScript) {
+            const script = document.createElement('script');
+            script.src = TURNSTILE_SCRIPT_SRC;
+            script.async = true;
+            script.defer = true;
+            script.onload = renderTurnstile;
+            script.onerror = () => setTurnstileError('No se pudo cargar el captcha de Turnstile.');
+            document.head.appendChild(script);
+        } else if (window.turnstile) {
+            renderTurnstile();
+        } else {
+            existingScript.addEventListener('load', renderTurnstile, { once: true });
+            existingScript.addEventListener('error', () => setTurnstileError('No se pudo cargar el captcha de Turnstile.'), { once: true });
+        }
+
+        return () => {
+            if (window.turnstile && turnstileWidgetIdRef.current !== null) {
+                window.turnstile.remove(turnstileWidgetIdRef.current);
+                turnstileWidgetIdRef.current = null;
+            }
+        };
+    }, []);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -101,13 +164,13 @@ export function RegisterPage() {
                                 component="h1"
                                 sx={{ fontWeight: 'bold', color: 'primary.main', letterSpacing: '1px' }}
                             >
-                                SSSI
+                                SPSG
                             </Typography>
                             <Typography
                                 variant="body2"
                                 sx={{ color: 'text.secondary', mt: 0.5, fontSize: '0.95rem', fontWeight: 500 }}
                             >
-                                Sistema de Sección de Seguridad Institucional
+                                Sistema Programa Servicios Generales
                             </Typography>
                         </Box>
 
@@ -201,13 +264,21 @@ export function RegisterPage() {
                                 }}
                                 sx={fieldSx}
                             />
+                            <Box sx={{ mt: 2, mb: 1, display: 'flex', justifyContent: 'center' }}>
+                                <Box ref={turnstileContainerRef} />
+                            </Box>
+                            {turnstileError ? (
+                                <Typography variant="body2" color="error" sx={{ mb: 1, textAlign: 'center' }}>
+                                    {turnstileError}
+                                </Typography>
+                            ) : null}
                             <Button
                                 fullWidth
                                 variant="contained"
                                 color="primary"
                                 size="large"
                                 type="submit"
-                                disabled={loading}
+                                disabled={loading || !turnstileReady || !formData.captchaToken}
                                 sx={{
                                     mt: 3,
                                     mb: 2,

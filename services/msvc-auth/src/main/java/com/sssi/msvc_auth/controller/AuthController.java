@@ -9,6 +9,7 @@ import com.sssi.msvc_auth.dto.*;
 import com.sssi.msvc_auth.service.KeycloakAdminService;
 import com.sssi.msvc_auth.service.KeycloakAuthService;
 import com.sssi.msvc_auth.service.UserApprobationService;
+import com.sssi.msvc_auth.service.TurnstileService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +36,7 @@ public class AuthController {
     private final KeycloakAdminService keycloakAdminService;
     private final UserApprobationService userApprobationService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final TurnstileService turnstileService;
 
     @Value("${app.cookie.secure:false}")
     private boolean secureCookie;
@@ -152,6 +154,10 @@ public class AuthController {
             @Valid @RequestBody RegisterRequestDto request,
             @RequestHeader(value = "Accept", required = false) String acceptHeader
     ) {
+        if (!turnstileService.validarCaptcha(request.getCaptchaToken())) {
+            throw new RuntimeException("Captcha invalido");
+        }
+
         String keycloakUserId = keycloakAdminService.registerUser(
                 request.getUsername(),
                 request.getEmail(),

@@ -25,11 +25,11 @@ export function useAuth() {
         }
     };
 
-    const handleRegister = async ({ username, password, email, firstName, lastName }) => {
+    const handleRegister = async ({ username, password, email, firstName, lastName, captchaToken }) => {
         setLoading(true);
         setAlert(null);
         try {
-            await register(username, password, email, firstName, lastName);
+            await register({ username, password, email, firstName, lastName, captchaToken });
             navigate('/login');
         } catch (err) {
             const message = err.response?.data?.message || err.message || 'Error al registrar el usuario';
