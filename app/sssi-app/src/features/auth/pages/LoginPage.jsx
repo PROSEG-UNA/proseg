@@ -107,7 +107,7 @@ export function LoginPage() {
                                 variant="body2"
                                 sx={{ color: 'text.secondary', mt: 0.5, fontSize: '0.95rem', fontWeight: 500 }}
                             >
-                                Sistema de Sección de Seguridad Institucional
+                                Sistema Programa Servicios Generales
                             </Typography>
                         </Box>
 
