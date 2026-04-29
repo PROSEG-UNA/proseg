@@ -34,6 +34,11 @@ export async function assignRoleToUser(userId, roleId) {
     return data;
 }
 
+export async function assignSingleRoleToUser(userId, roleId) {
+    const { data } = await axios.put(`${BASE_URL}/${userId}/roles/${roleId}`, null, config);
+    return data;
+}
+
 export async function removeRoleFromUser(userId, roleId) {
     const { data } = await axios.delete(`${BASE_URL}/${userId}/roles/${roleId}`, config);
     return data;

@@ -662,48 +662,53 @@ public class KeycloakAdminService {
     }
 
     public void assignRoleToUser(String userId, String roleId) {
+        List<RoleResponseDto> currentCompositeRoles = getRolesByUserId(userId).stream()
+            .filter(RoleResponseDto::isComposite)
+            .toList();
+
+        boolean alreadyAssigned = currentCompositeRoles.stream()
+            .anyMatch(role -> role.getId().equals(roleId));
+
+        List<RoleResponseDto> rolesToRemove = currentCompositeRoles.stream()
+            .filter(role -> !role.getId().equals(roleId))
+            .toList();
+
+        for (RoleResponseDto role : rolesToRemove) {
+            removeRoleFromUser(userId, role.getId());
+        }
+
+        if (alreadyAssigned) {
+            log.info("RoleId {} ya estaba asignado al usuario {} y se removieron {} roles compuestos adicionales",
+                roleId, userId, rolesToRemove.size());
+            return;
+        }
+
         String adminToken = getAdminToken();
-
-        String rolesByIdUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles-by-id/" + roleId;
-        String assignRoleUrl = keycloakServerUrl + "/admin/realms/" + realm +
-                "/users/" + userId + "/role-mappings/realm";
-
         HttpHeaders headers = buildJsonHeaders(adminToken);
 
         try {
-            String roleResponse = restTemplate.exchange(
-                    rolesByIdUrl,
-                    HttpMethod.GET,
-                    new HttpEntity<>(headers),
-                    String.class
-            ).getBody();
-
-            JsonNode roleNode = objectMapper.readTree(roleResponse);
-
-            Map<String, Object> roleMap = new HashMap<>();
-            roleMap.put("id", roleNode.path("id").asText());
-            roleMap.put("name", roleNode.path("name").asText());
-
-            List<Map<String, Object>> roles = List.of(roleMap);
+            List<Map<String, Object>> roles = List.of(resolveRoleMappingById(roleId, headers));
+            String assignRoleUrl = keycloakServerUrl + "/admin/realms/" + realm +
+                "/users/" + userId + "/role-mappings/realm";
 
             restTemplate.exchange(
-                    assignRoleUrl,
-                    HttpMethod.POST,
-                    new HttpEntity<>(objectMapper.writeValueAsString(roles), headers),
-                    String.class
+                assignRoleUrl,
+                HttpMethod.POST,
+                new HttpEntity<>(objectMapper.writeValueAsString(roles), headers),
+                String.class
             );
 
-            log.info("RoleId {} asignado al usuario {}", roleId, userId);
+            log.info("RoleId {} asignado al usuario {} con politica de rol unico", roleId, userId);
 
         } catch (HttpStatusCodeException e) {
             log.error("Error asignando roleId {} al usuario {}: {} - {}",
-                    roleId, userId, e.getStatusCode(), e.getResponseBodyAsString());
+                roleId, userId, e.getStatusCode(), e.getResponseBodyAsString());
 
             handleKeycloakError(e, roleId, userId);
 
         } catch (Exception e) {
             log.error("Error inesperado asignando roleId {} al usuario {}: {}",
-                    roleId, userId, e.getMessage(), e);
+                roleId, userId, e.getMessage(), e);
 
             throw KeycloakException.generic("Error procesando respuesta de Keycloak");
         }
@@ -755,6 +760,24 @@ public class KeycloakAdminService {
 
             throw KeycloakException.generic("Error procesando respuesta de Keycloak");
         }
+    }
+
+    private Map<String, Object> resolveRoleMappingById(String roleId, HttpHeaders headers) throws Exception {
+        String rolesByIdUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles-by-id/" + roleId;
+
+        String roleResponse = restTemplate.exchange(
+                rolesByIdUrl,
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                String.class
+        ).getBody();
+
+        JsonNode roleNode = objectMapper.readTree(roleResponse);
+
+        Map<String, Object> roleMap = new HashMap<>();
+        roleMap.put("id", roleNode.path("id").asText());
+        roleMap.put("name", roleNode.path("name").asText());
+        return roleMap;
     }
 
     private void handleKeycloakError(HttpStatusCodeException e, String roleId, String userId) {
