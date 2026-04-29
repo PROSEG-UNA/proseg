@@ -154,7 +154,7 @@ public class AuthController {
             @Valid @RequestBody RegisterRequestDto request,
             @RequestHeader(value = "Accept", required = false) String acceptHeader
     ) {
-        if (!turnstileService.validarCaptcha(request.getCaptchaToken())) {
+        if (!turnstileService.validateCaptcha(request.getCaptchaToken())) {
             throw new RuntimeException("Captcha invalido");
         }
 

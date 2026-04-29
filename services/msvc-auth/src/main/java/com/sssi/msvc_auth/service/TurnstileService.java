@@ -24,9 +24,9 @@ public class TurnstileService {
 
     private static final String TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
-    public boolean validarCaptcha(String captchaToken) {
+    public boolean validateCaptcha(String captchaToken) {
         if (captchaToken == null || captchaToken.isBlank()) {
-            log.warn("Captcha token vacío");
+            log.warn("Captcha token empty");
             return false;
         }
 
@@ -41,18 +41,18 @@ public class TurnstileService {
             String response = restTemplate.postForObject(TURNSTILE_VERIFY_URL, request, String.class);
 
             if (response == null) {
-                log.warn("Respuesta nula de Turnstile");
+                log.warn("Null response from Turnstile");
                 return false;
             }
 
             JsonNode jsonResponse = objectMapper.readTree(response);
             boolean success = jsonResponse.get("success").asBoolean(false);
 
-            log.info("Validación de Turnstile: {}", success);
+            log.info("Validation of Turnstile: {}", success);
             return success;
 
         } catch (Exception e) {
-            log.error("Error al validar captcha con Turnstile: {}", e.getMessage(), e);
+            log.error("Error validating Turnstile captcha: {}", e.getMessage(), e);
             return false;
         }
     }
