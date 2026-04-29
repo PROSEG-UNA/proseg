@@ -18,7 +18,7 @@ export function InventoryPage() {
   return (
     <Box className="inventory-page">
         <Header
-          title="Sistema de Sección de Seguridad Institucional"
+          title="Sistema Programa Servicios Generales"
           onMenuClick={isMediumOrDown ? () => setDrawerOpen(true) : undefined}
         />
         <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
@@ -46,7 +46,7 @@ export function InventoryPage() {
                 fontSize: { xs: '0.9rem', sm: '1rem' },
               }}
             >
-              El SSSI es una plataforma institucional para digitalizar la gestión de activos y seguridad de la Universidad Nacional de Costa Rica, centralizando usuarios, roles y trazabilidad de movimientos, mantenimiento y estado de los recursos para mejorar el control operativo y la toma de decisiones.
+              El Sistema Programa Servicios Generales es una plataforma institucional para digitalizar la gestión de activos y seguridad de la Universidad Nacional de Costa Rica, centralizando usuarios, roles y trazabilidad de movimientos, mantenimiento y estado de los recursos para mejorar el control operativo y la toma de decisiones.
             </Typography>
 
             <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, width: '100%', flexWrap: 'wrap' }}>

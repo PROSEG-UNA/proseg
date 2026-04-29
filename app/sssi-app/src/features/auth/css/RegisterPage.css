@@ -28,6 +28,10 @@
   width: 100%;
 }
 
+.register-page .cf-turnstile {
+  min-height: 78px;
+}
+
 @media (max-width: 600px) {
   .register-container {
     padding: 0 1rem;

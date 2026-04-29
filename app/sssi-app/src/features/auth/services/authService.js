@@ -4,8 +4,12 @@ const BASE_URL = '/api/auth';
 
 const config = { withCredentials: true };
 
-export async function register(username, password, email, firstName, lastName) {
-    const { data } = await axios.post(`${BASE_URL}/register`, { username, password, email, firstName, lastName }, config);
+export async function register({ username, password, email, firstName, lastName, captchaToken }) {
+    const { data } = await axios.post(
+        `${BASE_URL}/register`,
+        { username, password, email, firstName, lastName, captchaToken },
+        config,
+    );
     return data;
 }
 
