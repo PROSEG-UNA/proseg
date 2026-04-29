@@ -2,7 +2,7 @@ export function Navbar() {
   return (
     <nav className="navbar">
       <div className="navbar-brand">
-        <h2>SSSI</h2>
+        <h2>SPSG</h2>
       </div>
       <ul className="navbar-menu">
         <li><a href="/">Home</a></li>

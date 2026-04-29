@@ -29,3 +29,6 @@ spring:
 app:
   cookie:
     secure: ${COOKIE_SECURE:false}
+
+turnstile:
+  secret-key: ${TURNSTILE_SECRET_KEY:0x4AAAAAADEo_xVst3UEPKg1xo7CgackmKA}

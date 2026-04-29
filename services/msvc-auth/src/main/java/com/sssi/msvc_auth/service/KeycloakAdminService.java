@@ -150,7 +150,7 @@ public class KeycloakAdminService {
             return userId;
         } catch (HttpStatusCodeException e) {
             if (e.getStatusCode().value() == 409) {
-                throw UserException.userAlreadyExists(username);
+                throw buildRegisterConflictException(e, username, email);
             }
             log.error("Error creando usuario en Keycloak: {} - {}", e.getStatusCode(), e.getResponseBodyAsString(), e);
             throw new IllegalStateException("Error al crear el usuario en Keycloak", e);
@@ -786,6 +786,34 @@ public class KeycloakAdminService {
         return name.startsWith("default-roles-")
                 || name.equals("offline_access")
                 || name.equals("uma_authorization");
+    }
+
+    private UserException buildRegisterConflictException(HttpStatusCodeException e, String username, String email) {
+        String body = e.getResponseBodyAsString();
+
+        try {
+            JsonNode errorNode = objectMapper.readTree(body);
+            String rawMessage = errorNode.path("errorMessage").asText(
+                    errorNode.path("message").asText(errorNode.path("error").asText(""))
+            );
+            String message = rawMessage.toLowerCase();
+
+            boolean mentionsUsername = message.contains("username") || message.contains(username.toLowerCase());
+            boolean mentionsEmail = message.contains("email") || message.contains(email.toLowerCase());
+
+            if (mentionsUsername && !mentionsEmail) {
+                return UserException.userAlreadyExists(username);
+            }
+
+            if (mentionsEmail && !mentionsUsername) {
+                return UserException.emailAlreadyExists(email);
+            }
+
+            return UserException.userOrEmailAlreadyExists(username, email);
+        } catch (Exception parseEx) {
+            log.warn("No se pudo parsear conflicto 409 de Keycloak al crear usuario: {}", body);
+            return UserException.userOrEmailAlreadyExists(username, email);
+        }
     }
 
     private void setPassword(String userId, String password, HttpHeaders headers) {
