@@ -8,10 +8,11 @@ import Button from '@mui/material/Button';
 import CloseIcon from '@mui/icons-material/Close';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
+import Radio from '@mui/material/Radio';
 import TableBase from '../../../common/components/TablaBase.jsx';
 import AlertModal from '../../../common/components/AlertModal.jsx';
 import { fetchRoles } from '../services/rolesService';
-import { assignRoleToUser, removeRoleFromUser, fetchRolesByUserId } from '../services/usersService';
+import { assignSingleRoleToUser, fetchRolesByUserId } from '../services/usersService';
 
 const roleColumns = [
     {
@@ -30,8 +31,8 @@ const roleColumns = [
 
 export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
     const [roles, setRoles] = useState([]);
-    const [selectedIds, setSelectedIds] = useState([]);
-    const [initialSelectedIds, setInitialSelectedIds] = useState([]);
+    const [selectedRoleId, setSelectedRoleId] = useState(null);
+    const [initialRoleId, setInitialRoleId] = useState(null);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
@@ -45,7 +46,7 @@ export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
             try {
                 setLoading(true);
                 setError(null);
-                setSelectedIds([]);
+                setSelectedRoleId(null);
 
                 const [rolesResponse, assignedRoles] = await Promise.all([
                     fetchRoles({ size: 200 }),
@@ -61,11 +62,9 @@ export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
                 setRoles(mappedRoles);
 
                 const assignedRoleIds = new Set((assignedRoles ?? []).map((role) => role.id));
-                const preselectedIds = mappedRoles
-                    .filter((role) => assignedRoleIds.has(role.id))
-                    .map((role) => role.id);
-                setSelectedIds(preselectedIds);
-                setInitialSelectedIds(preselectedIds);
+                const preselectedRoleId = mappedRoles.find((role) => assignedRoleIds.has(role.id))?.id ?? null;
+                setSelectedRoleId(preselectedRoleId);
+                setInitialRoleId(preselectedRoleId);
             } catch (err) {
                 if (!ignore) {
                     setError(err?.message || 'Error al cargar roles');
@@ -83,15 +82,28 @@ export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
         };
     }, [open, user?.id]);
 
-    const rowSelection = useMemo(
-        () => Object.fromEntries(selectedIds.map((id) => [id, true])),
-        [selectedIds]
+    const columns = useMemo(
+        () => [
+            {
+                id: 'selection',
+                header: 'Seleccionar',
+                size: 90,
+                grow: false,
+                Cell: ({ row }) => (
+                    <Radio
+                        checked={selectedRoleId === row.original.id}
+                        onChange={() => setSelectedRoleId(row.original.id)}
+                        value={row.original.id}
+                        inputProps={{ 'aria-label': `Seleccionar rol ${row.original.name}` }}
+                    />
+                ),
+                enableColumnFilter: false,
+                enableSorting: false,
+            },
+            ...roleColumns,
+        ],
+        [selectedRoleId]
     );
-
-    const handleRowSelectionChange = (updater) => {
-        const next = typeof updater === 'function' ? updater(rowSelection) : updater;
-        setSelectedIds(Object.keys(next).filter((key) => next[key]));
-    };
 
     const handleAssign = async () => {
         if (!user?.id) {
@@ -99,31 +111,24 @@ export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
             return;
         }
 
-        const initialSet = new Set(initialSelectedIds);
-        const selectedSet = new Set(selectedIds);
-        const rolesToAssign = selectedIds.filter((id) => !initialSet.has(id));
-        const rolesToRemove = initialSelectedIds.filter((id) => !selectedSet.has(id));
+        if (!selectedRoleId) {
+            setAlert({ type: 'error', message: 'Debes seleccionar un rol para el usuario.' });
+            return;
+        }
 
-        if (rolesToAssign.length === 0 && rolesToRemove.length === 0) {
+        if (selectedRoleId === initialRoleId) {
             setAlert({ type: 'info', message: 'No hay cambios por guardar.' });
             return;
         }
 
         setSaving(true);
         try {
-            await Promise.all(
-                rolesToAssign.map((roleId) => assignRoleToUser(user.id, roleId))
-            );
-
-            await Promise.all(
-                rolesToRemove.map((roleId) => removeRoleFromUser(user.id, roleId))
-            );
-
-            setInitialSelectedIds(selectedIds);
-            setAlert({ type: 'success', message: 'Roles actualizados correctamente.' });
+            await assignSingleRoleToUser(user.id, selectedRoleId);
+            setInitialRoleId(selectedRoleId);
+            setAlert({ type: 'success', message: 'Rol actualizado correctamente.' });
             onSaved?.();
         } catch (err) {
-            setAlert({ type: 'error', message: err?.message || 'Error al actualizar roles del usuario.' });
+            setAlert({ type: 'error', message: err?.message || 'Error al actualizar el rol del usuario.' });
         } finally {
             setSaving(false);
         }
@@ -159,13 +164,10 @@ export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
                 <Box sx={{ width: '100%' }}>
                     <TableBase
                         maxHeight={'600px'}
-                        columns={roleColumns}
+                        columns={columns}
                         data={roles}
                         loading={loading}
                         error={error}
-                        enableRowSelection
-                        rowSelection={rowSelection}
-                        onRowSelectionChange={handleRowSelectionChange}
                         tableOptions={{ positionToolbarAlertBanner: 'none' }}
                     />
                 </Box>

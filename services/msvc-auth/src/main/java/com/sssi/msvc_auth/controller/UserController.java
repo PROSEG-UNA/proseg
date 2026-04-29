@@ -69,14 +69,14 @@ public class UserController {
         );
     }
 
-    @PostMapping("/{userId}/roles/{roleId}")
+    @PutMapping("/{userId}/roles/{roleId}")
     public ResponseEntity<ApiResponse<Void>> assignRoleToUser(
             @PathVariable String userId,
             @PathVariable String roleId
     ) {
-        log.info("Asignando roleId {} al usuario {}", roleId, userId);
+        log.info("Asignando rol unico roleId {} al usuario {}", roleId, userId);
         userService.assignRoleToUser(userId, roleId);
-        return ApiResponseBuilder.ok(null, "Rol asignado correctamente");
+        return ApiResponseBuilder.ok(null, "Rol unico asignado correctamente");
     }
 
     @DeleteMapping("/{userId}/roles/{roleId}")
