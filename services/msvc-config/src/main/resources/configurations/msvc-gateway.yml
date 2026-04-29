@@ -56,3 +56,24 @@ spring:
             - Path=/api/email/**
           filters:
             - StripPrefix=2
+
+        - id: msvc-inventory-brands
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/v1/brands/**
+          filters:
+            - StripPrefix=0
+
+        - id: msvc-inventory-locations
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/v1/locations/**
+          filters:
+            - StripPrefix=0
+
+        - id: msvc-inventory-sites
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/v1/sites/**
+          filters:
+            - StripPrefix=0

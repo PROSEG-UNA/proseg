@@ -5,6 +5,29 @@ spring:
   application:
     name: msvc-inventory
 
+  datasource:
+    url: jdbc:postgresql://76.13.124.126:5432/sssi-bd
+    username: sssi_user
+    password: sssi_user
+    driver-class-name: org.postgresql.Driver
+
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 30000
+      max-lifetime: 180000
+      connection-timeout: 30000
+      validation-timeout: 5000
+      connection-test-query: SELECT 1
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
 eureka:
   instance:
     hostname: localhost
@@ -13,7 +36,9 @@ eureka:
       defaultZone: http://localhost:8761/eureka
 
 api:
-  prefix: /api
+  prefix: /api/v1
 
 routes:
-  inventory: ${api.prefix}/inventory
+  brands: ${api.prefix}/brands
+  locations: ${api.prefix}/locations
+  sites: ${api.prefix}/sites

@@ -53,7 +53,10 @@ public class SecurityConfig {
                         .pathMatchers(
                                 "/api/role/**",
                                 "/api/user/**",
-                                "/api/auth/**"
+                                "/api/auth/**",
+                                "/api/v1/brands/**",
+                                "/api/v1/locations/**",
+                                "/api/v1/sites/**"
                         ).permitAll()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
