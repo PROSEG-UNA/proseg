@@ -188,10 +188,10 @@ export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
                     </Box>
                     <Box>
                         <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: { xs: 15, sm: 15.5 }, lineHeight: 1.2, letterSpacing: '-0.01em' }}>
-                            Asignar roles a {user?.username || 'usuario'}
+                            Asignar rol
                         </Typography>
                         <Typography sx={{ color: 'rgba(255,255,255,0.65)', fontSize: { xs: 11, sm: 11.5 } }}>
-                            Seleccioná el rol que tendrá el usuario
+                            Seleccione el rol que tendrá el usuario
                         </Typography>
                     </Box>
                 </Box>
