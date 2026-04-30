@@ -15,11 +15,12 @@ public final class Privileges {
     }
 
     public static final class User {
+        public static final String CREATE = "CREAR_USUARIO";
         public static final String READ = "LEER_USUARIO";
         public static final String READ_ALL = "LEER_USUARIOS";
         public static final String READ_ROLES = "LEER_ROLES_USUARIO";
         public static final String APPROVE = "APROBAR_USUARIO";
         public static final String ASSIGN_ROLE = "ASIGNAR_ROL_USUARIO";
-        public static final String REMOVE_ROLE = "REMOVER_ROL_USUARIO";
+        public static final String REMOVE_ROLE = "ELIMINAR_ROL_USUARIO";
     }
 }

@@ -1,6 +1,7 @@
 package com.sssi.msvc_email.config;
 
 import com.sssi.common.kafka.events.UserLoginEvent;
+import com.sssi.common.kafka.events.UserAdminCreatedEvent;
 import com.sssi.common.kafka.events.UserRegisteredEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -59,5 +60,11 @@ public class KafkaConsumerConfig {
     public ConcurrentKafkaListenerContainerFactory<String, UserRegisteredEvent>
     userRegisteredListenerFactory() {
         return listenerFactory(UserRegisteredEvent.class);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, UserAdminCreatedEvent>
+    userAdminCreatedListenerFactory() {
+        return listenerFactory(UserAdminCreatedEvent.class);
     }
 }

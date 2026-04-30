@@ -19,6 +19,15 @@ export async function fetchUsers({ page = 0, size = 10 } = {}) {
     };
 }
 
+export async function createUser({ username, firstName, lastName, email }) {
+    const { data } = await axios.post(
+        BASE_URL,
+        { username, firstName, lastName, email },
+        config,
+    );
+    return data;
+}
+
 export async function fetchUserStatuses() {
     const { data } = await axios.get(`${BASE_URL}/statuses`, config);
     return Array.isArray(data?.data) ? data.data : [];

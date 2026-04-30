@@ -1,6 +1,7 @@
 package com.sssi.msvc_email.messaging;
 
 import com.sssi.common.kafka.events.UserLoginEvent;
+import com.sssi.common.kafka.events.UserAdminCreatedEvent;
 import com.sssi.common.kafka.events.UserRegisteredEvent;
 import com.sssi.common.kafka.topics.KafkaTopics;
 import com.sssi.msvc_email.notificacion.service.EmailEventService;
@@ -35,5 +36,15 @@ public class KafkaConsumerListener {
         log.info("REGISTER EVENT: {}", event);
         emailEventService.sendRegisteredEmail(event);
         emailEventService.sendApprovalEmails(event);
+    }
+
+    @KafkaListener(
+            topics = KafkaTopics.USER_ADMIN_CREATED_TOPIC,
+            groupId = "msvc-email-group",
+            containerFactory = "userAdminCreatedListenerFactory"
+    )
+    public void onUserAdminCreated(UserAdminCreatedEvent event) {
+        log.info("USER ADMIN CREATED EVENT: {}", event);
+        emailEventService.sendAdminCreatedCredentialsEmail(event);
     }
 }

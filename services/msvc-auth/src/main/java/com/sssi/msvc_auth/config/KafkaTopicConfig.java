@@ -36,4 +36,13 @@ public class KafkaTopicConfig {
                 .configs(TOPIC_CONFIG)
                 .build();
     }
+
+    @Bean
+    public NewTopic userAdminCreatedTopic() {
+        return TopicBuilder.name(KafkaTopics.USER_ADMIN_CREATED_TOPIC)
+                .partitions(3)
+                .replicas(1)
+                .configs(TOPIC_CONFIG)
+                .build();
+    }
 }
