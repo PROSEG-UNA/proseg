@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("${routes.brands:/api/v1/brands}")
+@RequestMapping("${routes.brands:/api/v1/inventory/brands}")
 @RequiredArgsConstructor
 public class BrandController {
 
