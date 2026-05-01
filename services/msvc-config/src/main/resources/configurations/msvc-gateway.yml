@@ -60,20 +60,55 @@ spring:
         - id: msvc-inventory-brands
           uri: http://localhost:8095
           predicates:
-            - Path=/api/v1/brands/**
+            - Path=/api/v1/inventory/brands/**
           filters:
             - StripPrefix=0
 
         - id: msvc-inventory-locations
           uri: http://localhost:8095
           predicates:
-            - Path=/api/v1/locations/**
+            - Path=/api/v1/inventory/locations/**
           filters:
             - StripPrefix=0
 
         - id: msvc-inventory-sites
           uri: http://localhost:8095
           predicates:
-            - Path=/api/v1/sites/**
+            - Path=/api/v1/inventory/sites/**
+          filters:
+            - StripPrefix=0
+
+        - id: msvc-inventory-asset-types
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/v1/inventory/asset-types/**
+          filters:
+            - StripPrefix=0
+
+        - id: msvc-inventory-asset-models
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/v1/inventory/asset-models/**
+          filters:
+            - StripPrefix=0
+
+        - id: msvc-inventory-assets
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/v1/inventory/assets/**
+          filters:
+            - StripPrefix=0
+
+        - id: msvc-inventory-network-interfaces
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/v1/inventory/network-interfaces/**
+          filters:
+            - StripPrefix=0
+
+        - id: msvc-inventory-asset-images
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/v1/inventory/asset-images/**
           filters:
             - StripPrefix=0

@@ -36,9 +36,15 @@ eureka:
       defaultZone: http://localhost:8761/eureka
 
 api:
-  prefix: /api/v1
+  prefix: /api/v1/inventory
 
 routes:
   brands: ${api.prefix}/brands
   locations: ${api.prefix}/locations
   sites: ${api.prefix}/sites
+  asset-types: ${api.prefix}/asset-types
+  asset-models: ${api.prefix}/asset-models
+  assets: ${api.prefix}/assets
+  network-interfaces: ${api.prefix}/network-interfaces
+  alarm-sensors: ${api.prefix}/assets/alarm-sensors
+  asset-images: ${api.prefix}/asset-images

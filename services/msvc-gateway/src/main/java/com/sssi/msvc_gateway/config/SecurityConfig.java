@@ -54,9 +54,7 @@ public class SecurityConfig {
                                 "/api/role/**",
                                 "/api/user/**",
                                 "/api/auth/**",
-                                "/api/v1/brands/**",
-                                "/api/v1/locations/**",
-                                "/api/v1/sites/**"
+                                "/api/v1/inventory/**"
                         ).permitAll()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2

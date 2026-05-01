@@ -15,7 +15,8 @@ public class CookieBearerTokenConverter implements ServerAuthenticationConverter
     private static final Set<String> PUBLIC_PATHS = Set.of(
             "/api/auth/login",
             "/api/auth/register",
-            "/api/auth/refresh"
+            "/api/auth/refresh",
+            "/api/v1/inventory/**"
     );
 
     private final String cookieName;
