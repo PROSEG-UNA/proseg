@@ -2,12 +2,14 @@ package com.sssi.msvc_email.notificacion.service;
 
 import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.kafka.events.UserLoginEvent;
+import com.sssi.common.kafka.events.UserAdminCreatedEvent;
 import com.sssi.common.kafka.events.UserRegisteredEvent;
 import com.sssi.common.utils.DateUtils;
 import com.sssi.msvc_email.notificacion.client.AuthClient;
 import com.sssi.msvc_email.notificacion.dto.KeycloakUserDto;
 import com.sssi.msvc_email.notificacion.model.Email;
 import com.sssi.msvc_email.notificacion.template.impl.GenericEmailTemplate;
+import com.sssi.msvc_email.notificacion.template.impl.UserAdminCreatedCredentialsEmailTemplate;
 import com.sssi.msvc_email.notificacion.template.impl.UserApprovalEmailTemplate;
 import com.sssi.msvc_email.notificacion.template.impl.UserRegisteredEmailTemplate;
 import lombok.RequiredArgsConstructor;
@@ -71,7 +73,7 @@ public class EmailEventService {
         emailService.sendEmail(
                 Email.builder()
                         .to(List.of(event.getEmail()))
-                        .subject("Bienvenido a SSSI - Registro exitoso")
+                        .subject("Bienvenido a SPSG - Registro exitoso")
                         .templateDefinition(template)
                         .build()
         );
@@ -111,7 +113,7 @@ public class EmailEventService {
                         emailService.sendEmail(
                                 Email.builder()
                                         .to(List.of(admin.getEmail()))
-                                        .subject("Nuevo usuario requiere aprobación - SSSI")
+                                        .subject("Nuevo usuario requiere aprobación - SPSG")
                                         .templateDefinition(template)
                                         .build()
                         );
@@ -124,4 +126,26 @@ public class EmailEventService {
                     }
                 });
     }
+
+        public void sendAdminCreatedCredentialsEmail(UserAdminCreatedEvent event) {
+                UserAdminCreatedCredentialsEmailTemplate template = UserAdminCreatedCredentialsEmailTemplate.builder()
+                                .firstName(event.getFirstName())
+                                .lastName(event.getLastName())
+                                .username(event.getUsername())
+                                .email(event.getEmail())
+                                .temporaryPassword(event.getTemporaryPassword())
+                                .loginUrl(loginUrl)
+                                .timestamp(event.getTimestamp())
+                                .build();
+
+                emailService.sendEmail(
+                                Email.builder()
+                                                .to(List.of(event.getEmail()))
+                                                .subject("Tu cuenta en SPSG ha sido creada")
+                                                .templateDefinition(template)
+                                                .build()
+                );
+
+                log.info("Email de credenciales temporales enviado a: {}", event.getEmail());
+        }
 }

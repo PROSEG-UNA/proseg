@@ -3,6 +3,8 @@ package com.sssi.msvc_auth.controller;
 import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.api.response.PagedResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
+import com.sssi.msvc_auth.dto.CreateManagedUserRequestDto;
+import com.sssi.msvc_auth.dto.CreateManagedUserResponseDto;
 import com.sssi.msvc_auth.dto.KeycloakUserResponseDto;
 import com.sssi.msvc_auth.dto.RoleResponseDto;
 import com.sssi.msvc_auth.dto.UserApprovalRequestDto;
@@ -35,6 +37,15 @@ public class UserController {
                 pageable.getPageNumber(), pageable.getPageSize());
         PagedResponse<KeycloakUserResponseDto> response = userService.getAllUsers(pageable);
         return ApiResponseBuilder.ok(response, "Usuarios obtenidos correctamente");
+    }
+
+    @PostMapping
+    public ResponseEntity<ApiResponse<CreateManagedUserResponseDto>> createUser(
+            @Valid @RequestBody CreateManagedUserRequestDto request
+    ) {
+        log.info("Creando usuario administrado: {}", request.getUsername());
+        CreateManagedUserResponseDto response = userService.createManagedUser(request);
+        return ApiResponseBuilder.created(response, "Usuario creado. Se envio credencial temporal por email");
     }
 
     @GetMapping("/keycloak/{id}")
