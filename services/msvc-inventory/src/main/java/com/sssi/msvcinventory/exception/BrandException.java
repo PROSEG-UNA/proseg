@@ -24,4 +24,12 @@ public class BrandException extends BaseException {
                 "Ya existe una marca con el nombre: " + name
         );
     }
+
+    public static BrandException inUse(String id) {
+        return new BrandException(
+                HttpStatus.BAD_REQUEST,
+                "BRAND_IN_USE",
+                "No se puede eliminar la marca con id: " + id + " porque tiene modelos de activo asociados"
+        );
+    }
 }
