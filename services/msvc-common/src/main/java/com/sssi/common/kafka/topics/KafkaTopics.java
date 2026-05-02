@@ -22,4 +22,6 @@ public final class KafkaTopics {
     public static final String USER_LOGIN_TOPIC = "user-login-v1";
 
     public static final String USER_REGISTERED_TOPIC = "user-registered-v1";
+
+    public static final String USER_ADMIN_CREATED_TOPIC = "user-admin-created-v1";
 }

@@ -18,20 +18,12 @@ public class UserApprobationService {
 
     @Transactional
     public User createPendingUser(String keycloakUserId) {
-        UUID sharedUserId;
-        try {
-            sharedUserId = UUID.fromString(keycloakUserId);
-        } catch (IllegalArgumentException ex) {
-            throw UserException.invalidUserIdFormat(keycloakUserId);
-        }
+        return createUserWithStatus(keycloakUserId, User.UserStatus.PENDING);
+    }
 
-        User user = User.builder()
-                .id(sharedUserId)
-                .keycloakUserId(keycloakUserId)
-                .status(User.UserStatus.PENDING)
-                .build();
-
-        return userRepository.save(user);
+    @Transactional
+    public User createApprovedUser(String keycloakUserId) {
+        return createUserWithStatus(keycloakUserId, User.UserStatus.APPROVED);
     }
 
     @Transactional
@@ -51,6 +43,23 @@ public class UserApprobationService {
         if (user.getStatus() != User.UserStatus.APPROVED) {
             throw AuthorizationException.accountNotApproved(user.getStatus().name());
         }
+    }
+
+    private User createUserWithStatus(String keycloakUserId, User.UserStatus status) {
+        UUID sharedUserId;
+        try {
+            sharedUserId = UUID.fromString(keycloakUserId);
+        } catch (IllegalArgumentException ex) {
+            throw UserException.invalidUserIdFormat(keycloakUserId);
+        }
+
+        User user = User.builder()
+                .id(sharedUserId)
+                .keycloakUserId(keycloakUserId)
+                .status(status)
+                .build();
+
+        return userRepository.save(user);
     }
 }
 

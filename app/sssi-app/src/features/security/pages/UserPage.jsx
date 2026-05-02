@@ -3,18 +3,27 @@ import {
   Box,
   Typography,
   Container,
+  Button,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import { Header } from '../../../common/components/Header';
 import { NavDrawer } from '../../../common/components/NavDrawer';
 import UsersTable from '../components/UsersTable.jsx';
+import CreateUserModal from '../components/CreateUserModal.jsx';
 import '../css/UserPage.css';
 
 export function UserPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const theme = useTheme();
   const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
+
+  const handleRefresh = () => {
+    setRefreshKey((prev) => prev + 1);
+  };
 
   return (
     <Box className="user-page">
@@ -37,9 +46,17 @@ export function UserPage() {
             >
               Lista de Usuarios
             </Typography>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
+              Crear
+            </Button>
           </Box>
 
-          <UsersTable />
+          <UsersTable refreshKey={refreshKey} />
+          <CreateUserModal
+            open={createOpen}
+            onClose={() => setCreateOpen(false)}
+            onSaved={handleRefresh}
+          />
         </Container>
     </Box>
   );

@@ -122,6 +122,10 @@ public class KeycloakAdminService {
     }
 
     public String registerUser(String username, String email, String password, String firstName, String lastName) {
+        return registerUser(username, email, password, firstName, lastName, false);
+    }
+
+    public String registerUser(String username, String email, String password, String firstName, String lastName, boolean enabled) {
         String adminToken = getAdminToken();
         String createUserUrl = keycloakServerUrl + "/admin/realms/" + realm + "/users";
 
@@ -133,7 +137,7 @@ public class KeycloakAdminService {
             userMap.put("email", email);
             userMap.put("firstName", firstName);
             userMap.put("lastName", lastName);
-            userMap.put("enabled", false);
+            userMap.put("enabled", enabled);
             userMap.put("emailVerified", false);
 
             ResponseEntity<String> response = restTemplate.exchange(
@@ -146,7 +150,7 @@ public class KeycloakAdminService {
             String userId = extractUserIdFromLocation(response);
             setPassword(userId, password, headers);
 
-            log.info("Usuario creado en Keycloak y bloqueado hasta aprobacion: {}", username);
+            log.info("Usuario creado en Keycloak: {} (enabled={})", username, enabled);
             return userId;
         } catch (HttpStatusCodeException e) {
             if (e.getStatusCode().value() == 409) {
