@@ -1,6 +1,7 @@
     package com.sssi.msvc_auth.dto;
 
     import jakarta.validation.constraints.NotBlank;
+    import jakarta.validation.constraints.Pattern;
     import jakarta.validation.constraints.Size;
     import lombok.AllArgsConstructor;
     import lombok.Data;
@@ -13,9 +14,17 @@
 
         @NotBlank(message = "El usuario o correo no puede estar vacío")
         @Size(min = 3, max = 100, message = "Debe tener entre 3 y 100 caracteres")
+            @Pattern(
+                regexp = "^(?:[a-zA-Z0-9_-]{3,24}|[^\\s@]+@[^\\s@]+\\.[^\\s@]+)$",
+                message = "Debe ser un usuario de 3-24 caracteres o un email válido"
+            )
         private String identifier;
 
         @NotBlank(message = "La contraseña no puede estar vacía")
-        @Size(min = 6, message = "La contraseña debe tener al menos 6 caracteres")
+            @Size(min = 8, max = 24, message = "La contraseña debe tener entre 8 y 24 caracteres")
+            @Pattern(
+                regexp = "^[a-zA-Z0-9!@#$%^&*()_+=;:'\",.<>/?|~`-]{8,24}$",
+                message = "La contraseña solo puede usar caracteres permitidos"
+            )
         private String password;
     }

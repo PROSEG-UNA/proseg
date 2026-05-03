@@ -4,7 +4,6 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    TextField,
     Button,
     Typography,
     IconButton,
@@ -20,6 +19,8 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import CloseIcon from '@mui/icons-material/Close';
 import AlertModal from '../../../common/components/AlertModal.jsx';
 import { createUser } from '../services/usersService';
+import { ValidatedTextField } from '../../../common/components/ValidatedTextField';
+import { useFormValidation } from '../../../common/hooks/useFormValidation';
 
 const RED = {
     50:  '#fff1f2',
@@ -41,26 +42,32 @@ export default function CreateUserModal({ open, onClose, onSaved }) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const isSmall = useMediaQuery(theme.breakpoints.down('md'));
-    const [formData, setFormData] = useState(INITIAL_FORM);
     const [saving, setSaving] = useState(false);
     const [alert, setAlert] = useState(null);
+    const { formData, errors, touched, handleChange, handleBlur, validateForm, resetForm } = useFormValidation(
+        INITIAL_FORM,
+        ['username', 'firstName', 'lastName', 'email']
+    );
 
     const headerGradient = isDark
         ? `linear-gradient(135deg, ${RED[900]} 0%, ${RED[800]} 100%)`
         : `linear-gradient(135deg, ${RED[600]} 0%, ${RED[800]} 100%)`;
     const accentColor = isDark ? RED[400] : RED[600];
 
-    const handleChange = (event) => {
-        const { name, value } = event.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
-    };
-
     const resetAndClose = () => {
-        setFormData(INITIAL_FORM);
+        resetForm();
         onClose?.();
     };
 
     const handleSubmit = async () => {
+        if (!validateForm()) {
+            setAlert({
+                type: 'error',
+                message: 'Revisa los campos del formulario antes de continuar.',
+            });
+            return;
+        }
+
         setSaving(true);
         try {
             await createUser(formData);
@@ -140,15 +147,19 @@ export default function CreateUserModal({ open, onClose, onSaved }) {
                             Información básica
                         </Typography>
                         <Stack spacing={1.5}>
-                        <TextField
+                        <ValidatedTextField
+                            fieldName="username"
                             fullWidth
                             required
                             label="Nombre de usuario"
                             name="username"
                             value={formData.username}
                             onChange={handleChange}
+                            onBlur={handleBlur}
                             disabled={saving}
                             size="small"
+                            error={touched.username && !!errors.username}
+                            helperText={touched.username && errors.username}
                             sx={{
                                 '& .MuiOutlinedInput-root': {
                                     borderRadius: '10px',
@@ -159,15 +170,19 @@ export default function CreateUserModal({ open, onClose, onSaved }) {
                                 '& .MuiInputLabel-root.Mui-focused': { color: accentColor },
                             }}
                         />
-                        <TextField
+                        <ValidatedTextField
+                            fieldName="firstName"
                             fullWidth
                             required
                             label="Nombre"
                             name="firstName"
                             value={formData.firstName}
                             onChange={handleChange}
+                            onBlur={handleBlur}
                             disabled={saving}
                             size="small"
+                            error={touched.firstName && !!errors.firstName}
+                            helperText={touched.firstName && errors.firstName}
                             sx={{
                                 '& .MuiOutlinedInput-root': {
                                     borderRadius: '10px',
@@ -178,15 +193,19 @@ export default function CreateUserModal({ open, onClose, onSaved }) {
                                 '& .MuiInputLabel-root.Mui-focused': { color: accentColor },
                             }}
                         />
-                        <TextField
+                        <ValidatedTextField
+                            fieldName="lastName"
                             fullWidth
                             required
                             label="Apellido"
                             name="lastName"
                             value={formData.lastName}
                             onChange={handleChange}
+                            onBlur={handleBlur}
                             disabled={saving}
                             size="small"
+                            error={touched.lastName && !!errors.lastName}
+                            helperText={touched.lastName && errors.lastName}
                             sx={{
                                 '& .MuiOutlinedInput-root': {
                                     borderRadius: '10px',
@@ -197,7 +216,8 @@ export default function CreateUserModal({ open, onClose, onSaved }) {
                                 '& .MuiInputLabel-root.Mui-focused': { color: accentColor },
                             }}
                         />
-                        <TextField
+                        <ValidatedTextField
+                            fieldName="email"
                             fullWidth
                             required
                             type="email"
@@ -205,8 +225,11 @@ export default function CreateUserModal({ open, onClose, onSaved }) {
                             name="email"
                             value={formData.email}
                             onChange={handleChange}
+                            onBlur={handleBlur}
                             disabled={saving}
                             size="small"
+                            error={touched.email && !!errors.email}
+                            helperText={touched.email && errors.email}
                             sx={{
                                 '& .MuiOutlinedInput-root': {
                                     borderRadius: '10px',
