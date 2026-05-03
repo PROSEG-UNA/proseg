@@ -24,4 +24,12 @@ public class LocationException extends BaseException {
                 "Ya existe una ubicación con el nombre '" + name + "' en el sitio indicado"
         );
     }
+
+    public static LocationException inUse(String id) {
+        return new LocationException(
+                HttpStatus.BAD_REQUEST,
+                "LOCATION_IN_USE",
+                "No se puede eliminar la ubicación con id: " + id + " porque tiene activos asociados"
+        );
+    }
 }

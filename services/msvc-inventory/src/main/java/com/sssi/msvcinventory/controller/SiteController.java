@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("${routes.sites:/api/v1/sites}")
+@RequestMapping("${routes.sites:/api/v1/inventory/sites}")
 @RequiredArgsConstructor
 public class SiteController {
 
