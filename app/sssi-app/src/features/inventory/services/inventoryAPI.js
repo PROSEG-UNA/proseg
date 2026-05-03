@@ -1,35 +1,31 @@
+import axios from 'axios';
+
+const API_BASE_URL = '/api/inventory';
+
+const config = { withCredentials: true };
+
 export const inventoryAPI = {
   getItems: async () => {
-    const response = await fetch('/api/inventory/items');
-    return response.json();
+    const { data } = await axios.get(`${API_BASE_URL}/items`, config);
+    return data;
   },
 
   getItem: async (id) => {
-    const response = await fetch(`/api/inventory/items/${id}`);
-    return response.json();
+    const { data } = await axios.get(`${API_BASE_URL}/items/${id}`, config);
+    return data;
   },
 
   createItem: async (item) => {
-    const response = await fetch('/api/inventory/items', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(item),
-    });
-    return response.json();
+    const { data } = await axios.post(`${API_BASE_URL}/items`, item, config);
+    return data;
   },
 
   updateItem: async (id, item) => {
-    const response = await fetch(`/api/inventory/items/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(item),
-    });
-    return response.json();
+    const { data } = await axios.put(`${API_BASE_URL}/items/${id}`, item, config);
+    return data;
   },
 
   deleteItem: async (id) => {
-    await fetch(`/api/inventory/items/${id}`, {
-      method: 'DELETE',
-    });
+    await axios.delete(`${API_BASE_URL}/items/${id}`, config);
   },
 };
