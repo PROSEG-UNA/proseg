@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("${routes.locations:/api/v1/locations}")
+@RequestMapping("${routes.locations:/api/v1/inventory/locations}")
 @RequiredArgsConstructor
 public class LocationController {
 

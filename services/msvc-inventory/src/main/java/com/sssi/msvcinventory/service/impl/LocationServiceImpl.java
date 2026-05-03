@@ -7,6 +7,7 @@ import com.sssi.msvcinventory.entity.Site;
 import com.sssi.msvcinventory.exception.LocationException;
 import com.sssi.msvcinventory.exception.SiteException;
 import com.sssi.msvcinventory.mapper.LocationMapper;
+import com.sssi.msvcinventory.repository.AssetRepository;
 import com.sssi.msvcinventory.repository.LocationRepository;
 import com.sssi.msvcinventory.repository.SiteRepository;
 import com.sssi.msvcinventory.service.LocationService;
@@ -24,6 +25,7 @@ public class LocationServiceImpl implements LocationService {
 
     private final LocationRepository locationRepository;
     private final SiteRepository siteRepository;
+    private final AssetRepository assetRepository;
     private final LocationMapper locationMapper;
 
     @Override
@@ -100,6 +102,10 @@ public class LocationServiceImpl implements LocationService {
 
         Location location = locationRepository.findById(id)
                 .orElseThrow(() -> LocationException.notFound(id.toString()));
+
+        if (assetRepository.existsByLocationId(id)) {
+            throw LocationException.inUse(id.toString());
+        }
 
         locationRepository.delete(location);
     }
