@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
     Dialog, DialogContent,
-    IconButton, Button, TextField, Typography,
+    IconButton, Button, Typography,
     Box, Checkbox, Chip, Tooltip, LinearProgress,
     Collapse, Divider, alpha, useTheme, useMediaQuery,
 } from '@mui/material';
@@ -16,6 +16,8 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import AlertModal from '../../../common/components/AlertModal.jsx';
 import { useRoleFormData } from '../hooks/useRoleFormData';
+import { ValidatedTextField } from '../../../common/components/ValidatedTextField';
+import { getValidationRule, validateField } from '../../../common/utils/validationRegex';
 
 const RED = {
     50:  '#fff1f2',
@@ -275,6 +277,14 @@ export default function RoleFormModal({ open, onClose, onSaved, role = null }) {
     const [alert, setAlert]               = useState(null);
     const [saving, setSaving]             = useState(false);
     const [activePreset, setActivePreset] = useState(null);
+    const [touched, setTouched]           = useState({ roleName: false, roleDescription: false });
+    const [errors, setErrors]             = useState({});
+
+    useEffect(() => {
+        setTouched({ roleName: false, roleDescription: false });
+        setErrors({});
+        setActivePreset(null);
+    }, [role, open]);
 
     const grouped         = useMemo(() => groupPrivilegesByDomain(allPrivileges), [allPrivileges]);
     const totalPrivileges = allPrivileges.length;
@@ -315,8 +325,47 @@ export default function RoleFormModal({ open, onClose, onSaved, role = null }) {
         setActivePreset(null);
     };
 
+    const handleRoleNameChange = (event) => {
+        setRoleName(event.target.value);
+        if (touched.roleName) {
+            const result = validateField(event.target.value, getValidationRule('roleName'));
+            setErrors((prev) => ({ ...prev, roleName: result.isValid ? '' : result.error }));
+        }
+    };
+
+    const handleDescriptionChange = (event) => {
+        setDescription(event.target.value);
+        if (touched.roleDescription) {
+            const result = validateField(event.target.value, getValidationRule('roleDescription'));
+            setErrors((prev) => ({ ...prev, roleDescription: result.isValid ? '' : result.error }));
+        }
+    };
+
+    const handleFieldBlur = (fieldName, value) => {
+        setTouched((prev) => ({ ...prev, [fieldName]: true }));
+        const rule = getValidationRule(fieldName);
+        if (rule) {
+            const result = validateField(value, rule);
+            setErrors((prev) => ({ ...prev, [fieldName]: result.isValid ? '' : result.error }));
+        }
+    };
+
     const handleSave = async () => {
-        if (!roleName.trim())    { setAlert({ type: 'warning', message: 'El nombre del rol es requerido' }); return; }
+        const roleNameRule = getValidationRule('roleName');
+        const roleDescriptionRule = getValidationRule('roleDescription');
+        const roleNameCheck = validateField(roleName || '', roleNameRule);
+        const roleDescriptionCheck = validateField(description || '', roleDescriptionRule);
+
+        setTouched({ roleName: true, roleDescription: true });
+        setErrors({
+            roleName: roleNameCheck.isValid ? '' : roleNameCheck.error,
+            roleDescription: roleDescriptionCheck.isValid ? '' : roleDescriptionCheck.error,
+        });
+
+        if (!roleNameCheck.isValid || !roleDescriptionCheck.isValid) {
+            setAlert({ type: 'warning', message: 'Revisa los datos del rol antes de continuar' });
+            return;
+        }
         if (!selectedIds.length) { setAlert({ type: 'warning', message: 'Seleccioná al menos un privilegio' }); return; }
         setSaving(true);
         try {
@@ -396,8 +445,36 @@ export default function RoleFormModal({ open, onClose, onSaved, role = null }) {
                 <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 2, flexShrink: 0 }}>
                     <SectionLabel>Información básica</SectionLabel>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                        <TextField label="Nombre del rol" value={roleName} onChange={e => setRoleName(e.target.value)} fullWidth size="small" sx={fieldSx} />
-                        <TextField label="Descripción" value={description} onChange={e => setDescription(e.target.value)} fullWidth size="small" multiline rows={2} sx={fieldSx} />
+                        <ValidatedTextField
+                            fieldName="roleName"
+                            label="Nombre del rol"
+                            name="roleName"
+                            value={roleName}
+                            onChange={handleRoleNameChange}
+                            onBlur={() => handleFieldBlur('roleName', roleName)}
+                            fullWidth
+                            size="small"
+                            disabled={saving}
+                            error={touched.roleName && !!errors.roleName}
+                            helperText={touched.roleName && errors.roleName}
+                            sx={fieldSx}
+                        />
+                        <ValidatedTextField
+                            fieldName="roleDescription"
+                            label="Descripción"
+                            name="roleDescription"
+                            value={description}
+                            onChange={handleDescriptionChange}
+                            onBlur={() => handleFieldBlur('roleDescription', description)}
+                            fullWidth
+                            size="small"
+                            multiline
+                            rows={2}
+                            disabled={saving}
+                            error={touched.roleDescription && !!errors.roleDescription}
+                            helperText={touched.roleDescription && errors.roleDescription}
+                            sx={fieldSx}
+                        />
                     </Box>
                 </Box>
 

@@ -36,4 +36,11 @@ public class TokenException extends BaseException {
                 "TOKEN_SIGNATURE_INVALID", "La firma del token no es válida"
         );
     }
+
+    public static TokenException notFound() {
+        return new TokenException(
+                HttpStatus.UNAUTHORIZED,
+                "TOKEN_NOT_FOUND", "El token de autenticación no fue encontrado"
+        );
+    }
 }

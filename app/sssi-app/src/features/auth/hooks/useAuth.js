@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { login, register, logout } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../../../common/context/AuthContext';
 
 export function useAuth() {
     const navigate = useNavigate();
+    const { logout: logoutAuth, setIsAuthenticated } = useContext(AuthContext);
     const [loading, setLoading] = useState(false);
     const [alert, setAlert] = useState(null);
 
@@ -16,6 +18,7 @@ export function useAuth() {
         setAlert(null);
         try {
             await login(identifier, password);
+            setIsAuthenticated(true);
             navigate('/home');
         } catch (err) {
             const message = err.response?.data?.message || err.message || 'Error al iniciar sesión';
@@ -44,13 +47,15 @@ export function useAuth() {
         setAlert(null);
         try {
             await logout();
-            navigate('/login');
+            await logoutAuth();
+            window.location.href = '/login';
         } catch (err) {
             const message = err.response?.data?.message || err.message || 'Error al cerrar sesión. Intenta de nuevo.';
             setAlert({ type: 'error', message });
+            await logoutAuth();
+            window.location.reload();
         } finally {
             setLoading(false);
-            navigate('/login')
         }
     };
 
