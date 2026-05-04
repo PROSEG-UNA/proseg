@@ -16,8 +16,7 @@ public class CookieBearerTokenConverter implements ServerAuthenticationConverter
             "/api/auth/login",
             "/api/auth/register",
             "/api/auth/refresh",
-            "/api/v1/inventory/**",
-            "/api/auth/logout"
+            "/api/v1/inventory/**"
     );
 
     private final String cookieName;
