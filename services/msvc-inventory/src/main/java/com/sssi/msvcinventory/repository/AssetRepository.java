@@ -15,13 +15,13 @@ public interface AssetRepository extends JpaRepository<Asset, UUID> {
 
     Page<Asset> findByLocationSiteId(UUID siteId, Pageable pageable);
 
-    Page<Asset> findByAssetModelAssetTypeId(UUID assetTypeId, Pageable pageable);
+    Page<Asset> findByModelTypeId(UUID typeId, Pageable pageable);
 
     boolean existsByLocationId(UUID locationId);
 
-    boolean existsByAssetModelId(UUID assetModelId);
+    boolean existsByModelId(UUID modelId);
 
-    boolean existsByAssetModelBrandId(UUID brandId);
+    boolean existsByModelBrandId(UUID brandId);
 
-    boolean existsByAssetModelAssetTypeId(UUID assetTypeId);
+    boolean existsByModelTypeId(UUID typeId);
 }

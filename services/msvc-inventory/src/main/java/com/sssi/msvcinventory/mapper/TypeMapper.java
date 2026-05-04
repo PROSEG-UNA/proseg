@@ -1,17 +1,17 @@
 package com.sssi.msvcinventory.mapper;
 
-import com.sssi.msvcinventory.dto.request.AssetTypeRequestDto;
-import com.sssi.msvcinventory.dto.response.AssetTypeResponseDto;
-import com.sssi.msvcinventory.entity.AssetType;
+import com.sssi.msvcinventory.dto.request.TypeRequestDto;
+import com.sssi.msvcinventory.dto.response.TypeResponseDto;
+import com.sssi.msvcinventory.entity.Type;
 import org.mapstruct.*;
 
 @Mapper(componentModel = "spring")
-public interface AssetTypeMapper {
+public interface TypeMapper {
 
-    AssetType toEntity(AssetTypeRequestDto request);
+    Type toEntity(TypeRequestDto request);
 
-    AssetTypeResponseDto toResponse(AssetType assetType);
+    TypeResponseDto toResponse(Type type);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    void updateEntityFromRequest(AssetTypeRequestDto request, @MappingTarget AssetType assetType);
+    void updateEntityFromRequest(TypeRequestDto request, @MappingTarget Type type);
 }

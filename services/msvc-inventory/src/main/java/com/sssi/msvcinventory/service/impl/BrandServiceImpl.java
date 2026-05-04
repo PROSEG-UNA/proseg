@@ -5,7 +5,7 @@ import com.sssi.msvcinventory.dto.response.BrandResponseDto;
 import com.sssi.msvcinventory.entity.Brand;
 import com.sssi.msvcinventory.exception.BrandException;
 import com.sssi.msvcinventory.mapper.BrandMapper;
-import com.sssi.msvcinventory.repository.AssetModelRepository;
+import com.sssi.msvcinventory.repository.ModelRepository;
 import com.sssi.msvcinventory.repository.BrandRepository;
 import com.sssi.msvcinventory.service.BrandService;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ import java.util.UUID;
 public class BrandServiceImpl implements BrandService {
 
     private final BrandRepository brandRepository;
-    private final AssetModelRepository assetModelRepository;
+    private final ModelRepository modelRepository;
     private final BrandMapper brandMapper;
 
     @Override
@@ -73,7 +73,7 @@ public class BrandServiceImpl implements BrandService {
         Brand brand = brandRepository.findById(id)
                 .orElseThrow(() -> BrandException.notFound(id.toString()));
 
-        if (assetModelRepository.existsByBrandId(id)) {
+        if (modelRepository.existsByBrandId(id)) {
             throw BrandException.inUse(id.toString());
         }
 

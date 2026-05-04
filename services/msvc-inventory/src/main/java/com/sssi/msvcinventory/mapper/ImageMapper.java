@@ -1,20 +1,20 @@
 package com.sssi.msvcinventory.mapper;
 
-import com.sssi.msvcinventory.dto.request.AssetImageRequestDto;
-import com.sssi.msvcinventory.dto.response.AssetImageResponseDto;
+import com.sssi.msvcinventory.dto.request.ImageRequestDto;
+import com.sssi.msvcinventory.dto.response.ImageResponseDto;
 import com.sssi.msvcinventory.entity.Image;
 import org.mapstruct.*;
 
 @Mapper(componentModel = "spring")
-public interface AssetImageMapper {
+public interface ImageMapper {
 
     @Mapping(target = "asset", ignore = true)
-    Image toEntity(AssetImageRequestDto request);
+    Image toEntity(ImageRequestDto request);
 
     @Mapping(target = "assetId", source = "asset.id")
-    AssetImageResponseDto toResponse(Image image);
+    ImageResponseDto toResponse(Image image);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "asset", ignore = true)
-    void updateEntityFromRequest(AssetImageRequestDto request, @MappingTarget Image image);
+    void updateEntityFromRequest(ImageRequestDto request, @MappingTarget Image image);
 }

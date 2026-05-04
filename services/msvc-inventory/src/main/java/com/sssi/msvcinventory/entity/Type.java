@@ -10,15 +10,15 @@ import org.hibernate.annotations.Where;
 import java.util.UUID;
 
 @Entity
-@Table(name = "asset_type_table")
+@Table(name = "type_table")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@SQLDelete(sql = "UPDATE asset_type_table SET is_deleted = true WHERE id = ?")
+@SQLDelete(sql = "UPDATE type_table SET is_deleted = true WHERE id = ?")
 @Where(clause = "is_deleted = false")
-public class AssetType extends BaseEntity {
+public class Type extends BaseEntity {
 
     @Id
     @GeneratedValue

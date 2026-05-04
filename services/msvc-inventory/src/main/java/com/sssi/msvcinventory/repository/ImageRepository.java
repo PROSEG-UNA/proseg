@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.UUID;
 
 @Repository
-public interface AssetImageRepository extends JpaRepository<Image, UUID> {
+public interface ImageRepository extends JpaRepository<Image, UUID> {
 
     Page<Image> findByAssetId(UUID assetId, Pageable pageable);
 

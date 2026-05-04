@@ -10,7 +10,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AssetTypeResponseDto {
+public class TypeResponseDto {
 
     private UUID id;
     private String name;

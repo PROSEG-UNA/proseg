@@ -39,7 +39,7 @@ public class Asset extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "asset_model_id", nullable = false)
-    private AssetModel assetModel;
+    private Model model;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "location_id", nullable = false)

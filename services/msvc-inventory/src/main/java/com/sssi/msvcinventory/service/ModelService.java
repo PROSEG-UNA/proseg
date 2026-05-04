@@ -1,25 +1,25 @@
 package com.sssi.msvcinventory.service;
 
-import com.sssi.msvcinventory.dto.request.AssetModelRequestDto;
-import com.sssi.msvcinventory.dto.response.AssetModelResponseDto;
+import com.sssi.msvcinventory.dto.request.ModelRequestDto;
+import com.sssi.msvcinventory.dto.response.ModelResponseDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.UUID;
 
-public interface AssetModelService {
+public interface ModelService {
 
-    AssetModelResponseDto create(AssetModelRequestDto request);
+    ModelResponseDto create(ModelRequestDto request);
 
-    AssetModelResponseDto findById(UUID id);
+    ModelResponseDto findById(UUID id);
 
-    Page<AssetModelResponseDto> findAll(Pageable pageable);
+    Page<ModelResponseDto> findAll(Pageable pageable);
 
-    Page<AssetModelResponseDto> findByBrandId(UUID brandId, Pageable pageable);
+    Page<ModelResponseDto> findByBrandId(UUID brandId, Pageable pageable);
 
-    Page<AssetModelResponseDto> findByAssetTypeId(UUID assetTypeId, Pageable pageable);
+    Page<ModelResponseDto> findByTypeId(UUID typeId, Pageable pageable);
 
-    AssetModelResponseDto update(UUID id, AssetModelRequestDto request);
+    ModelResponseDto update(UUID id, ModelRequestDto request);
 
     void delete(UUID id);
 }

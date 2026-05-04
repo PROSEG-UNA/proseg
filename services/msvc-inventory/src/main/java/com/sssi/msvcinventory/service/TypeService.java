@@ -1,21 +1,21 @@
 package com.sssi.msvcinventory.service;
 
-import com.sssi.msvcinventory.dto.request.AssetTypeRequestDto;
-import com.sssi.msvcinventory.dto.response.AssetTypeResponseDto;
+import com.sssi.msvcinventory.dto.request.TypeRequestDto;
+import com.sssi.msvcinventory.dto.response.TypeResponseDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.UUID;
 
-public interface AssetTypeService {
+public interface TypeService {
 
-    AssetTypeResponseDto create(AssetTypeRequestDto request);
+    TypeResponseDto create(TypeRequestDto request);
 
-    AssetTypeResponseDto findById(UUID id);
+    TypeResponseDto findById(UUID id);
 
-    Page<AssetTypeResponseDto> findAll(Pageable pageable);
+    Page<TypeResponseDto> findAll(Pageable pageable);
 
-    AssetTypeResponseDto update(UUID id, AssetTypeRequestDto request);
+    TypeResponseDto update(UUID id, TypeRequestDto request);
 
     void delete(UUID id);
 }

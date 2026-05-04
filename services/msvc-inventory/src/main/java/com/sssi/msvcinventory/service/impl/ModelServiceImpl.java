@@ -1,19 +1,19 @@
 package com.sssi.msvcinventory.service.impl;
 
-import com.sssi.msvcinventory.dto.request.AssetModelRequestDto;
-import com.sssi.msvcinventory.dto.response.AssetModelResponseDto;
+import com.sssi.msvcinventory.dto.request.ModelRequestDto;
+import com.sssi.msvcinventory.dto.response.ModelResponseDto;
 import com.sssi.msvcinventory.entity.Model;
-import com.sssi.msvcinventory.entity.AssetType;
+import com.sssi.msvcinventory.entity.Type;
 import com.sssi.msvcinventory.entity.Brand;
-import com.sssi.msvcinventory.exception.AssetModelException;
-import com.sssi.msvcinventory.exception.AssetTypeException;
+import com.sssi.msvcinventory.exception.ModelException;
+import com.sssi.msvcinventory.exception.TypeException;
 import com.sssi.msvcinventory.exception.BrandException;
-import com.sssi.msvcinventory.mapper.AssetModelMapper;
-import com.sssi.msvcinventory.repository.AssetModelRepository;
+import com.sssi.msvcinventory.mapper.ModelMapper;
+import com.sssi.msvcinventory.repository.ModelRepository;
 import com.sssi.msvcinventory.repository.AssetRepository;
-import com.sssi.msvcinventory.repository.AssetTypeRepository;
+import com.sssi.msvcinventory.repository.TypeRepository;
 import com.sssi.msvcinventory.repository.BrandRepository;
-import com.sssi.msvcinventory.service.AssetModelService;
+import com.sssi.msvcinventory.service.ModelService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,103 +24,103 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class AssetModelServiceImpl implements AssetModelService {
+public class ModelServiceImpl implements ModelService {
 
-    private final AssetModelRepository assetModelRepository;
+    private final ModelRepository modelRepository;
     private final BrandRepository brandRepository;
-    private final AssetTypeRepository assetTypeRepository;
+    private final TypeRepository typeRepository;
     private final AssetRepository assetRepository;
-    private final AssetModelMapper assetModelMapper;
+    private final ModelMapper modelMapper;
 
     @Override
     @Transactional
-    public AssetModelResponseDto create(AssetModelRequestDto request) {
+    public ModelResponseDto create(ModelRequestDto request) {
         Brand brand = brandRepository.findById(request.getBrandId())
                 .orElseThrow(() -> BrandException.notFound(request.getBrandId().toString()));
 
-        AssetType assetType = assetTypeRepository.findById(request.getAssetTypeId())
-                .orElseThrow(() -> AssetTypeException.notFound(request.getAssetTypeId().toString()));
+        Type type = typeRepository.findById(request.getTypeId())
+                .orElseThrow(() -> TypeException.notFound(request.getTypeId().toString()));
 
-        if (assetModelRepository.existsByNameIgnoreCaseAndBrandId(request.getName(), request.getBrandId())) {
-            throw AssetModelException.duplicateName(request.getName());
+        if (modelRepository.existsByNameIgnoreCaseAndBrandId(request.getName(), request.getBrandId())) {
+            throw ModelException.duplicateName(request.getName());
         }
 
-        Model model = assetModelMapper.toEntity(request);
+        Model model = modelMapper.toEntity(request);
         model.setBrand(brand);
-        model.setAssetType(assetType);
+        model.setType(type);
 
-        return assetModelMapper.toResponse(assetModelRepository.save(model));
+        return modelMapper.toResponse(modelRepository.save(model));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public AssetModelResponseDto findById(UUID id) {
-        return assetModelRepository.findById(id)
-                .map(assetModelMapper::toResponse)
-                .orElseThrow(() -> AssetModelException.notFound(id.toString()));
+    public ModelResponseDto findById(UUID id) {
+        return modelRepository.findById(id)
+                .map(modelMapper::toResponse)
+                .orElseThrow(() -> ModelException.notFound(id.toString()));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<AssetModelResponseDto> findAll(Pageable pageable) {
-        return assetModelRepository.findAll(pageable)
-                .map(assetModelMapper::toResponse);
+    public Page<ModelResponseDto> findAll(Pageable pageable) {
+        return modelRepository.findAll(pageable)
+                .map(modelMapper::toResponse);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<AssetModelResponseDto> findByBrandId(UUID brandId, Pageable pageable) {
+    public Page<ModelResponseDto> findByBrandId(UUID brandId, Pageable pageable) {
         if (!brandRepository.existsById(brandId)) {
             throw BrandException.notFound(brandId.toString());
         }
-        return assetModelRepository.findByBrandId(brandId, pageable)
-                .map(assetModelMapper::toResponse);
+        return modelRepository.findByBrandId(brandId, pageable)
+                .map(modelMapper::toResponse);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<AssetModelResponseDto> findByAssetTypeId(UUID assetTypeId, Pageable pageable) {
-        if (!assetTypeRepository.existsById(assetTypeId)) {
-            throw AssetTypeException.notFound(assetTypeId.toString());
+    public Page<ModelResponseDto> findByTypeId(UUID typeId, Pageable pageable) {
+        if (!typeRepository.existsById(typeId)) {
+            throw TypeException.notFound(typeId.toString());
         }
-        return assetModelRepository.findByAssetTypeId(assetTypeId, pageable)
-                .map(assetModelMapper::toResponse);
+        return modelRepository.findByTypeId(typeId, pageable)
+                .map(modelMapper::toResponse);
     }
 
     @Override
     @Transactional
-    public AssetModelResponseDto update(UUID id, AssetModelRequestDto request) {
-        Model model = assetModelRepository.findById(id)
-                .orElseThrow(() -> AssetModelException.notFound(id.toString()));
+    public ModelResponseDto update(UUID id, ModelRequestDto request) {
+        Model model = modelRepository.findById(id)
+                .orElseThrow(() -> ModelException.notFound(id.toString()));
 
         Brand brand = brandRepository.findById(request.getBrandId())
                 .orElseThrow(() -> BrandException.notFound(request.getBrandId().toString()));
 
-        AssetType assetType = assetTypeRepository.findById(request.getAssetTypeId())
-                .orElseThrow(() -> AssetTypeException.notFound(request.getAssetTypeId().toString()));
+        Type type = typeRepository.findById(request.getTypeId())
+                .orElseThrow(() -> TypeException.notFound(request.getTypeId().toString()));
 
-        if (assetModelRepository.existsByNameIgnoreCaseAndBrandIdAndIdNot(
+        if (modelRepository.existsByNameIgnoreCaseAndBrandIdAndIdNot(
                 request.getName(), request.getBrandId(), id)) {
-            throw AssetModelException.duplicateName(request.getName());
+            throw ModelException.duplicateName(request.getName());
         }
 
-        assetModelMapper.updateEntityFromRequest(request, model);
+        modelMapper.updateEntityFromRequest(request, model);
         model.setBrand(brand);
-        model.setAssetType(assetType);
+        model.setType(type);
 
-        return assetModelMapper.toResponse(assetModelRepository.save(model));
+        return modelMapper.toResponse(modelRepository.save(model));
     }
 
     @Override
     @Transactional
     public void delete(UUID id) {
-        Model model = assetModelRepository.findById(id)
-                .orElseThrow(() -> AssetModelException.notFound(id.toString()));
+        Model model = modelRepository.findById(id)
+                .orElseThrow(() -> ModelException.notFound(id.toString()));
 
-        if (assetRepository.existsByAssetModelId(id)) {
-            throw AssetModelException.inUse(id.toString());
+        if (assetRepository.existsByModelId(id)) {
+            throw ModelException.inUse(id.toString());
         }
 
-        assetModelRepository.delete(model);
+        modelRepository.delete(model);
     }
 }

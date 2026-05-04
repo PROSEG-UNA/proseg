@@ -1,14 +1,14 @@
 package com.sssi.msvcinventory.service.impl;
 
-import com.sssi.msvcinventory.dto.request.AssetTypeRequestDto;
-import com.sssi.msvcinventory.dto.response.AssetTypeResponseDto;
-import com.sssi.msvcinventory.entity.AssetType;
-import com.sssi.msvcinventory.exception.AssetTypeException;
-import com.sssi.msvcinventory.mapper.AssetTypeMapper;
-import com.sssi.msvcinventory.repository.AssetModelRepository;
+import com.sssi.msvcinventory.dto.request.TypeRequestDto;
+import com.sssi.msvcinventory.dto.response.TypeResponseDto;
+import com.sssi.msvcinventory.entity.Type;
+import com.sssi.msvcinventory.exception.TypeException;
+import com.sssi.msvcinventory.mapper.TypeMapper;
+import com.sssi.msvcinventory.repository.ModelRepository;
 import com.sssi.msvcinventory.repository.AssetRepository;
-import com.sssi.msvcinventory.repository.AssetTypeRepository;
-import com.sssi.msvcinventory.service.AssetTypeService;
+import com.sssi.msvcinventory.repository.TypeRepository;
+import com.sssi.msvcinventory.service.TypeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,62 +19,62 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class AssetTypeServiceImpl implements AssetTypeService {
+public class TypeServiceImpl implements TypeService {
 
-    private final AssetTypeRepository assetTypeRepository;
-    private final AssetModelRepository assetModelRepository;
+    private final TypeRepository typeRepository;
+    private final ModelRepository modelRepository;
     private final AssetRepository assetRepository;
-    private final AssetTypeMapper assetTypeMapper;
+    private final TypeMapper typeMapper;
 
     @Override
     @Transactional
-    public AssetTypeResponseDto create(AssetTypeRequestDto request) {
-        if (assetTypeRepository.existsByNameIgnoreCase(request.getName())) {
-            throw AssetTypeException.duplicateName(request.getName());
+    public TypeResponseDto create(TypeRequestDto request) {
+        if (typeRepository.existsByNameIgnoreCase(request.getName())) {
+            throw TypeException.duplicateName(request.getName());
         }
-        AssetType assetType = assetTypeMapper.toEntity(request);
-        return assetTypeMapper.toResponse(assetTypeRepository.save(assetType));
+        Type type = typeMapper.toEntity(request);
+        return typeMapper.toResponse(typeRepository.save(type));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public AssetTypeResponseDto findById(UUID id) {
-        return assetTypeRepository.findById(id)
-                .map(assetTypeMapper::toResponse)
-                .orElseThrow(() -> AssetTypeException.notFound(id.toString()));
+    public TypeResponseDto findById(UUID id) {
+        return typeRepository.findById(id)
+                .map(typeMapper::toResponse)
+                .orElseThrow(() -> TypeException.notFound(id.toString()));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<AssetTypeResponseDto> findAll(Pageable pageable) {
-        return assetTypeRepository.findAll(pageable)
-                .map(assetTypeMapper::toResponse);
+    public Page<TypeResponseDto> findAll(Pageable pageable) {
+        return typeRepository.findAll(pageable)
+                .map(typeMapper::toResponse);
     }
 
     @Override
     @Transactional
-    public AssetTypeResponseDto update(UUID id, AssetTypeRequestDto request) {
-        AssetType assetType = assetTypeRepository.findById(id)
-                .orElseThrow(() -> AssetTypeException.notFound(id.toString()));
+    public TypeResponseDto update(UUID id, TypeRequestDto request) {
+        Type type = typeRepository.findById(id)
+                .orElseThrow(() -> TypeException.notFound(id.toString()));
 
-        if (assetTypeRepository.existsByNameIgnoreCaseAndIdNot(request.getName(), id)) {
-            throw AssetTypeException.duplicateName(request.getName());
+        if (typeRepository.existsByNameIgnoreCaseAndIdNot(request.getName(), id)) {
+            throw TypeException.duplicateName(request.getName());
         }
 
-        assetTypeMapper.updateEntityFromRequest(request, assetType);
-        return assetTypeMapper.toResponse(assetTypeRepository.save(assetType));
+        typeMapper.updateEntityFromRequest(request, type);
+        return typeMapper.toResponse(typeRepository.save(type));
     }
 
     @Override
     @Transactional
     public void delete(UUID id) {
-        AssetType assetType = assetTypeRepository.findById(id)
-                .orElseThrow(() -> AssetTypeException.notFound(id.toString()));
+        Type type = typeRepository.findById(id)
+                .orElseThrow(() -> TypeException.notFound(id.toString()));
 
-        if (assetModelRepository.existsByAssetTypeId(id) || assetRepository.existsByAssetModelAssetTypeId(id)) {
-            throw AssetTypeException.inUse(id.toString());
+        if (modelRepository.existsByTypeId(id) || assetRepository.existsByModelTypeId(id)) {
+            throw TypeException.inUse(id.toString());
         }
 
-        assetTypeRepository.delete(assetType);
+        typeRepository.delete(type);
     }
 }

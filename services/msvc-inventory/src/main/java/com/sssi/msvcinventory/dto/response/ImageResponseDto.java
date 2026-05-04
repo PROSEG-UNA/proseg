@@ -10,7 +10,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AssetImageResponseDto {
+public class ImageResponseDto {
 
     private UUID id;
     private UUID assetId;

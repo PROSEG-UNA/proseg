@@ -12,7 +12,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AssetImageRequestDto {
+public class ImageRequestDto {
 
     @NotNull(message = "El id del activo es obligatorio")
     private UUID assetId;

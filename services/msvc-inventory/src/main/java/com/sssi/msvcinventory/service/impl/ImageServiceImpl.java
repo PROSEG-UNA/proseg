@@ -1,15 +1,15 @@
 package com.sssi.msvcinventory.service.impl;
 
-import com.sssi.msvcinventory.dto.request.AssetImageRequestDto;
-import com.sssi.msvcinventory.dto.response.AssetImageResponseDto;
+import com.sssi.msvcinventory.dto.request.ImageRequestDto;
+import com.sssi.msvcinventory.dto.response.ImageResponseDto;
 import com.sssi.msvcinventory.entity.Asset;
 import com.sssi.msvcinventory.entity.Image;
 import com.sssi.msvcinventory.exception.AssetException;
-import com.sssi.msvcinventory.exception.AssetImageException;
-import com.sssi.msvcinventory.mapper.AssetImageMapper;
-import com.sssi.msvcinventory.repository.AssetImageRepository;
+import com.sssi.msvcinventory.exception.ImageException;
+import com.sssi.msvcinventory.mapper.ImageMapper;
+import com.sssi.msvcinventory.repository.ImageRepository;
 import com.sssi.msvcinventory.repository.AssetRepository;
-import com.sssi.msvcinventory.service.AssetImageService;
+import com.sssi.msvcinventory.service.ImageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,57 +20,57 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class AssetImageServiceImpl implements AssetImageService {
+public class ImageServiceImpl implements ImageService {
 
-    private final AssetImageRepository assetImageRepository;
+    private final ImageRepository imageRepository;
     private final AssetRepository assetRepository;
-    private final AssetImageMapper assetImageMapper;
+    private final ImageMapper imageMapper;
 
     @Override
     @Transactional
-    public AssetImageResponseDto create(AssetImageRequestDto request) {
+    public ImageResponseDto create(ImageRequestDto request) {
         Asset asset = assetRepository.findById(request.getAssetId())
                 .orElseThrow(() -> AssetException.notFound(request.getAssetId().toString()));
 
-        Image image = assetImageMapper.toEntity(request);
+        Image image = imageMapper.toEntity(request);
         image.setAsset(asset);
 
-        return assetImageMapper.toResponse(assetImageRepository.save(image));
+        return imageMapper.toResponse(imageRepository.save(image));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public AssetImageResponseDto findById(UUID id) {
-        return assetImageRepository.findById(id)
-                .map(assetImageMapper::toResponse)
-                .orElseThrow(() -> AssetImageException.notFound(id.toString()));
+    public ImageResponseDto findById(UUID id) {
+        return imageRepository.findById(id)
+                .map(imageMapper::toResponse)
+                .orElseThrow(() -> ImageException.notFound(id.toString()));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<AssetImageResponseDto> findByAssetId(UUID assetId, Pageable pageable) {
+    public Page<ImageResponseDto> findByAssetId(UUID assetId, Pageable pageable) {
         if (!assetRepository.existsById(assetId)) {
             throw AssetException.notFound(assetId.toString());
         }
-        return assetImageRepository.findByAssetId(assetId, pageable)
-                .map(assetImageMapper::toResponse);
+        return imageRepository.findByAssetId(assetId, pageable)
+                .map(imageMapper::toResponse);
     }
 
     @Override
     @Transactional
-    public AssetImageResponseDto update(UUID id, AssetImageRequestDto request) {
-        Image image = assetImageRepository.findById(id)
-                .orElseThrow(() -> AssetImageException.notFound(id.toString()));
+    public ImageResponseDto update(UUID id, ImageRequestDto request) {
+        Image image = imageRepository.findById(id)
+                .orElseThrow(() -> ImageException.notFound(id.toString()));
 
-        assetImageMapper.updateEntityFromRequest(request, image);
-        return assetImageMapper.toResponse(assetImageRepository.save(image));
+        imageMapper.updateEntityFromRequest(request, image);
+        return imageMapper.toResponse(imageRepository.save(image));
     }
 
     @Override
     @Transactional
     public void delete(UUID id) {
-        Image image = assetImageRepository.findById(id)
-                .orElseThrow(() -> AssetImageException.notFound(id.toString()));
-        assetImageRepository.delete(image);
+        Image image = imageRepository.findById(id)
+                .orElseThrow(() -> ImageException.notFound(id.toString()));
+        imageRepository.delete(image);
     }
 }

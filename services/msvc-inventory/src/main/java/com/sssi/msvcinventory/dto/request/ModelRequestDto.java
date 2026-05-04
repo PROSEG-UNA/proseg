@@ -12,7 +12,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AssetModelRequestDto {
+public class ModelRequestDto {
 
     @NotBlank(message = "El nombre del modelo es obligatorio")
     @Size(min = 2, max = 100, message = "El nombre debe tener entre 2 y 100 caracteres")
@@ -22,5 +22,5 @@ public class AssetModelRequestDto {
     private UUID brandId;
 
     @NotNull(message = "El tipo de activo es obligatorio")
-    private UUID assetTypeId;
+    private UUID typeId;
 }
