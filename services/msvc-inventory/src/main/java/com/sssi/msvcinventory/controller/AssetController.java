@@ -6,9 +6,9 @@ import com.sssi.common.api.util.ApiResponseBuilder;
 import com.sssi.common.api.util.PageMapper;
 import com.sssi.msvcinventory.dto.request.AssetRequestDto;
 import com.sssi.msvcinventory.dto.response.AssetResponseDto;
-import com.sssi.msvcinventory.service.AssetImageService;
+import com.sssi.msvcinventory.service.ImageService;
 import com.sssi.msvcinventory.service.AssetService;
-import com.sssi.msvcinventory.dto.response.AssetImageResponseDto;
+import com.sssi.msvcinventory.dto.response.ImageResponseDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -24,7 +24,7 @@ import java.util.UUID;
 public class AssetController {
 
     private final AssetService assetService;
-    private final AssetImageService assetImageService;
+    private final ImageService imageService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<AssetResponseDto>> create(@Valid @RequestBody AssetRequestDto request) {
@@ -71,12 +71,12 @@ public class AssetController {
         );
     }
 
-    @GetMapping("/type/{assetTypeId}")
-    public ResponseEntity<ApiResponse<PageResponse<AssetResponseDto>>> findByAssetTypeId(
-            @PathVariable UUID assetTypeId,
+    @GetMapping("/type/{typeId}")
+    public ResponseEntity<ApiResponse<PageResponse<AssetResponseDto>>> findByTypeId(
+            @PathVariable UUID typeId,
             @PageableDefault(size = 10, page = 0) Pageable pageable) {
         return ApiResponseBuilder.ok(
-                PageMapper.from(assetService.findByAssetTypeId(assetTypeId, pageable)),
+                PageMapper.from(assetService.findByTypeId(typeId, pageable)),
                 "Activos por tipo"
         );
     }
@@ -101,11 +101,11 @@ public class AssetController {
     }
 
     @GetMapping("/{assetId}/images")
-    public ResponseEntity<ApiResponse<PageResponse<AssetImageResponseDto>>> findImages(
+    public ResponseEntity<ApiResponse<PageResponse<ImageResponseDto>>> findImages(
             @PathVariable UUID assetId,
             @PageableDefault(size = 10, page = 0) Pageable pageable) {
         return ApiResponseBuilder.ok(
-                PageMapper.from(assetImageService.findByAssetId(assetId, pageable)),
+                PageMapper.from(imageService.findByAssetId(assetId, pageable)),
                 "Imágenes del activo"
         );
     }

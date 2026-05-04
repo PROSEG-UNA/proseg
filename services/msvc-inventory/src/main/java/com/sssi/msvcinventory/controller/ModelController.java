@@ -4,9 +4,9 @@ import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.api.response.PageResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
 import com.sssi.common.api.util.PageMapper;
-import com.sssi.msvcinventory.dto.request.AssetModelRequestDto;
-import com.sssi.msvcinventory.dto.response.AssetModelResponseDto;
-import com.sssi.msvcinventory.service.AssetModelService;
+import com.sssi.msvcinventory.dto.request.ModelRequestDto;
+import com.sssi.msvcinventory.dto.response.ModelResponseDto;
+import com.sssi.msvcinventory.service.ModelService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -17,70 +17,70 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("${routes.asset-models:/api/v1/inventory/asset-models}")
+@RequestMapping("${routes.models:/api/v1/inventory/models}")
 @RequiredArgsConstructor
-public class AssetModelController {
+public class ModelController {
 
-    private final AssetModelService assetModelService;
+    private final ModelService modelService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<AssetModelResponseDto>> create(@Valid @RequestBody AssetModelRequestDto request) {
+    public ResponseEntity<ApiResponse<ModelResponseDto>> create(@Valid @RequestBody ModelRequestDto request) {
         return ApiResponseBuilder.created(
-                assetModelService.create(request),
+                modelService.create(request),
                 "Modelo de activo creado correctamente"
         );
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<AssetModelResponseDto>> findById(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<ModelResponseDto>> findById(@PathVariable UUID id) {
         return ApiResponseBuilder.ok(
-                assetModelService.findById(id),
+                modelService.findById(id),
                 "Modelo de activo obtenido correctamente"
         );
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<PageResponse<AssetModelResponseDto>>> findAll(
+    public ResponseEntity<ApiResponse<PageResponse<ModelResponseDto>>> findAll(
             @PageableDefault(size = 10, page = 0) Pageable pageable) {
         return ApiResponseBuilder.ok(
-                PageMapper.from(assetModelService.findAll(pageable)),
+                PageMapper.from(modelService.findAll(pageable)),
                 "Lista de modelos de activo"
         );
     }
 
     @GetMapping("/brand/{brandId}")
-    public ResponseEntity<ApiResponse<PageResponse<AssetModelResponseDto>>> findByBrandId(
+    public ResponseEntity<ApiResponse<PageResponse<ModelResponseDto>>> findByBrandId(
             @PathVariable UUID brandId,
             @PageableDefault(size = 10, page = 0) Pageable pageable) {
         return ApiResponseBuilder.ok(
-                PageMapper.from(assetModelService.findByBrandId(brandId, pageable)),
+                PageMapper.from(modelService.findByBrandId(brandId, pageable)),
                 "Modelos por marca"
         );
     }
 
-    @GetMapping("/type/{assetTypeId}")
-    public ResponseEntity<ApiResponse<PageResponse<AssetModelResponseDto>>> findByAssetTypeId(
-            @PathVariable UUID assetTypeId,
+    @GetMapping("/type/{typeId}")
+    public ResponseEntity<ApiResponse<PageResponse<ModelResponseDto>>> findByTypeId(
+            @PathVariable UUID typeId,
             @PageableDefault(size = 10, page = 0) Pageable pageable) {
         return ApiResponseBuilder.ok(
-                PageMapper.from(assetModelService.findByAssetTypeId(assetTypeId, pageable)),
+                PageMapper.from(modelService.findByTypeId(typeId, pageable)),
                 "Modelos por tipo de activo"
         );
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<AssetModelResponseDto>> update(
+    public ResponseEntity<ApiResponse<ModelResponseDto>> update(
             @PathVariable UUID id,
-            @Valid @RequestBody AssetModelRequestDto request) {
+            @Valid @RequestBody ModelRequestDto request) {
         return ApiResponseBuilder.ok(
-                assetModelService.update(id, request),
+                modelService.update(id, request),
                 "Modelo de activo actualizado correctamente"
         );
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
-        assetModelService.delete(id);
+        modelService.delete(id);
         return ApiResponseBuilder.ok(
                 null,
                 "Modelo de activo eliminado correctamente"

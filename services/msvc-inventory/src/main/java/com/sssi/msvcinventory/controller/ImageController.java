@@ -2,9 +2,9 @@ package com.sssi.msvcinventory.controller;
 
 import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
-import com.sssi.msvcinventory.dto.request.AssetImageRequestDto;
-import com.sssi.msvcinventory.dto.response.AssetImageResponseDto;
-import com.sssi.msvcinventory.service.AssetImageService;
+import com.sssi.msvcinventory.dto.request.ImageRequestDto;
+import com.sssi.msvcinventory.dto.response.ImageResponseDto;
+import com.sssi.msvcinventory.service.ImageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -13,41 +13,41 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("${routes.asset-images:/api/v1/inventory/asset-images}")
+@RequestMapping("${routes.images:/api/v1/inventory/images}")
 @RequiredArgsConstructor
-public class AssetImageController {
+public class ImageController {
 
-    private final AssetImageService assetImageService;
+    private final ImageService imageService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<AssetImageResponseDto>> create(@Valid @RequestBody AssetImageRequestDto request) {
+    public ResponseEntity<ApiResponse<ImageResponseDto>> create(@Valid @RequestBody ImageRequestDto request) {
         return ApiResponseBuilder.created(
-                assetImageService.create(request),
+                imageService.create(request),
                 "Imagen del activo creada correctamente"
         );
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<AssetImageResponseDto>> findById(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<ImageResponseDto>> findById(@PathVariable UUID id) {
         return ApiResponseBuilder.ok(
-                assetImageService.findById(id),
+                imageService.findById(id),
                 "Imagen del activo obtenida correctamente"
         );
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<AssetImageResponseDto>> update(
+    public ResponseEntity<ApiResponse<ImageResponseDto>> update(
             @PathVariable UUID id,
-            @Valid @RequestBody AssetImageRequestDto request) {
+            @Valid @RequestBody ImageRequestDto request) {
         return ApiResponseBuilder.ok(
-                assetImageService.update(id, request),
+                imageService.update(id, request),
                 "Imagen del activo actualizada correctamente"
         );
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
-        assetImageService.delete(id);
+        imageService.delete(id);
         return ApiResponseBuilder.ok(
                 null,
                 "Imagen del activo eliminada correctamente"

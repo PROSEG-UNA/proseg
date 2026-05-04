@@ -3,7 +3,7 @@ package com.sssi.msvcinventory.service.impl;
 import com.sssi.msvcinventory.dto.request.AssetImageRequestDto;
 import com.sssi.msvcinventory.dto.response.AssetImageResponseDto;
 import com.sssi.msvcinventory.entity.Asset;
-import com.sssi.msvcinventory.entity.AssetImage;
+import com.sssi.msvcinventory.entity.Image;
 import com.sssi.msvcinventory.exception.AssetException;
 import com.sssi.msvcinventory.exception.AssetImageException;
 import com.sssi.msvcinventory.mapper.AssetImageMapper;
@@ -32,10 +32,10 @@ public class AssetImageServiceImpl implements AssetImageService {
         Asset asset = assetRepository.findById(request.getAssetId())
                 .orElseThrow(() -> AssetException.notFound(request.getAssetId().toString()));
 
-        AssetImage assetImage = assetImageMapper.toEntity(request);
-        assetImage.setAsset(asset);
+        Image image = assetImageMapper.toEntity(request);
+        image.setAsset(asset);
 
-        return assetImageMapper.toResponse(assetImageRepository.save(assetImage));
+        return assetImageMapper.toResponse(assetImageRepository.save(image));
     }
 
     @Override
@@ -59,18 +59,18 @@ public class AssetImageServiceImpl implements AssetImageService {
     @Override
     @Transactional
     public AssetImageResponseDto update(UUID id, AssetImageRequestDto request) {
-        AssetImage assetImage = assetImageRepository.findById(id)
+        Image image = assetImageRepository.findById(id)
                 .orElseThrow(() -> AssetImageException.notFound(id.toString()));
 
-        assetImageMapper.updateEntityFromRequest(request, assetImage);
-        return assetImageMapper.toResponse(assetImageRepository.save(assetImage));
+        assetImageMapper.updateEntityFromRequest(request, image);
+        return assetImageMapper.toResponse(assetImageRepository.save(image));
     }
 
     @Override
     @Transactional
     public void delete(UUID id) {
-        AssetImage assetImage = assetImageRepository.findById(id)
+        Image image = assetImageRepository.findById(id)
                 .orElseThrow(() -> AssetImageException.notFound(id.toString()));
-        assetImageRepository.delete(assetImage);
+        assetImageRepository.delete(image);
     }
 }

@@ -2,7 +2,7 @@ package com.sssi.msvcinventory.service.impl;
 
 import com.sssi.msvcinventory.dto.request.AssetModelRequestDto;
 import com.sssi.msvcinventory.dto.response.AssetModelResponseDto;
-import com.sssi.msvcinventory.entity.AssetModel;
+import com.sssi.msvcinventory.entity.Model;
 import com.sssi.msvcinventory.entity.AssetType;
 import com.sssi.msvcinventory.entity.Brand;
 import com.sssi.msvcinventory.exception.AssetModelException;
@@ -45,11 +45,11 @@ public class AssetModelServiceImpl implements AssetModelService {
             throw AssetModelException.duplicateName(request.getName());
         }
 
-        AssetModel assetModel = assetModelMapper.toEntity(request);
-        assetModel.setBrand(brand);
-        assetModel.setAssetType(assetType);
+        Model model = assetModelMapper.toEntity(request);
+        model.setBrand(brand);
+        model.setAssetType(assetType);
 
-        return assetModelMapper.toResponse(assetModelRepository.save(assetModel));
+        return assetModelMapper.toResponse(assetModelRepository.save(model));
     }
 
     @Override
@@ -90,7 +90,7 @@ public class AssetModelServiceImpl implements AssetModelService {
     @Override
     @Transactional
     public AssetModelResponseDto update(UUID id, AssetModelRequestDto request) {
-        AssetModel assetModel = assetModelRepository.findById(id)
+        Model model = assetModelRepository.findById(id)
                 .orElseThrow(() -> AssetModelException.notFound(id.toString()));
 
         Brand brand = brandRepository.findById(request.getBrandId())
@@ -104,23 +104,23 @@ public class AssetModelServiceImpl implements AssetModelService {
             throw AssetModelException.duplicateName(request.getName());
         }
 
-        assetModelMapper.updateEntityFromRequest(request, assetModel);
-        assetModel.setBrand(brand);
-        assetModel.setAssetType(assetType);
+        assetModelMapper.updateEntityFromRequest(request, model);
+        model.setBrand(brand);
+        model.setAssetType(assetType);
 
-        return assetModelMapper.toResponse(assetModelRepository.save(assetModel));
+        return assetModelMapper.toResponse(assetModelRepository.save(model));
     }
 
     @Override
     @Transactional
     public void delete(UUID id) {
-        AssetModel assetModel = assetModelRepository.findById(id)
+        Model model = assetModelRepository.findById(id)
                 .orElseThrow(() -> AssetModelException.notFound(id.toString()));
 
         if (assetRepository.existsByAssetModelId(id)) {
             throw AssetModelException.inUse(id.toString());
         }
 
-        assetModelRepository.delete(assetModel);
+        assetModelRepository.delete(model);
     }
 }

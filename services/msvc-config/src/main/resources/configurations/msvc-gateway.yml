@@ -78,17 +78,17 @@ spring:
           filters:
             - StripPrefix=0
 
-        - id: msvc-inventory-asset-types
+        - id: msvc-inventory-types
           uri: http://localhost:8095
           predicates:
-            - Path=/api/v1/inventory/asset-types/**
+            - Path=/api/v1/inventory/types/**
           filters:
             - StripPrefix=0
 
-        - id: msvc-inventory-asset-models
+        - id: msvc-inventory-models
           uri: http://localhost:8095
           predicates:
-            - Path=/api/v1/inventory/asset-models/**
+            - Path=/api/v1/inventory/models/**
           filters:
             - StripPrefix=0
 
@@ -106,9 +106,9 @@ spring:
           filters:
             - StripPrefix=0
 
-        - id: msvc-inventory-asset-images
+        - id: msvc-inventory-images
           uri: http://localhost:8095
           predicates:
-            - Path=/api/v1/inventory/asset-images/**
+            - Path=/api/v1/inventory/images/**
           filters:
             - StripPrefix=0
