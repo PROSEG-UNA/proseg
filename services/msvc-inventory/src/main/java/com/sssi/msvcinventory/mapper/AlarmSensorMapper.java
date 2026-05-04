@@ -5,10 +5,10 @@ import com.sssi.msvcinventory.dto.response.AlarmSensorResponseDto;
 import com.sssi.msvcinventory.entity.AlarmSensor;
 import org.mapstruct.*;
 
-@Mapper(componentModel = "spring", uses = {AssetModelMapper.class, LocationMapper.class, NetworkInterfaceMapper.class})
+@Mapper(componentModel = "spring", uses = {ModelMapper.class, LocationMapper.class, NetworkInterfaceMapper.class})
 public interface AlarmSensorMapper {
 
-    @Mapping(target = "assetModel", ignore = true)
+    @Mapping(target = "model", ignore = true)
     @Mapping(target = "location", ignore = true)
     @Mapping(target = "networkInterface", ignore = true)
     AlarmSensor toEntity(AlarmSensorRequestDto request);
@@ -17,7 +17,7 @@ public interface AlarmSensorMapper {
     AlarmSensorResponseDto toResponse(AlarmSensor alarmSensor);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    @Mapping(target = "assetModel", ignore = true)
+    @Mapping(target = "model", ignore = true)
     @Mapping(target = "location", ignore = true)
     @Mapping(target = "networkInterface", ignore = true)
     void updateEntityFromRequest(AlarmSensorRequestDto request, @MappingTarget AlarmSensor alarmSensor);

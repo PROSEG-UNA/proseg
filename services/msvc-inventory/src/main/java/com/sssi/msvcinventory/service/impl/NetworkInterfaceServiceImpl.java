@@ -86,9 +86,9 @@ public class NetworkInterfaceServiceImpl implements NetworkInterfaceService {
         NetworkInterface networkInterface = networkInterfaceRepository.findById(id)
                 .orElseThrow(() -> NetworkInterfaceException.notFound(id.toString()));
 
-        if (networkInterface.getAsset().getAssetModel().getAssetType().isRequiresNetworkInterface()) {
+        if (networkInterface.getAsset().getModel().getType().isRequiresNetworkInterface()) {
             throw NetworkInterfaceException.requiredByAssetType(
-                    networkInterface.getAsset().getAssetModel().getAssetType().getName()
+                    networkInterface.getAsset().getModel().getType().getName()
             );
         }
 

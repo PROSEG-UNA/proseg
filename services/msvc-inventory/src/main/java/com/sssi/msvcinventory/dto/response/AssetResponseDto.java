@@ -28,7 +28,7 @@ public class AssetResponseDto {
     private String name;
     private String description;
     private String subtype;
-    private AssetModelResponseDto assetModel;
+    private ModelResponseDto model;
     private LocationResponseDto location;
     private AssetStatus status;
     private String statusDescription;

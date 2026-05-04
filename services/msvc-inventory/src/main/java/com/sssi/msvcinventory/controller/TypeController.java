@@ -4,9 +4,9 @@ import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.api.response.PageResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
 import com.sssi.common.api.util.PageMapper;
-import com.sssi.msvcinventory.dto.request.AssetTypeRequestDto;
-import com.sssi.msvcinventory.dto.response.AssetTypeResponseDto;
-import com.sssi.msvcinventory.service.AssetTypeService;
+import com.sssi.msvcinventory.dto.request.TypeRequestDto;
+import com.sssi.msvcinventory.dto.response.TypeResponseDto;
+import com.sssi.msvcinventory.service.TypeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -17,50 +17,50 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("${routes.asset-types:/api/v1/inventory/asset-types}")
+@RequestMapping("${routes.types:/api/v1/inventory/types}")
 @RequiredArgsConstructor
-public class AssetTypeController {
+public class TypeController {
 
-    private final AssetTypeService assetTypeService;
+    private final TypeService typeService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<AssetTypeResponseDto>> create(@Valid @RequestBody AssetTypeRequestDto request) {
+    public ResponseEntity<ApiResponse<TypeResponseDto>> create(@Valid @RequestBody TypeRequestDto request) {
         return ApiResponseBuilder.created(
-                assetTypeService.create(request),
+                typeService.create(request),
                 "Tipo de activo creado correctamente"
         );
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<AssetTypeResponseDto>> findById(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<TypeResponseDto>> findById(@PathVariable UUID id) {
         return ApiResponseBuilder.ok(
-                assetTypeService.findById(id),
+                typeService.findById(id),
                 "Tipo de activo obtenido correctamente"
         );
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<PageResponse<AssetTypeResponseDto>>> findAll(
+    public ResponseEntity<ApiResponse<PageResponse<TypeResponseDto>>> findAll(
             @PageableDefault(size = 10, page = 0) Pageable pageable) {
         return ApiResponseBuilder.ok(
-                PageMapper.from(assetTypeService.findAll(pageable)),
+                PageMapper.from(typeService.findAll(pageable)),
                 "Lista de tipos de activo"
         );
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<AssetTypeResponseDto>> update(
+    public ResponseEntity<ApiResponse<TypeResponseDto>> update(
             @PathVariable UUID id,
-            @Valid @RequestBody AssetTypeRequestDto request) {
+            @Valid @RequestBody TypeRequestDto request) {
         return ApiResponseBuilder.ok(
-                assetTypeService.update(id, request),
+                typeService.update(id, request),
                 "Tipo de activo actualizado correctamente"
         );
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
-        assetTypeService.delete(id);
+        typeService.delete(id);
         return ApiResponseBuilder.ok(
                 null,
                 "Tipo de activo eliminado correctamente"

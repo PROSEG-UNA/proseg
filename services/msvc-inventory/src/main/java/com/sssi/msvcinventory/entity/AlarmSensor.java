@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "asset_alarm_sensor_table")
+@Table(name = "alarm_sensor_table")
 @DiscriminatorValue("ALARM_SENSOR")
 @Getter
 @Setter

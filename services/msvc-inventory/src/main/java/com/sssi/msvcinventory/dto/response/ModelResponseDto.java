@@ -10,12 +10,12 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AssetModelResponseDto {
+public class ModelResponseDto {
 
     private UUID id;
     private String name;
     private BrandResponseDto brand;
-    private AssetTypeResponseDto assetType;
+    private TypeResponseDto type;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

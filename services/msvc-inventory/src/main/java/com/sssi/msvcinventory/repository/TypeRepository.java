@@ -1,13 +1,13 @@
 package com.sssi.msvcinventory.repository;
 
-import com.sssi.msvcinventory.entity.AssetType;
+import com.sssi.msvcinventory.entity.Type;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.UUID;
 
 @Repository
-public interface AssetTypeRepository extends JpaRepository<AssetType, UUID> {
+public interface TypeRepository extends JpaRepository<Type, UUID> {
 
     boolean existsByNameIgnoreCase(String name);
 

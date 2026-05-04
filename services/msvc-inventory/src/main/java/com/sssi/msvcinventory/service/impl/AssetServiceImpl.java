@@ -5,14 +5,14 @@ import com.sssi.msvcinventory.dto.request.NetworkInterfaceEmbeddedRequestDto;
 import com.sssi.msvcinventory.dto.response.AssetResponseDto;
 import com.sssi.msvcinventory.entity.*;
 import com.sssi.msvcinventory.exception.AssetException;
-import com.sssi.msvcinventory.exception.AssetModelException;
-import com.sssi.msvcinventory.exception.AssetTypeException;
+import com.sssi.msvcinventory.exception.ModelException;
+import com.sssi.msvcinventory.exception.TypeException;
 import com.sssi.msvcinventory.exception.LocationException;
 import com.sssi.msvcinventory.exception.NetworkInterfaceException;
 import com.sssi.msvcinventory.mapper.*;
-import com.sssi.msvcinventory.repository.AssetModelRepository;
+import com.sssi.msvcinventory.repository.ModelRepository;
 import com.sssi.msvcinventory.repository.AssetRepository;
-import com.sssi.msvcinventory.repository.AssetTypeRepository;
+import com.sssi.msvcinventory.repository.TypeRepository;
 import com.sssi.msvcinventory.repository.LocationRepository;
 import com.sssi.msvcinventory.repository.NetworkInterfaceRepository;
 import com.sssi.msvcinventory.service.AssetService;
@@ -29,9 +29,9 @@ import java.util.UUID;
 public class AssetServiceImpl implements AssetService {
 
     private final AssetRepository assetRepository;
-    private final AssetModelRepository assetModelRepository;
+    private final ModelRepository modelRepository;
     private final LocationRepository locationRepository;
-    private final AssetTypeRepository assetTypeRepository;
+    private final TypeRepository typeRepository;
     private final NetworkInterfaceRepository networkInterfaceRepository;
     private final AssetMapper assetMapper;
     private final AlarmSensorMapper alarmSensorMapper;
@@ -40,19 +40,19 @@ public class AssetServiceImpl implements AssetService {
     @Override
     @Transactional
     public AssetResponseDto create(AssetRequestDto request) {
-        AssetModel assetModel = assetModelRepository.findById(request.getAssetModelId())
-                .orElseThrow(() -> AssetModelException.notFound(request.getAssetModelId().toString()));
+        Model model = modelRepository.findById(request.getModelId())
+                .orElseThrow(() -> ModelException.notFound(request.getModelId().toString()));
 
         Location location = locationRepository.findById(request.getLocationId())
                 .orElseThrow(() -> LocationException.notFound(request.getLocationId().toString()));
 
-        AssetType assetType = assetModel.getAssetType();
-        if (assetType.isRequiresNetworkInterface() && request.getNetworkInterface() == null) {
-            throw AssetException.networkInterfaceRequired(assetType.getName());
+        Type type = model.getType();
+        if (type.isRequiresNetworkInterface() && request.getNetworkInterface() == null) {
+            throw AssetException.networkInterfaceRequired(type.getName());
         }
 
         Asset asset = assetMapper.toEntity(request);
-        asset.setAssetModel(assetModel);
+        asset.setModel(model);
         asset.setLocation(location);
         Asset saved = assetRepository.save(asset);
 
@@ -97,11 +97,11 @@ public class AssetServiceImpl implements AssetService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<AssetResponseDto> findByAssetTypeId(UUID assetTypeId, Pageable pageable) {
-        if (!assetTypeRepository.existsById(assetTypeId)) {
-            throw AssetTypeException.notFound(assetTypeId.toString());
+    public Page<AssetResponseDto> findByTypeId(UUID typeId, Pageable pageable) {
+        if (!typeRepository.existsById(typeId)) {
+            throw TypeException.notFound(typeId.toString());
         }
-        return assetRepository.findByAssetModelAssetTypeId(assetTypeId, pageable)
+        return assetRepository.findByModelTypeId(typeId, pageable)
                 .map(this::toPolymorphicResponse);
     }
 
@@ -111,20 +111,20 @@ public class AssetServiceImpl implements AssetService {
         Asset asset = assetRepository.findById(id)
                 .orElseThrow(() -> AssetException.notFound(id.toString()));
 
-        AssetModel assetModel = assetModelRepository.findById(request.getAssetModelId())
-                .orElseThrow(() -> AssetModelException.notFound(request.getAssetModelId().toString()));
+        Model model = modelRepository.findById(request.getModelId())
+                .orElseThrow(() -> ModelException.notFound(request.getModelId().toString()));
 
         Location location = locationRepository.findById(request.getLocationId())
                 .orElseThrow(() -> LocationException.notFound(request.getLocationId().toString()));
 
-        AssetType assetType = assetModel.getAssetType();
+        Type type = model.getType();
         boolean hasExistingNi = networkInterfaceRepository.existsByAssetId(id);
-        if (assetType.isRequiresNetworkInterface() && request.getNetworkInterface() == null && !hasExistingNi) {
-            throw AssetException.networkInterfaceRequired(assetType.getName());
+        if (type.isRequiresNetworkInterface() && request.getNetworkInterface() == null && !hasExistingNi) {
+            throw AssetException.networkInterfaceRequired(type.getName());
         }
 
         assetMapper.updateEntityFromRequest(request, asset);
-        asset.setAssetModel(assetModel);
+        asset.setModel(model);
         asset.setLocation(location);
         assetRepository.save(asset);
 

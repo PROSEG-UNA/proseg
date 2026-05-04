@@ -10,15 +10,15 @@ import org.hibernate.annotations.Where;
 import java.util.UUID;
 
 @Entity
-@Table(name = "asset_image_table")
+@Table(name = "image_table")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@SQLDelete(sql = "UPDATE asset_image_table SET is_deleted = true WHERE id = ?")
+@SQLDelete(sql = "UPDATE image_table SET is_deleted = true WHERE id = ?")
 @Where(clause = "is_deleted = false")
-public class AssetImage extends BaseEntity {
+public class Image extends BaseEntity {
 
     @Id
     @GeneratedValue

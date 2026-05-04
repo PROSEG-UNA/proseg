@@ -10,12 +10,12 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AssetImageResponseDto {
+public class TypeResponseDto {
 
     private UUID id;
-    private UUID assetId;
-    private String url;
-    private String caption;
+    private String name;
+    private String description;
+    private boolean requiresNetworkInterface;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

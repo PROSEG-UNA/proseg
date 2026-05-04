@@ -29,7 +29,7 @@ public class AssetRequestDto {
     private String subtype;
 
     @NotNull(message = "El modelo del activo es obligatorio")
-    private UUID assetModelId;
+    private UUID modelId;
 
     @NotNull(message = "La ubicación es obligatoria")
     private UUID locationId;

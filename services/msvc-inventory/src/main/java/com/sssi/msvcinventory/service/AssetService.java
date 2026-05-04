@@ -19,7 +19,7 @@ public interface AssetService {
 
     Page<AssetResponseDto> findBySiteId(UUID siteId, Pageable pageable);
 
-    Page<AssetResponseDto> findByAssetTypeId(UUID assetTypeId, Pageable pageable);
+    Page<AssetResponseDto> findByTypeId(UUID typeId, Pageable pageable);
 
     AssetResponseDto update(UUID id, AssetRequestDto request);
 
