@@ -14,6 +14,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import InventoryIcon from '@mui/icons-material/Inventory';
 import AlertModal from '../../../common/components/AlertModal.jsx';
 import { useRoleFormData } from '../hooks/useRoleFormData';
 
@@ -53,6 +54,14 @@ const DOMAIN_META = {
         darkBg:     alpha('#134e4a', 0.35),
         icon: ManageAccountsIcon,
         description: 'Asignación de roles a usuarios',
+    },
+    Inventario: {
+        lightColor: '#1d4ed8',
+        darkColor:  '#60a5fa',
+        lightBg:    '#eff6ff',
+        darkBg:     alpha('#1e3a5f', 0.35),
+        icon: InventoryIcon,
+        description: 'Gestión de activos y ubicaciones',
     },
 };
 
@@ -96,15 +105,17 @@ const ROLE_PRESETS = [
 ];
 
 const groupPrivilegesByDomain = (privileges) => {
-    const groups = { Usuarios: [], Roles: [], 'Roles de Usuario': [] };
-    const USUARIOS_SET = new Set(['LEER_USUARIOS','LEER_USUARIO','REGISTRAR_USUARIO','APROBAR_USUARIO','LEER_USUARIOS_POR_ROL']);
-    const ROLES_SET    = new Set(['CREAR_ROL','EDITAR_ROL','ELIMINAR_ROL','LEER_ROLES_BASE','LEER_ROLES_COMPUESTOS','LEER_COMPOSITES_ROL']);
-    const ROL_USR_SET  = new Set(['ASIGNAR_ROL_USUARIO','REMOVER_ROL_USUARIO','LEER_ROLES_USUARIO']);
+    const groups = { Usuarios: [], Roles: [], 'Roles de Usuario': [], Inventario: [] };
+    const USUARIOS_SET    = new Set(['LEER_USUARIOS','LEER_USUARIO','REGISTRAR_USUARIO','APROBAR_USUARIO','LEER_USUARIOS_POR_ROL']);
+    const ROLES_SET       = new Set(['CREAR_ROL','EDITAR_ROL','ELIMINAR_ROL','LEER_ROLES_BASE','LEER_ROLES_COMPUESTOS','LEER_COMPOSITES_ROL']);
+    const ROL_USR_SET     = new Set(['ASIGNAR_ROL_USUARIO','REMOVER_ROL_USUARIO','LEER_ROLES_USUARIO']);
+    const INVENTARIO_SET  = new Set(['LEER_ACTIVOS','GESTIONAR_ACTIVOS','ELIMINAR_ACTIVOS','LEER_UBICACIONES','GESTIONAR_UBICACIONES','ELIMINAR_UBICACIONES']);
     privileges.forEach(p => {
-        if (USUARIOS_SET.has(p.name))     groups.Usuarios.push(p);
-        else if (ROLES_SET.has(p.name))   groups.Roles.push(p);
-        else if (ROL_USR_SET.has(p.name)) groups['Roles de Usuario'].push(p);
-        else                              groups.Usuarios.push(p);
+        if (USUARIOS_SET.has(p.name))        groups.Usuarios.push(p);
+        else if (ROLES_SET.has(p.name))      groups.Roles.push(p);
+        else if (ROL_USR_SET.has(p.name))    groups['Roles de Usuario'].push(p);
+        else if (INVENTARIO_SET.has(p.name)) groups.Inventario.push(p);
+        else                                 groups.Usuarios.push(p);
     });
     return groups;
 };
@@ -392,7 +403,6 @@ export default function RoleFormModal({ open, onClose, onSaved, role = null }) {
                     '&::-webkit-scrollbar-thumb:hover': { background: alpha(accentColor, 0.45) },
                 }}
             >
-                {/* INFO BÁSICA */}
                 <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 2, flexShrink: 0 }}>
                     <SectionLabel>Información básica</SectionLabel>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -419,7 +429,7 @@ export default function RoleFormModal({ open, onClose, onSaved, role = null }) {
 
                 <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2, pb: 3, flex: 1 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.75 }}>
-                        <SectionLabel noMargin>Permisos por dominio</SectionLabel>
+                        <SectionLabel noMargin>Privilegios por dominio</SectionLabel>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.875 }}>
                             <Chip
                                 label={`${selectedCount} seleccionados`}
