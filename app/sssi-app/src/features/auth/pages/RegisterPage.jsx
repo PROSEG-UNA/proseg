@@ -3,7 +3,6 @@ import { Link as RouterLink } from 'react-router-dom';
 import {
     Container,
     Box,
-    TextField,
     Button,
     Card,
     CircularProgress,
@@ -18,6 +17,8 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { alpha } from '@mui/material/styles';
 import { useAuth } from '../hooks/useAuth';
 import AlertModal from '../../../common/components/AlertModal.jsx';
+import { useFormValidation } from '../../../common/hooks/useFormValidation';
+import { ValidatedTextField } from '../../../common/components/ValidatedTextField';
 import '../css/RegisterPage.css';
 
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAADEo_zmnakZDiJdz';
@@ -47,20 +48,17 @@ const fieldSx = (theme) => ({
 });
 
 export function RegisterPage() {
-    const [formData, setFormData] = useState({
-        username: '',
-        email: '',
-        password: '',
-        firstName: '',
-        lastName: '',
-        captchaToken: '',
-    });
     const [showPassword, setShowPassword] = useState(false);
     const [turnstileReady, setTurnstileReady] = useState(false);
     const [turnstileError, setTurnstileError] = useState('');
     const turnstileContainerRef = useRef(null);
     const turnstileWidgetIdRef = useRef(null);
     const { loading, alert, handleAlertClose, handleRegister } = useAuth();
+    
+    const { formData, errors, touched, handleChange, handleBlur, validateForm, setFormValue } = useFormValidation(
+        { username: '', email: '', registerPassword: '', firstName: '', lastName: '', captchaToken: '' },
+        ['username', 'email', 'registerPassword', 'firstName', 'lastName']
+    );
 
     useEffect(() => {
         const renderTurnstile = () => {
@@ -71,13 +69,13 @@ export function RegisterPage() {
             turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
                 sitekey: TURNSTILE_SITE_KEY,
                 callback: (token) => {
-                    setFormData((prev) => ({ ...prev, captchaToken: token }));
+                    setFormValue('captchaToken', token);
                 },
                 'expired-callback': () => {
-                    setFormData((prev) => ({ ...prev, captchaToken: '' }));
+                    setFormValue('captchaToken', '');
                 },
                 'error-callback': () => {
-                    setFormData((prev) => ({ ...prev, captchaToken: '' }));
+                    setFormValue('captchaToken', '');
                     setTurnstileError('No se pudo cargar el captcha. Intenta nuevamente.');
                 },
             });
@@ -111,14 +109,11 @@ export function RegisterPage() {
         };
     }, []);
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
-
     const handleSubmit = (e) => {
         e.preventDefault();
-        handleRegister(formData);
+        if (validateForm()) {
+            handleRegister(formData);
+        }
     };
 
     const handleTogglePasswordVisibility = () => {
@@ -175,92 +170,110 @@ export function RegisterPage() {
                         </Box>
 
                         <form onSubmit={handleSubmit}>
-                            <TextField
+                            <ValidatedTextField
+                                fieldName="username"
                                 fullWidth
                                 label="Nombre de usuario"
                                 name="username"
                                 type="text"
                                 value={formData.username}
                                 onChange={handleChange}
+                                onBlur={handleBlur}
                                 margin="dense"
                                 variant="outlined"
                                 required
                                 disabled={loading}
+                                error={touched.username && !!errors.username}
+                                helperText={touched.username && errors.username}
                                 sx={fieldSx}
                             />
-                            <TextField
+                            <ValidatedTextField
+                                fieldName="firstName"
                                 fullWidth
                                 label="Nombre"
                                 name="firstName"
                                 type="text"
                                 value={formData.firstName}
                                 onChange={handleChange}
+                                onBlur={handleBlur}
                                 margin="dense"
                                 variant="outlined"
                                 required
                                 disabled={loading}
+                                error={touched.firstName && !!errors.firstName}
+                                helperText={touched.firstName && errors.firstName}
                                 sx={fieldSx}
                             />
-                            <TextField
+                            <ValidatedTextField
+                                fieldName="lastName"
                                 fullWidth
                                 label="Apellido"
                                 name="lastName"
                                 type="text"
                                 value={formData.lastName}
                                 onChange={handleChange}
+                                onBlur={handleBlur}
                                 margin="dense"
                                 variant="outlined"
                                 required
                                 disabled={loading}
+                                error={touched.lastName && !!errors.lastName}
+                                helperText={touched.lastName && errors.lastName}
                                 sx={fieldSx}
                             />
-                            <TextField
+                            <ValidatedTextField
+                                fieldName="email"
                                 fullWidth
                                 label="Email"
                                 name="email"
                                 type="email"
                                 value={formData.email}
                                 onChange={handleChange}
+                                onBlur={handleBlur}
                                 margin="dense"
                                 variant="outlined"
                                 required
                                 disabled={loading}
+                                error={touched.email && !!errors.email}
+                                helperText={touched.email && errors.email}
                                 sx={fieldSx}
                             />
-                            <TextField
+                            <ValidatedTextField
+                                fieldName="registerPassword"
                                 fullWidth
                                 label="Contraseña"
-                                name="password"
+                                name="registerPassword"
                                 type={showPassword ? 'text' : 'password'}
-                                value={formData.password}
+                                value={formData.registerPassword}
                                 onChange={handleChange}
+                                onBlur={handleBlur}
                                 margin="dense"
                                 variant="outlined"
                                 required
                                 disabled={loading}
-                                slotProps={{
-                                    input: {
-                                        endAdornment: (
-                                            <InputAdornment position="end">
-                                                <IconButton
-                                                    onClick={handleTogglePasswordVisibility}
-                                                    edge="end"
-                                                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                                                    disableRipple
-                                                    sx={{
-                                                        p: 0.5,
-                                                        color: 'text.secondary',
-                                                        '&:hover': {
-                                                            backgroundColor: 'transparent',
-                                                            color: 'text.primary',
-                                                        },
-                                                    }}
-                                                >
-                                                    {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                                                </IconButton>
-                                            </InputAdornment>
-                                        ),
-                                    },
+                                error={touched.registerPassword && !!errors.registerPassword}
+                                helperText={touched.registerPassword && errors.registerPassword}
+                                InputProps={{
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <IconButton
+                                                onClick={handleTogglePasswordVisibility}
+                                                edge="end"
+                                                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                                disableRipple
+                                                sx={{
+                                                    p: 0.5,
+                                                    color: 'text.secondary',
+                                                    '&:hover': {
+                                                        backgroundColor: 'transparent',
+                                                        color: 'text.primary',
+                                                    },
+                                                }}
+                                            >
+                                                {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ),
                                 }}
                                 sx={fieldSx}
                             />

@@ -3,7 +3,6 @@ import { Link as RouterLink } from 'react-router-dom';
 import {
     Container,
     Box,
-    TextField,
     Button,
     Card,
     CircularProgress,
@@ -18,6 +17,8 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { alpha } from '@mui/material/styles';
 import { useAuth } from '../hooks/useAuth';
 import AlertModal from '../../../common/components/AlertModal.jsx';
+import { ValidatedTextField } from '../../../common/components/ValidatedTextField';
+import { useFormValidation } from '../../../common/hooks/useFormValidation';
 import '../css/LoginPage.css';
 
 const fieldSx = (theme) => ({
@@ -44,18 +45,18 @@ const fieldSx = (theme) => ({
 });
 
 export function LoginPage() {
-    const [formData, setFormData] = useState({ identifier: '', password: '' });
     const [showPassword, setShowPassword] = useState(false);
     const { loading, alert, handleAlertClose, handleLogin } = useAuth();
-
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
+    const { formData, errors, touched, handleChange, handleBlur, validateForm } = useFormValidation(
+        { identifier: '', loginPassword: '' },
+        ['identifier', 'loginPassword']
+    );
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        handleLogin(formData.identifier, formData.password);
+        if (validateForm()) {
+            handleLogin(formData.identifier, formData.loginPassword);
+        }
     };
 
     const handleTogglePasswordVisibility = () => {
@@ -112,53 +113,59 @@ export function LoginPage() {
                         </Box>
 
                         <form onSubmit={handleSubmit}>
-                            <TextField
+                            <ValidatedTextField
+                                fieldName="identifier"
                                 fullWidth
                                 label="Usuario o Email"
                                 name="identifier"
                                 type="text"
                                 value={formData.identifier}
                                 onChange={handleChange}
+                                onBlur={handleBlur}
                                 margin="dense"
                                 variant="outlined"
                                 required
                                 disabled={loading}
+                                error={touched.identifier && !!errors.identifier}
+                                helperText={touched.identifier && errors.identifier}
                                 sx={fieldSx}
                             />
-                            <TextField
+                            <ValidatedTextField
+                                fieldName="loginPassword"
                                 fullWidth
                                 label="Contraseña"
-                                name="password"
+                                name="loginPassword"
                                 type={showPassword ? 'text' : 'password'}
-                                value={formData.password}
+                                value={formData.loginPassword}
                                 onChange={handleChange}
+                                onBlur={handleBlur}
                                 margin="dense"
                                 variant="outlined"
                                 required
                                 disabled={loading}
-                                slotProps={{
-                                    input: {
-                                        endAdornment: (
-                                            <InputAdornment position="end">
-                                                <IconButton
-                                                    onClick={handleTogglePasswordVisibility}
-                                                    edge="end"
-                                                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                                                    disableRipple
-                                                    sx={{
-                                                        p: 0.5,
-                                                        color: 'text.secondary',
-                                                        '&:hover': {
-                                                            backgroundColor: 'transparent',
-                                                            color: 'text.primary',
-                                                        },
-                                                    }}
-                                                >
-                                                    {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                                                </IconButton>
-                                            </InputAdornment>
-                                        ),
-                                    },
+                                error={touched.loginPassword && !!errors.loginPassword}
+                                helperText={touched.loginPassword && errors.loginPassword}
+                                InputProps={{
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <IconButton
+                                                onClick={handleTogglePasswordVisibility}
+                                                edge="end"
+                                                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                                disableRipple
+                                                sx={{
+                                                    p: 0.5,
+                                                    color: 'text.secondary',
+                                                    '&:hover': {
+                                                        backgroundColor: 'transparent',
+                                                        color: 'text.primary',
+                                                    },
+                                                }}
+                                            >
+                                                {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ),
                                 }}
                                 sx={fieldSx}
                             />

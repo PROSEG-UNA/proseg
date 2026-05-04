@@ -23,11 +23,13 @@ import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import { alpha, useColorScheme } from '@mui/material/styles';
 import { SidebarContext } from '../context/SidebarContext';
+import { useAuth } from '../../features/auth/hooks/useAuth';
 import '../css/Sidebar.css';
 
 export function Sidebar() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { handleLogout } = useAuth();
     const [expandedMenu, setExpandedMenu] = useState(null);
     const { isMinimized, setIsMinimized } = useContext(SidebarContext);
     const theme = useTheme();
@@ -359,7 +361,7 @@ export function Sidebar() {
                         fullWidth
                         variant="contained"
                         startIcon={<LogoutIcon />}
-                        onClick={() => navigate('/login')}
+                        onClick={handleLogout}
                         sx={{
                             backgroundColor: 'primary.main',
                             color: 'primary.contrastText',

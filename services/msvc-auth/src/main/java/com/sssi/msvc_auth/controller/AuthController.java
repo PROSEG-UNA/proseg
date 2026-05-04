@@ -46,6 +46,31 @@ public class AuthController {
         return "Auth Service is running";
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<KeycloakUserResponseDto>> getCurrentUser(HttpServletRequest request) {
+        String authToken = null;
+        
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("auth_token".equals(cookie.getName())) {
+                    authToken = cookie.getValue();
+                    break;
+                }
+            }
+        }
+
+        if (authToken == null || authToken.isBlank()) {
+            throw com.sssi.msvc_auth.exception.TokenException.notFound();
+        }
+
+        String userId = keycloakAuthService.extractUserIdFromToken(authToken);
+        KeycloakUserResponseDto user = keycloakAdminService.getUserById(userId);
+
+        log.info("Información del usuario obtenida: {}", userId);
+
+        return ApiResponseBuilder.ok(user, "Usuario obtenido exitosamente");
+    }
+
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponseDto>> login(
             @Valid @RequestBody LoginRequestDto request,
