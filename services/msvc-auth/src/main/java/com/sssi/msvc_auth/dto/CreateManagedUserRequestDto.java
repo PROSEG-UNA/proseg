@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 public class CreateManagedUserRequestDto {
 
     @NotBlank(message = "El username no puede estar vacio")
-    @Size(min = 3, max = 24, message = "El username debe tener entre 3 y 24 caracteres")
+    @Size(min = 3, max = 64, message = "El username debe tener entre 3 y 64 caracteres")
     @Pattern(regexp = "^[a-zA-Z0-9_-]+$", message = "El username solo puede contener letras, numeros, guiones y guiones bajos")
     private String username;
 

@@ -13,10 +13,10 @@
     public class LoginRequestDto {
 
         @NotBlank(message = "El usuario o correo no puede estar vacío")
-        @Size(min = 3, max = 24, message = "Debe tener entre 3 y 24 caracteres")
+        @Size(min = 3, max = 64, message = "Debe tener entre 3 y 64 caracteres")
             @Pattern(
-                regexp = "^(?:[a-zA-Z0-9_-]{3,24}|[^\\s@]+@[^\\s@]+\\.[^\\s@]+)$",
-                message = "Debe ser un usuario de 3-24 caracteres o un email válido"
+                regexp = "^(?:[a-zA-Z0-9_-]{3,64}|[^\\s@]+@[^\\s@]+\\.[^\\s@]+)$",
+                message = "Debe ser un usuario de 3-64 caracteres o un email válido"
             )
         private String identifier;
 
