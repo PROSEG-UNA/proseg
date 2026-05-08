@@ -27,3 +27,13 @@ export async function getCurrentUser() {
     const { data } = await axios.get(`${BASE_URL}/me`, config);
     return data;
 }
+
+export async function forgotPassword(email) {
+    const { data } = await axios.post(`${BASE_URL}/forgot-password`, { email }, config);
+    return data;
+}
+
+export async function resetPassword(token, newPassword) {
+    const { data } = await axios.post(`${BASE_URL}/reset-password`, { token, newPassword }, config);
+    return data;
+}
