@@ -112,3 +112,10 @@ spring:
             - Path=/api/v1/inventory/images/**
           filters:
             - StripPrefix=0
+
+        - id: msvc-archive
+          uri: http://localhost:8096
+          predicates:
+            - Path=/api/v1/archive/**
+          filters:
+            - StripPrefix=0

@@ -29,6 +29,7 @@
         <module>msvc-email</module>
         <module>msvc-common</module>
         <module>msvc-inventory</module>
+        <module>msvc-archive</module>
     </modules>
 
     <properties>

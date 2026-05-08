@@ -1,0 +1,32 @@
+server:
+  port: 8096
+
+spring:
+  application:
+    name: msvc-archive
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:https://auth.devbychris.com/realms/sssi-realm}
+
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+
+api:
+  prefix: /api/v1/archive
+
+routes:
+  files: ${api.prefix}/files
+
+minio:
+  url: ${MINIO_URL:http://minio.devbychris.com:9000}
+  access-key: ${MINIO_ACCESS_KEY:admin}
+  secret-key: ${MINIO_SECRET_KEY:admin12345}
+  bucket: ${MINIO_BUCKET:spsg-dev}
+  region: ${MINIO_REGION:us-east-1}
+  secure: ${MINIO_SECURE:false}

@@ -48,7 +48,6 @@ export function ValidatedTextField({
     };
   }
 
-  // Intenta derivar una regex por carácter a partir del pattern completo.
   const deriveCharRegex = (pat) => {
     try {
       const s = String(pat);
@@ -56,12 +55,10 @@ export function ValidatedTextField({
       const end = s.indexOf(']', start + 1);
       if (start !== -1 && end !== -1) {
         const cls = s.slice(start + 1, end);
-        // Si la clase contiene \s, reemplazar por espacio explícito y \t etc.
         const cleaned = cls.replace(/\\s/g, ' ');
         return new RegExp(`^[${cleaned}]$`, 'u');
       }
     } catch (err) {
-      // ignore
     }
     return null;
   };
@@ -75,7 +72,6 @@ export function ValidatedTextField({
     const next = e.target.value || '';
     let out = next;
     if (charRegex) {
-      // Filtrar todos los caracteres que no cumplan la regla por carácter
       out = Array.from(out).filter((ch) => charRegex.test(ch)).join('');
     }
     if (maxLen && out.length > maxLen) {
@@ -88,7 +84,6 @@ export function ValidatedTextField({
       return;
     }
 
-    // Si no hubo cambios por filtrado/truncado, propagar el evento original
     onChange(e);
   };
 
