@@ -1,16 +1,19 @@
 import { useMemo, useState, useCallback, useEffect } from 'react';
-import { Box, Tab, Tabs } from '@mui/material';
+import {Box, Button, Tab, Tabs} from '@mui/material';
 import TableBase from '../../../common/components/TablaBase.jsx';
 import AlertModal from '../../../common/components/AlertModal.jsx';
 import { useUsersData } from '../hooks/useUsersData';
-import { fetchUserStatuses, updateUserApproval } from '../services/usersService';
+import {fetchUserStatuses, resendInvitation, updateUserApproval} from '../services/usersService';
 import { getUsersColumns, renderUsersActions } from './usersColumns.jsx';
 import AssignUserRolesModal from './AssignUserRolesModal.jsx';
+import ReplayIcon from '@mui/icons-material/Replay';
 
 const ALL_TAB_VALUE = 'ALL';
 
 function toStatusLabel(status) {
     switch (status) {
+        case 'INVITED':
+            return 'Invitados';
         case 'APPROVED':
             return 'Activos';
         case 'REJECTED':
@@ -28,7 +31,7 @@ export default function UsersTable({ refreshKey = 0 }) {
     const [localRefreshKey, setLocalRefreshKey] = useState(0);
     const [alert, setAlert] = useState(null);
     const [statusTab, setStatusTab] = useState(ALL_TAB_VALUE);
-    const [availableStatuses, setAvailableStatuses] = useState(['PENDING', 'APPROVED', 'REJECTED']);
+    const [availableStatuses, setAvailableStatuses] = useState(['PENDING', 'APPROVED', 'REJECTED', 'INVITED']);
 
     const triggerRefresh = useCallback(() => {
         setLocalRefreshKey((k) => k + 1);
@@ -87,20 +90,62 @@ export default function UsersTable({ refreshKey = 0 }) {
         }
     };
 
-    const columns = useMemo(
-        () =>
-            getUsersColumns().map((column) => ({
-                ...column,
-                muiTableBodyCellProps: {
-                    ...(column.muiTableBodyCellProps ?? {}),
-                    sx: {
-                        ...(column.muiTableBodyCellProps?.sx ?? {}),
-                        py: 1.15,
-                    },
+    const columns = useMemo(() => {
+        let baseColumns = getUsersColumns().map((column) => ({
+            ...column,
+            muiTableBodyCellProps: {
+                ...(column.muiTableBodyCellProps ?? {}),
+                sx: {
+                    ...(column.muiTableBodyCellProps?.sx ?? {}),
+                    py: 1.15,
                 },
-            })),
-        []
-    );
+            },
+        }));
+
+        if (statusTab === 'INVITED') {
+            baseColumns = baseColumns.filter(
+                (column) =>
+                    column.accessorKey !== 'username' &&
+                    column.accessorKey !== 'fullName'
+            );
+            baseColumns.push({
+                id: 'resendInvitation',
+                header: 'Reenviar Invitación',
+                size: 180,
+                Cell: ({ row }) => (
+                    <Button
+                        variant="contained"
+                        size="small"
+                        color="secondary"
+                        startIcon={<ReplayIcon />}
+                        onClick={async () => {
+                            try {
+                                await resendInvitation(row.original.id);
+
+                                setAlert({
+                                    type: 'success',
+                                    message: 'Invitación reenviada correctamente.',
+                                });
+
+                                triggerRefresh();
+                            } catch (err) {
+                                setAlert({
+                                    type: 'error',
+                                    message:
+                                        err?.response?.data?.message ||
+                                        'Error al reenviar invitación.',
+                                });
+                            }
+                        }}
+                    >
+                        Reenviar
+                    </Button>
+                ),
+            });
+        }
+
+        return baseColumns;
+    }, [statusTab]);
 
     const filteredRows = useMemo(() => {
         if (statusTab === ALL_TAB_VALUE) {

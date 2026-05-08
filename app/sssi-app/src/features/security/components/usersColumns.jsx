@@ -7,6 +7,7 @@ import RowActionsMenu from '../../../common/components/RowActionsMenu.jsx';
 function statusChipColor(statusRaw) {
     if (statusRaw === 'APPROVED') return 'success';
     if (statusRaw === 'REJECTED') return 'error';
+    if (statusRaw === 'INVITED') return 'secondary';
     return 'warning';
 }
 

@@ -42,7 +42,7 @@ export const VALIDATION_RULES = {
     errorMessage: 'Ingrese un email válido (máx 64 caracteres)',
     type: 'email',
   },
-  registerPassword: {
+  password: {
     label: 'Contraseña',
     pattern: REGEX_PATTERNS.PASSWORD,
     minLength: 8,
