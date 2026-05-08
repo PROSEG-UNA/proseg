@@ -9,12 +9,12 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserAdminCreatedEvent {
+public class UserInvitedEvent {
     private String userId;
     private String username;
     private String email;
     private String firstName;
     private String lastName;
-    private String temporaryPassword;
+    private String invitationToken;
     private long timestamp;
 }

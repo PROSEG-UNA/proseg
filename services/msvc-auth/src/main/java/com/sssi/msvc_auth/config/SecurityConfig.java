@@ -30,6 +30,10 @@ public class SecurityConfig {
                                 "/api/auth/register",
                                 "/api/auth/refresh",
                                 "/api/auth/logout",
+                                "/api/auth/forgot-password",
+                                "/api/auth/reset-password",
+                                "/api/user/set-password",
+                                "/api/user/invitation-info/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         ).permitAll()
@@ -74,6 +78,9 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.DELETE, "/api/user/*/roles/*")
                         .hasAuthority(Privileges.User.REMOVE_ROLE)
+
+                        .requestMatchers(HttpMethod.GET, "/api/invitations/**")
+                        .hasAuthority(Privileges.Invitation.READ_PENDING)
 
                         .anyRequest().authenticated()
                 )
