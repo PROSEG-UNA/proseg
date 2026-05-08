@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserLoginEvent {
-    private String userId;
+    private String keycloakUserId;
     private String identifier;
     private long timestamp;
 }

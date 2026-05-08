@@ -57,3 +57,30 @@ export async function fetchRolesByUserId(userId) {
     const { data } = await axios.get(`${BASE_URL}/${userId}/roles`, config);
     return data?.data ?? [];
 }
+
+export async function getInvitationInfo(token) {
+    const { data } = await axios.get(`${BASE_URL}/invitation-info`, {
+        ...config,
+        params: { token },
+    });
+    return data.data;
+}
+
+export async function setPassword(token, password, confirmPassword) {
+    const { data } = await axios.post(
+        `${BASE_URL}/set-password`,
+        { token, password, confirmPassword },
+        config,
+    );
+    return data;
+}
+
+export async function resendInvitation(userId) {
+    const { data } = await axios.post(
+        `${BASE_URL}/${userId}/resend-invitation`,
+        null,
+        config,
+    );
+
+    return data;
+}

@@ -34,7 +34,7 @@ public class GenericEmailTemplate implements EmailTemplateDefinition {
 
     @Override
     public List<String> getInlineImages() {
-        return List.of("logo-4.png");
+        return List.of("flower.png");
     }
 
     private void validate() {

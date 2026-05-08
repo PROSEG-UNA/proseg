@@ -22,6 +22,11 @@ public class UserApprobationService {
     }
 
     @Transactional
+    public User createInvitedUser(String keycloakUserId) {
+        return createUserWithStatus(keycloakUserId, User.UserStatus.INVITED);
+    }
+
+    @Transactional
     public User createApprovedUser(String keycloakUserId) {
         return createUserWithStatus(keycloakUserId, User.UserStatus.APPROVED);
     }
@@ -60,6 +65,20 @@ public class UserApprobationService {
                 .build();
 
         return userRepository.save(user);
+    }
+
+    @Transactional
+    public User activateUser(String keycloakUserId) {
+        User user = userRepository.findByKeycloakUserId(keycloakUserId)
+                .orElseThrow(() -> UserException.notFound(keycloakUserId));
+        user.setStatus(User.UserStatus.APPROVED);
+        return userRepository.save(user);
+    }
+
+    @Transactional(readOnly = true)
+    public User findByKeycloakUserId(String keycloakUserId) {
+        return userRepository.findByKeycloakUserId(keycloakUserId)
+                .orElseThrow(() -> UserException.notFound(keycloakUserId));
     }
 }
 

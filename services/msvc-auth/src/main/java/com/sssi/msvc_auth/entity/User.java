@@ -41,7 +41,8 @@ public class User extends BaseEntity {
 	public enum UserStatus {
 		PENDING,
 		APPROVED,
-		REJECTED
+		REJECTED,
+		INVITED
 	}
 }
 

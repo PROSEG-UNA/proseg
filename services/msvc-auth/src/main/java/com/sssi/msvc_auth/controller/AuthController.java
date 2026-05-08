@@ -6,10 +6,7 @@ import com.sssi.common.kafka.events.UserLoginEvent;
 import com.sssi.common.kafka.events.UserRegisteredEvent;
 import com.sssi.common.kafka.topics.KafkaTopics;
 import com.sssi.msvc_auth.dto.*;
-import com.sssi.msvc_auth.service.KeycloakAdminService;
-import com.sssi.msvc_auth.service.KeycloakAuthService;
-import com.sssi.msvc_auth.service.UserApprobationService;
-import com.sssi.msvc_auth.service.TurnstileService;
+import com.sssi.msvc_auth.service.*;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,6 +34,7 @@ public class AuthController {
     private final UserApprobationService userApprobationService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final TurnstileService turnstileService;
+    private final PasswordResetService passwordResetService;
 
     @Value("${app.cookie.secure:false}")
     private boolean secureCookie;
@@ -49,7 +47,6 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<KeycloakUserResponseDto>> getCurrentUser(HttpServletRequest request) {
         String authToken = null;
-        
         if (request.getCookies() != null) {
             for (Cookie cookie : request.getCookies()) {
                 if ("auth_token".equals(cookie.getName())) {
@@ -58,16 +55,12 @@ public class AuthController {
                 }
             }
         }
-
         if (authToken == null || authToken.isBlank()) {
             throw com.sssi.msvc_auth.exception.TokenException.notFound();
         }
-
         String userId = keycloakAuthService.extractUserIdFromToken(authToken);
         KeycloakUserResponseDto user = keycloakAdminService.getUserById(userId);
-
         log.info("Información del usuario obtenida: {}", userId);
-
         return ApiResponseBuilder.ok(user, "Usuario obtenido exitosamente");
     }
 
@@ -77,20 +70,17 @@ public class AuthController {
             HttpServletResponse response
     ) {
         log.info("Login attempt for identifier: {}", request.getIdentifier());
-
         KeycloakTokenDto tokens = keycloakAuthService.getToken(
                 request.getIdentifier(),
                 request.getPassword()
         );
-
         String keycloakUserId = keycloakAuthService.extractUserIdFromToken(tokens.getAccessToken());
         userApprobationService.assertUserIsApproved(keycloakUserId);
-
         try {
             kafkaTemplate.send(
                     KafkaTopics.USER_LOGIN_TOPIC,
                     UserLoginEvent.builder()
-                            .userId(keycloakUserId)
+                            .keycloakUserId(keycloakUserId)
                             .identifier(request.getIdentifier())
                             .timestamp(Instant.now().toEpochMilli())
                             .build()
@@ -98,12 +88,9 @@ public class AuthController {
         } catch (Exception kafkaEx) {
             log.warn("No se pudo enviar evento de login a Kafka: {}", kafkaEx.getMessage());
         }
-
         response.addHeader(HttpHeaders.SET_COOKIE, buildCookie("auth_token", tokens.getAccessToken()).toString());
         response.addHeader(HttpHeaders.SET_COOKIE, buildCookie("refresh_token", tokens.getRefreshToken()).toString());
-
         log.info("Login exitoso para identifier: {}", request.getIdentifier());
-
         return ApiResponseBuilder.ok(
                 LoginResponseDto.builder()
                         .identifier(request.getIdentifier())
@@ -141,18 +128,30 @@ public class AuthController {
                 }
             }
         }
-
         if (refreshTokenValue == null || refreshTokenValue.isBlank()) {
             throw com.sssi.msvc_auth.exception.TokenException.refreshTokenNotFound();
         }
-
         KeycloakTokenDto tokens = keycloakAuthService.refreshToken(refreshTokenValue);
-
         response.addHeader(HttpHeaders.SET_COOKIE, buildCookie("auth_token", tokens.getAccessToken()).toString());
         response.addHeader(HttpHeaders.SET_COOKIE, buildCookie("refresh_token", tokens.getRefreshToken()).toString());
-
         log.info("Token renovado exitosamente");
         return ApiResponseBuilder.ok(tokens, "Token renovado exitosamente");
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequestDto request
+    ) {
+        passwordResetService.requestPasswordReset(request.getEmail());
+        return ApiResponseBuilder.ok(null, "Si el correo está registrado, recibirás instrucciones");
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequestDto request
+    ) {
+        passwordResetService.resetPassword(request.getToken(), request.getNewPassword());
+        return ApiResponseBuilder.ok(null, "Contraseña restablecida correctamente");
     }
 
     private ResponseCookie buildCookie(String name, String value) {
@@ -182,7 +181,6 @@ public class AuthController {
         if (!turnstileService.validateCaptcha(request.getCaptchaToken())) {
             throw new RuntimeException("Captcha invalido");
         }
-
         String keycloakUserId = keycloakAdminService.registerUser(
                 request.getUsername(),
                 request.getEmail(),
@@ -190,9 +188,7 @@ public class AuthController {
                 request.getFirstName(),
                 request.getLastName()
         );
-
         userApprobationService.createPendingUser(keycloakUserId);
-
         try {
             kafkaTemplate.send(
                     KafkaTopics.USER_REGISTERED_TOPIC,
@@ -208,7 +204,6 @@ public class AuthController {
         } catch (Exception kafkaEx) {
             log.warn("No se pudo enviar evento de registro a Kafka: {}", kafkaEx.getMessage());
         }
-
         return ApiResponseBuilder.created(
                 RegisterResponseDto.builder()
                         .username(request.getUsername())
@@ -217,5 +212,4 @@ public class AuthController {
                 "Registro exitoso. Pendiente de aprobacion"
         );
     }
-
 }
