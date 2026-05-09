@@ -15,10 +15,13 @@
     "@mui/icons-material": "^9.0.0",
     "@mui/material": "^9.0.0",
     "@mui/x-data-grid": "^9.0.2",
+    "@mui/x-date-pickers": "^9.1.0",
     "axios": "^1.15.0",
+    "dayjs": "^1.11.20",
     "material-react-table": "^3.2.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-helmet-async": "^3.0.0",
     "react-router-dom": "^7.14.0"
   },
   "devDependencies": {

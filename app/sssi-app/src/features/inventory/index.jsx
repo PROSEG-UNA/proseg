@@ -1,2 +1,0 @@
-// Inventory Feature Module
-export {};

@@ -39,7 +39,7 @@ export default function AlertModal({ type = 'info', title, message, open, onClos
 
             <DialogContent>
                 <Box sx={{ pt: 0.5 }}>
-                    <Typography variant="body1">{message}</Typography>
+                    <Typography variant="body1" sx={{ whiteSpace: 'pre-line' }}>{message}</Typography>
                 </Box>
             </DialogContent>
 

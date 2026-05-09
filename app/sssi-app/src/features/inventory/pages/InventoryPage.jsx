@@ -7,7 +7,6 @@ import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import { FeatureCard } from '../../../common/components/FeatureCard';
 import { Header } from '../../../common/components/Header';
 import { NavDrawer } from '../../../common/components/NavDrawer';
-import '../css/InventoryPage.css';
 
 export function InventoryPage() {
   const navigate = useNavigate();

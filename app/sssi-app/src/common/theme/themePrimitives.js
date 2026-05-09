@@ -1,73 +1,11 @@
 import { createTheme, alpha } from '@mui/material/styles';
+import { brand, gray, green, orange, red } from './primitives';
 
 const defaultTheme = createTheme();
 
 const customShadows = [...defaultTheme.shadows];
 
-export const brand = {
-  50: 'hsl(210, 100%, 95%)',
-  100: 'hsl(210, 100%, 92%)',
-  200: 'hsl(210, 100%, 80%)',
-  300: 'hsl(210, 100%, 65%)',
-  400: 'hsl(210, 98%, 48%)',
-  500: 'hsl(210, 98%, 42%)',
-  600: 'hsl(210, 98%, 55%)',
-  700: 'hsl(210, 100%, 35%)',
-  800: 'hsl(210, 100%, 16%)',
-  900: 'hsl(210, 100%, 21%)',
-};
-
-export const gray = {
-  50: 'hsl(220, 35%, 97%)',
-  100: 'hsl(220, 30%, 94%)',
-  200: 'hsl(220, 20%, 88%)',
-  300: 'hsl(220, 20%, 80%)',
-  400: 'hsl(220, 20%, 65%)',
-  500: 'hsl(220, 20%, 42%)',
-  600: 'hsl(220, 20%, 35%)',
-  700: 'hsl(220, 20%, 25%)',
-  800: 'hsl(220, 30%, 6%)',
-  900: 'hsl(220, 35%, 3%)',
-};
-
-export const green = {
-  50: 'hsl(120, 80%, 98%)',
-  100: 'hsl(120, 75%, 94%)',
-  200: 'hsl(120, 75%, 87%)',
-  300: 'hsl(120, 61%, 77%)',
-  400: 'hsl(120, 44%, 53%)',
-  500: 'hsl(120, 59%, 30%)',
-  600: 'hsl(120, 70%, 25%)',
-  700: 'hsl(120, 75%, 16%)',
-  800: 'hsl(120, 84%, 10%)',
-  900: 'hsl(120, 87%, 6%)',
-};
-
-export const orange = {
-  50: 'hsl(45, 100%, 97%)',
-  100: 'hsl(45, 92%, 90%)',
-  200: 'hsl(45, 94%, 80%)',
-  300: 'hsl(45, 90%, 65%)',
-  400: 'hsl(45, 90%, 40%)',
-  500: 'hsl(45, 90%, 35%)',
-  600: 'hsl(45, 91%, 25%)',
-  700: 'hsl(45, 94%, 20%)',
-  800: 'hsl(45, 95%, 16%)',
-  900: 'hsl(45, 93%, 12%)',
-};
-
-export const red = {
-  50:  'hsl(0, 70%, 97%)',
-  100: 'hsl(0, 70%, 92%)',
-  200: 'hsl(0, 72%, 82%)',
-  300: 'hsl(0, 72%, 68%)',
-  400: 'hsl(0, 68%, 52%)',
-  500: 'hsl(0, 65%, 42%)',
-  600: 'hsl(0, 63%, 34%)',
-  700: 'hsl(0, 62%, 24%)',
-  800: 'hsl(0, 60%, 14%)',
-  900: 'hsl(0, 58%, 8%)',
-};
+export { brand, gray, green, orange, red };
 
 export const getDesignTokens = (mode) => {
   customShadows[1] =
@@ -137,7 +75,8 @@ export const getDesignTokens = (mode) => {
       background: {
         default: 'hsl(0, 0%, 99%)',
         paper: 'hsl(220, 35%, 97%)',
-        ...(mode === 'dark' && { default: gray[900], paper: 'hsl(220, 30%, 7%)' }),
+        ...(mode === 'dark' && { default: gray[900], paper: 'hsl(220, 30%, 7%)', paperWarm: '#0d0608' }),
+        ...(mode !== 'dark' && { paperWarm: '#ffffff' }),
       },
       text: {
         primary: gray[800],
@@ -188,11 +127,18 @@ export const colorSchemes = {
       success: { light: green[300], main: green[400], dark: green[800] },
       grey: { ...gray },
       divider: alpha(gray[300], 0.4),
-      background: { default: 'hsl(0, 0%, 99%)', paper: 'hsl(220, 35%, 97%)' },
+      background: { default: 'hsl(0, 0%, 99%)', paper: 'hsl(220, 35%, 97%)', paperWarm: '#ffffff' },
       text: { primary: gray[800], secondary: gray[600], warning: orange[400] },
       action: { hover: alpha(gray[200], 0.2), selected: `${alpha(gray[200], 0.3)}` },
       baseShadow:
           'hsla(220, 30%, 5%, 0.07) 0px 4px 16px 0px, hsla(220, 25%, 10%, 0.07) 0px 8px 16px -5px',
+      tones: {
+        rose:   { fg: '#dc2626', soft: '#fff1f2', headerBg: '#dc2626', footerBg: '#fff1f2', hoverBg: '#B41D1D', buttonShadow: '0 4px 14px rgba(100,10,10,0.45)', buttonShadowHover: '0 6px 18px rgba(100,10,10,0.55)', secondaryHoverBg: 'rgba(220,38,38,0.05)', ring: 'rgba(220,38,38,0.18)',  glow: 'rgba(220,38,38,0.18)',  shadowResting: '0 4px 14px rgba(0,0,0,0.05)', shadowHover: '0 10px 28px rgba(220,38,38,0.18), 0 0 0 1px rgba(220,38,38,0.18)',  headerOverlay: 'rgba(255,255,255,0.15)', headerOverlayHover: 'rgba(255,255,255,0.15)', headerBorder: 'rgba(255,255,255,0.22)', headerTextMuted: 'rgba(255,255,255,0.65)', headerTextSubtle: 'rgba(255,255,255,0.75)', headerTextBorder: 'rgba(255,255,255,0.20)', shadowModal: '0 24px 48px rgba(0,0,0,0.14)', softSubtle: 'rgba(220,38,38,0.06)' },
+        amber:  { fg: '#b45309', soft: '#fffbeb', ring: 'rgba(180,83,9,0.18)',   glow: 'rgba(217,119,6,0.18)',  shadowResting: '0 4px 14px rgba(0,0,0,0.05)', shadowHover: '0 10px 28px rgba(217,119,6,0.18),  0 0 0 1px rgba(180,83,9,0.18)',   headerOverlay: 'rgba(255,255,255,0.15)', headerOverlayHover: 'rgba(255,255,255,0.15)', headerBorder: 'rgba(255,255,255,0.22)', headerTextMuted: 'rgba(255,255,255,0.65)', headerTextSubtle: 'rgba(255,255,255,0.75)', headerTextBorder: 'rgba(255,255,255,0.20)', shadowModal: '0 24px 48px rgba(0,0,0,0.14)' },
+        violet: { fg: '#7c3aed', soft: '#f5f3ff', ring: 'rgba(124,58,237,0.18)', glow: 'rgba(124,58,237,0.18)', shadowResting: '0 4px 14px rgba(0,0,0,0.05)', shadowHover: '0 10px 28px rgba(124,58,237,0.18), 0 0 0 1px rgba(124,58,237,0.18)', headerOverlay: 'rgba(255,255,255,0.15)', headerOverlayHover: 'rgba(255,255,255,0.15)', headerBorder: 'rgba(255,255,255,0.22)', headerTextMuted: 'rgba(255,255,255,0.65)', headerTextSubtle: 'rgba(255,255,255,0.75)', headerTextBorder: 'rgba(255,255,255,0.20)', shadowModal: '0 24px 48px rgba(0,0,0,0.14)' },
+        teal:   { fg: '#0f766e', soft: '#f0fdfa', ring: 'rgba(15,118,110,0.18)', glow: 'rgba(20,184,166,0.18)', shadowResting: '0 4px 14px rgba(0,0,0,0.05)', shadowHover: '0 10px 28px rgba(20,184,166,0.18),  0 0 0 1px rgba(15,118,110,0.18)',  headerOverlay: 'rgba(255,255,255,0.15)', headerOverlayHover: 'rgba(255,255,255,0.15)', headerBorder: 'rgba(255,255,255,0.22)', headerTextMuted: 'rgba(255,255,255,0.65)', headerTextSubtle: 'rgba(255,255,255,0.75)', headerTextBorder: 'rgba(255,255,255,0.20)', shadowModal: '0 24px 48px rgba(0,0,0,0.14)' },
+        indigo: { fg: '#4338ca', soft: '#eef2ff', ring: 'rgba(67,56,202,0.18)',  glow: 'rgba(99,102,241,0.18)', shadowResting: '0 4px 14px rgba(0,0,0,0.05)', shadowHover: '0 10px 28px rgba(99,102,241,0.18),  0 0 0 1px rgba(67,56,202,0.18)',  headerOverlay: 'rgba(255,255,255,0.15)', headerOverlayHover: 'rgba(255,255,255,0.15)', headerBorder: 'rgba(255,255,255,0.22)', headerTextMuted: 'rgba(255,255,255,0.65)', headerTextSubtle: 'rgba(255,255,255,0.75)', headerTextBorder: 'rgba(255,255,255,0.20)', shadowModal: '0 24px 48px rgba(0,0,0,0.14)' },
+      },
     },
   },
   dark: {
@@ -204,11 +150,18 @@ export const colorSchemes = {
       success: { light: green[400], main: green[500], dark: green[700] },
       grey: { ...gray },
       divider: alpha(gray[700], 0.6),
-      background: { default: gray[900], paper: 'hsl(220, 30%, 7%)' },
+      background: { default: gray[900], paper: 'hsl(220, 30%, 7%)', paperWarm: '#0d0608' },
       text: { primary: 'hsl(0, 0%, 100%)', secondary: gray[400] },
       action: { hover: alpha(gray[600], 0.2), selected: alpha(gray[600], 0.3) },
       baseShadow:
           'hsla(220, 30%, 5%, 0.7) 0px 4px 16px 0px, hsla(220, 25%, 10%, 0.8) 0px 8px 16px -5px',
+      tones: {
+        rose:   { fg: '#FBE9E9', soft: 'rgba(127,29,29,0.35)', headerBg: '#B41D1D', footerBg: '#1F2937', hoverBg: '#dc2626', buttonShadow: '0 4px 14px rgba(0,0,0,0.15)', buttonShadowHover: '0 6px 18px rgba(0,0,0,0.22)', secondaryHoverBg: '#2D3748', ring: 'rgba(248,113,113,0.28)', glow: 'rgba(248,113,113,0.18)', shadowResting: '0 4px 16px rgba(0,0,0,0.35)', shadowHover: '0 10px 28px rgba(0,0,0,0.45), 0 0 0 1px rgba(248,113,113,0.28)', headerOverlay: 'rgba(255,255,255,0.15)', headerOverlayHover: 'rgba(255,255,255,0.15)', headerBorder: 'rgba(255,255,255,0.22)', headerTextMuted: 'rgba(255,255,255,0.65)', headerTextSubtle: 'rgba(255,255,255,0.75)', headerTextBorder: 'rgba(255,255,255,0.20)', shadowModal: '0 24px 48px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.08)', softSubtle: 'rgba(248,113,113,0.10)' },
+        amber:  { fg: '#fbbf24', soft: 'rgba(120,53,15,0.35)',  ring: 'rgba(251,191,36,0.28)',  glow: 'rgba(251,191,36,0.16)',  shadowResting: '0 4px 16px rgba(0,0,0,0.35)', shadowHover: '0 10px 28px rgba(0,0,0,0.45), 0 0 0 1px rgba(251,191,36,0.28)',  headerOverlay: 'rgba(255,255,255,0.15)', headerOverlayHover: 'rgba(255,255,255,0.15)', headerBorder: 'rgba(255,255,255,0.22)', headerTextMuted: 'rgba(255,255,255,0.65)', headerTextSubtle: 'rgba(255,255,255,0.75)', headerTextBorder: 'rgba(255,255,255,0.20)', shadowModal: '0 24px 48px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.08)' },
+        violet: { fg: '#a78bfa', soft: 'rgba(76,29,149,0.35)',  ring: 'rgba(167,139,250,0.28)', glow: 'rgba(167,139,250,0.16)', shadowResting: '0 4px 16px rgba(0,0,0,0.35)', shadowHover: '0 10px 28px rgba(0,0,0,0.45), 0 0 0 1px rgba(167,139,250,0.28)', headerOverlay: 'rgba(255,255,255,0.15)', headerOverlayHover: 'rgba(255,255,255,0.15)', headerBorder: 'rgba(255,255,255,0.22)', headerTextMuted: 'rgba(255,255,255,0.65)', headerTextSubtle: 'rgba(255,255,255,0.75)', headerTextBorder: 'rgba(255,255,255,0.20)', shadowModal: '0 24px 48px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.08)' },
+        teal:   { fg: '#5eead4', soft: 'rgba(19,78,74,0.35)',   ring: 'rgba(94,234,212,0.28)',  glow: 'rgba(94,234,212,0.16)',  shadowResting: '0 4px 16px rgba(0,0,0,0.35)', shadowHover: '0 10px 28px rgba(0,0,0,0.45), 0 0 0 1px rgba(94,234,212,0.28)',  headerOverlay: 'rgba(255,255,255,0.15)', headerOverlayHover: 'rgba(255,255,255,0.15)', headerBorder: 'rgba(255,255,255,0.22)', headerTextMuted: 'rgba(255,255,255,0.65)', headerTextSubtle: 'rgba(255,255,255,0.75)', headerTextBorder: 'rgba(255,255,255,0.20)', shadowModal: '0 24px 48px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.08)' },
+        indigo: { fg: '#a5b4fc', soft: 'rgba(49,46,129,0.35)',  ring: 'rgba(165,180,252,0.28)', glow: 'rgba(165,180,252,0.16)', shadowResting: '0 4px 16px rgba(0,0,0,0.35)', shadowHover: '0 10px 28px rgba(0,0,0,0.45), 0 0 0 1px rgba(165,180,252,0.28)', headerOverlay: 'rgba(255,255,255,0.15)', headerOverlayHover: 'rgba(255,255,255,0.15)', headerBorder: 'rgba(255,255,255,0.22)', headerTextMuted: 'rgba(255,255,255,0.65)', headerTextSubtle: 'rgba(255,255,255,0.75)', headerTextBorder: 'rgba(255,255,255,0.20)', shadowModal: '0 24px 48px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.08)' },
+      },
     },
   },
 };

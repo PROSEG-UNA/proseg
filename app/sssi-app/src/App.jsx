@@ -1,5 +1,8 @@
 import './App.css';
-import {BrowserRouter as Router, Navigate, Route, Routes} from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import 'dayjs/locale/es';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
 import AppTheme from './common/theme/AppTheme';
@@ -20,6 +23,7 @@ import ResetPasswordPage from "./features/auth/pages/ResetPasswordPage.jsx";
 function App() {
     return (
         <AuthProvider>
+            <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
             <AppTheme defaultColorScheme="light">
                 <CssBaseline/>
                 <Box sx={{minHeight: '100vh', bgcolor: 'background.default'}}>
@@ -98,6 +102,7 @@ function App() {
                     </SidebarProvider>
                 </Box>
             </AppTheme>
+            </LocalizationProvider>
         </AuthProvider>
     );
 }
