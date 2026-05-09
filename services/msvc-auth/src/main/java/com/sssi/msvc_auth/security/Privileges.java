@@ -23,4 +23,8 @@ public final class Privileges {
         public static final String ASSIGN_ROLE = "ASIGNAR_ROL_USUARIO";
         public static final String REMOVE_ROLE = "ELIMINAR_ROL_USUARIO";
     }
+
+    public static final class Invitation {
+        public static final String READ_PENDING = "LEER_INVITACIONES_PENDIENTES";
+    }
 }

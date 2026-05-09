@@ -7,6 +7,8 @@ function buildFullName(firstName, lastName) {
 
 function mapStatusToSpanish(status) {
     switch (status) {
+        case 'INVITED':
+            return 'Invitado';
         case 'APPROVED':
             return 'Activo';
         case 'REJECTED':

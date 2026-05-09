@@ -1,8 +1,6 @@
 package com.sssi.msvc_email.config;
 
-import com.sssi.common.kafka.events.UserLoginEvent;
-import com.sssi.common.kafka.events.UserAdminCreatedEvent;
-import com.sssi.common.kafka.events.UserRegisteredEvent;
+import com.sssi.common.kafka.events.*;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,7 +10,6 @@ import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
-
 import java.util.Map;
 
 @Configuration
@@ -63,8 +60,32 @@ public class KafkaConsumerConfig {
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, UserAdminCreatedEvent>
-    userAdminCreatedListenerFactory() {
-        return listenerFactory(UserAdminCreatedEvent.class);
+    public ConcurrentKafkaListenerContainerFactory<String, UserInvitedEvent>
+    userInvitedListenerFactory() {
+        return listenerFactory(UserInvitedEvent.class);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, ManagedUserCreatedEvent>
+    managedUserCreatedListenerFactory() {
+        return listenerFactory(ManagedUserCreatedEvent.class);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, UserPasswordConfiguredEvent>
+    userPasswordConfiguredListenerFactory() {
+        return listenerFactory(UserPasswordConfiguredEvent.class);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, PasswordResetRequestedEvent>
+    passwordResetRequestedListenerFactory() {
+        return listenerFactory(PasswordResetRequestedEvent.class);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, PasswordChangedEvent>
+    passwordChangedListenerFactory() {
+        return listenerFactory(PasswordChangedEvent.class);
     }
 }

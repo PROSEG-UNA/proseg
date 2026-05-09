@@ -9,19 +9,16 @@ import org.thymeleaf.context.Context;
 import java.util.List;
 
 @Builder
-public class UserAdminCreatedCredentialsEmailTemplate implements EmailTemplateDefinition {
+public class PasswordResetEmailTemplate implements EmailTemplateDefinition {
 
     private final String firstName;
-    private final String lastName;
-    private final String username;
     private final String email;
-    private final String temporaryPassword;
-    private final String loginUrl;
+    private final String resetPasswordUrl;
     private final long timestamp;
 
     @Override
     public String getTemplateName() {
-        return "user-admin-created-credentials-email";
+        return "password-reset-email";
     }
 
     @Override
@@ -30,29 +27,22 @@ public class UserAdminCreatedCredentialsEmailTemplate implements EmailTemplateDe
 
         Context ctx = new Context();
         ctx.setVariable("firstName", firstName);
-        ctx.setVariable("lastName", lastName);
-        ctx.setVariable("username", username);
         ctx.setVariable("email", email);
-        ctx.setVariable("temporaryPassword", temporaryPassword);
-        ctx.setVariable("loginUrl", loginUrl);
+        ctx.setVariable("resetPasswordUrl", resetPasswordUrl);
         ctx.setVariable("timestamp", DateUtils.formatReadable(timestamp));
         return ctx;
     }
 
     @Override
     public List<String> getInlineImages() {
-        return List.of("logo-4.png");
+        return List.of("flower.png");
     }
 
     private void validate() {
-        String template = "UserAdminCreatedCredentialsEmailTemplate";
-
+        String template = "PasswordResetEmailTemplate";
         TemplateValidator.requireNotBlank(firstName, "firstName", template);
-        TemplateValidator.requireNotBlank(lastName, "lastName", template);
-        TemplateValidator.requireNotBlank(username, "username", template);
         TemplateValidator.requireNotBlank(email, "email", template);
-        TemplateValidator.requireNotBlank(temporaryPassword, "temporaryPassword", template);
-        TemplateValidator.requireNotBlank(loginUrl, "loginUrl", template);
+        TemplateValidator.requireNotBlank(resetPasswordUrl, "resetPasswordUrl", template);
 
         if (timestamp <= 0) {
             throw new IllegalArgumentException(

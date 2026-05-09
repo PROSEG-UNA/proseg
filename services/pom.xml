@@ -14,11 +14,6 @@
     <version>1.0-SNAPSHOT</version>
 
     <name>services</name>
-
-    <!--
-    This project not produce an artifact,
-    it is only used to manage dependencies and plugins for its child modules
-    -->
     <packaging>pom</packaging>
 
     <modules>

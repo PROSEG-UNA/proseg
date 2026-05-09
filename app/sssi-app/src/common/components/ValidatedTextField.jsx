@@ -58,12 +58,17 @@ export function ValidatedTextField({
         const cleaned = cls.replace(/\\s/g, ' ');
         return new RegExp(`^[${cleaned}]$`, 'u');
       }
-    } catch (err) {
+    } catch {
+      // ignore
     }
     return null;
   };
 
-  const shouldSkipCharFiltering = rule?.type === 'email' || fieldName === 'email' || fieldName === 'createUserEmail';
+  const shouldSkipCharFiltering =
+      rule?.type === 'email' ||
+      fieldName === 'email' ||
+      fieldName === 'createUserEmail' ||
+      fieldName === 'identifier';
   const charRegex = !shouldSkipCharFiltering && rule && rule.pattern ? deriveCharRegex(rule.pattern) : null;
   const maxLen = rule && rule.maxLength ? rule.maxLength : null;
 

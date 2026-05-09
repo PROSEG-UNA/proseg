@@ -3,11 +3,7 @@ package com.sssi.msvc_auth.controller;
 import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.api.response.PagedResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
-import com.sssi.msvc_auth.dto.CreateManagedUserRequestDto;
-import com.sssi.msvc_auth.dto.CreateManagedUserResponseDto;
-import com.sssi.msvc_auth.dto.KeycloakUserResponseDto;
-import com.sssi.msvc_auth.dto.RoleResponseDto;
-import com.sssi.msvc_auth.dto.UserApprovalRequestDto;
+import com.sssi.msvc_auth.dto.*;
 import com.sssi.msvc_auth.entity.User;
 import com.sssi.msvc_auth.service.UserService;
 import jakarta.validation.Valid;
@@ -16,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -41,10 +38,16 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<CreateManagedUserResponseDto>> createUser(
-            @Valid @RequestBody CreateManagedUserRequestDto request
+            @Valid @RequestBody CreateManagedUserRequestDto request,
+            Authentication authentication
     ) {
-        log.info("Creando usuario administrado: {}", request.getUsername());
-        CreateManagedUserResponseDto response = userService.createManagedUser(request);
+        String currentUserId = authentication.getName();
+        log.info(
+                "Usuario [{}] creando usuario administrado: {}",
+                currentUserId,
+                request.getUsername()
+        );
+        CreateManagedUserResponseDto response = userService.createManagedUser(request, currentUserId);
         return ApiResponseBuilder.created(response, "Usuario creado. Se envio credencial temporal por email");
     }
 
@@ -98,6 +101,31 @@ public class UserController {
         log.info("Quitando roleId {} del usuario {}", roleId, userId);
         userService.removeRoleFromUser(userId, roleId);
         return ApiResponseBuilder.ok(null, "Rol removido correctamente");
+    }
+
+    @PostMapping("/set-password")
+    public ResponseEntity<ApiResponse<Void>> setPassword(
+            @Valid @RequestBody SetPasswordRequestDto request
+    ) {
+        userService.activateUserWithToken(request.getToken(), request.getPassword());
+        return ApiResponseBuilder.ok(null, "Cuenta activada correctamente");
+    }
+
+    @PostMapping("/{userId}/resend-invitation")
+    public ResponseEntity<ApiResponse<Void>> resendInvitation(@PathVariable String userId) {
+        userService.resendInvitation(userId);
+        return ApiResponseBuilder.ok(null, "Invitación reenviada");
+    }
+
+    @GetMapping("/invitation-info")
+    public ResponseEntity<ApiResponse<InvitationInfoResponseDto>> getInvitationInfo(
+            @RequestParam String token
+    ) {
+        InvitationInfoResponseDto response = userService.getInvitationInfo(token);
+        return ApiResponseBuilder.ok(
+                response,
+                "Información de invitación obtenida correctamente"
+        );
     }
 }
 

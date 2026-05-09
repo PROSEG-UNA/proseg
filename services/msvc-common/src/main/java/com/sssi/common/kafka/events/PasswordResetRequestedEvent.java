@@ -9,12 +9,10 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserAdminCreatedEvent {
-    private String userId;
-    private String username;
+public class PasswordResetRequestedEvent {
+    private String keycloakUserId;
     private String email;
     private String firstName;
-    private String lastName;
-    private String temporaryPassword;
+    private String resetToken;
     private long timestamp;
 }
