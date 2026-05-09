@@ -35,8 +35,6 @@ public class Asset extends BaseEntity {
 
     private String description;
 
-    private String subtype;
-
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "asset_model_id", nullable = false)
     private Model model;

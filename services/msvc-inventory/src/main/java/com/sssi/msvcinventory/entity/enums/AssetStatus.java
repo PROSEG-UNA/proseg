@@ -4,7 +4,6 @@ public enum AssetStatus {
     BUENO,
     REGULAR,
     MALO,
-    FUERA_DE_SERVICIO,
     EN_REPARACION,
     BAJA
 }
