@@ -120,6 +120,19 @@ export function RegisterPage() {
         setShowPassword((prev) => !prev);
     };
 
+        useEffect(() => {
+        if (loading || !alert || alert.type !== 'error') {
+            return;
+        }
+
+        if (window.turnstile && turnstileWidgetIdRef.current !== null) {
+            window.turnstile.reset(turnstileWidgetIdRef.current);
+        }
+
+        setFormValue('captchaToken', '');
+        setTurnstileError('Debes completar nuevamente el captcha para reintentar.');
+    }, [alert, loading, setFormValue]);
+
     return (
         <Box
                 className="register-page"
