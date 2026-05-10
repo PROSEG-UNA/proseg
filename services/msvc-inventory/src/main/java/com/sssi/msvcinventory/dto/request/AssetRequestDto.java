@@ -25,9 +25,6 @@ public class AssetRequestDto {
     @Size(max = 255, message = "La descripción no puede superar los 255 caracteres")
     private String description;
 
-    @Size(max = 100, message = "El subtipo no puede superar los 100 caracteres")
-    private String subtype;
-
     @NotNull(message = "El modelo del activo es obligatorio")
     private UUID modelId;
 
