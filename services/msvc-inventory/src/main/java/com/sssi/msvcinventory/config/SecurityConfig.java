@@ -29,27 +29,27 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/inventory/assets",
                                 "/api/v1/inventory/assets/**",
-                                "/api/v1/inventory/asset-images/**",
+                                "/api/v1/inventory/asset-archives/**",
                                 "/api/v1/inventory/network-interfaces/**"
                         ).hasAuthority(Privileges.Activos.LEER)
 
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/inventory/assets",
-                                "/api/v1/inventory/asset-images",
+                                "/api/v1/inventory/asset-archives",
                                 "/api/v1/inventory/network-interfaces",
                                 "/api/v1/inventory/assets/alarm-sensors"
                         ).hasAuthority(Privileges.Activos.GESTIONAR)
 
                         .requestMatchers(HttpMethod.PUT,
                                 "/api/v1/inventory/assets/**",
-                                "/api/v1/inventory/asset-images/**",
+                                "/api/v1/inventory/asset-archives/**",
                                 "/api/v1/inventory/network-interfaces/**",
                                 "/api/v1/inventory/assets/alarm-sensors/**"
                         ).hasAuthority(Privileges.Activos.GESTIONAR)
 
                         .requestMatchers(HttpMethod.DELETE,
                                 "/api/v1/inventory/assets/**",
-                                "/api/v1/inventory/asset-images/**",
+                                "/api/v1/inventory/asset-archives/**",
                                 "/api/v1/inventory/network-interfaces/**"
                         ).hasAuthority(Privileges.Activos.ELIMINAR)
 

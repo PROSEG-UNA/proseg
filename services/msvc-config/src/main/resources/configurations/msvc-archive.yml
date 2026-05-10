@@ -30,3 +30,7 @@ minio:
   bucket: ${MINIO_BUCKET:spsg-dev}
   region: ${MINIO_REGION:us-east-1}
   secure: ${MINIO_SECURE:false}
+
+archive:
+  max-file-size-mb: 25
+  max-chunk-size-mb: 5

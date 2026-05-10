@@ -13,7 +13,7 @@ public class ArchiveException extends BaseException {
         return new ArchiveException(
                 HttpStatus.BAD_REQUEST,
                 "ARCHIVE_INVALID_FILE",
-                "El archivo es invalido"
+                "El archivo es inválido"
         );
     }
 
@@ -22,6 +22,46 @@ public class ArchiveException extends BaseException {
                 HttpStatus.NOT_FOUND,
                 "ARCHIVE_NOT_FOUND",
                 "Archivo no encontrado: " + objectName
+        );
+    }
+
+    public static ArchiveException uploadPartError() {
+        return new ArchiveException(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "ARCHIVE_UPLOAD_PART_ERROR",
+                "No fue posible subir la parte del archivo"
+        );
+    }
+
+    public static ArchiveException multipartUploadIncomplete() {
+        return new ArchiveException(
+                HttpStatus.BAD_REQUEST,
+                "ARCHIVE_MULTIPART_INCOMPLETE",
+                "No existen partes para completar la carga"
+        );
+    }
+
+    public static ArchiveException completeUploadError() {
+        return new ArchiveException(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "ARCHIVE_COMPLETE_UPLOAD_ERROR",
+                "No fue posible completar la carga por partes"
+        );
+    }
+
+    public static ArchiveException downloadError() {
+        return new ArchiveException(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "ARCHIVE_DOWNLOAD_ERROR",
+                "No fue posible descargar el archivo"
+        );
+    }
+
+    public static ArchiveException presignedUrlError() {
+        return new ArchiveException(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "ARCHIVE_PRESIGNED_URL_ERROR",
+                "No fue posible generar la URL firmada"
         );
     }
 

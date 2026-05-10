@@ -106,10 +106,10 @@ spring:
           filters:
             - StripPrefix=0
 
-        - id: msvc-inventory-images
+        - id: msvc-inventory-asset-archives
           uri: http://localhost:8095
           predicates:
-            - Path=/api/v1/inventory/images/**
+            - Path=/api/v1/inventory/asset-archives,/api/v1/inventory/asset-archives/**
           filters:
             - StripPrefix=0
 
