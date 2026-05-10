@@ -16,6 +16,9 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -42,11 +45,19 @@ public class AssetController {
         );
     }
 
+    private static final Set<String> RESERVED_PARAMS = Set.of("search", "sort", "page", "size");
+
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<AssetResponseDto>>> findAll(
+            @RequestParam(required = false) String search,
+            @RequestParam Map<String, String> allParams,
             @PageableDefault(size = 10, page = 0) Pageable pageable) {
+
+        Map<String, String> filters = new HashMap<>(allParams);
+        RESERVED_PARAMS.forEach(filters::remove);
+
         return ApiResponseBuilder.ok(
-                PageMapper.from(assetService.findAll(pageable)),
+                PageMapper.from(assetService.findAll(search, filters, pageable)),
                 "Lista de activos"
         );
     }
