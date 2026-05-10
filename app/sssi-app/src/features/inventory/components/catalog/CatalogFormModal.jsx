@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import {
     Box, Typography,
-    TextField, MenuItem, FormControlLabel, Switch,
+    TextField, FormControlLabel, Switch,
     useTheme,
 } from '@mui/material';
 import AlertModal from '../../../../common/components/AlertModal.jsx';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import { createCatalogItem, updateCatalogItem, fetchCatalogOptions } from '../../services/catalogService';
+import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
 
 export default function CatalogFormModal({ open, onClose, onSaved, config, row }) {
     const theme = useTheme();
@@ -197,12 +198,11 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row }
 
                         if (field.type === 'select') {
                             return (
-                                <TextField
+                                <SearchableSelect
                                     key={field.key}
-                                    select
                                     label={field.label}
                                     value={formValues[field.key] ?? ''}
-                                    onChange={(e) => handleChange(field.key, e.target.value)}
+                                    onChange={(val) => handleChange(field.key, val)}
                                     onBlur={() => handleBlur(field.key)}
                                     fullWidth
                                     size="small"
@@ -211,13 +211,10 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row }
                                     error={touched[field.key] && !!errors[field.key]}
                                     helperText={touched[field.key] ? (errors[field.key] || ' ') : ' '}
                                     sx={fieldSx}
-                                >
-                                    {(selectOptions[field.key] ?? []).map((opt) => (
-                                        <MenuItem key={field.getOptionValue(opt)} value={field.getOptionValue(opt)}>
-                                            {field.getOptionLabel(opt)}
-                                        </MenuItem>
-                                    ))}
-                                </TextField>
+                                    items={selectOptions[field.key] ?? []}
+                                    getItemLabel={field.getOptionLabel}
+                                    getItemValue={field.getOptionValue}
+                                />
                             );
                         }
 

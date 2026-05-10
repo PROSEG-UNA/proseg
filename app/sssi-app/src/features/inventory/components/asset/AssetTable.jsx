@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import {
     Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
     Button, Box,
@@ -11,17 +11,63 @@ import { getAssetsColumns, renderAssetActions } from './assetColumns.jsx';
 import AssetDetailPanel from './AssetDetailPanel.jsx';
 import AssetFormModal from './AssetFormModal.jsx';
 import { deleteAsset } from '../../services/assetsService.js';
+import { useDebounce } from '../../../../common/hooks/useDebounce.js';
+
+const COLUMN_TO_BACKEND_KEY = {
+    name: 'name',
+    brand: 'model.brand.name',
+    model: 'model.name',
+    location: 'location.name',
+    status: 'status',
+};
 
 export default function AssetTable({ refreshKey = 0, onRefresh }) {
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
+    const [globalFilter, setGlobalFilter] = useState('');
+    const [columnFilters, setColumnFilters] = useState([]);
+    const [sorting, setSorting] = useState([]);
     const [alert, setAlert] = useState(null);
     const [editAssetId, setEditAssetId] = useState(null);
     const [assetToDelete, setAssetToDelete] = useState(null);
     const [deleting, setDeleting] = useState(false);
 
+    const debouncedGlobalFilter = useDebounce(globalFilter, 350);
+    const debouncedColumnFilters = useDebounce(columnFilters, 350);
+
+    const backendFilters = useMemo(() => {
+        const out = {};
+        debouncedColumnFilters.forEach(({ id, value }) => {
+            const key = COLUMN_TO_BACKEND_KEY[id];
+            if (!key) return;
+            if (value === null || value === undefined || value === '') return;
+            out[key] = value;
+        });
+        return out;
+    }, [debouncedColumnFilters]);
+
+    const backendSort = useMemo(
+        () => sorting
+            .map(({ id, desc }) => {
+                const key = COLUMN_TO_BACKEND_KEY[id];
+                if (!key) return null;
+                return `${key},${desc ? 'desc' : 'asc'}`;
+            })
+            .filter(Boolean),
+        [sorting]
+    );
+
+    const resetPageOnFilterChange = () => {
+        setPagination((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }));
+    };
+
+    useEffect(resetPageOnFilterChange, [debouncedGlobalFilter, backendFilters, backendSort]);
+
     const { rows, loading, error, totalElements } = useAssetsData({
         pageIndex: pagination.pageIndex,
         pageSize: pagination.pageSize,
+        search: debouncedGlobalFilter,
+        filters: backendFilters,
+        sort: backendSort,
         refreshKey,
     });
 
@@ -98,9 +144,14 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
                 tableOptions={{
                     positionActionsColumn: 'last',
                     manualPagination: true,
+                    manualFiltering: true,
+                    manualSorting: true,
                     rowCount: totalElements,
                     onPaginationChange: setPagination,
-                    state: { pagination },
+                    onGlobalFilterChange: setGlobalFilter,
+                    onColumnFiltersChange: setColumnFilters,
+                    onSortingChange: setSorting,
+                    state: { pagination, globalFilter, columnFilters, sorting },
                     displayColumnDefOptions: {
                         'mrt-row-expand': {
                             muiTableBodyCellProps: {

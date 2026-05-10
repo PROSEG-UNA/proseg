@@ -28,10 +28,24 @@ export async function fetchAssetById(id) {
     return data?.data ?? null;
 }
 
-export async function fetchAssets({ page = 0, size = 10 } = {}) {
+export async function fetchAssets({ page = 0, size = 10, search = '', filters = {}, sort = [] } = {}) {
+    const params = new URLSearchParams();
+    params.append('page', String(page));
+    params.append('size', String(size));
+    if (search && search.trim() !== '') {
+        params.append('search', search.trim());
+    }
+    Object.entries(filters).forEach(([key, value]) => {
+        if (value === null || value === undefined || value === '') return;
+        params.append(key, String(value));
+    });
+    sort.forEach((s) => {
+        if (s) params.append('sort', s);
+    });
+
     const { data } = await axios.get(INVENTORY_ENDPOINTS.assets, {
         ...config,
-        params: { page, size },
+        params,
     });
 
     return data?.data ?? {

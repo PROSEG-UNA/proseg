@@ -12,12 +12,15 @@ function mapStatusToSpanish(status) {
     }
 }
 
-export function useAssetsData({ pageIndex = 0, pageSize = 10, refreshKey = 0 } = {}) {
+export function useAssetsData({ pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [], refreshKey = 0 } = {}) {
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [totalElements, setTotalElements] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
+
+    const filtersKey = JSON.stringify(filters);
+    const sortKey = sort.join('|');
 
     const fetchAndSetAssets = () => {
         let ignore = false;
@@ -27,7 +30,7 @@ export function useAssetsData({ pageIndex = 0, pageSize = 10, refreshKey = 0 } =
                 setLoading(true);
                 setError(null);
 
-                const response = await fetchAssets({ page: pageIndex, size: pageSize });
+                const response = await fetchAssets({ page: pageIndex, size: pageSize, search, filters, sort });
 
                 if (ignore) return;
 
@@ -72,7 +75,7 @@ export function useAssetsData({ pageIndex = 0, pageSize = 10, refreshKey = 0 } =
         };
     };
 
-    useEffect(fetchAndSetAssets, [pageIndex, pageSize, refreshKey]);
+    useEffect(fetchAndSetAssets, [pageIndex, pageSize, search, filtersKey, sortKey, refreshKey]);
 
     return { rows, loading, error, totalElements, totalPages };
 }

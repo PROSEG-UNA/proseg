@@ -11,6 +11,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import AlertModal from '../../../../common/components/AlertModal.jsx';
+import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
 import CatalogFormModal from '../catalog/CatalogFormModal.jsx';
 import { CATALOG_CONFIG } from '../catalog/catalogConfig.js';
 import { fetchCatalogOptions } from '../../services/catalogService.js';
@@ -360,20 +361,6 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         </Typography>
     );
 
-    const createMenuItem = (label) => (
-        <MenuItem
-            key="__CREATE__"
-            value="__CREATE__"
-            sx={{
-                borderTop: '1px solid', borderColor: 'divider', mt: 0.5,
-                color: accentColor, fontWeight: 600, fontSize: 13.5, gap: 1,
-            }}
-        >
-            <AddCircleOutlinedIcon sx={{ fontSize: 16 }} />
-            {label}
-        </MenuItem>
-    );
-
     const modelDisabled = saving || loadingOptions || !formValues.brandId || !formValues.typeId;
 
     return (
@@ -425,47 +412,39 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     <Box>
                         {sectionLabel('Clasificación')}
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-                            <TextField
-                                select label="Marca" value={formValues.brandId} required
-                                onChange={e => {
-                                    const v = e.target.value;
-                                    if (v === '__CREATE__') { openCatalogModal('brandId'); return; }
-                                    handleBrandChange(v);
-                                }}
+                            <SearchableSelect
+                                label="Marca" value={formValues.brandId} required
+                                onChange={handleBrandChange}
                                 onBlur={() => handleBlur('brandId')}
                                 fullWidth size="small" disabled={saving || loadingOptions}
                                 error={touched.brandId && !!errors.brandId}
                                 helperText={touched.brandId ? (errors.brandId || ' ') : ' '}
                                 sx={fieldSx}
-                            >
-                                {brands.map(b => <MenuItem key={b.id} value={b.id}>{b.name}</MenuItem>)}
-                                {createMenuItem('Crear nueva Marca')}
-                            </TextField>
+                                items={brands}
+                                getItemLabel={b => b.name}
+                                getItemValue={b => b.id}
+                                onCreate={() => openCatalogModal('brandId')}
+                                createLabel="Crear nueva Marca"
+                            />
 
-                            <TextField
-                                select label="Tipo" value={formValues.typeId} required
-                                onChange={e => {
-                                    const v = e.target.value;
-                                    if (v === '__CREATE__') { openCatalogModal('typeId'); return; }
-                                    handleTypeChange(v);
-                                }}
+                            <SearchableSelect
+                                label="Tipo" value={formValues.typeId} required
+                                onChange={handleTypeChange}
                                 onBlur={() => handleBlur('typeId')}
                                 fullWidth size="small" disabled={saving || loadingOptions}
                                 error={touched.typeId && !!errors.typeId}
                                 helperText={touched.typeId ? (errors.typeId || ' ') : ' '}
                                 sx={fieldSx}
-                            >
-                                {types.map(t => <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>)}
-                                {createMenuItem('Crear nuevo Tipo')}
-                            </TextField>
+                                items={types}
+                                getItemLabel={t => t.name}
+                                getItemValue={t => t.id}
+                                onCreate={() => openCatalogModal('typeId')}
+                                createLabel="Crear nuevo Tipo"
+                            />
 
-                            <TextField
-                                select label="Modelo" value={formValues.modelId} required
-                                onChange={e => {
-                                    const v = e.target.value;
-                                    if (v === '__CREATE__') { openCatalogModal('modelId'); return; }
-                                    handleChange('modelId', v);
-                                }}
+                            <SearchableSelect
+                                label="Modelo" value={formValues.modelId} required
+                                onChange={v => handleChange('modelId', v)}
                                 onBlur={() => handleBlur('modelId')}
                                 fullWidth size="small" disabled={modelDisabled}
                                 error={touched.modelId && !!errors.modelId}
@@ -475,10 +454,12 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                                         : (touched.modelId ? (errors.modelId || ' ') : ' ')
                                 }
                                 sx={{ ...fieldSx, gridColumn: '1 / -1' }}
-                            >
-                                {filteredModels.map(m => <MenuItem key={m.id} value={m.id}>{m.name}</MenuItem>)}
-                                {createMenuItem('Crear nuevo Modelo')}
-                            </TextField>
+                                items={filteredModels}
+                                getItemLabel={m => m.name}
+                                getItemValue={m => m.id}
+                                onCreate={() => openCatalogModal('modelId')}
+                                createLabel="Crear nuevo Modelo"
+                            />
                         </Box>
                     </Box>
 
@@ -486,26 +467,20 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
 
                     <Box>
                         {sectionLabel('Ubicación')}
-                        <TextField
-                            select label="Locación" value={formValues.locationId} required
-                            onChange={e => {
-                                const v = e.target.value;
-                                if (v === '__CREATE__') { openCatalogModal('locationId'); return; }
-                                handleChange('locationId', v);
-                            }}
+                        <SearchableSelect
+                            label="Locación" value={formValues.locationId} required
+                            onChange={v => handleChange('locationId', v)}
                             onBlur={() => handleBlur('locationId')}
                             fullWidth size="small" disabled={saving || loadingOptions}
                             error={touched.locationId && !!errors.locationId}
                             helperText={touched.locationId ? (errors.locationId || ' ') : ' '}
                             sx={fieldSx}
-                        >
-                            {locations.map(l => (
-                                <MenuItem key={l.id} value={l.id}>
-                                    {l.name}{l.site?.name ? ` — ${l.site.name}` : ' '}
-                                </MenuItem>
-                            ))}
-                            {createMenuItem('Crear nueva Locación')}
-                        </TextField>
+                            items={locations}
+                            getItemLabel={l => l.name + (l.site?.name ? ` — ${l.site.name}` : '')}
+                            getItemValue={l => l.id}
+                            onCreate={() => openCatalogModal('locationId')}
+                            createLabel="Crear nueva Locación"
+                        />
                     </Box>
 
                     <Divider />
