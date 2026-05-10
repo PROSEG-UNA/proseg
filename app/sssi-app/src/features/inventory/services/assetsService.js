@@ -13,6 +13,21 @@ export async function createAsset(payload) {
     return data?.data;
 }
 
+export async function updateAsset(id, payload) {
+    const { data } = await axios.put(`${INVENTORY_ENDPOINTS.assets}/${id}`, payload, config);
+    return data?.data;
+}
+
+export async function deleteAsset(id) {
+    const { data } = await axios.delete(`${INVENTORY_ENDPOINTS.assets}/${id}`, config);
+    return data?.data;
+}
+
+export async function fetchAssetById(id) {
+    const { data } = await axios.get(`${INVENTORY_ENDPOINTS.assets}/${id}`, config);
+    return data?.data ?? null;
+}
+
 export async function fetchAssets({ page = 0, size = 10 } = {}) {
     const { data } = await axios.get(INVENTORY_ENDPOINTS.assets, {
         ...config,

@@ -14,7 +14,7 @@ import AlertModal from '../../../../common/components/AlertModal.jsx';
 import CatalogFormModal from '../catalog/CatalogFormModal.jsx';
 import { CATALOG_CONFIG } from '../catalog/catalogConfig.js';
 import { fetchCatalogOptions } from '../../services/catalogService.js';
-import { createAsset } from '../../services/assetsService.js';
+import { createAsset, updateAsset, fetchAssetById } from '../../services/assetsService.js';
 import { INVENTORY_ENDPOINTS } from '../../services/endpoints.js';
 
 const STATUS_OPTIONS = [
@@ -34,15 +34,18 @@ const INIT = {
     ipAddress: '', macAddress: '',
 };
 
-export default function AssetFormModal({ open, onClose, onSaved }) {
+export default function AssetFormModal({ open, onClose, onSaved, assetId = null }) {
     const theme = useTheme();
     const accentColor = theme.vars.palette.tones.rose.fg;
+
+    const isEdit = !!assetId;
 
     const [formValues, setFormValues] = useState(INIT);
     const [errors, setErrors]         = useState({});
     const [touched, setTouched]       = useState({});
     const [saving, setSaving]         = useState(false);
     const [alert, setAlert]           = useState(null);
+    const [loadingAsset, setLoadingAsset] = useState(false);
 
     const [brands, setBrands]       = useState([]);
     const [types, setTypes]         = useState([]);
@@ -90,6 +93,36 @@ export default function AssetFormModal({ open, onClose, onSaved }) {
         }).catch(() => {}).finally(() => { if (!cancelled) setLoadingOptions(false); });
         return () => { cancelled = true; };
     }, [open]);
+
+    useEffect(() => {
+        if (!open || !assetId) return;
+        let cancelled = false;
+        setLoadingAsset(true);
+        fetchAssetById(assetId)
+            .then((asset) => {
+                if (cancelled || !asset) return;
+                setFormValues({
+                    name:                   asset.name ?? '',
+                    description:            asset.description ?? '',
+                    brandId:                asset.model?.brand?.id ?? '',
+                    typeId:                 asset.model?.type?.id ?? '',
+                    modelId:                asset.model?.id ?? '',
+                    locationId:             asset.location?.id ?? '',
+                    status:                 asset.status ?? '',
+                    statusDescription:      asset.statusDescription ?? '',
+                    acquisitionDate:        asset.acquisitionDate ?? '',
+                    warrantyEndDate:        asset.warrantyEndDate ?? '',
+                    firmwareSupportEndDate: asset.firmwareSupportEndDate ?? '',
+                    ipAddress:              asset.networkInterface?.ipAddress ?? '',
+                    macAddress:             asset.networkInterface?.macAddress ?? '',
+                });
+            })
+            .catch(() => {
+                if (!cancelled) setAlert({ type: 'error', message: 'No se pudo cargar el activo' });
+            })
+            .finally(() => { if (!cancelled) setLoadingAsset(false); });
+        return () => { cancelled = true; };
+    }, [open, assetId]);
 
     const validateField = (key, value) => {
         const required = ['name', 'brandId', 'typeId', 'modelId', 'locationId', 'status'];
@@ -261,7 +294,11 @@ export default function AssetFormModal({ open, onClose, onSaved }) {
                     },
                 }),
             };
-            await createAsset(payload);
+            if (isEdit) {
+                await updateAsset(assetId, payload);
+            } else {
+                await createAsset(payload);
+            }
             onSaved?.();
             onClose();
         } catch (e) {
@@ -346,21 +383,22 @@ export default function AssetFormModal({ open, onClose, onSaved }) {
                 onClose={onClose}
                 maxWidth="md"
                 icon={Inventory2OutlinedIcon}
-                title="Nuevo Activo"
-                subtitle="Completa los datos para registrar el activo"
-                loading={saving}
+                title={isEdit ? 'Editar Activo' : 'Nuevo Activo'}
+                subtitle={isEdit ? 'Actualiza los datos del activo' : 'Completa los datos para registrar el activo'}
+                loading={saving || loadingAsset}
                 secondaryButton={{ label: 'Cancelar', onClick: onClose, disabled: saving }}
                 primaryButton={{
-                    label: saving ? 'Guardando…' : 'Crear Activo',
+                    label: saving
+                        ? 'Guardando…'
+                        : isEdit ? 'Guardar cambios' : 'Crear Activo',
                     onClick: handleSave,
-                    disabled: saving,
+                    disabled: saving || loadingAsset,
                     startIcon: <AddCircleOutlinedIcon />,
                 }}
                 contentSx={contentSx}
             >
                 <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
 
-                    {/* BÁSICO */}
                     <Box>
                         {sectionLabel('Información básica')}
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -384,7 +422,6 @@ export default function AssetFormModal({ open, onClose, onSaved }) {
 
                     <Divider />
 
-                    {/* CLASIFICACIÓN */}
                     <Box>
                         {sectionLabel('Clasificación')}
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
@@ -447,7 +484,6 @@ export default function AssetFormModal({ open, onClose, onSaved }) {
 
                     <Divider />
 
-                    {/* UBICACIÓN */}
                     <Box>
                         {sectionLabel('Ubicación')}
                         <TextField
@@ -474,7 +510,6 @@ export default function AssetFormModal({ open, onClose, onSaved }) {
 
                     <Divider />
 
-                    {/* ESTADO */}
                     <Box>
                         {sectionLabel('Estado')}
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 2fr' }, gap: 2 }}>
@@ -500,7 +535,6 @@ export default function AssetFormModal({ open, onClose, onSaved }) {
 
                     <Divider />
 
-                    {/* FECHAS */}
                     <Box>
                         {sectionLabel('Fechas')}
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
@@ -528,7 +562,6 @@ export default function AssetFormModal({ open, onClose, onSaved }) {
                         </Box>
                     </Box>
 
-                    {/* INTERFAZ DE RED (condicional) */}
                     {requiresNetworkInterface && (
                         <>
                             <Divider />
@@ -587,7 +620,6 @@ export default function AssetFormModal({ open, onClose, onSaved }) {
 
                     <Divider />
 
-                    {/* FOTOS */}
                     <Box>
                         {sectionLabel('Fotos')}
                         <Box

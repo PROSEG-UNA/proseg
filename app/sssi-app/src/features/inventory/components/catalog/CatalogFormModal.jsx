@@ -209,7 +209,7 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row }
                                     required={field.required}
                                     disabled={saving || loadingOptions}
                                     error={touched[field.key] && !!errors[field.key]}
-                                    helperText={touched[field.key] ? errors[field.key] : ''}
+                                    helperText={touched[field.key] ? (errors[field.key] || ' ') : ' '}
                                     sx={fieldSx}
                                 >
                                     {(selectOptions[field.key] ?? []).map((opt) => (
@@ -235,7 +235,7 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row }
                                 required={field.required}
                                 disabled={saving}
                                 error={touched[field.key] && !!errors[field.key]}
-                                helperText={touched[field.key] ? errors[field.key] : ''}
+                                helperText={touched[field.key] ? (errors[field.key] || ' ') : ' '}
                                 sx={fieldSx}
                             />
                         );
