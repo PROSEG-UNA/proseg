@@ -30,6 +30,9 @@ import java.util.concurrent.TimeUnit;
 public class ArchiveService {
 
     private static final int PRESIGNED_URL_MINUTES = 10;
+    private static final String OBJECT_NAME_REGEX = "^[a-zA-Z0-9._/-]+$";
+    private static final String FOLDER_REGEX = "^[a-zA-Z0-9._/-]+$";
+    private static final String FILENAME_REGEX = "^[a-zA-Z0-9._-]+$";
 
     private final MinioClient minioClient;
     private final MinioProperties minioProperties;
@@ -62,8 +65,13 @@ public class ArchiveService {
             int partNumber,
             MultipartFile chunk
     ) {
+        validateUploadId(uploadId);
+        validateObjectName(objectName);
+        validatePartNumber(partNumber);
+
         try {
-            String partObjectName = getPartObjectName(uploadId, objectName, partNumber);
+            String normalizedObjectName = normalizePath(objectName);
+            String partObjectName = getPartObjectName(uploadId, normalizedObjectName, partNumber);
 
             minioClient.putObject(
                     PutObjectArgs.builder()
@@ -76,11 +84,13 @@ public class ArchiveService {
 
             ArchiveUploadPartResponseDto response = new ArchiveUploadPartResponseDto();
             response.setUploadId(uploadId);
-            response.setObjectName(objectName);
+            response.setObjectName(normalizedObjectName);
             response.setPartNumber(partNumber);
             response.setSize(chunk.getSize());
 
             return response;
+        } catch (ArchiveException exception) {
+            throw exception;
         } catch (Exception exception) {
             throw ArchiveException.uploadPartError();
         }
@@ -91,12 +101,16 @@ public class ArchiveService {
             String objectName,
             long totalSize
     ) {
+        validateUploadId(uploadId);
+        validateObjectName(objectName);
+
         try {
+            String normalizedObjectName = normalizePath(objectName);
             List<ComposeSource> sources = new ArrayList<>();
             int partNumber = 1;
 
             while (true) {
-                String partObjectName = getPartObjectName(uploadId, objectName, partNumber);
+                String partObjectName = getPartObjectName(uploadId, normalizedObjectName, partNumber);
 
                 try {
                     minioClient.statObject(
@@ -127,11 +141,11 @@ public class ArchiveService {
                 minioClient.copyObject(
                         CopyObjectArgs.builder()
                                 .bucket(minioProperties.getBucket())
-                                .object(objectName)
+                                .object(normalizedObjectName)
                                 .source(
                                         CopySource.builder()
                                                 .bucket(minioProperties.getBucket())
-                                                .object(getPartObjectName(uploadId, objectName, 1))
+                                                .object(getPartObjectName(uploadId, normalizedObjectName, 1))
                                                 .build()
                                 )
                                 .build()
@@ -140,7 +154,7 @@ public class ArchiveService {
                 minioClient.composeObject(
                         ComposeObjectArgs.builder()
                                 .bucket(minioProperties.getBucket())
-                                .object(objectName)
+                                .object(normalizedObjectName)
                                 .sources(sources)
                                 .build()
                 );
@@ -150,13 +164,13 @@ public class ArchiveService {
                 minioClient.removeObject(
                         RemoveObjectArgs.builder()
                                 .bucket(minioProperties.getBucket())
-                                .object(getPartObjectName(uploadId, objectName, index))
+                                .object(getPartObjectName(uploadId, normalizedObjectName, index))
                                 .build()
                 );
             }
 
             ArchiveUploadResponseDto response = new ArchiveUploadResponseDto();
-            response.setObjectName(objectName);
+            response.setObjectName(normalizedObjectName);
             response.setBucket(minioProperties.getBucket());
             response.setSize(totalSize);
 
@@ -169,57 +183,137 @@ public class ArchiveService {
     }
 
     public ArchiveDownload download(String objectName) {
+        validateObjectName(objectName);
+
         try {
+            String normalizedObjectName = normalizePath(objectName);
+
             StatObjectResponse statObjectResponse = minioClient.statObject(
                     StatObjectArgs.builder()
                             .bucket(minioProperties.getBucket())
-                            .object(objectName)
+                            .object(normalizedObjectName)
                             .build()
             );
 
             InputStream stream = minioClient.getObject(
                     GetObjectArgs.builder()
                             .bucket(minioProperties.getBucket())
-                            .object(objectName)
+                            .object(normalizedObjectName)
                             .build()
             );
 
             return new ArchiveDownload(
-                    objectName,
+                    normalizedObjectName,
                     resolveContentType(statObjectResponse.contentType()),
                     statObjectResponse.size(),
                     stream
             );
+        } catch (ArchiveException exception) {
+            throw exception;
         } catch (Exception exception) {
             throw ArchiveException.downloadError();
         }
     }
 
     public String getPresignedGetUrl(String objectName) {
+        validateObjectName(objectName);
+
         try {
             return minioClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
                             .method(Method.GET)
                             .bucket(minioProperties.getBucket())
-                            .object(objectName)
+                            .object(normalizePath(objectName))
                             .expiry(PRESIGNED_URL_MINUTES, TimeUnit.MINUTES)
                             .build()
             );
+        } catch (ArchiveException exception) {
+            throw exception;
         } catch (Exception exception) {
             throw ArchiveException.presignedUrlError();
         }
     }
 
     private String resolveObjectName(String filename, String objectName, String folder) {
+        validateObjectName(objectName);
+        validateFolder(folder);
+
         if (objectName != null && !objectName.isBlank()) {
-            return objectName;
+            return normalizePath(objectName);
         }
 
-        String resolvedFolder = folder == null || folder.isBlank()
-                ? ""
-                : folder.replace("\\", "/").replaceAll("/+$", "") + "/";
+        validateFilename(filename);
 
-        return resolvedFolder + filename;
+        String normalizedFolder = normalizeFolder(folder);
+        return normalizedFolder + filename.trim();
+    }
+
+    private void validateObjectName(String objectName) {
+        if (objectName == null || objectName.isBlank()) {
+            return;
+        }
+
+        String normalizedObjectName = normalizePath(objectName);
+
+        if (normalizedObjectName.startsWith("/")
+                || normalizedObjectName.endsWith("/")
+                || normalizedObjectName.contains("..")
+                || normalizedObjectName.contains("//")
+                || !normalizedObjectName.matches(OBJECT_NAME_REGEX)) {
+            throw ArchiveException.invalidObjectName();
+        }
+    }
+
+    private void validateFolder(String folder) {
+        if (folder == null || folder.isBlank()) {
+            return;
+        }
+
+        String normalizedFolder = normalizePath(folder);
+
+        if (normalizedFolder.startsWith("/")
+                || normalizedFolder.contains("..")
+                || normalizedFolder.contains("//")
+                || !normalizedFolder.matches(FOLDER_REGEX)) {
+            throw ArchiveException.invalidFolder();
+        }
+    }
+
+    private void validateFilename(String filename) {
+        if (filename == null
+                || filename.isBlank()
+                || filename.contains("/")
+                || filename.contains("\\")
+                || filename.contains("..")
+                || !filename.trim().matches(FILENAME_REGEX)) {
+            throw ArchiveException.invalidFile();
+        }
+    }
+
+    private void validateUploadId(String uploadId) {
+        try {
+            UUID.fromString(uploadId);
+        } catch (Exception exception) {
+            throw ArchiveException.invalidUploadId();
+        }
+    }
+
+    private void validatePartNumber(int partNumber) {
+        if (partNumber < 1) {
+            throw ArchiveException.invalidPartNumber();
+        }
+    }
+
+    private String normalizePath(String value) {
+        return value.trim().replace("\\", "/").replaceAll("/+", "/");
+    }
+
+    private String normalizeFolder(String folder) {
+        if (folder == null || folder.isBlank()) {
+            return "";
+        }
+
+        return normalizePath(folder).replaceAll("/+$", "") + "/";
     }
 
     private String getPartObjectName(String uploadId, String objectName, int partNumber) {

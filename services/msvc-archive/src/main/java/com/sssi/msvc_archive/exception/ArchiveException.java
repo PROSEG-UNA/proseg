@@ -17,6 +17,38 @@ public class ArchiveException extends BaseException {
         );
     }
 
+    public static ArchiveException invalidObjectName() {
+        return new ArchiveException(
+                HttpStatus.BAD_REQUEST,
+                "ARCHIVE_INVALID_OBJECT_NAME",
+                "El nombre del objeto es inválido"
+        );
+    }
+
+    public static ArchiveException invalidFolder() {
+        return new ArchiveException(
+                HttpStatus.BAD_REQUEST,
+                "ARCHIVE_INVALID_FOLDER",
+                "La carpeta del archivo es inválida"
+        );
+    }
+
+    public static ArchiveException invalidUploadId() {
+        return new ArchiveException(
+                HttpStatus.BAD_REQUEST,
+                "ARCHIVE_INVALID_UPLOAD_ID",
+                "El identificador de carga es inválido"
+        );
+    }
+
+    public static ArchiveException invalidPartNumber() {
+        return new ArchiveException(
+                HttpStatus.BAD_REQUEST,
+                "ARCHIVE_INVALID_PART_NUMBER",
+                "El número de parte es inválido"
+        );
+    }
+
     public static ArchiveException notFound(String objectName) {
         return new ArchiveException(
                 HttpStatus.NOT_FOUND,
