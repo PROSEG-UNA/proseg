@@ -272,4 +272,36 @@ public class EmailEventService {
                     event.getKeycloakUserId(), e.getMessage(), e);
         }
     }
+
+    public void sendPasswordExpiringSoonEmail(PasswordExpiringSoonEvent event) {
+
+        try {
+            PasswordExpiringSoonEmailTemplate template =
+                    PasswordExpiringSoonEmailTemplate.builder()
+                            .firstName(event.getFirstName())
+                            .daysRemaining(event.getDaysRemaining())
+                            .expiresAt(event.getExpiresAt())
+                            .loginUrl(loginUrl)
+                            .timestamp(event.getTimestamp())
+                            .build();
+            emailService.sendEmail(
+                    Email.builder()
+                            .to(List.of(event.getEmail()))
+                            .subject("Tu contraseña expirará pronto en SPGS")
+                            .templateDefinition(template)
+                            .build()
+            );
+            log.info(
+                    "Email password expiring soon enviado a: {}",
+                    event.getEmail()
+            );
+        } catch (Exception e) {
+            log.error(
+                    "Error enviando password expiring soon email userId={}: {}",
+                    event.getKeycloakUserId(),
+                    e.getMessage(),
+                    e
+            );
+        }
+    }
 }
