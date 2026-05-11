@@ -1,0 +1,35 @@
+.user-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.user-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.user-header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.user-table-container {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .user-content {
+    padding: 1rem;
+  }
+
+  .user-header-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+}
