@@ -3,13 +3,9 @@ package com.sssi.msvc_auth.service;
 import com.sssi.common.api.response.PagedResponse;
 import com.sssi.common.kafka.events.ManagedUserCreatedEvent;
 import com.sssi.common.kafka.events.UserInvitedEvent;
-import com.sssi.common.kafka.events.UserPasswordConfiguredEvent;
 import com.sssi.common.kafka.topics.KafkaTopics;
 import com.sssi.msvc_auth.dto.*;
-import com.sssi.msvc_auth.entity.InvitationToken;
 import com.sssi.msvc_auth.entity.User;
-import com.sssi.msvc_auth.exception.InvitationException;
-import com.sssi.msvc_auth.repository.InvitationTokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -39,9 +35,9 @@ public class UserService {
 
     private final KeycloakAdminService keycloakAdminService;
     private final UserApprobationService userApprobationService;
+    private final InvitationService invitationService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final SecureRandom secureRandom = new SecureRandom();
-    private final InvitationTokenRepository invitationTokenRepository;
 
     @Transactional(readOnly = true)
     public PagedResponse<KeycloakUserResponseDto> getAllUsers(Pageable pageable) {
@@ -82,7 +78,7 @@ public class UserService {
 
         userApprobationService.createInvitedUser(keycloakUserId);
 
-        String token = generateInvitationToken(keycloakUserId);
+        String token = invitationService.generateInvitationToken(keycloakUserId);
 
         try {
             kafkaTemplate.send(
@@ -125,115 +121,6 @@ public class UserService {
                 .status(User.UserStatus.PENDING.name())
                 .build();
     }
-
-
-    private String generateInvitationToken(String keycloakUserId) {
-        String token = UUID.randomUUID().toString();
-
-        invitationTokenRepository.save(
-                InvitationToken.builder()
-                        .keycloakUserId(keycloakUserId)
-                        .token(token)
-                        .expiresAt(Instant.now().plusSeconds(86400)) // 24h
-                        .used(false)
-                        .build()
-        );
-
-        return token;
-    }
-
-    @Transactional
-    public void activateUserWithToken(String token, String newPassword) {
-
-        InvitationToken invitation = invitationTokenRepository
-                .findByTokenAndUsedFalse(token)
-                .orElseThrow(InvitationException::invalidToken);
-        if (invitation.getExpiresAt().isBefore(Instant.now())) {
-            throw InvitationException.expiredToken();
-        }
-        keycloakAdminService.setPasswordAndEnable(
-                invitation.getKeycloakUserId(),
-                newPassword
-        );
-        invitation.setUsed(true);
-        invitationTokenRepository.save(invitation);
-        userApprobationService.activateUser(
-                invitation.getKeycloakUserId()
-        );
-        try {
-            kafkaTemplate.send(
-                    KafkaTopics.USER_PASSWORD_CONFIGURED_TOPIC,
-                    UserPasswordConfiguredEvent.builder()
-                            .keycloakUserId(invitation.getKeycloakUserId())
-                            .timestamp(System.currentTimeMillis())
-                            .build()
-            );
-        } catch (Exception kafkaEx) {
-            log.warn("No se pudo enviar evento de invitación para usuario: {}", kafkaEx.getMessage());
-        }
-
-        log.info(
-                "Usuario {} activó su cuenta via invitación",
-                invitation.getKeycloakUserId()
-        );
-    }
-
-    @Transactional
-    public void resendInvitation(String keycloakUserId) {
-        User user = userApprobationService.findByKeycloakUserId(keycloakUserId);
-        if (user.getStatus() != User.UserStatus.INVITED) {
-            throw new IllegalStateException("El usuario ya activó su cuenta");
-        }
-        KeycloakUserResponseDto keycloakUser = keycloakAdminService.getUserById(keycloakUserId);
-        invitationTokenRepository.invalidateAllByKeycloakUserId(keycloakUserId);
-        String newToken = generateInvitationToken(keycloakUserId);
-        try {
-            kafkaTemplate.send(
-                    KafkaTopics.USER_INVITED_TOPIC,
-                    UserInvitedEvent.builder()
-                            .userId(keycloakUserId)
-                            .username(keycloakUser.getUsername())
-                            .email(keycloakUser.getEmail())
-                            .firstName(keycloakUser.getFirstName())
-                            .lastName(keycloakUser.getLastName())
-                            .invitationToken(newToken)
-                            .timestamp(Instant.now().toEpochMilli())
-                            .build()
-            );
-            log.info("Invitación reenviada correctamente para usuario {}", keycloakUserId);
-        } catch (Exception kafkaEx) {
-            log.warn(
-                    "No se pudo reenviar invitación para usuario {}: {}",
-                    keycloakUserId,
-                    kafkaEx.getMessage()
-            );
-        }
-    }
-
-    @Transactional(readOnly = true)
-    public InvitationInfoResponseDto getInvitationInfo(String token) {
-
-        InvitationToken invitation = invitationTokenRepository
-                .findByTokenAndUsedFalse(token)
-                .orElseThrow(InvitationException::invalidToken);
-
-        if (invitation.getExpiresAt().isBefore(Instant.now())) {
-            throw InvitationException.expiredToken();
-        }
-
-        KeycloakUserResponseDto user =
-                keycloakAdminService.getUserById(
-                        invitation.getKeycloakUserId()
-                );
-
-        return InvitationInfoResponseDto.builder()
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .email(user.getEmail())
-                .expiresAt(invitation.getExpiresAt())
-                .build();
-    }
-
     public void assignRoleToUser(String userId, String roleId) {
         keycloakAdminService.assignRoleToUser(userId, roleId);
     }
@@ -279,4 +166,3 @@ public class UserService {
         return source.charAt(secureRandom.nextInt(source.length()));
     }
 }
-
