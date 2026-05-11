@@ -39,13 +39,14 @@ public class UserService {
 
     private final KeycloakAdminService keycloakAdminService;
     private final UserApprobationService userApprobationService;
+    private final PasswordPolicyService passwordPolicyService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final SecureRandom secureRandom = new SecureRandom();
     private final InvitationTokenRepository invitationTokenRepository;
 
     @Transactional(readOnly = true)
     public PagedResponse<KeycloakUserResponseDto> getAllUsers(Pageable pageable) {
-    return keycloakAdminService.getAllUsers(pageable);
+        return keycloakAdminService.getAllUsers(pageable);
     }
 
     @Transactional(readOnly = true)
@@ -69,9 +70,7 @@ public class UserService {
 
     @Transactional
     public CreateManagedUserResponseDto createManagedUser(CreateManagedUserRequestDto request, String currentUserId) {
-
         KeycloakUserResponseDto currentUser = keycloakAdminService.getUserById(currentUserId);
-
         String keycloakUserId = keycloakAdminService.registerUser(
                 request.getUsername(),
                 request.getEmail(),
@@ -79,11 +78,8 @@ public class UserService {
                 request.getLastName(),
                 false
         );
-
         userApprobationService.createInvitedUser(keycloakUserId);
-
         String token = generateInvitationToken(keycloakUserId);
-
         try {
             kafkaTemplate.send(
                     KafkaTopics.USER_INVITED_TOPIC,
@@ -117,7 +113,6 @@ public class UserService {
             log.warn("No se pudo enviar evento de invitación para usuario {}: {}",
                     request.getUsername(), kafkaEx.getMessage());
         }
-
         return CreateManagedUserResponseDto.builder()
                 .userId(keycloakUserId)
                 .username(request.getUsername())
@@ -126,10 +121,8 @@ public class UserService {
                 .build();
     }
 
-
     private String generateInvitationToken(String keycloakUserId) {
         String token = UUID.randomUUID().toString();
-
         invitationTokenRepository.save(
                 InvitationToken.builder()
                         .keycloakUserId(keycloakUserId)
@@ -148,18 +141,16 @@ public class UserService {
         InvitationToken invitation = invitationTokenRepository
                 .findByTokenAndUsedFalse(token)
                 .orElseThrow(InvitationException::invalidToken);
+
         if (invitation.getExpiresAt().isBefore(Instant.now())) {
             throw InvitationException.expiredToken();
         }
-        keycloakAdminService.setPasswordAndEnable(
-                invitation.getKeycloakUserId(),
-                newPassword
-        );
+
+        keycloakAdminService.setPasswordAndEnable(invitation.getKeycloakUserId(), newPassword);
         invitation.setUsed(true);
         invitationTokenRepository.save(invitation);
-        userApprobationService.activateUser(
-                invitation.getKeycloakUserId()
-        );
+        userApprobationService.activateUser(invitation.getKeycloakUserId());
+        passwordPolicyService.recordPasswordChange(invitation.getKeycloakUserId());
         try {
             kafkaTemplate.send(
                     KafkaTopics.USER_PASSWORD_CONFIGURED_TOPIC,
@@ -169,24 +160,24 @@ public class UserService {
                             .build()
             );
         } catch (Exception kafkaEx) {
-            log.warn("No se pudo enviar evento de invitación para usuario: {}", kafkaEx.getMessage());
+            log.warn("No se pudo enviar evento UserPasswordConfigured para userId={}: {}",
+                    invitation.getKeycloakUserId(), kafkaEx.getMessage());
         }
-
-        log.info(
-                "Usuario {} activó su cuenta via invitación",
-                invitation.getKeycloakUserId()
-        );
+        log.info("Usuario {} activó su cuenta via invitación", invitation.getKeycloakUserId());
     }
 
     @Transactional
     public void resendInvitation(String keycloakUserId) {
         User user = userApprobationService.findByKeycloakUserId(keycloakUserId);
+
         if (user.getStatus() != User.UserStatus.INVITED) {
             throw new IllegalStateException("El usuario ya activó su cuenta");
         }
+
         KeycloakUserResponseDto keycloakUser = keycloakAdminService.getUserById(keycloakUserId);
         invitationTokenRepository.invalidateAllByKeycloakUserId(keycloakUserId);
         String newToken = generateInvitationToken(keycloakUserId);
+
         try {
             kafkaTemplate.send(
                     KafkaTopics.USER_INVITED_TOPIC,
@@ -202,11 +193,7 @@ public class UserService {
             );
             log.info("Invitación reenviada correctamente para usuario {}", keycloakUserId);
         } catch (Exception kafkaEx) {
-            log.warn(
-                    "No se pudo reenviar invitación para usuario {}: {}",
-                    keycloakUserId,
-                    kafkaEx.getMessage()
-            );
+            log.warn("No se pudo reenviar invitación para usuario {}: {}", keycloakUserId, kafkaEx.getMessage());
         }
     }
 
@@ -221,10 +208,7 @@ public class UserService {
             throw InvitationException.expiredToken();
         }
 
-        KeycloakUserResponseDto user =
-                keycloakAdminService.getUserById(
-                        invitation.getKeycloakUserId()
-                );
+        KeycloakUserResponseDto user = keycloakAdminService.getUserById(invitation.getKeycloakUserId());
 
         return InvitationInfoResponseDto.builder()
                 .firstName(user.getFirstName())
@@ -279,4 +263,3 @@ public class UserService {
         return source.charAt(secureRandom.nextInt(source.length()));
     }
 }
-

@@ -255,6 +255,7 @@ public class EmailEventService {
                     UserPasswordChangedEmailTemplate.builder()
                             .firstName(user.getFirstName())
                             .lastName(user.getLastName())
+                            .username(user.getUsername())
                             .email(user.getEmail())
                             .loginUrl(loginUrl)
                             .timestamp(event.getTimestamp())
@@ -262,7 +263,7 @@ public class EmailEventService {
             emailService.sendEmail(
                     Email.builder()
                             .to(List.of(user.getEmail()))
-                            .subject("Tu contraseña fue actualizada en SPGS")
+                            .subject("Tu contraseña fue actualizada en SPSG")
                             .templateDefinition(template)
                             .build()
             );
@@ -270,6 +271,70 @@ public class EmailEventService {
         } catch (Exception e) {
             log.error("Error procesando PasswordChangedEvent userId={}: {}",
                     event.getKeycloakUserId(), e.getMessage(), e);
+        }
+    }
+
+    public void sendPasswordExpiringSoonEmail(PasswordExpiringSoonEvent event) {
+
+        try {
+            PasswordExpiringSoonEmailTemplate template =
+                    PasswordExpiringSoonEmailTemplate.builder()
+                            .firstName(event.getFirstName())
+                            .daysRemaining(event.getDaysRemaining())
+                            .expiresAt(event.getExpiresAt())
+                            .loginUrl(loginUrl)
+                            .timestamp(event.getTimestamp())
+                            .build();
+            emailService.sendEmail(
+                    Email.builder()
+                            .to(List.of(event.getEmail()))
+                            .subject("Tu contraseña expirará pronto en SPGS")
+                            .templateDefinition(template)
+                            .build()
+            );
+            log.info(
+                    "Email password expiring soon enviado a: {}",
+                    event.getEmail()
+            );
+        } catch (Exception e) {
+            log.error(
+                    "Error enviando password expiring soon email userId={}: {}",
+                    event.getKeycloakUserId(),
+                    e.getMessage(),
+                    e
+            );
+        }
+    }
+
+    public void sendPasswordExpiredResetEmail(PasswordExpiredResetRequiredEvent event) {
+        try {
+            String resetPasswordUrl =
+                    resetPasswordBaseUrl + "?token=" + event.getResetToken();
+            PasswordExpiredResetEmailTemplate template =
+                    PasswordExpiredResetEmailTemplate.builder()
+                            .firstName(event.getFirstName())
+                            .email(event.getEmail())
+                            .resetPasswordUrl(resetPasswordUrl)
+                            .timestamp(event.getTimestamp())
+                            .build();
+            emailService.sendEmail(
+                    Email.builder()
+                            .to(List.of(event.getEmail()))
+                            .subject("Tu contraseña expiró - Acción requerida en SPSG")
+                            .templateDefinition(template)
+                            .build()
+            );
+            log.info(
+                    "Email de expiración de contraseña enviado a: {}",
+                    event.getEmail()
+            );
+        } catch (Exception e) {
+            log.error(
+                    "Error enviando password expired reset email userId={}: {}",
+                    event.getKeycloakUserId(),
+                    e.getMessage(),
+                    e
+            );
         }
     }
 }
