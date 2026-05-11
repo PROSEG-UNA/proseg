@@ -9,6 +9,7 @@ import lombok.experimental.SuperBuilder;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.List;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "kind", visible = true)
 @JsonSubTypes({
@@ -36,5 +37,6 @@ public class AssetResponseDto {
     private LocalDate firmwareSupportEndDate;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private List<String> archiveUrls;
     private NetworkInterfaceResponseDto networkInterface;
 }

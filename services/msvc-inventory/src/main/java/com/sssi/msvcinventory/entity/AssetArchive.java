@@ -10,15 +10,15 @@ import org.hibernate.annotations.Where;
 import java.util.UUID;
 
 @Entity
-@Table(name = "image_table")
+@Table(name = "asset_archive_table")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@SQLDelete(sql = "UPDATE image_table SET is_deleted = true WHERE id = ?")
+@SQLDelete(sql = "UPDATE asset_archive_table SET is_deleted = true WHERE id = ?")
 @Where(clause = "is_deleted = false")
-public class Image extends BaseEntity {
+public class AssetArchive extends BaseEntity {
 
     @Id
     @GeneratedValue
@@ -30,8 +30,8 @@ public class Image extends BaseEntity {
     @JoinColumn(name = "asset_id", nullable = false)
     private Asset asset;
 
-    @Column(nullable = false)
-    private String url;
+    @Column(name = "object_name", nullable = false)
+    private String objectName;
 
     private String caption;
 }
