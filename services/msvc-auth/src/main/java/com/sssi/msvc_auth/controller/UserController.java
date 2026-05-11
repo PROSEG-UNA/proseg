@@ -102,30 +102,6 @@ public class UserController {
         userService.removeRoleFromUser(userId, roleId);
         return ApiResponseBuilder.ok(null, "Rol removido correctamente");
     }
-
-    @PostMapping("/set-password")
-    public ResponseEntity<ApiResponse<Void>> setPassword(
-            @Valid @RequestBody SetPasswordRequestDto request
-    ) {
-        userService.activateUserWithToken(request.getToken(), request.getPassword());
-        return ApiResponseBuilder.ok(null, "Cuenta activada correctamente");
-    }
-
-    @PostMapping("/{userId}/resend-invitation")
-    public ResponseEntity<ApiResponse<Void>> resendInvitation(@PathVariable String userId) {
-        userService.resendInvitation(userId);
-        return ApiResponseBuilder.ok(null, "Invitación reenviada");
-    }
-
-    @GetMapping("/invitation-info")
-    public ResponseEntity<ApiResponse<InvitationInfoResponseDto>> getInvitationInfo(
-            @RequestParam String token
-    ) {
-        InvitationInfoResponseDto response = userService.getInvitationInfo(token);
-        return ApiResponseBuilder.ok(
-                response,
-                "Información de invitación obtenida correctamente"
-        );
-    }
 }
+
 

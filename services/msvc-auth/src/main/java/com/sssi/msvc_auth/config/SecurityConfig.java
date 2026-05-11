@@ -32,8 +32,8 @@ public class SecurityConfig {
                                 "/api/auth/logout",
                                 "/api/auth/forgot-password",
                                 "/api/auth/reset-password",
-                                "/api/user/set-password",
-                                "/api/user/invitation-info/**",
+                                "/api/invitations/activate",
+                                "/api/invitations/info",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         ).permitAll()
@@ -81,6 +81,9 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.GET, "/api/invitations/**")
                         .hasAuthority(Privileges.Invitation.READ_PENDING)
+
+                        .requestMatchers(HttpMethod.POST, "/api/invitations/*/resend")
+                        .hasAuthority(Privileges.User.CREATE)
 
                         .anyRequest().authenticated()
                 )

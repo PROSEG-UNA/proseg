@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 const BASE_URL = '/api/user';
+const INVITATION_URL = '/api/invitations';
 const config = { withCredentials: true };
 
 export async function fetchUsers({ page = 0, size = 10 } = {}) {
@@ -59,7 +60,7 @@ export async function fetchRolesByUserId(userId) {
 }
 
 export async function getInvitationInfo(token) {
-    const { data } = await axios.get(`${BASE_URL}/invitation-info`, {
+    const { data } = await axios.get(`${INVITATION_URL}/info`, {
         ...config,
         params: { token },
     });
@@ -68,7 +69,7 @@ export async function getInvitationInfo(token) {
 
 export async function setPassword(token, password, confirmPassword) {
     const { data } = await axios.post(
-        `${BASE_URL}/set-password`,
+        `${INVITATION_URL}/activate`,
         { token, password, confirmPassword },
         config,
     );
@@ -77,7 +78,7 @@ export async function setPassword(token, password, confirmPassword) {
 
 export async function resendInvitation(userId) {
     const { data } = await axios.post(
-        `${BASE_URL}/${userId}/resend-invitation`,
+        `${INVITATION_URL}/${userId}/resend`,
         null,
         config,
     );

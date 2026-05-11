@@ -31,6 +31,7 @@ routes:
   auth: ${api.prefix}/auth
   user: ${api.prefix}/user
   role: ${api.prefix}/role
+  invitation: ${api.prefix}/invitations
 
 keycloak:
   server-url: ${KEYCLOAK_SERVER_URL:https://auth.devbychris.com}
