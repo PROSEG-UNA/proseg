@@ -181,24 +181,33 @@ public class UserService {
     @Transactional
     public void resendInvitation(String keycloakUserId) {
         User user = userApprobationService.findByKeycloakUserId(keycloakUserId);
-
         if (user.getStatus() != User.UserStatus.INVITED) {
             throw new IllegalStateException("El usuario ya activó su cuenta");
         }
         KeycloakUserResponseDto keycloakUser = keycloakAdminService.getUserById(keycloakUserId);
         invitationTokenRepository.invalidateAllByKeycloakUserId(keycloakUserId);
         String newToken = generateInvitationToken(keycloakUserId);
-        kafkaTemplate.send(KafkaTopics.USER_INVITED_TOPIC,
-                UserInvitedEvent.builder()
-                        .userId(keycloakUserId)
-                        .username(keycloakUser.getUsername())
-                        .email(keycloakUser.getEmail())
-                        .firstName(keycloakUser.getFirstName())
-                        .lastName(keycloakUser.getLastName())
-                        .invitationToken(newToken)
-                        .timestamp(Instant.now().toEpochMilli())
-                        .build()
-        );
+        try {
+            kafkaTemplate.send(
+                    KafkaTopics.USER_INVITED_TOPIC,
+                    UserInvitedEvent.builder()
+                            .userId(keycloakUserId)
+                            .username(keycloakUser.getUsername())
+                            .email(keycloakUser.getEmail())
+                            .firstName(keycloakUser.getFirstName())
+                            .lastName(keycloakUser.getLastName())
+                            .invitationToken(newToken)
+                            .timestamp(Instant.now().toEpochMilli())
+                            .build()
+            );
+            log.info("Invitación reenviada correctamente para usuario {}", keycloakUserId);
+        } catch (Exception kafkaEx) {
+            log.warn(
+                    "No se pudo reenviar invitación para usuario {}: {}",
+                    keycloakUserId,
+                    kafkaEx.getMessage()
+            );
+        }
     }
 
     @Transactional(readOnly = true)
