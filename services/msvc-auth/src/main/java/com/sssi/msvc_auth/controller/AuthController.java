@@ -6,6 +6,7 @@ import com.sssi.common.kafka.events.UserLoginEvent;
 import com.sssi.common.kafka.events.UserRegisteredEvent;
 import com.sssi.common.kafka.topics.KafkaTopics;
 import com.sssi.msvc_auth.dto.*;
+import com.sssi.msvc_auth.exception.PasswordExpiredException;
 import com.sssi.msvc_auth.service.*;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -77,7 +78,12 @@ public class AuthController {
         );
         String keycloakUserId = keycloakAuthService.extractUserIdFromToken(tokens.getAccessToken());
         userApprobationService.assertUserIsApproved(keycloakUserId);
-        passwordPolicyService.assertPasswordNotExpired(keycloakUserId);
+        try {
+            passwordPolicyService.assertPasswordNotExpired(keycloakUserId);
+        } catch (PasswordExpiredException ex) {
+            passwordResetService.requestExpiredPasswordReset(keycloakUserId);
+            throw ex;
+        }
         try {
             kafkaTemplate.send(
                     KafkaTopics.USER_LOGIN_TOPIC,
