@@ -1,0 +1,47 @@
+import { createBrowserRouter, Navigate } from 'react-router-dom';
+import LoginPage from '../features/auth/pages/LoginPage';
+import RegisterPage from '../features/auth/pages/RegisterPage';
+import InventoryPage from '../features/inventory/pages/InventoryPage';
+import AssetPage from '../features/inventory/pages/AssetPage';
+import SecurityPage from '../features/security/pages/SecurityPage';
+import UserPage from '../features/security/pages/UserPage';
+import RolePage from '../features/security/pages/RolePage';
+
+export const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <LoginPage />,
+  },
+  {
+    path: '/login',
+    element: <LoginPage />,
+  },
+  {
+    path: '/registro',
+    element: <RegisterPage />,
+  },
+  {
+    path: '/home',
+    element: <InventoryPage />,
+  },
+  {
+    path: '/inventario',
+    element: <Navigate to="/home" replace />,
+  },
+  {
+    path: '/inventario/activos',
+    element: <AssetPage />,
+  },
+  {
+    path: '/seguridad',
+    element: <SecurityPage />,
+  },
+  {
+    path: '/seguridad/usuarios',
+    element: <UserPage />,
+  },
+  {
+    path: '/seguridad/roles',
+    element: <RolePage />,
+  },
+]);

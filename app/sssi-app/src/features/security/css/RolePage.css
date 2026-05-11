@@ -1,0 +1,46 @@
+.role-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.role-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.role-header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  gap: 1.5rem;
+}
+
+.role-table-container {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+@media (max-width: 1024px) {
+  .role-header-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .role-header-section > button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .role-content {
+    padding: 1rem;
+  }
+
+  .role-header-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
