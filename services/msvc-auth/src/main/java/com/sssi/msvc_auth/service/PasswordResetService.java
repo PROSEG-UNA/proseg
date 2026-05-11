@@ -24,6 +24,7 @@ public class PasswordResetService {
 
     private final KeycloakAdminService keycloakAdminService;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final PasswordPolicyService passwordPolicyService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Transactional
@@ -68,6 +69,9 @@ public class PasswordResetService {
             throw PasswordResetException.expiredToken();
         }
         keycloakAdminService.resetPassword(resetToken.getKeycloakUserId(), newPassword);
+        passwordPolicyService.recordPasswordChange(
+                resetToken.getKeycloakUserId()
+        );
         resetToken.setUsed(true);
         passwordResetTokenRepository.save(resetToken);
         log.info("Contraseña restablecida para keycloakUserId={}", resetToken.getKeycloakUserId());
