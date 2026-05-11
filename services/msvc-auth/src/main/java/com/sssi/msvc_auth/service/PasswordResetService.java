@@ -1,6 +1,7 @@
 package com.sssi.msvc_auth.service;
 
 import com.sssi.common.kafka.events.PasswordChangedEvent;
+import com.sssi.common.kafka.events.PasswordExpiredResetRequiredEvent;
 import com.sssi.common.kafka.events.PasswordResetRequestedEvent;
 import com.sssi.common.kafka.topics.KafkaTopics;
 import com.sssi.msvc_auth.entity.PasswordResetToken;
@@ -89,5 +90,34 @@ public class PasswordResetService {
             log.error("Error enviando PasswordChangedEvent userId={}: {}",
                     resetToken.getKeycloakUserId(), e.getMessage(), e);
         }
+    }
+
+    @Transactional
+    public void requestExpiredPasswordReset(String keycloakUserId) {
+        passwordResetTokenRepository.invalidateAllByKeycloakUserId(keycloakUserId);
+        String token = UUID.randomUUID().toString();
+        passwordResetTokenRepository.save(
+                PasswordResetToken.builder()
+                        .keycloakUserId(keycloakUserId)
+                        .token(token)
+                        .expiresAt(Instant.now().plusSeconds(EXPIRY_SECONDS))
+                        .used(false)
+                        .build()
+        );
+        var keycloakUser = keycloakAdminService.getUserById(keycloakUserId);
+        kafkaTemplate.send(
+                KafkaTopics.PASSWORD_EXPIRED_RESET_REQUIRED_TOPIC,
+                PasswordExpiredResetRequiredEvent.builder()
+                        .keycloakUserId(keycloakUserId)
+                        .email(keycloakUser.getEmail())
+                        .firstName(keycloakUser.getFirstName())
+                        .resetToken(token)
+                        .timestamp(Instant.now().toEpochMilli())
+                        .build()
+        );
+        log.info(
+                "Reset obligatorio por expiración generado para userId={}",
+                keycloakUserId
+        );
     }
 }

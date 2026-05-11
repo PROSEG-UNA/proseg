@@ -13,7 +13,7 @@ public class PasswordExpiredException extends BaseException {
         return new PasswordExpiredException(
                 HttpStatus.FORBIDDEN,
                 "PASSWORD_EXPIRED",
-                "Tu contraseña expiró por seguridad. Debes restablecerla para poder iniciar sesión."
+                "Tu contraseña expiró por seguridad. Te enviamos un correo con instrucciones para restablecerla."
         );
     }
 }
