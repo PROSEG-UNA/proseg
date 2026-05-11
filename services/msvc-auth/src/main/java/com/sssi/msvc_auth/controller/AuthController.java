@@ -32,6 +32,7 @@ public class AuthController {
     private final KeycloakAuthService keycloakAuthService;
     private final KeycloakAdminService keycloakAdminService;
     private final UserApprobationService userApprobationService;
+    private final PasswordPolicyService passwordPolicyService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final TurnstileService turnstileService;
     private final PasswordResetService passwordResetService;
@@ -76,6 +77,7 @@ public class AuthController {
         );
         String keycloakUserId = keycloakAuthService.extractUserIdFromToken(tokens.getAccessToken());
         userApprobationService.assertUserIsApproved(keycloakUserId);
+        passwordPolicyService.assertPasswordNotExpired(keycloakUserId);
         try {
             kafkaTemplate.send(
                     KafkaTopics.USER_LOGIN_TOPIC,
@@ -154,25 +156,6 @@ public class AuthController {
         return ApiResponseBuilder.ok(null, "Contraseña restablecida correctamente");
     }
 
-    private ResponseCookie buildCookie(String name, String value) {
-        return ResponseCookie.from(name, value)
-                .httpOnly(true)
-                .secure(secureCookie)
-                .path("/")
-                .sameSite("Strict")
-                .build();
-    }
-
-    private ResponseCookie expireCookie(String name) {
-        return ResponseCookie.from(name, "")
-                .httpOnly(true)
-                .secure(secureCookie)
-                .path("/")
-                .maxAge(0)
-                .sameSite("Strict")
-                .build();
-    }
-
     @PostMapping(value = "/register", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<RegisterResponseDto>> register(
             @Valid @RequestBody RegisterRequestDto request,
@@ -189,6 +172,7 @@ public class AuthController {
                 request.getLastName()
         );
         userApprobationService.createPendingUser(keycloakUserId);
+        passwordPolicyService.recordPasswordChange(keycloakUserId);
         try {
             kafkaTemplate.send(
                     KafkaTopics.USER_REGISTERED_TOPIC,
@@ -211,5 +195,24 @@ public class AuthController {
                         .build(),
                 "Registro exitoso. Pendiente de aprobacion"
         );
+    }
+
+    private ResponseCookie buildCookie(String name, String value) {
+        return ResponseCookie.from(name, value)
+                .httpOnly(true)
+                .secure(secureCookie)
+                .path("/")
+                .sameSite("Strict")
+                .build();
+    }
+
+    private ResponseCookie expireCookie(String name) {
+        return ResponseCookie.from(name, "")
+                .httpOnly(true)
+                .secure(secureCookie)
+                .path("/")
+                .maxAge(0)
+                .sameSite("Strict")
+                .build();
     }
 }
