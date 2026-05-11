@@ -24,7 +24,7 @@ public class PasswordPolicyScheduler {
     private final KeycloakAdminService keycloakAdminService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    @Scheduled(cron = "0 0 8 * * *") // 8:00am
+    @Scheduled(cron = "0 0 8 * * *", zone = "America/Costa_Rica") // 8:00am
     public void notifyExpiringPasswords() {
         List<PasswordPolicy> policies =
                 passwordPolicyService.findPasswordsExpiringSoon(7);
