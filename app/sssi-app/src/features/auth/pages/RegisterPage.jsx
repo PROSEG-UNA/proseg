@@ -324,7 +324,6 @@ export function RegisterPage() {
                     </IconButton>
                 </Box>
 
-                {/* ── Barra de fortaleza + requisitos (solo si hay algo escrito) ── */}
                 {formData.password && (
                     <Box sx={{ mt: 1.25, mb: 1.5 }}>
                         {/* Barra */}
