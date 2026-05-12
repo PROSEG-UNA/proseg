@@ -242,12 +242,8 @@ public class ArchiveService {
             return normalizePath(objectName);
         }
 
-        validateFilename(filename);
-
         String normalizedFolder = normalizeFolder(folder);
-        String ext = filename != null && filename.contains(".")
-                ? filename.substring(filename.lastIndexOf('.'))
-                : "";
+        String ext = extractExtension(filename);
         return normalizedFolder + UUID.randomUUID() + ext;
     }
 
@@ -280,6 +276,14 @@ public class ArchiveService {
                 || !normalizedFolder.matches(FOLDER_REGEX)) {
             throw ArchiveException.invalidFolder();
         }
+    }
+
+    private String extractExtension(String filename) {
+        if (filename == null || filename.isBlank() || !filename.contains(".")) {
+            return "";
+        }
+        String ext = filename.substring(filename.lastIndexOf('.')).toLowerCase();
+        return ext.matches("^\\.[a-zA-Z0-9]+$") ? ext : "";
     }
 
     private void validateFilename(String filename) {

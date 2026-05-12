@@ -44,6 +44,9 @@ eureka:
 api:
   prefix: /api/v1/inventory
 
+archive:
+  base-url: http://localhost:8081
+
 routes:
   brands: ${api.prefix}/brands
   locations: ${api.prefix}/locations

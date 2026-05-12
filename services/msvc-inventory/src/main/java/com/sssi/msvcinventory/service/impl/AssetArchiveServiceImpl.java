@@ -129,7 +129,10 @@ public class AssetArchiveServiceImpl implements AssetArchiveService {
     }
 
     private AssetArchiveResponseDto toResponse(AssetArchive assetArchive) {
-        String presignedUrl = getPresignedGetUrl(assetArchive.getObjectName());
+        String presignedUrl = null;
+        try {
+            presignedUrl = getPresignedGetUrl(assetArchive.getObjectName());
+        } catch (Exception ignored) {}
         return AssetArchiveResponseDto.builder()
                 .id(assetArchive.getId())
                 .caption(assetArchive.getCaption())
