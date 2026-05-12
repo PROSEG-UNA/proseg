@@ -245,7 +245,10 @@ public class ArchiveService {
         validateFilename(filename);
 
         String normalizedFolder = normalizeFolder(folder);
-        return normalizedFolder + filename.trim();
+        String ext = filename != null && filename.contains(".")
+                ? filename.substring(filename.lastIndexOf('.'))
+                : "";
+        return normalizedFolder + UUID.randomUUID() + ext;
     }
 
     private void validateObjectName(String objectName) {
