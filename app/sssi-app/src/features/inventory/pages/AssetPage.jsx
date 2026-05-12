@@ -33,10 +33,8 @@ export function AssetPage() {
         <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
 
-        <Box sx={{ mt: 3, mb:-2}}>
-            <Catalog />
-        </Box>
-        <Container maxWidth="lg" className="asset-content">
+        <Catalog />
+        <Container maxWidth="xl" className="asset-content" sx={{ pb: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
             <Typography
               variant="h5"

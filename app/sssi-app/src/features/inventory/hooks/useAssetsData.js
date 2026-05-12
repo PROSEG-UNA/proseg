@@ -40,6 +40,7 @@ export function useAssetsData({ pageIndex = 0, pageSize = 10, search = '', filte
                         id: asset.id,
                         kind: asset.kind || '—',
                         name: asset.name || '—',
+                        description: asset.description || '—',
                         brand: asset.model?.brand?.name || '—',
                         model: asset.model?.name || '—',
                         type: asset.model?.type?.name || '—',

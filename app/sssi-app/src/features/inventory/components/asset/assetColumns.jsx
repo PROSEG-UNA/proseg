@@ -19,6 +19,12 @@ function statusChipColor(statusRaw) {
     return 'default';
 }
 
+function formatDate(value) {
+    if (!value) return '—';
+    const [year, month, day] = value.split('-');
+    return `${day}/${month}/${year}`;
+}
+
 export function getAssetsColumns() {
     return [
         {
@@ -28,14 +34,32 @@ export function getAssetsColumns() {
             grow: true,
         },
         {
+            accessorKey: 'description',
+            header: 'Descripción',
+            size: 220,
+            grow: true,
+        },
+        {
+            accessorKey: 'type',
+            header: 'Tipo',
+            size: 140,
+            grow: true,
+        },
+        {
             accessorKey: 'brand',
             header: 'Marca',
-            size: 160,
+            size: 140,
             grow: true,
         },
         {
             accessorKey: 'model',
             header: 'Modelo',
+            size: 160,
+            grow: true,
+        },
+        {
+            accessorKey: 'site',
+            header: 'Sede',
             size: 160,
             grow: true,
         },
@@ -62,6 +86,30 @@ export function getAssetsColumns() {
                     variant="outlined"
                 />
             ),
+        },
+        {
+            accessorKey: 'acquisitionDate',
+            header: 'Fecha de Adquisición',
+            size: 180,
+            grow: false,
+            enableColumnFilter: false,
+            Cell: ({ cell }) => formatDate(cell.getValue()),
+        },
+        {
+            accessorKey: 'warrantyEndDate',
+            header: 'Fecha de fin Garantía',
+            size: 180,
+            grow: false,
+            enableColumnFilter: false,
+            Cell: ({ cell }) => formatDate(cell.getValue()),
+        },
+        {
+            accessorKey: 'firmwareSupportEndDate',
+            header: 'Fecha de fin Firmware',
+            size: 180,
+            grow: false,
+            enableColumnFilter: false,
+            Cell: ({ cell }) => formatDate(cell.getValue()),
         },
     ];
 }

@@ -21,7 +21,7 @@ export default function Catalog() {
 
     return (
         <>
-            <Container maxWidth="lg" sx={{ pt: 1, pb: 1 }}>
+            <Container maxWidth="xl" sx={{ pt: 1, pb: 1,  mt: 3, mb: -1  }}>
                 <CatalogGrid>
                     <CatalogCard
                         title="Sedes"

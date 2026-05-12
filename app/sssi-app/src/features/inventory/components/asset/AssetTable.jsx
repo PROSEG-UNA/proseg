@@ -15,10 +15,16 @@ import { useDebounce } from '../../../../common/hooks/useDebounce.js';
 
 const COLUMN_TO_BACKEND_KEY = {
     name: 'name',
+    description: 'description',
+    type: 'model.type.name',
     brand: 'model.brand.name',
     model: 'model.name',
+    site: 'location.site.name',
     location: 'location.name',
     status: 'status',
+    acquisitionDate: 'acquisitionDate',
+    warrantyEndDate: 'warrantyEndDate',
+    firmwareSupportEndDate: 'firmwareSupportEndDate',
 };
 
 export default function AssetTable({ refreshKey = 0, onRefresh }) {
@@ -152,6 +158,15 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
                     onColumnFiltersChange: setColumnFilters,
                     onSortingChange: setSorting,
                     state: { pagination, globalFilter, columnFilters, sorting },
+                    initialState: {
+                        columnVisibility: {
+                            description: false,
+                            site: false,
+                            acquisitionDate: false,
+                            warrantyEndDate: false,
+                            firmwareSupportEndDate: false,
+                        },
+                    },
                     displayColumnDefOptions: {
                         'mrt-row-expand': {
                             muiTableBodyCellProps: {

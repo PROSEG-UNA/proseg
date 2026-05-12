@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Box, Typography, Skeleton } from '@mui/material';
+import { Box, Typography, Skeleton, Dialog, IconButton } from '@mui/material';
 import RouterIcon from '@mui/icons-material/Router';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
+import CloseIcon from '@mui/icons-material/Close';
 import { fetchNetworkInterfaceByAsset } from '../../services/assetsService';
+import { fetchAssetArchives } from '../../services/assetArchiveService';
 
 function InfoRow({ label, value }) {
     return (
@@ -54,8 +56,9 @@ function SectionHeader({ icon: Icon, label }) {
 
 export default function AssetDetailPanel({ assetId }) {
     const [netIface, setNetIface] = useState(null);
-    const [images, setImages] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [images, setImages]     = useState([]);
+    const [loading, setLoading]   = useState(true);
+    const [lightbox, setLightbox] = useState(null);
 
     const loadDetails = () => {
         let cancelled = false;
@@ -63,10 +66,16 @@ export default function AssetDetailPanel({ assetId }) {
         setNetIface(null);
         setImages([]);
 
-        fetchNetworkInterfaceByAsset(assetId)
-            .then((data) => { if (!cancelled) setNetIface(data); })
-            .catch(() => { if (!cancelled) setNetIface(null); })
-            .finally(() => { if (!cancelled) setLoading(false); });
+        Promise.all([
+            fetchNetworkInterfaceByAsset(assetId).catch(() => null),
+            fetchAssetArchives(assetId).catch(() => []),
+        ]).then(([iface, archives]) => {
+            if (cancelled) return;
+            setNetIface(iface);
+            setImages(archives.filter(a => !!a.imageUrl));
+        }).finally(() => {
+            if (!cancelled) setLoading(false);
+        });
 
         return () => { cancelled = true; };
     };
@@ -84,53 +93,95 @@ export default function AssetDetailPanel({ assetId }) {
     }
 
     const hasNetIface = !!netIface;
-    const hasImages = images.length > 0;
+    const hasImages   = images.length > 0;
 
-    if (!hasNetIface && !hasImages) {
-        return (
-            <Box sx={{ p: 2.5 }}>
-                <Typography sx={{ fontSize: '0.8rem', color: 'text.disabled', fontStyle: 'italic' }}>
-                    Sin información adicional
-                </Typography>
-            </Box>
-        );
-    }
+    if (!hasNetIface && !hasImages) return null;
 
     return (
-        <Box sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-            {hasNetIface && (
-                <Box>
-                    <SectionHeader icon={RouterIcon} label="Interfaz de red" />
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.625, pl: 2.5 }}>
-                        {netIface.ipAddress && <InfoRow label="IP" value={netIface.ipAddress} />}
-                        {netIface.macAddress && <InfoRow label="MAC" value={netIface.macAddress} />}
+        <>
+            <Box sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                {hasNetIface && (
+                    <Box>
+                        <SectionHeader icon={RouterIcon} label="Interfaz de red" />
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.625, pl: 2.5 }}>
+                            {netIface.ipAddress  && <InfoRow label="IP"  value={netIface.ipAddress} />}
+                            {netIface.macAddress && <InfoRow label="MAC" value={netIface.macAddress} />}
+                        </Box>
                     </Box>
-                </Box>
-            )}
+                )}
 
-            {hasImages && (
-                <Box>
-                    <SectionHeader icon={ImageOutlinedIcon} label="Imágenes" />
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, pl: 2.5 }}>
-                        {images.map((img) => (
-                            <Box
-                                key={img.id}
-                                component="img"
-                                src={img.url}
-                                alt={img.caption || ''}
-                                sx={{
-                                    width: 88,
-                                    height: 88,
-                                    objectFit: 'cover',
-                                    borderRadius: '10px',
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                }}
-                            />
-                        ))}
+                {hasImages && (
+                    <Box>
+                        <SectionHeader icon={ImageOutlinedIcon} label="Imágenes" />
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, pl: 2.5 }}>
+                            {images.map((img) => (
+                                <Box
+                                    key={img.id}
+                                    component="img"
+                                    src={img.imageUrl}
+                                    alt={img.caption || ''}
+                                    onClick={() => setLightbox(img.imageUrl)}
+                                    sx={{
+                                        width: 80,
+                                        height: 80,
+                                        objectFit: 'cover',
+                                        borderRadius: '8px',
+                                        border: '1px solid',
+                                        borderColor: 'divider',
+                                        cursor: 'pointer',
+                                        transition: 'opacity 0.15s',
+                                        '&:hover': { opacity: 0.8 },
+                                    }}
+                                />
+                            ))}
+                        </Box>
                     </Box>
+                )}
+            </Box>
+
+            <Dialog
+                open={!!lightbox}
+                onClose={() => setLightbox(null)}
+                maxWidth={false}
+                slotProps={{
+                    backdrop: { sx: { bgcolor: 'rgba(0,0,0,0.88)' } },
+                    paper: {
+                        sx: {
+                            bgcolor: 'transparent',
+                            boxShadow: 'none',
+                            overflow: 'visible',
+                        },
+                    },
+                }}
+            >
+                <Box sx={{ position: 'relative' }}>
+                    <Box
+                        component="img"
+                        src={lightbox ?? ''}
+                        sx={{
+                            maxWidth: '90vw',
+                            maxHeight: '90vh',
+                            objectFit: 'contain',
+                            borderRadius: '10px',
+                            display: 'block',
+                        }}
+                    />
+                    <IconButton
+                        onClick={() => setLightbox(null)}
+                        sx={{
+                            position: 'absolute',
+                            top: -16,
+                            right: -16,
+                            bgcolor: 'rgba(0,0,0,0.6)',
+                            color: '#fff',
+                            p: 0.5,
+                            '&:hover': { bgcolor: 'rgba(0,0,0,0.85)' },
+                        }}
+                    >
+                        <CloseIcon sx={{ fontSize: 18 }} />
+                    </IconButton>
                 </Box>
-            )}
-        </Box>
+            </Dialog>
+        </>
     );
 }
