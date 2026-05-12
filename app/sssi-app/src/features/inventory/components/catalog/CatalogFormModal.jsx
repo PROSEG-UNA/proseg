@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import {
     Box, Typography,
     TextField, FormControlLabel, Switch,
+    Dialog, DialogTitle, DialogContent, DialogActions, Button,
     useTheme,
 } from '@mui/material';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import AlertModal from '../../../../common/components/AlertModal.jsx';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import { createCatalogItem, updateCatalogItem, fetchCatalogOptions } from '../../services/catalogService';
@@ -24,6 +26,7 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row }
     const [alert, setAlert] = useState(null);
     const [selectOptions, setSelectOptions] = useState({});
     const [loadingOptions, setLoadingOptions] = useState(false);
+    const [pendingBooleanChange, setPendingBooleanChange] = useState(null);
 
     const initForm = () => {
         if (!open || !config) return;
@@ -178,7 +181,14 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row }
                                     control={
                                         <Switch
                                             checked={formValues[field.key] ?? false}
-                                            onChange={(e) => handleChange(field.key, e.target.checked)}
+                                            onChange={(e) => {
+                                                const newValue = e.target.checked;
+                                                if (!newValue && isEditMode && field.destructiveWarning) {
+                                                    setPendingBooleanChange({ key: field.key, value: newValue, warning: field.destructiveWarning });
+                                                    return;
+                                                }
+                                                handleChange(field.key, newValue);
+                                            }}
                                             disabled={saving}
                                             size="small"
                                             sx={{
@@ -241,6 +251,43 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row }
             </GeneralModal>
 
             <AlertModal open={!!alert} type={alert?.type} message={alert?.message} onClose={() => setAlert(null)} />
+
+            <Dialog
+                open={!!pendingBooleanChange}
+                onClose={() => setPendingBooleanChange(null)}
+                maxWidth="xs"
+                fullWidth
+                slotProps={{ backdrop: { sx: { backdropFilter: 'blur(4px)' } } }}
+            >
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <WarningAmberIcon sx={{ color: 'warning.main', fontSize: 28 }} />
+                    <Typography component="span" variant="h6" fontWeight={600}>
+                        Acción destructiva
+                    </Typography>
+                </DialogTitle>
+                <DialogContent>
+                    <Typography variant="body1">
+                        {pendingBooleanChange?.warning}
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setPendingBooleanChange(null)} variant="outlined" sx={{ textTransform: 'none' }}>
+                        Cancelar
+                    </Button>
+                    <Button
+                        onClick={() => {
+                            handleChange(pendingBooleanChange.key, pendingBooleanChange.value);
+                            setPendingBooleanChange(null);
+                        }}
+                        variant="contained"
+                        color="warning"
+                        autoFocus
+                        sx={{ textTransform: 'none' }}
+                    >
+                        Sí, continuar
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </>
     );
 }

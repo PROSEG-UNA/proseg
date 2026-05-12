@@ -70,7 +70,12 @@ export const CATALOG_CONFIG = {
         formFields: [
             { key: 'name', label: 'Nombre', type: 'text', required: true },
             { key: 'description', label: 'Descripción', type: 'textarea', required: false },
-            { key: 'requiresNetworkInterface', label: 'Requiere interfaz de red', type: 'boolean' },
+            {
+                key: 'requiresNetworkInterface',
+                label: 'Requiere interfaz de red',
+                type: 'boolean',
+                destructiveWarning: 'Al desactivar esta opción se eliminarán las interfaces de red de todos los activos asociados a este tipo. ¿Deseas continuar?',
+            },
         ],
     },
     brand: {

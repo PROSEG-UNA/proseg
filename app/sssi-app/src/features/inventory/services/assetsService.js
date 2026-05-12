@@ -28,6 +28,16 @@ export async function fetchAssetById(id) {
     return data?.data ?? null;
 }
 
+export async function fetchLastKnownNetworkInterface(assetId) {
+    try {
+        const { data } = await axios.get(`${INVENTORY_ENDPOINTS.assets}/${assetId}/network-interface/last-known`, config);
+        return data?.data ?? null;
+    } catch (e) {
+        if (e?.response?.status === 404) return null;
+        throw e;
+    }
+}
+
 export async function fetchAssets({ page = 0, size = 10, search = '', filters = {}, sort = [] } = {}) {
     const params = new URLSearchParams();
     params.append('page', String(page));

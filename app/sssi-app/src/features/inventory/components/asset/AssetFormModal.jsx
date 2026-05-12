@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
     Box, Typography, TextField, MenuItem,
     Divider, IconButton, useTheme,
+    Dialog, DialogTitle, DialogContent, DialogActions, Button,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
@@ -9,13 +10,15 @@ import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import AlertModal from '../../../../common/components/AlertModal.jsx';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
 import CatalogFormModal from '../catalog/CatalogFormModal.jsx';
 import { CATALOG_CONFIG } from '../catalog/catalogConfig.js';
 import { fetchCatalogOptions } from '../../services/catalogService.js';
-import { createAsset, updateAsset, fetchAssetById } from '../../services/assetsService.js';
+import { createAsset, updateAsset, fetchAssetById, fetchLastKnownNetworkInterface } from '../../services/assetsService.js';
+import { uploadPhoto, registerArchive, fetchAssetArchives, deleteArchive } from '../../services/assetArchiveService.js';
 import { INVENTORY_ENDPOINTS } from '../../services/endpoints.js';
 
 const STATUS_OPTIONS = [
@@ -34,6 +37,9 @@ const INIT = {
     acquisitionDate: '', warrantyEndDate: '', firmwareSupportEndDate: '',
     ipAddress: '', macAddress: '',
 };
+
+// ─── Whitelist de tipos MIME permitidos para imágenes ───────────────────────
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 export default function AssetFormModal({ open, onClose, onSaved, assetId = null }) {
     const theme = useTheme();
@@ -54,9 +60,12 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
     const [locations, setLocations] = useState([]);
     const [loadingOptions, setLoadingOptions] = useState(false);
 
-    const [catalogModal, setCatalogModal] = useState(null);
-    const [photos, setPhotos]             = useState([]);
-    const [isDragOver, setIsDragOver]     = useState(false);
+    const [catalogModal, setCatalogModal]           = useState(null);
+    const [photos, setPhotos]                       = useState([]);
+    const [existingPhotos, setExistingPhotos]       = useState([]);
+    const [photosToDelete, setPhotosToDelete]       = useState([]);
+    const [isDragOver, setIsDragOver]               = useState(false);
+    const [pendingTypeChange, setPendingTypeChange] = useState(null);
     const fileInputRef = useRef(null);
 
     const selectedType             = types.find(t => t.id === formValues.typeId) ?? null;
@@ -71,12 +80,15 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
     useEffect(() => {
         if (!open) return;
         setPhotos(prev => { prev.forEach(p => URL.revokeObjectURL(p.preview)); return []; });
+        setExistingPhotos([]);
+        setPhotosToDelete([]);
         setFormValues(INIT);
         setErrors({});
         setTouched({});
         setSaving(false);
         setAlert(null);
         setIsDragOver(false);
+        setPendingTypeChange(null);
     }, [open]);
 
     useEffect(() => {
@@ -95,35 +107,43 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         return () => { cancelled = true; };
     }, [open]);
 
-    useEffect(() => {
+    const loadAssetData = () => {
         if (!open || !assetId) return;
         let cancelled = false;
         setLoadingAsset(true);
-        fetchAssetById(assetId)
-            .then((asset) => {
-                if (cancelled || !asset) return;
-                setFormValues({
-                    name:                   asset.name ?? '',
-                    description:            asset.description ?? '',
-                    brandId:                asset.model?.brand?.id ?? '',
-                    typeId:                 asset.model?.type?.id ?? '',
-                    modelId:                asset.model?.id ?? '',
-                    locationId:             asset.location?.id ?? '',
-                    status:                 asset.status ?? '',
-                    statusDescription:      asset.statusDescription ?? '',
-                    acquisitionDate:        asset.acquisitionDate ?? '',
-                    warrantyEndDate:        asset.warrantyEndDate ?? '',
-                    firmwareSupportEndDate: asset.firmwareSupportEndDate ?? '',
-                    ipAddress:              asset.networkInterface?.ipAddress ?? '',
-                    macAddress:             asset.networkInterface?.macAddress ?? '',
-                });
+        Promise.all([
+            fetchAssetById(assetId),
+            fetchAssetArchives(assetId).catch(() => []),
+        ])
+            .then(([asset, archives]) => {
+                if (cancelled) return;
+                if (asset) {
+                    setFormValues({
+                        name:                   asset.name ?? '',
+                        description:            asset.description ?? '',
+                        brandId:                asset.model?.brand?.id ?? '',
+                        typeId:                 asset.model?.type?.id ?? '',
+                        modelId:                asset.model?.id ?? '',
+                        locationId:             asset.location?.id ?? '',
+                        status:                 asset.status ?? '',
+                        statusDescription:      asset.statusDescription ?? '',
+                        acquisitionDate:        asset.acquisitionDate ?? '',
+                        warrantyEndDate:        asset.warrantyEndDate ?? '',
+                        firmwareSupportEndDate: asset.firmwareSupportEndDate ?? '',
+                        ipAddress:              asset.networkInterface?.ipAddress ?? '',
+                        macAddress:             asset.networkInterface?.macAddress ?? '',
+                    });
+                }
+                setExistingPhotos(archives.filter(a => !!a.imageUrl));
             })
             .catch(() => {
                 if (!cancelled) setAlert({ type: 'error', message: 'No se pudo cargar el activo' });
             })
             .finally(() => { if (!cancelled) setLoadingAsset(false); });
         return () => { cancelled = true; };
-    }, [open, assetId]);
+    };
+
+    useEffect(loadAssetData, [open, assetId]);
 
     const validateField = (key, value) => {
         const required = ['name', 'brandId', 'typeId', 'modelId', 'locationId', 'status'];
@@ -138,20 +158,15 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
             if (value.trim().length > 150) error = 'Máximo 150 caracteres';
         }
 
-        if (!error && requiresNetworkInterface) {
-            if (key === 'ipAddress') {
-                if (!value?.trim()) {
-                    error = 'La dirección IP es obligatoria';
-                } else if (!/^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/.test(value.trim())) {
-                    error = 'La dirección IP no tiene un formato válido';
-                }
+        if (!error && key === 'ipAddress' && value?.trim()) {
+            if (!/^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/.test(value.trim())) {
+                error = 'La dirección IP no tiene un formato válido';
             }
-            if (key === 'macAddress') {
-                if (!value?.trim()) {
-                    error = 'La dirección MAC es obligatoria';
-                } else if (value.trim().length < 12 || value.trim().length > 17) {
-                    error = 'La dirección MAC debe tener entre 12 y 17 caracteres';
-                }
+        }
+        if (!error && key === 'macAddress' && value?.trim()) {
+            const mac = value.trim();
+            if (mac.length < 12 || mac.length > 17) {
+                error = 'La dirección MAC debe tener entre 12 y 17 caracteres';
             }
         }
 
@@ -169,8 +184,17 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         if (touched.brandId) validateField('brandId', value);
     };
 
-    const handleTypeChange = (value) => {
-        const newType = types.find(t => t.id === value);
+    const prefillLastKnownNi = async () => {
+        const ni = await fetchLastKnownNetworkInterface(assetId);
+        if (!ni) return;
+        setFormValues(prev => ({
+            ...prev,
+            ipAddress:  prev.ipAddress  || ni.ipAddress  || '',
+            macAddress: prev.macAddress || ni.macAddress || '',
+        }));
+    };
+
+    const applyTypeChange = (value, newType) => {
         setFormValues(prev => ({
             ...prev,
             typeId: value,
@@ -178,7 +202,38 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
             ...(!newType?.requiresNetworkInterface && { ipAddress: '', macAddress: '' }),
         }));
         if (touched.typeId) validateField('typeId', value);
+        if (isEdit && newType?.requiresNetworkInterface && !formValues.ipAddress && !formValues.macAddress) {
+            prefillLastKnownNi();
+        }
     };
+
+    const handleTypeChange = (value) => {
+        const newType = types.find(t => t.id === value);
+        const willDeleteNi = isEdit
+            && requiresNetworkInterface
+            && !newType?.requiresNetworkInterface
+            && (!!formValues.ipAddress || !!formValues.macAddress);
+
+        if (willDeleteNi) {
+            setPendingTypeChange({
+                value,
+                newType,
+                ipAddress: formValues.ipAddress,
+                macAddress: formValues.macAddress,
+            });
+            return;
+        }
+        applyTypeChange(value, newType);
+    };
+
+    const confirmTypeChange = () => {
+        if (pendingTypeChange) {
+            applyTypeChange(pendingTypeChange.value, pendingTypeChange.newType);
+        }
+        setPendingTypeChange(null);
+    };
+
+    const cancelTypeChange = () => setPendingTypeChange(null);
 
     const handleBlur = (key) => {
         setTouched(prev => ({ ...prev, [key]: true }));
@@ -237,7 +292,6 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
 
     const handleSave = async () => {
         const requiredFields = ['name', 'brandId', 'typeId', 'modelId', 'locationId', 'status'];
-        if (requiresNetworkInterface) requiredFields.push('ipAddress', 'macAddress');
 
         const newTouched = {};
         const newErrors  = {};
@@ -254,13 +308,13 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
             newErrors.name    = 'Mínimo 2 caracteres';
             newTouched.name   = true;
         }
-        if (requiresNetworkInterface && !newErrors.ipAddress && formValues.ipAddress?.trim()) {
+        if (!newErrors.ipAddress && formValues.ipAddress?.trim()) {
             if (!/^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/.test(formValues.ipAddress.trim())) {
                 newErrors.ipAddress  = 'La dirección IP no tiene un formato válido';
                 newTouched.ipAddress = true;
             }
         }
-        if (requiresNetworkInterface && !newErrors.macAddress && formValues.macAddress?.trim()) {
+        if (!newErrors.macAddress && formValues.macAddress?.trim()) {
             const mac = formValues.macAddress.trim();
             if (mac.length < 12 || mac.length > 17) {
                 newErrors.macAddress  = 'La dirección MAC debe tener entre 12 y 17 caracteres';
@@ -288,18 +342,42 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 acquisitionDate:         formValues.acquisitionDate               || null,
                 warrantyEndDate:         formValues.warrantyEndDate               || null,
                 firmwareSupportEndDate:  formValues.firmwareSupportEndDate        || null,
-                ...(requiresNetworkInterface && {
+                ...(requiresNetworkInterface && formValues.ipAddress?.trim() && formValues.macAddress?.trim() && {
                     networkInterface: {
                         ipAddress:  formValues.ipAddress.trim(),
                         macAddress: formValues.macAddress.trim(),
                     },
                 }),
             };
+            let savedAssetId;
             if (isEdit) {
                 await updateAsset(assetId, payload);
+                savedAssetId = assetId;
             } else {
-                await createAsset(payload);
+                const created = await createAsset(payload);
+                savedAssetId = created.id;
             }
+
+            if (photos.length > 0) {
+                const results = await Promise.allSettled(
+                    photos.map(async (photo) => {
+                        const objectName = await uploadPhoto(savedAssetId, photo.file);
+                        await registerArchive(savedAssetId, objectName);
+                    })
+                );
+                const failed = results.filter(r => r.status === 'rejected').length;
+                if (failed > 0) {
+                    setAlert({ type: 'warning', message: `El activo se guardó, pero ${failed} imagen(es) no pudieron subirse.` });
+                    onSaved?.();
+                    onClose();
+                    return;
+                }
+            }
+
+            if (photosToDelete.length > 0) {
+                await Promise.allSettled(photosToDelete.map(id => deleteArchive(id)));
+            }
+
             onSaved?.();
             onClose();
         } catch (e) {
@@ -315,9 +393,21 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         }
     };
 
+    // ─── Validación de whitelist: solo JPG, PNG, WEBP ───────────────────────
     const handleFileSelect = (files) => {
-        const images = Array.from(files).filter(f => f.type.startsWith('image/'));
-        const next   = images.map(f => ({ file: f, preview: URL.createObjectURL(f), name: f.name }));
+        const all     = Array.from(files);
+        const valid   = all.filter(f => ALLOWED_IMAGE_TYPES.includes(f.type));
+        const invalid = all.filter(f => !ALLOWED_IMAGE_TYPES.includes(f.type));
+
+        if (invalid.length > 0) {
+            setAlert({
+                type: 'warning',
+                message: `Formato no permitido: ${invalid.map(f => f.name).join(', ')}. Solo se aceptan JPG, PNG y WEBP.`,
+            });
+        }
+
+        if (valid.length === 0) return;
+        const next = valid.map(f => ({ file: f, preview: URL.createObjectURL(f), name: f.name }));
         setPhotos(prev => [...prev, ...next]);
     };
 
@@ -326,6 +416,11 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
             URL.revokeObjectURL(prev[index].preview);
             return prev.filter((_, i) => i !== index);
         });
+    };
+
+    const handleRemoveExistingPhoto = (archiveId) => {
+        setExistingPhotos(prev => prev.filter(p => p.id !== archiveId));
+        setPhotosToDelete(prev => [...prev, archiveId]);
     };
 
     const fieldSx = {
@@ -626,13 +721,13 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                                 </Typography>
                             </Typography>
                             <Typography sx={{ fontSize: 11.5, color: 'text.disabled' }}>
-                                JPG, PNG, WEBP, GIF
+                                JPG, PNG, WEBP
                             </Typography>
                         </Box>
                         <input
                             ref={fileInputRef}
                             type="file"
-                            accept="image/*"
+                            accept="image/jpeg,image/png,image/webp"
                             multiple
                             style={{ display: 'none' }}
                             onChange={e => { handleFileSelect(e.target.files); e.target.value = ''; }}
@@ -670,6 +765,48 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                                 ))}
                             </Box>
                         )}
+
+                        {isEdit && existingPhotos.length > 0 && (
+                            <Box sx={{ mt: 2.5 }}>
+                                <Typography sx={{
+                                    fontSize: 11, fontWeight: 600, letterSpacing: '0.06em',
+                                    textTransform: 'uppercase', color: 'text.secondary', mb: 1,
+                                }}>
+                                    Fotos guardadas
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                                    {existingPhotos.map(photo => (
+                                        <Box
+                                            key={photo.id}
+                                            sx={{
+                                                position: 'relative', width: 80, height: 80,
+                                                borderRadius: '10px', overflow: 'hidden',
+                                                border: '1px solid', borderColor: 'divider',
+                                            }}
+                                        >
+                                            <Box
+                                                component="img"
+                                                src={photo.imageUrl}
+                                                alt={photo.caption || ''}
+                                                sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                            />
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleRemoveExistingPhoto(photo.id)}
+                                                sx={{
+                                                    position: 'absolute', top: 2, right: 2,
+                                                    bgcolor: 'rgba(0,0,0,0.55)', color: '#fff',
+                                                    p: 0.25,
+                                                    '&:hover': { bgcolor: 'rgba(0,0,0,0.75)' },
+                                                }}
+                                            >
+                                                <CloseIcon sx={{ fontSize: 12 }} />
+                                            </IconButton>
+                                        </Box>
+                                    ))}
+                                </Box>
+                            </Box>
+                        )}
                     </Box>
                 </Box>
             </GeneralModal>
@@ -689,6 +826,54 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 message={alert?.message}
                 onClose={() => setAlert(null)}
             />
+
+            <Dialog
+                open={!!pendingTypeChange}
+                onClose={cancelTypeChange}
+                maxWidth="xs"
+                fullWidth
+                slotProps={{ backdrop: { sx: { backdropFilter: 'blur(4px)' } } }}
+            >
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <WarningAmberIcon sx={{ color: 'warning.main', fontSize: 28 }} />
+                    <Typography component="span" variant="h6" fontWeight={600}>
+                        Eliminar interfaz de red
+                    </Typography>
+                </DialogTitle>
+                <DialogContent>
+                    <Typography variant="body1" sx={{ mb: 1.5 }}>
+                        El nuevo tipo seleccionado no requiere interfaz de red. La interfaz actualmente asociada a este activo será eliminada al guardar:
+                    </Typography>
+                    <Box sx={{
+                        bgcolor: 'action.hover',
+                        borderRadius: '8px',
+                        px: 1.5, py: 1,
+                        display: 'flex', flexDirection: 'column', gap: 0.25,
+                    }}>
+                        {pendingTypeChange?.ipAddress && (
+                            <Typography sx={{ fontSize: 13, fontFamily: '"Roboto Mono", monospace' }}>
+                                IP: {pendingTypeChange.ipAddress}
+                            </Typography>
+                        )}
+                        {pendingTypeChange?.macAddress && (
+                            <Typography sx={{ fontSize: 13, fontFamily: '"Roboto Mono", monospace' }}>
+                                MAC: {pendingTypeChange.macAddress}
+                            </Typography>
+                        )}
+                    </Box>
+                    <Typography variant="body2" sx={{ mt: 1.5, color: 'text.secondary' }}>
+                        ¿Deseas continuar?
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={cancelTypeChange} variant="outlined" sx={{ textTransform: 'none' }}>
+                        Cancelar
+                    </Button>
+                    <Button onClick={confirmTypeChange} variant="contained" color="warning" autoFocus sx={{ textTransform: 'none' }}>
+                        Eliminar y continuar
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </>
     );
 }
