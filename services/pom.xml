@@ -25,6 +25,7 @@
         <module>msvc-common</module>
         <module>msvc-inventory</module>
         <module>msvc-archive</module>
+        <module>msvc-document-processor</module>
     </modules>
 
     <properties>
