@@ -57,59 +57,10 @@ spring:
           filters:
             - StripPrefix=2
 
-        - id: msvc-inventory-brands
+        - id: msvc-inventory
           uri: http://localhost:8095
           predicates:
-            - Path=/api/v1/inventory/brands/**
-          filters:
-            - StripPrefix=0
-
-        - id: msvc-inventory-locations
-          uri: http://localhost:8095
-          predicates:
-            - Path=/api/v1/inventory/locations/**
-          filters:
-            - StripPrefix=0
-
-        - id: msvc-inventory-sites
-          uri: http://localhost:8095
-          predicates:
-            - Path=/api/v1/inventory/sites/**
-          filters:
-            - StripPrefix=0
-
-        - id: msvc-inventory-types
-          uri: http://localhost:8095
-          predicates:
-            - Path=/api/v1/inventory/types/**
-          filters:
-            - StripPrefix=0
-
-        - id: msvc-inventory-models
-          uri: http://localhost:8095
-          predicates:
-            - Path=/api/v1/inventory/models/**
-          filters:
-            - StripPrefix=0
-
-        - id: msvc-inventory-assets
-          uri: http://localhost:8095
-          predicates:
-            - Path=/api/v1/inventory/assets/**
-          filters:
-            - StripPrefix=0
-
-        - id: msvc-inventory-network-interfaces
-          uri: http://localhost:8095
-          predicates:
-            - Path=/api/v1/inventory/network-interfaces/**
-          filters:
-            - StripPrefix=0
-
-        - id: msvc-inventory-asset-archives
-          uri: http://localhost:8095
-          predicates:
-            - Path=/api/v1/inventory/asset-archives,/api/v1/inventory/asset-archives/**
+            - Path=/api/v1/inventory/**
           filters:
             - StripPrefix=0
 
