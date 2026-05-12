@@ -42,6 +42,9 @@ export default function SearchableSelect({
     const visibleCount = filtered.length === 0 ? 1 : pageItems.length;
     const placeholderCount = Math.max(0, pageSize - visibleCount);
 
+    const selectedItem = value ? items.find(i => getItemValue(i) === value) : null;
+    const selectedOnPage = selectedItem ? pageItems.some(i => getItemValue(i) === value) : true;
+
     useEffect(() => { setPage(0); }, [search]);
 
     return (
@@ -104,6 +107,12 @@ export default function SearchableSelect({
             {filtered.length === 0 && (
                 <MenuItem disabled sx={{ fontSize: 13, color: 'text.disabled', justifyContent: 'center' }}>
                     Sin resultados
+                </MenuItem>
+            )}
+
+            {selectedItem && !selectedOnPage && (
+                <MenuItem key={`__sel__${getItemValue(selectedItem)}`} value={getItemValue(selectedItem)} sx={{ display: 'none' }}>
+                    {getItemLabel(selectedItem)}
                 </MenuItem>
             )}
 

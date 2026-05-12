@@ -38,7 +38,6 @@ const INIT = {
     ipAddress: '', macAddress: '',
 };
 
-// ─── Whitelist de tipos MIME permitidos para imágenes ───────────────────────
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 export default function AssetFormModal({ open, onClose, onSaved, assetId = null }) {
@@ -102,7 +101,22 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
             fetchCatalogOptions(INVENTORY_ENDPOINTS.locations),
         ]).then(([b, t, m, l]) => {
             if (cancelled) return;
-            setBrands(b); setTypes(t); setModels(m); setLocations(l);
+            setBrands(prev => {
+                const ids = new Set(b.map(x => x.id));
+                return [...b, ...prev.filter(x => !ids.has(x.id))];
+            });
+            setTypes(prev => {
+                const ids = new Set(t.map(x => x.id));
+                return [...t, ...prev.filter(x => !ids.has(x.id))];
+            });
+            setModels(prev => {
+                const ids = new Set(m.map(x => x.id));
+                return [...m, ...prev.filter(x => !ids.has(x.id))];
+            });
+            setLocations(prev => {
+                const ids = new Set(l.map(x => x.id));
+                return [...l, ...prev.filter(x => !ids.has(x.id))];
+            });
         }).catch(() => {}).finally(() => { if (!cancelled) setLoadingOptions(false); });
         return () => { cancelled = true; };
     }, [open]);
@@ -111,11 +125,9 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         if (!open || !assetId) return;
         let cancelled = false;
         setLoadingAsset(true);
-        Promise.all([
-            fetchAssetById(assetId),
-            fetchAssetArchives(assetId).catch(() => []),
-        ])
-            .then(([asset, archives]) => {
+
+        fetchAssetById(assetId)
+            .then(asset => {
                 if (cancelled) return;
                 if (asset) {
                     setFormValues({
@@ -133,13 +145,32 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                         ipAddress:              asset.networkInterface?.ipAddress ?? '',
                         macAddress:             asset.networkInterface?.macAddress ?? '',
                     });
+                    if (asset.model?.type) {
+                        setTypes(prev => prev.some(t => t.id === asset.model.type.id) ? prev : [...prev, asset.model.type]);
+                    }
+                    if (asset.model?.brand) {
+                        setBrands(prev => prev.some(b => b.id === asset.model.brand.id) ? prev : [...prev, asset.model.brand]);
+                    }
+                    if (asset.model) {
+                        setModels(prev => prev.some(m => m.id === asset.model.id) ? prev : [...prev, asset.model]);
+                    }
+                    if (asset.location) {
+                        setLocations(prev => prev.some(l => l.id === asset.location.id) ? prev : [...prev, asset.location]);
+                    }
                 }
-                setExistingPhotos(archives.filter(a => !!a.imageUrl));
             })
             .catch(() => {
                 if (!cancelled) setAlert({ type: 'error', message: 'No se pudo cargar el activo' });
             })
             .finally(() => { if (!cancelled) setLoadingAsset(false); });
+
+        fetchAssetArchives(assetId)
+            .then(archives => {
+                if (cancelled) return;
+                setExistingPhotos(archives.filter(a => !!a.imageUrl));
+            })
+            .catch(() => {});
+
         return () => { cancelled = true; };
     };
 
@@ -393,7 +424,6 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         }
     };
 
-    // ─── Validación de whitelist: solo JPG, PNG, WEBP ───────────────────────
     const handleFileSelect = (files) => {
         const all     = Array.from(files);
         const valid   = all.filter(f => ALLOWED_IMAGE_TYPES.includes(f.type));

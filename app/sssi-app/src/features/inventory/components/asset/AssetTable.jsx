@@ -162,6 +162,7 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
                         columnVisibility: {
                             description: false,
                             site: false,
+                            status: false,
                             acquisitionDate: false,
                             warrantyEndDate: false,
                             firmwareSupportEndDate: false,
