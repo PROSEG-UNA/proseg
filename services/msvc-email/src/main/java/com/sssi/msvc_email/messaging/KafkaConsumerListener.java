@@ -85,4 +85,24 @@ public class KafkaConsumerListener {
         log.info("PASSWORD CHANGED EVENT: {}", event);
         emailEventService.sendPasswordChangedEmail(event);
     }
+
+    @KafkaListener(
+            topics = KafkaTopics.PASSWORD_EXPIRING_SOON_TOPIC,
+            groupId = "msvc-email-group",
+            containerFactory = "passwordExpiringSoonListenerFactory"
+    )
+    public void onPasswordExpiringSoon(PasswordExpiringSoonEvent event) {
+        log.info("PASSWORD EXPIRING SOON EVENT: {}", event);
+        emailEventService.sendPasswordExpiringSoonEmail(event);
+    }
+
+    @KafkaListener(
+            topics = KafkaTopics.PASSWORD_EXPIRED_RESET_REQUIRED_TOPIC,
+            groupId = "msvc-email-group",
+            containerFactory = "passwordExpiredResetRequestedListenerFactory"
+    )
+    public void onPasswordExpiredResetRequested(PasswordExpiredResetRequiredEvent event) {
+        log.info("PASSWORD EXPIRED RESET REQUESTED EVENT: {}", event);
+        emailEventService.sendPasswordExpiredResetEmail(event);
+    }
 }

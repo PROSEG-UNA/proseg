@@ -5,21 +5,25 @@ import com.sssi.common.api.response.PageResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
 import com.sssi.common.api.util.PageMapper;
 import com.sssi.msvcinventory.dto.request.AssetRequestDto;
+import com.sssi.msvcinventory.dto.response.AssetArchiveResponseDto;
 import com.sssi.msvcinventory.dto.response.AssetResponseDto;
-import com.sssi.msvcinventory.service.ImageService;
+import com.sssi.msvcinventory.service.AssetArchiveService;
 import com.sssi.msvcinventory.service.AssetService;
-import com.sssi.msvcinventory.dto.response.ImageResponseDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("${routes.assets:/api/v1/inventory/assets}")
@@ -27,47 +31,55 @@ import java.util.UUID;
 public class AssetController {
 
     private final AssetService assetService;
-    private final ImageService imageService;
+    private final AssetArchiveService assetArchiveService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<AssetResponseDto>> create(@Valid @RequestBody AssetRequestDto request) {
-        return ApiResponseBuilder.created(
-                assetService.create(request),
-                "Activo creado correctamente"
-        );
+                AssetResponseDto dto = assetService.create(request);
+                List<AssetArchiveResponseDto> archives = assetArchiveService.getAssetArchivesByAssetId(dto.getId());
+                dto.setArchiveUrls(archives.stream().map(AssetArchiveResponseDto::getImageUrl).filter(Objects::nonNull).collect(Collectors.toList()));
+
+                return ApiResponseBuilder.created(dto, "Activo creado correctamente");
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<AssetResponseDto>> findById(@PathVariable UUID id) {
-        return ApiResponseBuilder.ok(
-                assetService.findById(id),
-                "Activo obtenido correctamente"
-        );
+                AssetResponseDto dto = assetService.findById(id);
+                List<AssetArchiveResponseDto> archives = assetArchiveService.getAssetArchivesByAssetId(id);
+                dto.setArchiveUrls(archives.stream().map(AssetArchiveResponseDto::getImageUrl).filter(Objects::nonNull).collect(Collectors.toList()));
+
+                return ApiResponseBuilder.ok(dto, "Activo obtenido correctamente");
     }
 
     private static final Set<String> RESERVED_PARAMS = Set.of("search", "sort", "page", "size");
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<AssetResponseDto>>> findAll(
-            @RequestParam(required = false) String search,
-            @RequestParam Map<String, String> allParams,
-            @PageableDefault(size = 10, page = 0) Pageable pageable) {
+                    @PageableDefault(size = 10, page = 0) Pageable pageable) {
+            Page<AssetResponseDto> page = assetService.findAll(pageable);
+            page.forEach(dto -> {
+                    List<AssetArchiveResponseDto> archives = assetArchiveService.getAssetArchivesByAssetId(dto.getId());
+                    dto.setArchiveUrls(archives.stream().map(AssetArchiveResponseDto::getImageUrl).filter(Objects::nonNull).collect(Collectors.toList()));
+            });
 
-        Map<String, String> filters = new HashMap<>(allParams);
-        RESERVED_PARAMS.forEach(filters::remove);
-
-        return ApiResponseBuilder.ok(
-                PageMapper.from(assetService.findAll(search, filters, pageable)),
-                "Lista de activos"
-        );
+            return ApiResponseBuilder.ok(
+                            PageMapper.from(page),
+                            "Lista de activos"
+            );
     }
 
     @GetMapping("/location/{locationId}")
     public ResponseEntity<ApiResponse<PageResponse<AssetResponseDto>>> findByLocationId(
             @PathVariable UUID locationId,
             @PageableDefault(size = 10, page = 0) Pageable pageable) {
+        Page<AssetResponseDto> page = assetService.findByLocationId(locationId, pageable);
+        page.forEach(dto -> {
+            List<AssetArchiveResponseDto> archives = assetArchiveService.getAssetArchivesByAssetId(dto.getId());
+            dto.setArchiveUrls(archives.stream().map(AssetArchiveResponseDto::getImageUrl).filter(Objects::nonNull).collect(Collectors.toList()));
+        });
+
         return ApiResponseBuilder.ok(
-                PageMapper.from(assetService.findByLocationId(locationId, pageable)),
+                PageMapper.from(page),
                 "Activos por ubicación"
         );
     }
@@ -76,8 +88,14 @@ public class AssetController {
     public ResponseEntity<ApiResponse<PageResponse<AssetResponseDto>>> findBySiteId(
             @PathVariable UUID siteId,
             @PageableDefault(size = 10, page = 0) Pageable pageable) {
+        Page<AssetResponseDto> page = assetService.findBySiteId(siteId, pageable);
+        page.forEach(dto -> {
+            List<AssetArchiveResponseDto> archives = assetArchiveService.getAssetArchivesByAssetId(dto.getId());
+            dto.setArchiveUrls(archives.stream().map(AssetArchiveResponseDto::getImageUrl).filter(Objects::nonNull).collect(Collectors.toList()));
+        });
+
         return ApiResponseBuilder.ok(
-                PageMapper.from(assetService.findBySiteId(siteId, pageable)),
+                PageMapper.from(page),
                 "Activos por sitio"
         );
     }
@@ -86,8 +104,14 @@ public class AssetController {
     public ResponseEntity<ApiResponse<PageResponse<AssetResponseDto>>> findByTypeId(
             @PathVariable UUID typeId,
             @PageableDefault(size = 10, page = 0) Pageable pageable) {
+        Page<AssetResponseDto> page = assetService.findByTypeId(typeId, pageable);
+        page.forEach(dto -> {
+            List<AssetArchiveResponseDto> archives = assetArchiveService.getAssetArchivesByAssetId(dto.getId());
+            dto.setArchiveUrls(archives.stream().map(AssetArchiveResponseDto::getImageUrl).filter(Objects::nonNull).collect(Collectors.toList()));
+        });
+
         return ApiResponseBuilder.ok(
-                PageMapper.from(assetService.findByTypeId(typeId, pageable)),
+                PageMapper.from(page),
                 "Activos por tipo"
         );
     }
@@ -96,10 +120,11 @@ public class AssetController {
     public ResponseEntity<ApiResponse<AssetResponseDto>> update(
             @PathVariable UUID id,
             @Valid @RequestBody AssetRequestDto request) {
-        return ApiResponseBuilder.ok(
-                assetService.update(id, request),
-                "Activo actualizado correctamente"
-        );
+        AssetResponseDto dto = assetService.update(id, request);
+        List<AssetArchiveResponseDto> archives = assetArchiveService.getAssetArchivesByAssetId(dto.getId());
+        dto.setArchiveUrls(archives.stream().map(AssetArchiveResponseDto::getImageUrl).filter(Objects::nonNull).collect(Collectors.toList()));
+
+        return ApiResponseBuilder.ok(dto, "Activo actualizado correctamente");
     }
 
     @DeleteMapping("/{id}")
@@ -111,13 +136,13 @@ public class AssetController {
         );
     }
 
-    @GetMapping("/{assetId}/images")
-    public ResponseEntity<ApiResponse<PageResponse<ImageResponseDto>>> findImages(
+    @GetMapping("/{assetId}/asset-archives")
+    public ResponseEntity<ApiResponse<PageResponse<AssetArchiveResponseDto>>> findAssetArchives(
             @PathVariable UUID assetId,
             @PageableDefault(size = 10, page = 0) Pageable pageable) {
         return ApiResponseBuilder.ok(
-                PageMapper.from(imageService.findByAssetId(assetId, pageable)),
-                "Imágenes del activo"
+                PageMapper.from(assetArchiveService.findByAssetId(assetId, pageable)),
+                "Archivos del activo"
         );
     }
 }

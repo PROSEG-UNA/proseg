@@ -13,6 +13,7 @@ public class UserPasswordChangedEmailTemplate implements EmailTemplateDefinition
 
     private final String firstName;
     private final String lastName;
+    private final String username;
     private final String email;
     private final String loginUrl;
     private final long timestamp;
@@ -30,6 +31,7 @@ public class UserPasswordChangedEmailTemplate implements EmailTemplateDefinition
         Context ctx = new Context();
         ctx.setVariable("firstName", firstName);
         ctx.setVariable("lastName", lastName);
+        ctx.setVariable("username", username);
         ctx.setVariable("email", email);
         ctx.setVariable("loginUrl", loginUrl);
         ctx.setVariable("timestamp", DateUtils.formatReadable(timestamp));
@@ -46,9 +48,9 @@ public class UserPasswordChangedEmailTemplate implements EmailTemplateDefinition
 
         TemplateValidator.requireNotBlank(firstName, "firstName", getTemplateName());
         TemplateValidator.requireNotBlank(lastName, "lastName", getTemplateName());
+        TemplateValidator.requireNotBlank(username, "username", getTemplateName());
         TemplateValidator.requireNotBlank(email, "email", getTemplateName());
         TemplateValidator.requireNotBlank(loginUrl, "loginUrl", getTemplateName());
-
         if (timestamp <= 0) {
             throw new IllegalArgumentException("timestamp inválido");
         }

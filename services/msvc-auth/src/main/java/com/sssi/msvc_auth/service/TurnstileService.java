@@ -22,6 +22,9 @@ public class TurnstileService {
     @Value("${turnstile.secret-key}")
     private String secretKey;
 
+    @Value("${turnstile.max-retries:3}")
+    private int maxRetries;
+    
     private static final String TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
     public boolean validateCaptcha(String captchaToken) {
@@ -30,30 +33,41 @@ public class TurnstileService {
             return false;
         }
 
-        try {
-            String requestBody = String.format("{\"secret\":\"%s\",\"response\":\"%s\"}", secretKey, captchaToken);
+        int attempt = 0;
+        while (attempt < maxRetries) {
+            attempt++;
+            try {
+                String requestBody = String.format("{\"secret\":\"%s\",\"response\":\"%s\"}", secretKey, captchaToken);
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpEntity<String> request = new HttpEntity<>(requestBody, headers);
+                HttpEntity<String> request = new HttpEntity<>(requestBody, headers);
 
-            String response = restTemplate.postForObject(TURNSTILE_VERIFY_URL, request, String.class);
+                String response = restTemplate.postForObject(TURNSTILE_VERIFY_URL, request, String.class);
 
-            if (response == null) {
-                log.warn("Null response from Turnstile");
-                return false;
+                if (response == null) {
+                    log.warn("Null response from Turnstile (attempt {}/{})", attempt, maxRetries);
+                    if (attempt < maxRetries) {
+                        continue;
+                    }
+                    return false;
+                }
+
+                JsonNode jsonResponse = objectMapper.readTree(response);
+                boolean success = jsonResponse.get("success").asBoolean(false);
+
+                log.info("Validation of Turnstile: {} (attempt {}/{})", success, attempt, maxRetries);
+                return success;
+
+            } catch (Exception e) {
+                log.warn("Error validating Turnstile captcha on attempt {}/{}: {}", attempt, maxRetries, e.getMessage());
+                if (attempt >= maxRetries) {
+                    log.error("Max retries reached for Turnstile captcha validation", e);
+                    return false;
+                }
             }
-
-            JsonNode jsonResponse = objectMapper.readTree(response);
-            boolean success = jsonResponse.get("success").asBoolean(false);
-
-            log.info("Validation of Turnstile: {}", success);
-            return success;
-
-        } catch (Exception e) {
-            log.error("Error validating Turnstile captcha: {}", e.getMessage(), e);
-            return false;
         }
+        return false;
     }
 }

@@ -88,4 +88,16 @@ public class KafkaConsumerConfig {
     passwordChangedListenerFactory() {
         return listenerFactory(PasswordChangedEvent.class);
     }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, PasswordExpiringSoonEvent>
+    passwordExpiringSoonListenerFactory() {
+        return listenerFactory(PasswordExpiringSoonEvent.class);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, PasswordExpiredResetRequiredEvent>
+    passwordExpiredResetRequestedListenerFactory() {
+        return listenerFactory(PasswordExpiredResetRequiredEvent.class);
+    }
 }
