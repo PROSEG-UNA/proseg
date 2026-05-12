@@ -7,6 +7,7 @@ import com.sssi.common.api.util.PageMapper;
 import com.sssi.msvcinventory.dto.request.AssetRequestDto;
 import com.sssi.msvcinventory.dto.response.AssetArchiveResponseDto;
 import com.sssi.msvcinventory.dto.response.AssetResponseDto;
+import com.sssi.msvcinventory.dto.response.NetworkInterfaceResponseDto;
 import com.sssi.msvcinventory.service.AssetArchiveService;
 import com.sssi.msvcinventory.service.AssetService;
 import jakarta.validation.Valid;
@@ -133,6 +134,15 @@ public class AssetController {
         return ApiResponseBuilder.ok(
                 null,
                 "Activo eliminado correctamente"
+        );
+    }
+
+    @GetMapping("/{id}/network-interface/last-known")
+    public ResponseEntity<ApiResponse<NetworkInterfaceResponseDto>> findLastKnownNetworkInterface(
+            @PathVariable UUID id) {
+        return ApiResponseBuilder.ok(
+                assetService.findLastKnownNetworkInterface(id),
+                "Última interfaz de red conocida"
         );
     }
 

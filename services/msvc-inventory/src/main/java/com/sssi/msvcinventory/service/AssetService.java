@@ -2,6 +2,7 @@ package com.sssi.msvcinventory.service;
 
 import com.sssi.msvcinventory.dto.request.AssetRequestDto;
 import com.sssi.msvcinventory.dto.response.AssetResponseDto;
+import com.sssi.msvcinventory.dto.response.NetworkInterfaceResponseDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -25,4 +26,6 @@ public interface AssetService {
     AssetResponseDto update(UUID id, AssetRequestDto request);
 
     void delete(UUID id);
+
+    NetworkInterfaceResponseDto findLastKnownNetworkInterface(UUID assetId);
 }

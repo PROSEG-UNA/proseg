@@ -7,6 +7,7 @@ import com.sssi.msvcinventory.exception.TypeException;
 import com.sssi.msvcinventory.mapper.TypeMapper;
 import com.sssi.msvcinventory.repository.ModelRepository;
 import com.sssi.msvcinventory.repository.AssetRepository;
+import com.sssi.msvcinventory.repository.NetworkInterfaceRepository;
 import com.sssi.msvcinventory.repository.TypeRepository;
 import com.sssi.msvcinventory.service.TypeService;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class TypeServiceImpl implements TypeService {
     private final TypeRepository typeRepository;
     private final ModelRepository modelRepository;
     private final AssetRepository assetRepository;
+    private final NetworkInterfaceRepository networkInterfaceRepository;
     private final TypeMapper typeMapper;
 
     @Override
@@ -61,8 +63,15 @@ public class TypeServiceImpl implements TypeService {
             throw TypeException.duplicateName(request.getName());
         }
 
+        boolean wasRequiringNi = type.isRequiresNetworkInterface();
         typeMapper.updateEntityFromRequest(request, type);
-        return typeMapper.toResponse(typeRepository.save(type));
+        typeRepository.save(type);
+
+        if (wasRequiringNi && !type.isRequiresNetworkInterface()) {
+            networkInterfaceRepository.softDeleteAllByAssetTypeId(id);
+        }
+
+        return typeMapper.toResponse(type);
     }
 
     @Override

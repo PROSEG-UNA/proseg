@@ -3,6 +3,7 @@ package com.sssi.msvcinventory.service.impl;
 import com.sssi.msvcinventory.dto.request.AssetRequestDto;
 import com.sssi.msvcinventory.dto.request.NetworkInterfaceEmbeddedRequestDto;
 import com.sssi.msvcinventory.dto.response.AssetResponseDto;
+import com.sssi.msvcinventory.dto.response.NetworkInterfaceResponseDto;
 import com.sssi.msvcinventory.entity.*;
 import com.sssi.msvcinventory.exception.AssetException;
 import com.sssi.msvcinventory.exception.ModelException;
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -49,11 +51,6 @@ public class AssetServiceImpl implements AssetService {
 
         Location location = locationRepository.findById(request.getLocationId())
                 .orElseThrow(() -> LocationException.notFound(request.getLocationId().toString()));
-
-        Type type = model.getType();
-        if (type.isRequiresNetworkInterface() && request.getNetworkInterface() == null) {
-            throw AssetException.networkInterfaceRequired(type.getName());
-        }
 
         Asset asset = assetMapper.toEntity(request);
         asset.setModel(model);
@@ -132,9 +129,6 @@ public class AssetServiceImpl implements AssetService {
 
         Type type = model.getType();
         boolean hasExistingNi = networkInterfaceRepository.existsByAssetId(id);
-        if (type.isRequiresNetworkInterface() && request.getNetworkInterface() == null && !hasExistingNi) {
-            throw AssetException.networkInterfaceRequired(type.getName());
-        }
 
         assetMapper.updateEntityFromRequest(request, asset);
         asset.setModel(model);
@@ -143,14 +137,23 @@ public class AssetServiceImpl implements AssetService {
 
         if (!type.isRequiresNetworkInterface()) {
             if (hasExistingNi) {
-                networkInterfaceRepository.findByAssetId(id)
-                        .ifPresent(networkInterfaceRepository::delete);
+                NetworkInterface ni = asset.getNetworkInterface();
+                asset.setNetworkInterface(null);
+                assetRepository.saveAndFlush(asset);
+                if (ni != null) {
+                    networkInterfaceRepository.delete(ni);
+                }
             }
         } else if (request.getNetworkInterface() != null) {
-            networkInterfaceRepository.findByAssetId(id).ifPresentOrElse(
-                    existing -> updateNetworkInterface(request.getNetworkInterface(), existing),
-                    () -> saveNetworkInterface(request.getNetworkInterface(), asset)
-            );
+            Optional<NetworkInterface> active = networkInterfaceRepository.findByAssetId(id);
+            if (active.isPresent()) {
+                updateNetworkInterface(request.getNetworkInterface(), active.get());
+            } else {
+                networkInterfaceRepository.findByAssetIdIncludingDeleted(id).ifPresentOrElse(
+                        deleted -> resurrectNetworkInterface(request.getNetworkInterface(), deleted),
+                        () -> saveNetworkInterface(request.getNetworkInterface(), asset)
+                );
+            }
         }
 
         return toPolymorphicResponse(assetRepository.findById(id).orElseThrow());
@@ -162,6 +165,17 @@ public class AssetServiceImpl implements AssetService {
         Asset asset = assetRepository.findById(id)
                 .orElseThrow(() -> AssetException.notFound(id.toString()));
         assetRepository.delete(asset);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public NetworkInterfaceResponseDto findLastKnownNetworkInterface(UUID assetId) {
+        if (!assetRepository.existsById(assetId)) {
+            throw AssetException.notFound(assetId.toString());
+        }
+        return networkInterfaceRepository.findByAssetIdIncludingDeleted(assetId)
+                .map(networkInterfaceMapper::toResponse)
+                .orElseThrow(() -> NetworkInterfaceException.notFound(assetId.toString()));
     }
 
     private void saveNetworkInterface(NetworkInterfaceEmbeddedRequestDto dto, Asset asset) {
@@ -185,6 +199,19 @@ public class AssetServiceImpl implements AssetService {
         }
         existing.setIpAddress(dto.getIpAddress());
         existing.setMacAddress(dto.getMacAddress());
+        networkInterfaceRepository.save(existing);
+    }
+
+    private void resurrectNetworkInterface(NetworkInterfaceEmbeddedRequestDto dto, NetworkInterface existing) {
+        if (networkInterfaceRepository.existsByIpAddressAndIdNot(dto.getIpAddress(), existing.getId())) {
+            throw NetworkInterfaceException.duplicateIp(dto.getIpAddress());
+        }
+        if (networkInterfaceRepository.existsByMacAddressAndIdNot(dto.getMacAddress(), existing.getId())) {
+            throw NetworkInterfaceException.duplicateMac(dto.getMacAddress());
+        }
+        existing.setIpAddress(dto.getIpAddress());
+        existing.setMacAddress(dto.getMacAddress());
+        existing.markAsActive();
         networkInterfaceRepository.save(existing);
     }
 
