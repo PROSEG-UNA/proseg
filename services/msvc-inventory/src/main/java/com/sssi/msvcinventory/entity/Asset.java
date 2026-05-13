@@ -1,6 +1,8 @@
 package com.sssi.msvcinventory.entity;
 
 import com.sssi.common.entity.BaseEntity;
+import com.sssi.common.specification.Filterable;
+import com.sssi.common.specification.FilterType;
 import com.sssi.msvcinventory.entity.enums.AssetStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -30,32 +32,41 @@ public class Asset extends BaseEntity {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
+    @Filterable(type = FilterType.TEXT)
     @Column(nullable = false)
     private String name;
 
+    @Filterable(type = FilterType.TEXT)
     private String description;
 
+    @Filterable(type = FilterType.TEXT, nestedPaths = {"name", "brand.name", "type.name"})
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "asset_model_id", nullable = false)
     private Model model;
 
+    @Filterable(type = FilterType.TEXT, nestedPaths = {"name"})
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "location_id", nullable = false)
     private Location location;
 
+    @Filterable(type = FilterType.ENUM)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AssetStatus status;
 
+    @Filterable(type = FilterType.TEXT)
     @Column(name = "status_description")
     private String statusDescription;
 
+    @Filterable(type = FilterType.DATE)
     @Column(name = "acquisition_date")
     private LocalDate acquisitionDate;
 
+    @Filterable(type = FilterType.DATE)
     @Column(name = "warranty_end_date")
     private LocalDate warrantyEndDate;
 
+    @Filterable(type = FilterType.DATE)
     @Column(name = "firmware_support_end_date")
     private LocalDate firmwareSupportEndDate;
 

@@ -37,4 +37,8 @@ public abstract class BaseEntity {
 	public void markAsDeleted() {
 		this.isDeleted = true;
 	}
+
+	public void markAsActive() {
+		this.isDeleted = false;
+	}
 }

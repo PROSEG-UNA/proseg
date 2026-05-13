@@ -6,6 +6,7 @@ import { feedbackCustomizations } from './customizations/feedback';
 import { navigationCustomizations } from './customizations/navigation';
 import { surfacesCustomizations } from './customizations/surfaces';
 import { dataGridCustomizations } from './customizations/dataGrid';
+import { datePickersCustomizations } from './customizations/datePickers';
 import { colorSchemes, typography, shadows, shape } from './themePrimitives';
 
 export default function AppTheme({ children, disableCustomTheme, themeComponents, defaultColorScheme = 'light' }) {
@@ -28,6 +29,7 @@ export default function AppTheme({ children, disableCustomTheme, themeComponents
                     ...navigationCustomizations,
                     ...surfacesCustomizations,
                     ...dataGridCustomizations,
+                    ...datePickersCustomizations,
                     ...themeComponents,
                 },
             });

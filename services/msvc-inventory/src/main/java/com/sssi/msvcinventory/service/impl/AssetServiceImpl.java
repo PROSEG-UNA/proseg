@@ -3,6 +3,7 @@ package com.sssi.msvcinventory.service.impl;
 import com.sssi.msvcinventory.dto.request.AssetRequestDto;
 import com.sssi.msvcinventory.dto.request.NetworkInterfaceEmbeddedRequestDto;
 import com.sssi.msvcinventory.dto.response.AssetResponseDto;
+import com.sssi.msvcinventory.dto.response.NetworkInterfaceResponseDto;
 import com.sssi.msvcinventory.entity.*;
 import com.sssi.msvcinventory.exception.AssetException;
 import com.sssi.msvcinventory.exception.ModelException;
@@ -12,16 +13,21 @@ import com.sssi.msvcinventory.exception.NetworkInterfaceException;
 import com.sssi.msvcinventory.mapper.*;
 import com.sssi.msvcinventory.repository.ModelRepository;
 import com.sssi.msvcinventory.repository.AssetRepository;
+import com.sssi.msvcinventory.specification.GenericSpecifications;
 import com.sssi.msvcinventory.repository.TypeRepository;
 import com.sssi.msvcinventory.repository.LocationRepository;
 import com.sssi.msvcinventory.repository.NetworkInterfaceRepository;
 import com.sssi.msvcinventory.service.AssetService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -46,11 +52,6 @@ public class AssetServiceImpl implements AssetService {
         Location location = locationRepository.findById(request.getLocationId())
                 .orElseThrow(() -> LocationException.notFound(request.getLocationId().toString()));
 
-        Type type = model.getType();
-        if (type.isRequiresNetworkInterface() && request.getNetworkInterface() == null) {
-            throw AssetException.networkInterfaceRequired(type.getName());
-        }
-
         Asset asset = assetMapper.toEntity(request);
         asset.setModel(model);
         asset.setLocation(location);
@@ -73,9 +74,18 @@ public class AssetServiceImpl implements AssetService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<AssetResponseDto> findAll(Pageable pageable) {
-        return assetRepository.findAll(pageable)
-                .map(this::toPolymorphicResponse);
+    public Page<AssetResponseDto> findAll(String search, Map<String, String> filters, Pageable pageable) {
+        Specification<Asset> spec = Specification
+                .where(GenericSpecifications.<Asset>withSearch(Asset.class, search))
+                .and(GenericSpecifications.<Asset>withColumnFilters(Asset.class, filters));
+
+        Pageable sanitized = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                GenericSpecifications.sanitizeSort(Asset.class, pageable.getSort())
+        );
+
+        return assetRepository.findAll(spec, sanitized).map(this::toPolymorphicResponse);
     }
 
     @Override
@@ -119,20 +129,31 @@ public class AssetServiceImpl implements AssetService {
 
         Type type = model.getType();
         boolean hasExistingNi = networkInterfaceRepository.existsByAssetId(id);
-        if (type.isRequiresNetworkInterface() && request.getNetworkInterface() == null && !hasExistingNi) {
-            throw AssetException.networkInterfaceRequired(type.getName());
-        }
 
         assetMapper.updateEntityFromRequest(request, asset);
         asset.setModel(model);
         asset.setLocation(location);
         assetRepository.save(asset);
 
-        if (request.getNetworkInterface() != null) {
-            networkInterfaceRepository.findByAssetId(id).ifPresentOrElse(
-                    existing -> updateNetworkInterface(request.getNetworkInterface(), existing),
-                    () -> saveNetworkInterface(request.getNetworkInterface(), asset)
-            );
+        if (!type.isRequiresNetworkInterface()) {
+            if (hasExistingNi) {
+                NetworkInterface ni = asset.getNetworkInterface();
+                asset.setNetworkInterface(null);
+                assetRepository.saveAndFlush(asset);
+                if (ni != null) {
+                    networkInterfaceRepository.delete(ni);
+                }
+            }
+        } else if (request.getNetworkInterface() != null) {
+            Optional<NetworkInterface> active = networkInterfaceRepository.findByAssetId(id);
+            if (active.isPresent()) {
+                updateNetworkInterface(request.getNetworkInterface(), active.get());
+            } else {
+                networkInterfaceRepository.findByAssetIdIncludingDeleted(id).ifPresentOrElse(
+                        deleted -> resurrectNetworkInterface(request.getNetworkInterface(), deleted),
+                        () -> saveNetworkInterface(request.getNetworkInterface(), asset)
+                );
+            }
         }
 
         return toPolymorphicResponse(assetRepository.findById(id).orElseThrow());
@@ -144,6 +165,17 @@ public class AssetServiceImpl implements AssetService {
         Asset asset = assetRepository.findById(id)
                 .orElseThrow(() -> AssetException.notFound(id.toString()));
         assetRepository.delete(asset);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public NetworkInterfaceResponseDto findLastKnownNetworkInterface(UUID assetId) {
+        if (!assetRepository.existsById(assetId)) {
+            throw AssetException.notFound(assetId.toString());
+        }
+        return networkInterfaceRepository.findByAssetIdIncludingDeleted(assetId)
+                .map(networkInterfaceMapper::toResponse)
+                .orElseThrow(() -> NetworkInterfaceException.notFound(assetId.toString()));
     }
 
     private void saveNetworkInterface(NetworkInterfaceEmbeddedRequestDto dto, Asset asset) {
@@ -167,6 +199,19 @@ public class AssetServiceImpl implements AssetService {
         }
         existing.setIpAddress(dto.getIpAddress());
         existing.setMacAddress(dto.getMacAddress());
+        networkInterfaceRepository.save(existing);
+    }
+
+    private void resurrectNetworkInterface(NetworkInterfaceEmbeddedRequestDto dto, NetworkInterface existing) {
+        if (networkInterfaceRepository.existsByIpAddressAndIdNot(dto.getIpAddress(), existing.getId())) {
+            throw NetworkInterfaceException.duplicateIp(dto.getIpAddress());
+        }
+        if (networkInterfaceRepository.existsByMacAddressAndIdNot(dto.getMacAddress(), existing.getId())) {
+            throw NetworkInterfaceException.duplicateMac(dto.getMacAddress());
+        }
+        existing.setIpAddress(dto.getIpAddress());
+        existing.setMacAddress(dto.getMacAddress());
+        existing.markAsActive();
         networkInterfaceRepository.save(existing);
     }
 

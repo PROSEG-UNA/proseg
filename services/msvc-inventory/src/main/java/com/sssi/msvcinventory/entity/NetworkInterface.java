@@ -1,8 +1,11 @@
 package com.sssi.msvcinventory.entity;
 
+import com.sssi.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.UuidGenerator;
+import org.hibernate.annotations.Where;
 
 import java.util.UUID;
 
@@ -13,7 +16,9 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class NetworkInterface {
+@SQLDelete(sql = "UPDATE network_interface SET is_deleted = true WHERE id = ?")
+@Where(clause = "is_deleted = false")
+public class NetworkInterface extends BaseEntity {
 
     @Id
     @GeneratedValue

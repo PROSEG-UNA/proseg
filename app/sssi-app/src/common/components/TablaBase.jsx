@@ -3,6 +3,7 @@ import {
     MaterialReactTable,
     useMaterialReactTable,
 } from 'material-react-table';
+import { Box } from '@mui/material';
 import {alpha, useTheme} from '@mui/material/styles';
 import { MRT_Localization_ES } from 'material-react-table/locales/es';
 
@@ -13,6 +14,7 @@ export default function TableBase({
     error = null,
     enableRowActions = false,
     renderRowActions,
+    renderDetailPanel,
     enableRowSelection = false,
     rowSelection,
     onRowSelectionChange,
@@ -58,6 +60,21 @@ export default function TableBase({
 
         enableRowActions,
         renderRowActions,
+        renderDetailPanel: renderDetailPanel
+            ? (props) => (
+                <Box
+                    sx={{
+                        width: '100%',
+                        borderBottom: '1px solid',
+                        borderBottomColor: 'divider',
+                        borderTop: '1px solid',
+                        borderTopColor: 'divider',
+                    }}
+                >
+                    {renderDetailPanel(props)}
+                </Box>
+            )
+            : undefined,
         positionActionsColumn: tableOptions.positionActionsColumn ?? 'last',
         enableRowSelection,
         onRowSelectionChange,
@@ -78,7 +95,7 @@ export default function TableBase({
         muiTableContainerProps: {
             sx: maxHeight
                 ? { maxHeight, overflow: 'auto' }
-                : { height: 'calc(100vh - 300px)', overflow: 'auto' },
+                : { height: 'calc(100vh - 315px)', overflow: 'auto' },
         },
 
         paginationDisplayMode: 'pages',
@@ -159,6 +176,20 @@ export default function TableBase({
             },
         },
 
+        muiDetailPanelProps: {
+            sx: {
+                backgroundColor: 'background.paper',
+                padding: 0,
+            },
+        },
+
+        muiExpandButtonProps: ({ row }) => ({
+            sx: {
+                transition: 'transform 200ms ease',
+                transform: row.getIsExpanded() ? 'rotate(180deg)' : 'rotate(0deg)',
+            },
+        }),
+
         muiSearchTextFieldProps: {
             variant: 'outlined',
             size: 'small',
@@ -176,6 +207,11 @@ export default function TableBase({
             : undefined,
 
         displayColumnDefOptions: {
+            'mrt-row-expand': {
+                muiTableBodyCellProps: {
+                    sx: { borderTop: 'none' },
+                },
+            },
             'mrt-row-actions': {
                 header: 'Acción',
                 size: 120,
