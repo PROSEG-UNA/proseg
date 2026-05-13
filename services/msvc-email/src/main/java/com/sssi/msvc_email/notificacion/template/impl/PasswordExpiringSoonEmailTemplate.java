@@ -6,21 +6,21 @@ import com.sssi.msvc_email.notificacion.util.TemplateValidator;
 import lombok.Builder;
 import org.thymeleaf.context.Context;
 
+import java.time.Instant;
 import java.util.List;
 
 @Builder
-public class UserPasswordChangedEmailTemplate implements EmailTemplateDefinition {
+public class PasswordExpiringSoonEmailTemplate implements EmailTemplateDefinition {
 
     private final String firstName;
-    private final String lastName;
-    private final String username;
-    private final String email;
+    private final long daysRemaining;
+    private final Instant expiresAt;
     private final String loginUrl;
     private final long timestamp;
 
     @Override
     public String getTemplateName() {
-        return "user-password-changed-email";
+        return "password-expiring-soon-email";
     }
 
     @Override
@@ -30,9 +30,8 @@ public class UserPasswordChangedEmailTemplate implements EmailTemplateDefinition
 
         Context ctx = new Context();
         ctx.setVariable("firstName", firstName);
-        ctx.setVariable("lastName", lastName);
-        ctx.setVariable("username", username);
-        ctx.setVariable("email", email);
+        ctx.setVariable("daysRemaining", daysRemaining);
+        ctx.setVariable("expiresAt", DateUtils.formatReadable(expiresAt.toEpochMilli()));
         ctx.setVariable("loginUrl", loginUrl);
         ctx.setVariable("timestamp", DateUtils.formatReadable(timestamp));
 
@@ -46,11 +45,26 @@ public class UserPasswordChangedEmailTemplate implements EmailTemplateDefinition
 
     private void validate() {
 
-        TemplateValidator.requireNotBlank(firstName, "firstName", getTemplateName());
-        TemplateValidator.requireNotBlank(lastName, "lastName", getTemplateName());
-        TemplateValidator.requireNotBlank(username, "username", getTemplateName());
-        TemplateValidator.requireNotBlank(email, "email", getTemplateName());
-        TemplateValidator.requireNotBlank(loginUrl, "loginUrl", getTemplateName());
+        TemplateValidator.requireNotBlank(
+                firstName,
+                "firstName",
+                getTemplateName()
+        );
+
+        TemplateValidator.requireNotBlank(
+                loginUrl,
+                "loginUrl",
+                getTemplateName()
+        );
+
+        if (daysRemaining < 0) {
+            throw new IllegalArgumentException("daysRemaining inválido");
+        }
+
+        if (expiresAt == null) {
+            throw new IllegalArgumentException("expiresAt es requerido");
+        }
+
         if (timestamp <= 0) {
             throw new IllegalArgumentException("timestamp inválido");
         }
