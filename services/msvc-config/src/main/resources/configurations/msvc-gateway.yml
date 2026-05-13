@@ -119,3 +119,10 @@ spring:
             - Path=/api/v1/archive/**
           filters:
             - StripPrefix=0
+
+        - id: msvc-transport
+          uri: http://localhost:8097
+          predicates:
+            - Path=/api/v1/transport/**
+          filters:
+            - StripPrefix=0

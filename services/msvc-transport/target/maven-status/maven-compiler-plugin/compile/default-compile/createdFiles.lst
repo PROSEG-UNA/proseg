@@ -1,0 +1,7 @@
+com\sssi\msvc_transport\MsvcTransportApplication.class
+com\sssi\msvc_transport\config\JwtAccessDeniedHandler.class
+com\sssi\msvc_transport\config\CookieBearerTokenResolver.class
+com\sssi\msvc_transport\controller\TransportController.class
+com\sssi\msvc_transport\config\KeycloakJwtConverter.class
+com\sssi\msvc_transport\config\JwtAuthenticationEntryPoint.class
+com\sssi\msvc_transport\config\SecurityConfig.class
