@@ -25,7 +25,6 @@ public class PasswordPolicyScheduler {
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Scheduled(cron = "0 0 8 * * *", zone = "America/Costa_Rica") // 8:00am
-    // @Scheduled(fixedDelay = 30000) // cada 30 segundos
     public void notifyExpiringPasswords() {
         List<PasswordPolicy> policies =
                 passwordPolicyService.findPasswordsExpiringSoon(7);
