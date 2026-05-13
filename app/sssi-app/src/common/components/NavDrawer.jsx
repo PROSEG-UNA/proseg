@@ -11,6 +11,7 @@ import {
   ListItem,
   ListItemButton,
   ListItemText,
+  Typography,
 } from '@mui/material';
 import AppsIcon from '@mui/icons-material/Apps';
 import CloseIcon from '@mui/icons-material/Close';
@@ -20,146 +21,231 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
-import { alpha, useColorScheme } from '@mui/material/styles';
+import ShieldIcon from '@mui/icons-material/Shield';
+import { useColorScheme } from '@mui/material/styles';
+
+const panelSurfaceSx = (t) => ({
+  background: `
+    radial-gradient(ellipse 80% 40% at 50% 0%, hsla(0, 70%, 55%, 0.05) 0%, transparent 70%),
+    linear-gradient(180deg, hsl(220, 30%, 99%) 0%, hsl(220, 28%, 97%) 100%)
+  `,
+  ...t.applyStyles('dark', {
+    background: `
+      radial-gradient(ellipse 80% 40% at 50% 0%, hsla(0, 65%, 45%, 0.1) 0%, transparent 70%),
+      linear-gradient(180deg, hsl(228, 16%, 10%) 0%, hsl(228, 16%, 7%) 100%)
+    `,
+  }),
+});
+
+const iconBoxSx = (t, { active = false } = {}) => ({
+  width: 34, height: 34, mr: 1.5,
+  borderRadius: '10px',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  background: active
+    ? t.vars.palette.tones.rose.softSubtle
+    : 'hsla(220, 20%, 50%, 0.06)',
+  border: '1px solid',
+  borderColor: active ? t.vars.palette.tones.rose.ring : 'divider',
+  transition: 'border-color 0.22s ease, transform 0.22s ease, background 0.22s ease',
+  flexShrink: 0,
+  ...t.applyStyles('dark', {
+    background: active
+      ? t.vars.palette.tones.rose.softSubtle
+      : 'hsla(220, 20%, 80%, 0.04)',
+    borderColor: active ? 'rgba(255,255,255,0.35)' : 'divider',
+  }),
+});
+
+function NavSection({ icon: Icon, label, expanded, onToggle, children }) {
+  return (
+    <Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+      <ListItemButton
+        onClick={onToggle}
+        sx={(t) => ({
+          paddingTop: '10px !important',
+          paddingBottom: '10px !important',
+          px: 2,
+          color: 'text.primary',
+          transition: 'background 0.18s ease',
+          '&:hover': { bgcolor: 'hsla(220, 20%, 50%, 0.05)' },
+          '&:hover .nav-section-icon': {
+            borderColor: t.vars.palette.tones.rose.ring,
+          },
+          ...t.applyStyles('dark', {
+            '&:hover': { bgcolor: 'hsla(220, 20%, 80%, 0.04)' },
+          }),
+        })}
+      >
+        <Box className="nav-section-icon" sx={(t) => iconBoxSx(t)}>
+          <Icon sx={{ fontSize: 18, color: 'text.secondary', transition: 'color 0.22s ease' }} />
+        </Box>
+        <ListItemText
+          primary={label}
+          slotProps={{ primary: { sx: { fontSize: '0.9rem', fontWeight: 600, letterSpacing: '-0.01em' } } }}
+        />
+        {expanded
+          ? <ExpandLessIcon sx={{ fontSize: 20, color: 'text.disabled' }} />
+          : <ExpandMoreIcon sx={{ fontSize: 20, color: 'text.disabled' }} />}
+      </ListItemButton>
+      <Collapse in={expanded} timeout={220} unmountOnExit>
+        <Box sx={{ py: 0.5 }}>
+          {children}
+        </Box>
+      </Collapse>
+    </Box>
+  );
+}
+
+function NavLeaf({ icon: Icon, label, onClick }) {
+  return (
+    <Box
+      onClick={onClick}
+      sx={(t) => ({
+        cursor: 'pointer',
+        position: 'relative',
+        display: 'flex', alignItems: 'center',
+        gap: 1.25,
+        py: 1.5,
+        pl: 4.5, pr: 2,
+        color: 'text.secondary',
+        transition: 'color 0.18s ease, background 0.18s ease, padding-left 0.18s ease',
+        '& .MuiSvgIcon-root': { color: 'inherit' },
+        '&:hover, &:focus, &:active': {
+          color: t.vars.palette.text.primary,
+          bgcolor: 'hsla(220, 20%, 50%, 0.07)',
+          pl: 5,
+          ...t.applyStyles('dark', { bgcolor: 'hsla(220, 20%, 80%, 0.07)' }),
+        },
+      })}
+    >
+      <Icon sx={{ fontSize: 18, color: 'inherit' }} />
+      <Typography sx={{ fontSize: '0.84rem', fontWeight: 500, color: 'inherit' }}>{label}</Typography>
+    </Box>
+  );
+}
 
 export function NavDrawer({ open, onClose }) {
   const { handleLogout } = useAuth();
   const navigate = useNavigate();
   const [expandedMenu, setExpandedMenu] = useState(null);
-  const { mode } = useColorScheme();
+  const { mode, systemMode } = useColorScheme();
+  const resolvedMode = mode === 'system' ? systemMode : mode;
 
-  const toggleMenu = (menu) => {
-    setExpandedMenu(expandedMenu === menu ? null : menu);
-  };
-
-  const handleNavigation = (path) => {
-    navigate(path);
-    onClose();
-  };
+  const toggleMenu = (menu) => setExpandedMenu(expandedMenu === menu ? null : menu);
+  const handleNavigation = (path) => { navigate(path); onClose(); };
 
   return (
-    <Drawer anchor="left" open={open} onClose={onClose}>
+    <Drawer
+      anchor="left"
+      open={open}
+      onClose={onClose}
+      slotProps={{
+        backdrop: { sx: { backdropFilter: 'blur(3px)' } },
+        paper: {
+          sx: (t) => ({
+            width: 280,
+            border: 'none',
+            borderRight: '1px solid',
+            borderColor: 'divider',
+            position: 'relative',
+            overflow: 'hidden',
+            color: 'text.primary',
+            ...panelSurfaceSx(t),
+            backgroundImage: 'none',
+          }),
+        },
+      }}
+    >
       <Box
-        sx={{ width: 280, backgroundColor: 'background.paper', height: '100%', display: 'flex', flexDirection: 'column' }}
         role="presentation"
+        sx={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}
       >
-        <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(0,0,0,0.1)' }}>
+        <Box
+          sx={{
+            p: 2,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
           <img
-            src={mode === 'dark' ? '/logo_una_blanco.png' : '/logo_una.png'}
+            src={resolvedMode === 'dark' ? '/logo_una_blanco.png' : '/logo_una.png'}
             alt="Logo UNA"
             onClick={() => handleNavigation('/home')}
             style={{ maxWidth: '50%', height: 'auto', maxHeight: '50px', cursor: 'pointer' }}
           />
-          <IconButton onClick={onClose} sx={{ color: 'primary.icon' }}>
-            <CloseIcon />
+          <IconButton
+            onClick={onClose}
+            sx={(t) => ({
+              color: 'text.secondary',
+              borderRadius: '10px',
+              transition: 'color 0.2s ease, background 0.2s ease',
+              '&:hover': {
+                color: 'text.primary',
+                bgcolor: 'hsla(220, 20%, 50%, 0.08)',
+              },
+              ...t.applyStyles('dark', {
+                '&:hover': {
+                  bgcolor: 'hsla(220, 20%, 80%, 0.06)',
+                },
+              }),
+            })}
+          >
+            <CloseIcon sx={{ fontSize: 20 }} />
           </IconButton>
         </Box>
 
         <List sx={{ flex: 1, overflowY: 'auto', p: 0 }}>
           <ListItem disablePadding sx={{ display: 'block' }}>
-            <ListItemButton
-              onClick={() => toggleMenu('inventory')}
-              sx={(theme) => ({
-                '&&': { py: 3, minHeight: 72 },
-                borderBottom: '1px solid rgba(0,0,0,0.1)',
-                color: 'text.primary',
-                '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.05) },
-              })}
+            <NavSection
+              icon={WarehouseIcon}
+              label="Gestión Inventarios"
+              expanded={expandedMenu === 'inventory'}
+              onToggle={() => toggleMenu('inventory')}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <WarehouseIcon sx={{ mr: 2, fontSize: 20 }} />
-                  <ListItemText
-                    primary="Gestión Inventarios"
-                    sx={{ '& .MuiListItemText-primary': { fontSize: '1.05rem', fontWeight: 600, lineHeight: 1.2 } }}
-                  />
-                </Box>
-                {expandedMenu === 'inventory' ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-              </Box>
-            </ListItemButton>
-            <Collapse in={expandedMenu === 'inventory'} timeout="auto" unmountOnExit>
-              <Box sx={(theme) => ({ backgroundColor: alpha(theme.palette.primary.main, 0.05) })}>
-                <Box
-                  onClick={() => handleNavigation('/inventario/activos')}
-                  sx={(theme) => ({
-                    pl: 8, color: 'text.primary',
-                    '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.1) },
-                    display: 'flex', alignItems: 'center', width: '100%', py: 2.2, minHeight: 56, cursor: 'pointer',
-                  })}
-                >
-                  <AppsIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                  <ListItemText
-                    primary="Activos"
-                    sx={{ '& .MuiListItemText-primary': { fontSize: '0.98rem', fontWeight: 500 } }}
-                  />
-                </Box>
-              </Box>
-            </Collapse>
+              <NavLeaf icon={AppsIcon} label="Activos" onClick={() => handleNavigation('/inventario/activos')} />
+            </NavSection>
           </ListItem>
 
           <ListItem disablePadding sx={{ display: 'block' }}>
-            <ListItemButton
-              onClick={() => toggleMenu('security')}
-              sx={(theme) => ({
-                '&&': { py: 3, minHeight: 72 },
-                borderBottom: '1px solid rgba(0,0,0,0.1)',
-                color: 'text.primary',
-                '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.05) },
-              })}
+            <NavSection
+              icon={ShieldIcon}
+              label="Gestión Seguridad"
+              expanded={expandedMenu === 'security'}
+              onToggle={() => toggleMenu('security')}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <VerifiedUserIcon sx={{ mr: 2, fontSize: 20 }} />
-                  <ListItemText
-                    primary="Gestión Seguridad"
-                    sx={{ '& .MuiListItemText-primary': { fontSize: '1.05rem', fontWeight: 600, lineHeight: 1.2 } }}
-                  />
-                </Box>
-                {expandedMenu === 'security' ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-              </Box>
-            </ListItemButton>
-            <Collapse in={expandedMenu === 'security'} timeout="auto" unmountOnExit>
-              <Box sx={(theme) => ({ backgroundColor: alpha(theme.palette.primary.main, 0.05) })}>
-                <Box
-                  onClick={() => handleNavigation('/seguridad/usuarios')}
-                  sx={(theme) => ({
-                    pl: 8, color: 'text.primary',
-                    '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.1) },
-                    display: 'flex', alignItems: 'center', width: '100%', py: 2.2, minHeight: 56, cursor: 'pointer',
-                  })}
-                >
-                  <PeopleIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                  <ListItemText
-                    primary="Usuarios"
-                    sx={{ '& .MuiListItemText-primary': { fontSize: '0.98rem', fontWeight: 500 } }}
-                  />
-                </Box>
-                <Box
-                  onClick={() => handleNavigation('/seguridad/roles')}
-                  sx={(theme) => ({
-                    pl: 6, color: 'text.primary',
-                    '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.1) },
-                    display: 'flex', alignItems: 'center', width: '100%', py: 2.2, minHeight: 56, cursor: 'pointer',
-                  })}
-                >
-                  <VerifiedUserIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                  <ListItemText
-                    primary="Roles"
-                    sx={{ '& .MuiListItemText-primary': { fontSize: '0.98rem', fontWeight: 500 } }}
-                  />
-                </Box>
-              </Box>
-            </Collapse>
+              <NavLeaf icon={PeopleIcon} label="Usuarios" onClick={() => handleNavigation('/seguridad/usuarios')} />
+              <NavLeaf icon={VerifiedUserIcon} label="Roles" onClick={() => handleNavigation('/seguridad/roles')} />
+            </NavSection>
           </ListItem>
         </List>
 
-        <Box sx={{ p: 2, borderTop: '1px solid rgba(0,0,0,0.1)' }}>
+        <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
           <Button
             fullWidth
             variant="contained"
-            startIcon={<LogoutIcon />}
+            startIcon={<LogoutIcon sx={{ fontSize: 18 }} />}
             onClick={handleLogout}
-            sx={{ backgroundColor: 'primary.main', color: 'primary.contrastText', '&:hover': { backgroundColor: 'primary.dark' }, fontWeight: 600 }}
+            disableElevation
+            sx={(t) => ({
+              textTransform: 'none',
+              fontWeight: 700,
+              fontSize: '0.86rem',
+              borderRadius: '10px',
+              py: 1,
+              letterSpacing: '0.01em',
+              color: '#fff',
+              background: `linear-gradient(135deg, ${t.vars.palette.tones.rose.headerBg} 0%, ${t.vars.palette.tones.rose.headerBg} 100%)`,
+              boxShadow: t.palette.tones.rose.shadowResting,
+              transition: 'box-shadow 0.22s ease, transform 0.22s ease, background 0.22s ease',
+              '&:hover': {
+                background: t.palette.primary.dark,
+                boxShadow: t.palette.tones.rose.shadowHover,
+                transform: 'translateY(-1px)',
+              },
+            })}
           >
             Cerrar Sesión
           </Button>
