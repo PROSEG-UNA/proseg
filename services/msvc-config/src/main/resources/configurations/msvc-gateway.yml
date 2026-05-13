@@ -126,3 +126,10 @@ spring:
             - Path=/api/v1/transport/**
           filters:
             - StripPrefix=0
+
+        - id: msvc-document-processor
+          uri: http://localhost:8098
+          predicates:
+            - Path=/api/v1/document-processor/**
+          filters:
+            - StripPrefix=0
