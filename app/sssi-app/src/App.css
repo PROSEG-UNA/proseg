@@ -1,22 +1,45 @@
+html, body, #root {
+  background-color: #ffffff;
+}
+[data-mui-color-scheme="dark"] html,
+[data-mui-color-scheme="dark"] body,
+[data-mui-color-scheme="dark"] #root {
+  background-color: #14080a;
+}
+
+.spsg-root {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  background: transparent;
+}
+
+.spsg-root::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: #ffffff;
+  background-image:
+          radial-gradient(ellipse 80% 60% at 15% 0%,    hsla(0,   80%, 90%, 0.55) 0%, transparent 60%),
+          radial-gradient(ellipse 60% 70% at 100% 30%,  hsla(0,   75%, 88%, 0.45) 0%, transparent 65%),
+          radial-gradient(ellipse 90% 50% at 50% 100%,  hsla(355, 70%, 92%, 0.55) 0%, transparent 70%);
+}
+
+[data-mui-color-scheme="dark"] .spsg-root::before {
+  background-color: #14080a;
+  background-image:
+          radial-gradient(ellipse 70% 55% at 20% 0%,    hsla(0,   70%, 35%, 0.28) 0%, transparent 60%),
+          radial-gradient(ellipse 55% 65% at 95% 35%,   hsla(0,   65%, 30%, 0.22) 0%, transparent 65%),
+          radial-gradient(ellipse 90% 50% at 50% 100%,  hsla(355, 60%, 25%, 0.30) 0%, transparent 70%);
+}
+
 .app {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
-
-.app-header {
-  background-color: #333;
-  color: white;
-  padding: 1.5rem;
-  text-align: center;
-}
-
-.app-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-
-.app-main {
-  flex: 1;
-  padding: 2rem;
-}
+.app-header { background-color: #333; color: white; padding: 1.5rem; text-align: center; }
+.app-header h1 { margin: 0; font-size: 1.5rem; }
+.app-main { flex: 1; padding: 2rem; }
