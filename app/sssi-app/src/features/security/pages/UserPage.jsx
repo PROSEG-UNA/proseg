@@ -33,7 +33,7 @@ export function UserPage() {
         />
         <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
-        <Container maxWidth="lg" className="user-content">
+        <Container maxWidth="xl" className="user-content">
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
             <Typography
               variant="h5"

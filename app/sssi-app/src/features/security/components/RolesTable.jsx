@@ -10,7 +10,7 @@ import { deleteRole } from '../services/rolesService';
 import { getRolesColumns, renderRolesActions } from './rolesColumns.jsx';
 import TableBase from '../../../common/components/TablaBase.jsx';
 import RoleFormModal from './RoleFormModal.jsx';
-import AlertModal from '../../../common/components/AlertModal.jsx';
+import DialogModal from '../../../common/components/DialogModal.jsx';
 
 export default function RolesTable({ refreshKey, onRefresh }) {
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
@@ -117,7 +117,7 @@ export default function RolesTable({ refreshKey, onRefresh }) {
                 </DialogActions>
             </Dialog>
 
-            <AlertModal
+            <DialogModal
                 open={!!alert}
                 type={alert?.type}
                 message={alert?.message}

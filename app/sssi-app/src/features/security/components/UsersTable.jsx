@@ -1,7 +1,7 @@
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import {Box, Button, Tab, Tabs} from '@mui/material';
 import TableBase from '../../../common/components/TablaBase.jsx';
-import AlertModal from '../../../common/components/AlertModal.jsx';
+import DialogModal from '../../../common/components/DialogModal.jsx';
 import { useUsersData } from '../hooks/useUsersData';
 import {fetchUserStatuses, resendInvitation, updateUserApproval} from '../services/usersService';
 import { getUsersColumns, renderUsersActions } from './usersColumns.jsx';
@@ -208,7 +208,6 @@ export default function UsersTable({ refreshKey = 0 }) {
                         },
                     },
                 }}
-                enableColumnFilters={false}
                 enableGlobalFilter
             />
 
@@ -219,7 +218,7 @@ export default function UsersTable({ refreshKey = 0 }) {
                 onSaved={triggerRefresh}
             />
 
-            <AlertModal
+            <DialogModal
                 open={!!alert}
                 type={alert?.type}
                 message={alert?.message}

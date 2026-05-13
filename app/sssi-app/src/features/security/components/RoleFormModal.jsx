@@ -1,11 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import {
-    Dialog, DialogContent,
-    IconButton, Button, Typography,
-    Box, Checkbox, Chip, Tooltip, LinearProgress,
-    Collapse, Divider, alpha, useTheme, useMediaQuery,
+    Box, Typography, Checkbox, Chip, Tooltip,
+    Collapse, Divider, IconButton, useTheme, useColorScheme,
 } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -15,29 +12,18 @@ import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import InventoryIcon from '@mui/icons-material/Inventory';
-import AlertModal from '../../../common/components/AlertModal.jsx';
+import GeneralModal from '../../../common/components/GeneralModal.jsx';
+import DialogModal from '../../../common/components/DialogModal.jsx';
 import { useRoleFormData } from '../hooks/useRoleFormData';
 import { ValidatedTextField } from '../../../common/components/ValidatedTextField';
 import { getValidationRule, validateField } from '../../../common/utils/validationRegex';
 
-const RED = {
-    50:  '#fff1f2',
-    100: '#ffe4e6',
-    200: '#fecdd3',
-    400: '#f87171',
-    500: '#ef4444',
-    600: '#dc2626',
-    700: '#b91c1c',
-    800: '#991b1b',
-    900: '#7f1d1d',
-};
-
 const DOMAIN_META = {
     Usuarios: {
-        lightColor: RED[600],
-        darkColor:  RED[400],
-        lightBg:    RED[50],
-        darkBg:     alpha(RED[900], 0.35),
+        lightColor: '#dc2626',
+        darkColor:  '#f87171',
+        lightBg:    '#fff1f2',
+        darkBg:     'rgba(127,29,29,0.35)',
         icon: PeopleIcon,
         description: 'Gestión y registro de usuarios',
     },
@@ -45,7 +31,7 @@ const DOMAIN_META = {
         lightColor: '#b45309',
         darkColor:  '#fbbf24',
         lightBg:    '#fffbeb',
-        darkBg:     alpha('#78350f', 0.35),
+        darkBg:     'rgba(120,53,15,0.35)',
         icon: ShieldIcon,
         description: 'Configuración de roles del sistema',
     },
@@ -53,7 +39,7 @@ const DOMAIN_META = {
         lightColor: '#0f766e',
         darkColor:  '#2dd4bf',
         lightBg:    '#f0fdfa',
-        darkBg:     alpha('#134e4a', 0.35),
+        darkBg:     'rgba(19,78,74,0.35)',
         icon: ManageAccountsIcon,
         description: 'Asignación de roles a usuarios',
     },
@@ -61,7 +47,7 @@ const DOMAIN_META = {
         lightColor: '#1d4ed8',
         darkColor:  '#60a5fa',
         lightBg:    '#eff6ff',
-        darkBg:     alpha('#1e3a5f', 0.35),
+        darkBg:     'rgba(30,58,95,0.35)',
         icon: InventoryIcon,
         description: 'Gestión de activos y ubicaciones',
     },
@@ -81,8 +67,8 @@ const ROLE_PRESETS = [
         id: 'gestion-usuarios',
         name: 'Gestión de Usuarios',
         description: 'Registra, aprueba y consulta usuarios del sistema',
-        color: RED[600],
-        darkColor: RED[400],
+        color: '#dc2626',
+        darkColor: '#f87171',
         icon: PeopleIcon,
         privileges: ['LEER_USUARIOS','LEER_USUARIO','REGISTRAR_USUARIO','APROBAR_USUARIO','LEER_ROLES_USUARIO','LEER_USUARIOS_POR_ROL'],
     },
@@ -99,8 +85,8 @@ const ROLE_PRESETS = [
         id: 'administrador',
         name: 'Administrador',
         description: 'Acceso total — todos los privilegios del sistema',
-        color: RED[800],
-        darkColor: RED[200],
+        color: '#991b1b',
+        darkColor: '#fecdd3',
         icon: AdminPanelSettingsIcon,
         privileges: ['LEER_ROLES_BASE','REMOVER_ROL_USUARIO','LEER_ROLES_COMPUESTOS','APROBAR_USUARIO','ELIMINAR_ROL','ASIGNAR_ROL_USUARIO','LEER_COMPOSITES_ROL','LEER_USUARIO','CREAR_ROL','LEER_USUARIOS_POR_ROL','LEER_ROLES_USUARIO','REGISTRAR_USUARIO','EDITAR_ROL','LEER_USUARIOS'],
     },
@@ -108,10 +94,10 @@ const ROLE_PRESETS = [
 
 const groupPrivilegesByDomain = (privileges) => {
     const groups = { Usuarios: [], Roles: [], 'Roles de Usuario': [], Inventario: [] };
-    const USUARIOS_SET    = new Set(['LEER_USUARIOS','LEER_USUARIO','REGISTRAR_USUARIO','APROBAR_USUARIO','LEER_USUARIOS_POR_ROL']);
-    const ROLES_SET       = new Set(['CREAR_ROL','EDITAR_ROL','ELIMINAR_ROL','LEER_ROLES_BASE','LEER_ROLES_COMPUESTOS','LEER_COMPOSITES_ROL']);
-    const ROL_USR_SET     = new Set(['ASIGNAR_ROL_USUARIO','REMOVER_ROL_USUARIO','LEER_ROLES_USUARIO']);
-    const INVENTARIO_SET  = new Set(['LEER_ACTIVOS','GESTIONAR_ACTIVOS','ELIMINAR_ACTIVOS','LEER_UBICACIONES','GESTIONAR_UBICACIONES','ELIMINAR_UBICACIONES']);
+    const USUARIOS_SET   = new Set(['LEER_USUARIOS','LEER_USUARIO','REGISTRAR_USUARIO','APROBAR_USUARIO','LEER_USUARIOS_POR_ROL']);
+    const ROLES_SET      = new Set(['CREAR_ROL','EDITAR_ROL','ELIMINAR_ROL','LEER_ROLES_BASE','LEER_ROLES_COMPUESTOS','LEER_COMPOSITES_ROL']);
+    const ROL_USR_SET    = new Set(['ASIGNAR_ROL_USUARIO','REMOVER_ROL_USUARIO','LEER_ROLES_USUARIO']);
+    const INVENTARIO_SET = new Set(['LEER_ACTIVOS','GESTIONAR_ACTIVOS','ELIMINAR_ACTIVOS','LEER_UBICACIONES','GESTIONAR_UBICACIONES','ELIMINAR_UBICACIONES']);
     privileges.forEach(p => {
         if (USUARIOS_SET.has(p.name))        groups.Usuarios.push(p);
         else if (ROLES_SET.has(p.name))      groups.Roles.push(p);
@@ -159,14 +145,14 @@ function PresetChip({ preset, onApply, active, isDark }) {
                     borderRadius: '10px',
                     px: 1.5, py: 0.875,
                     cursor: 'pointer',
-                    bgcolor: active ? alpha(color, isDark ? 0.15 : 0.07) : 'background.paper',
+                    bgcolor: active ? `color-mix(in srgb, ${color} ${isDark ? 15 : 7}%, transparent)` : 'background.paper',
                     transition: 'all 0.15s ease',
                     display: 'flex', alignItems: 'center', gap: 0.75,
                     '&:hover': {
                         borderColor: color,
-                        bgcolor: alpha(color, isDark ? 0.12 : 0.05),
+                        bgcolor: `color-mix(in srgb, ${color} ${isDark ? 12 : 5}%, transparent)`,
                         transform: 'translateY(-1px)',
-                        boxShadow: `0 4px 12px ${alpha(color, 0.22)}`,
+                        boxShadow: `0 4px 12px color-mix(in srgb, ${color} 22%, transparent)`,
                     },
                 }}
             >
@@ -228,9 +214,9 @@ function DomainPanel({ domainName, privileges, selectedIds, onToggleAll, onToggl
             <Box
                 sx={{
                     display: 'flex', alignItems: 'center', px: 2, py: 1.5,
-                    bgcolor: expanded ? alpha(color, isDark ? 0.1 : 0.04) : 'background.paper',
+                    bgcolor: expanded ? `color-mix(in srgb, ${color} ${isDark ? 10 : 4}%, transparent)` : 'background.paper',
                     cursor: 'pointer', transition: 'background 0.15s',
-                    '&:hover': { bgcolor: alpha(color, isDark ? 0.1 : 0.04) },
+                    '&:hover': { bgcolor: `color-mix(in srgb, ${color} ${isDark ? 10 : 4}%, transparent)` },
                 }}
                 onClick={() => setExpanded(v => !v)}
             >
@@ -278,10 +264,10 @@ function DomainPanel({ domainName, privileges, selectedIds, onToggleAll, onToggl
 }
 
 export default function RoleFormModal({ open, onClose, onSaved, role = null }) {
-    const theme    = useTheme();
-    const isDark   = theme.palette.mode === 'dark';
-    // En pantallas pequeñas (laptop 768–1024px) usamos fullScreen para aprovechar toda la altura
-    const isSmall  = useMediaQuery(theme.breakpoints.down('md'));
+    const theme = useTheme();
+    const { mode, systemMode } = useColorScheme();
+    const isDark = (mode === 'system' ? systemMode : mode) === 'dark';
+    const accentColor = theme.vars.palette.tones.rose.fg;
 
     const { allPrivileges, selectedIds, setSelectedIds, roleName, setRoleName, description, setDescription, save, isEditMode } = useRoleFormData(role);
 
@@ -302,16 +288,11 @@ export default function RoleFormModal({ open, onClose, onSaved, role = null }) {
     const selectedCount   = selectedIds.length;
     const completionPct   = totalPrivileges === 0 ? 0 : Math.round((selectedCount / totalPrivileges) * 100);
 
-    const headerGradient = isDark
-        ? `linear-gradient(135deg, ${RED[900]} 0%, ${RED[800]} 100%)`
-        : `linear-gradient(135deg, ${RED[600]} 0%, ${RED[800]} 100%)`;
-    const accentColor = isDark ? RED[400] : RED[600];
-
     const fieldSx = {
         '& .MuiOutlinedInput-root': {
             borderRadius: '10px',
             '& fieldset': { borderColor: 'divider' },
-            '&:hover fieldset': { borderColor: alpha(accentColor, 0.5) },
+            '&:hover fieldset': { borderColor: `color-mix(in srgb, ${accentColor} 50%, transparent)` },
             '&.Mui-focused fieldset': { borderColor: accentColor },
         },
         '& .MuiInputLabel-root.Mui-focused': { color: accentColor },
@@ -362,14 +343,14 @@ export default function RoleFormModal({ open, onClose, onSaved, role = null }) {
     };
 
     const handleSave = async () => {
-        const roleNameRule = getValidationRule('roleName');
+        const roleNameRule        = getValidationRule('roleName');
         const roleDescriptionRule = getValidationRule('roleDescription');
-        const roleNameCheck = validateField(roleName || '', roleNameRule);
+        const roleNameCheck        = validateField(roleName || '', roleNameRule);
         const roleDescriptionCheck = validateField(description || '', roleDescriptionRule);
 
         setTouched({ roleName: true, roleDescription: true });
         setErrors({
-            roleName: roleNameCheck.isValid ? '' : roleNameCheck.error,
+            roleName:        roleNameCheck.isValid ? '' : roleNameCheck.error,
             roleDescription: roleDescriptionCheck.isValid ? '' : roleDescriptionCheck.error,
         });
 
@@ -378,6 +359,7 @@ export default function RoleFormModal({ open, onClose, onSaved, role = null }) {
             return;
         }
         if (!selectedIds.length) { setAlert({ type: 'warning', message: 'Seleccioná al menos un privilegio' }); return; }
+
         setSaving(true);
         try {
             await save();
@@ -391,65 +373,34 @@ export default function RoleFormModal({ open, onClose, onSaved, role = null }) {
     };
 
     return (
-        <Dialog
-            open={open}
-            onClose={onClose}
-            fullScreen={isSmall}
-            maxWidth="md"
-            fullWidth
-            slotProps={{ backdrop: { sx: { backdropFilter: 'blur(3px)' } } }}
-            PaperProps={{
-                sx: {
-                    maxHeight: isSmall ? '100vh' : '92vh',
-                    height: isSmall ? '100vh' : 'auto',
-                    borderRadius: isSmall ? 0 : '16px',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    boxShadow: isDark
-                        ? `0 24px 48px rgba(0,0,0,0.55), 0 0 0 1px ${alpha(RED[700], 0.3)}`
-                        : '0 24px 48px rgba(0,0,0,0.14)',
-                    bgcolor: 'background.paper',
-                },
-            }}
-        >
-            <Box sx={{ flexShrink: 0, background: headerGradient, px: { xs: 2.5, sm: 3 }, py: 2.25, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <Box sx={{ width: 38, height: 38, borderRadius: '10px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <AdminPanelSettingsIcon sx={{ color: '#fff', fontSize: 20 }} />
-                    </Box>
-                    <Box>
-                        <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: { xs: 15, sm: 15.5 }, lineHeight: 1.2, letterSpacing: '-0.01em' }}>
-                            {isEditMode ? 'Editar rol' : 'Nuevo rol'}
-                        </Typography>
-                        <Typography sx={{ color: 'rgba(255,255,255,0.65)', fontSize: { xs: 11, sm: 11.5 } }}>
-                            {isEditMode ? 'Modificá nombre, descripción y privilegios' : 'Definí los permisos para este rol'}
-                        </Typography>
-                    </Box>
-                </Box>
-                <IconButton onClick={onClose} size="small" sx={{ color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.2)', p: 0.625, '&:hover': { bgcolor: 'rgba(255,255,255,0.15)', color: '#fff' } }}>
-                    <CloseIcon sx={{ fontSize: 16 }} />
-                </IconButton>
-            </Box>
-
-            {saving && (
-                <LinearProgress sx={{ flexShrink: 0, height: 2, bgcolor: alpha(accentColor, 0.15), '& .MuiLinearProgress-bar': { bgcolor: accentColor } }} />
-            )}
-
-            <DialogContent
-                sx={{
-                    p: 0,
-                    flex: 1,
-                    minHeight: 0,
-                    overflowY: 'auto',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    bgcolor: 'background.paper',
-
+        <>
+            <GeneralModal
+                open={open}
+                onClose={onClose}
+                maxWidth="md"
+                icon={AdminPanelSettingsIcon}
+                title={isEditMode ? 'Editar rol' : 'Nuevo rol'}
+                subtitle={isEditMode ? 'Modificá nombre, descripción y privilegios' : 'Definí los permisos para este rol'}
+                loading={saving}
+                contentSx={{
                     '&::-webkit-scrollbar': { width: '5px' },
                     '&::-webkit-scrollbar-track': { background: 'transparent' },
-                    '&::-webkit-scrollbar-thumb': { background: alpha(accentColor, 0.25), borderRadius: '4px' },
-                    '&::-webkit-scrollbar-thumb:hover': { background: alpha(accentColor, 0.45) },
+                    '&::-webkit-scrollbar-thumb': { background: `color-mix(in srgb, ${accentColor} 25%, transparent)`, borderRadius: '4px' },
+                    '&::-webkit-scrollbar-thumb:hover': { background: `color-mix(in srgb, ${accentColor} 45%, transparent)` },
+                }}
+                footerLeft={
+                    <Typography sx={{ fontSize: 11.5, color: 'text.disabled', fontWeight: 500 }}>
+                        {selectedCount === 0
+                            ? 'Sin privilegios asignados'
+                            : `${selectedCount} privilegio${selectedCount !== 1 ? 's' : ''} asignado${selectedCount !== 1 ? 's' : ''}`}
+                    </Typography>
+                }
+                secondaryButton={{ label: 'Cancelar', onClick: onClose }}
+                primaryButton={{
+                    label: saving ? 'Guardando…' : isEditMode ? 'Guardar cambios' : 'Crear rol',
+                    onClick: handleSave,
+                    disabled: saving,
+                    loading: saving,
                 }}
             >
                 <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 2, flexShrink: 0 }}>
@@ -513,7 +464,7 @@ export default function RoleFormModal({ open, onClose, onSaved, role = null }) {
                                 size="small"
                                 sx={{
                                     fontSize: 11, height: 20, fontWeight: 700,
-                                    bgcolor: selectedCount > 0 ? alpha(accentColor, isDark ? 0.2 : 0.1) : 'action.hover',
+                                    bgcolor: selectedCount > 0 ? `color-mix(in srgb, ${accentColor} ${isDark ? 20 : 10}%, transparent)` : 'action.hover',
                                     color: selectedCount > 0 ? accentColor : 'text.disabled',
                                     border: 'none',
                                 }}
@@ -537,56 +488,9 @@ export default function RoleFormModal({ open, onClose, onSaved, role = null }) {
                         ) : null
                     )}
                 </Box>
-            </DialogContent>
+            </GeneralModal>
 
-            <Box
-                sx={{
-                    flexShrink: 0,
-                    px: { xs: 2.5, sm: 3 }, py: 1.75,
-                    borderTop: '1px solid', borderColor: 'divider',
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    bgcolor: isDark ? alpha('#000', 0.25) : alpha(RED[50], 0.7),
-                }}
-            >
-                <Typography sx={{ fontSize: 11.5, color: 'text.disabled', fontWeight: 500 }}>
-                    {selectedCount === 0
-                        ? 'Sin privilegios asignados'
-                        : `${selectedCount} privilegio${selectedCount !== 1 ? 's' : ''} asignado${selectedCount !== 1 ? 's' : ''}`}
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button
-                        onClick={onClose}
-                        variant="outlined"
-                        size="small"
-                        sx={{ borderColor: 'divider', color: 'text.secondary', textTransform: 'none', fontWeight: 600, fontSize: 12.5, borderRadius: '8px', '&:hover': { borderColor: accentColor, color: accentColor, bgcolor: alpha(accentColor, 0.05) } }}
-                    >
-                        Cancelar
-                    </Button>
-                    <Button
-                        onClick={handleSave}
-                        disabled={saving}
-                        variant="contained"
-                        size="small"
-                        sx={{
-                            background: headerGradient,
-                            textTransform: 'none', fontWeight: 700, fontSize: 12.5, borderRadius: '8px',
-                            boxShadow: `0 4px 14px ${alpha(RED[600], isDark ? 0.4 : 0.3)}`,
-                            px: 2.5, letterSpacing: '0.01em',
-                            '&:hover': {
-                                background: isDark
-                                    ? `linear-gradient(135deg, ${RED[800]}, ${RED[700]})`
-                                    : `linear-gradient(135deg, ${RED[700]}, ${RED[900]})`,
-                                boxShadow: `0 6px 18px ${alpha(RED[600], 0.4)}`,
-                            },
-                            '&:disabled': { opacity: 0.55 },
-                        }}
-                    >
-                        {saving ? 'Guardando…' : isEditMode ? 'Guardar cambios' : 'Crear rol'}
-                    </Button>
-                </Box>
-            </Box>
-
-            <AlertModal open={!!alert} type={alert?.type} message={alert?.message} onClose={() => setAlert(null)} />
-        </Dialog>
+            <DialogModal open={!!alert} type={alert?.type} message={alert?.message} onClose={() => setAlert(null)} />
+        </>
     );
 }
