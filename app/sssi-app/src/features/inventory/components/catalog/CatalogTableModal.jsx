@@ -8,7 +8,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import TableBase from '../../../../common/components/TablaBase.jsx';
 import RowActionsMenu from '../../../../common/components/RowActionsMenu.jsx';
-import AlertModal from '../../../../common/components/AlertModal.jsx';
+import DialogModal from '../../../../common/components/DialogModal.jsx';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import { useCatalogData } from '../../hooks/useCatalogData';
 import { deleteCatalogItem } from '../../services/catalogService';
@@ -178,7 +178,7 @@ export default function CatalogTableModal({ open, onClose, config }) {
                 </DialogActions>
             </Dialog>
 
-            <AlertModal open={!!alert} type={alert?.type} message={alert?.message} onClose={() => setAlert(null)} />
+            <DialogModal open={!!alert} type={alert?.type} message={alert?.message} onClose={() => setAlert(null)} />
         </>
     );
 }

@@ -5,7 +5,7 @@ import {
 } from '@mui/material';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import TableBase from '../../../../common/components/TablaBase.jsx';
-import AlertModal from '../../../../common/components/AlertModal.jsx';
+import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { useAssetsData } from '../../hooks/useAssetsData';
 import { getAssetsColumns, renderAssetActions } from './assetColumns.jsx';
 import AssetDetailPanel from './AssetDetailPanel.jsx';
@@ -224,7 +224,7 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
                 </DialogActions>
             </Dialog>
 
-            <AlertModal
+            <DialogModal
                 open={!!alert}
                 type={alert?.type}
                 message={alert?.message}

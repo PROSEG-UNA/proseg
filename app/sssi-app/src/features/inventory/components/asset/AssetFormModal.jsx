@@ -12,7 +12,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
-import AlertModal from '../../../../common/components/AlertModal.jsx';
+import DialogModal from '../../../../common/components/DialogModal.jsx';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
 import CatalogFormModal from '../catalog/CatalogFormModal.jsx';
 import { CATALOG_CONFIG } from '../catalog/catalogConfig.js';
@@ -850,7 +850,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 />
             )}
 
-            <AlertModal
+            <DialogModal
                 open={!!alert}
                 type={alert?.type}
                 message={alert?.message}
