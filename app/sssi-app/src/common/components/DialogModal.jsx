@@ -9,12 +9,12 @@ import DeleteForeverOutlinedIcon from '@mui/icons-material/DeleteForeverOutlined
 const TYPES = {
     success:     { Icon: CheckCircleOutlinedIcon, colorKey: 'success', defaultTitle: 'Éxito' },
     error:       { Icon: WarningAmberIcon,        colorKey: 'error',   defaultTitle: 'Error' },
-    destructive: { Icon: ErrorOutlinedIcon,       colorKey: 'error',   defaultTitle: 'Acción destructiva' },
+    delete:      { Icon: ErrorOutlinedIcon,       colorKey: 'error',   defaultTitle: 'Eliminar registros' },
     warning:     { Icon: WarningAmberIcon,        colorKey: 'warning', defaultTitle: 'Advertencia' },
     info:        { Icon: InfoOutlinedIcon,        colorKey: 'info',    defaultTitle: 'Información' },
 };
 
-const DESTRUCTIVE = new Set(['destructive']);
+const DELETE_TYPES = new Set(['delete']);
 
 const paperSx = (t) => ({
     borderRadius: '16px',
@@ -82,7 +82,7 @@ const makeConfirmBtnSx = (colorKey) => (t) => ({
 });
 
 export default function DialogModal({
-    type = 'destructive',
+    type = 'delete',
     title,
     message,
     open,
@@ -96,7 +96,7 @@ export default function DialogModal({
     const { type: frozenType, title: frozenTitle, message: frozenMessage } = frozen.current;
 
     const { Icon, colorKey, defaultTitle } = TYPES[frozenType] ?? TYPES.warning;
-    const isDestructive = DESTRUCTIVE.has(frozenType);
+    const isDelete = DELETE_TYPES.has(frozenType);
     const resolvedCancelLabel = cancelLabel ?? (onConfirm ? 'Cancelar' : 'Aceptar');
 
     return (
@@ -110,7 +110,7 @@ export default function DialogModal({
                 paper: { sx: paperSx },
             }}
         >
-            {isDestructive ? (
+            {isDelete ? (
                 <Box sx={{ px: 2.5, pt: 3, pb: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
                     <Box
                         sx={(t) => ({
@@ -150,8 +150,8 @@ export default function DialogModal({
                 </Box>
             )}
 
-            <Box sx={{ px: isDestructive ? 3 : 2.5, pt: 1.5, pb: 1.5 }}>
-                <Typography sx={{ fontSize: '0.875rem', color: 'text.secondary', lineHeight: 1.65, whiteSpace: 'pre-line', textAlign: isDestructive ? 'center' : 'left' }}>
+            <Box sx={{ px: isDelete ? 3 : 2.5, pt: 1.5, pb: 1.5 }}>
+                <Typography sx={{ fontSize: '0.875rem', color: 'text.secondary', lineHeight: 1.65, whiteSpace: 'pre-line', textAlign: isDelete ? 'center' : 'left' }}>
                     {frozenMessage}
                 </Typography>
             </Box>

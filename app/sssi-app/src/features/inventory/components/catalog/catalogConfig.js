@@ -74,7 +74,7 @@ export const CATALOG_CONFIG = {
                 key: 'requiresNetworkInterface',
                 label: 'Requiere interfaz de red',
                 type: 'boolean',
-                destructiveWarning: 'Al desactivar esta opción se eliminarán las interfaces de red de todos los activos asociados a este tipo. ¿Deseas continuar?',
+                deleteWarning: 'Al desactivar esta opción se eliminarán las interfaces de red de todos los activos asociados a este tipo. ¿Deseas continuar?',
             },
         ],
     },

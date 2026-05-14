@@ -181,8 +181,8 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row }
                                             checked={formValues[field.key] ?? false}
                                             onChange={(e) => {
                                                 const newValue = e.target.checked;
-                                                if (!newValue && isEditMode && field.destructiveWarning) {
-                                                    setPendingBooleanChange({ key: field.key, value: newValue, warning: field.destructiveWarning });
+                                                if (!newValue && isEditMode && field.deleteWarning) {
+                                                    setPendingBooleanChange({ key: field.key, value: newValue, warning: field.deleteWarning });
                                                     return;
                                                 }
                                                 handleChange(field.key, newValue);
