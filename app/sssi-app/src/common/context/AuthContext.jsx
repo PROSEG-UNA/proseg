@@ -45,7 +45,8 @@ export function AuthProvider({ children }) {
         if (error.response?.status === 401) {
           setIsAuthenticated(false);
           setUser(null);
-          if (window.location.pathname !== '/login') {
+          const publicPaths = ['/login', '/forgot-password', '/reset-password'];
+          if (!publicPaths.includes(window.location.pathname)) {
             window.location.href = '/login';
           }
         }

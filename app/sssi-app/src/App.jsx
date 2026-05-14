@@ -8,6 +8,7 @@ import { AuthProvider } from './common/context/AuthContext';
 import { ProtectedRoute, PublicRoute } from './common/components/ProtectedRoute';
 import LoginPage from './features/auth/pages/LoginPage';
 import RegisterPage from './features/auth/pages/RegisterPage';
+import ResetPasswordPage from './features/auth/pages/ResetPasswordPage';
 import HomePage from './features/home/pages/HomePage.jsx';
 import AssetPage from './features/inventory/pages/AssetPage';
 import SecurityPage from './features/security/pages/SecurityPage';
@@ -27,6 +28,8 @@ function App() {
                                 <Route path="/" element={<Navigate to="/login" replace />} />
                                 <Route path="/login" element={<PublicRoute element={<LoginPage />} />} />
                                 <Route path="/registro" element={<PublicRoute element={<RegisterPage />} />} />
+                                <Route path="/forgot-password" element={<PublicRoute element={<ResetPasswordPage />} />} />
+                                <Route path="/reset-password" element={<PublicRoute element={<ResetPasswordPage />} />} />
                                 <Route
                                     path="/home"
                                     element={
