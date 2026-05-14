@@ -1,10 +1,4 @@
 import { useMemo, useState } from 'react';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
-import Button from '@mui/material/Button';
-import Typography from '@mui/material/Typography';
 import { useRolesData } from '../hooks/useRolesData';
 import { deleteRole } from '../services/rolesService';
 import { getRolesColumns, renderRolesActions } from './rolesColumns.jsx';
@@ -92,30 +86,15 @@ export default function RolesTable({ refreshKey, onRefresh }) {
                 onSaved={onRefresh}
             />
 
-            <Dialog
+            <DialogModal
+                type="delete"
                 open={!!deletingRole}
+                title="Eliminar rol"
+                message={`¿Estás seguro de que deseas eliminar el rol "${deletingRole?.name}"?\nEsta acción no se puede deshacer.`}
                 onClose={() => !deleting && setDeletingRole(null)}
-                maxWidth="xs"
-                fullWidth
-                slotProps={{
-                    backdrop: { sx: { backdropFilter: 'blur(4px)' } },
-                }}
-            >
-                <DialogTitle>Eliminar rol</DialogTitle>
-                <DialogContent>
-                    <Typography>
-                        ¿Estás seguro de que deseas eliminar el rol <strong>{deletingRole?.name}</strong>? Esta acción no se puede deshacer.
-                    </Typography>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setDeletingRole(null)} disabled={deleting}>
-                        Cancelar
-                    </Button>
-                    <Button variant="contained" color="error" onClick={handleConfirmDelete} loading={deleting}>
-                        Eliminar
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                onConfirm={handleConfirmDelete}
+                confirmLabel="Eliminar"
+            />
 
             <DialogModal
                 open={!!alert}

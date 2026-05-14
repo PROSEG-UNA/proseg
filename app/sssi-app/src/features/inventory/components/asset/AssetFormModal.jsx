@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import {
     Box, Typography, TextField, MenuItem,
     Divider, IconButton, useTheme,
-    Dialog, DialogTitle, DialogContent, DialogActions, Button,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
@@ -10,7 +9,6 @@ import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
@@ -857,53 +855,20 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 onClose={() => setAlert(null)}
             />
 
-            <Dialog
+            <DialogModal
+                type="warning"
                 open={!!pendingTypeChange}
+                title="Eliminar interfaz de red"
+                message={[
+                    'El nuevo tipo seleccionado no requiere interfaz de red. La interfaz actualmente asociada a este activo será eliminada al guardar.',
+                    pendingTypeChange?.ipAddress  ? `IP: ${pendingTypeChange.ipAddress}`   : null,
+                    pendingTypeChange?.macAddress ? `MAC: ${pendingTypeChange.macAddress}` : null,
+                    '¿Deseas continuar?',
+                ].filter(Boolean).join('\n\n')}
                 onClose={cancelTypeChange}
-                maxWidth="xs"
-                fullWidth
-                slotProps={{ backdrop: { sx: { backdropFilter: 'blur(4px)' } } }}
-            >
-                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <WarningAmberIcon sx={{ color: 'warning.main', fontSize: 28 }} />
-                    <Typography component="span" variant="h6" fontWeight={600}>
-                        Eliminar interfaz de red
-                    </Typography>
-                </DialogTitle>
-                <DialogContent>
-                    <Typography variant="body1" sx={{ mb: 1.5 }}>
-                        El nuevo tipo seleccionado no requiere interfaz de red. La interfaz actualmente asociada a este activo será eliminada al guardar:
-                    </Typography>
-                    <Box sx={{
-                        bgcolor: 'action.hover',
-                        borderRadius: '8px',
-                        px: 1.5, py: 1,
-                        display: 'flex', flexDirection: 'column', gap: 0.25,
-                    }}>
-                        {pendingTypeChange?.ipAddress && (
-                            <Typography sx={{ fontSize: 13, fontFamily: '"Roboto Mono", monospace' }}>
-                                IP: {pendingTypeChange.ipAddress}
-                            </Typography>
-                        )}
-                        {pendingTypeChange?.macAddress && (
-                            <Typography sx={{ fontSize: 13, fontFamily: '"Roboto Mono", monospace' }}>
-                                MAC: {pendingTypeChange.macAddress}
-                            </Typography>
-                        )}
-                    </Box>
-                    <Typography variant="body2" sx={{ mt: 1.5, color: 'text.secondary' }}>
-                        ¿Deseas continuar?
-                    </Typography>
-                </DialogContent>
-                <DialogActions sx={{ px: 3, pb: 2 }}>
-                    <Button onClick={cancelTypeChange} variant="outlined" sx={{ textTransform: 'none' }}>
-                        Cancelar
-                    </Button>
-                    <Button onClick={confirmTypeChange} variant="contained" color="warning" autoFocus sx={{ textTransform: 'none' }}>
-                        Eliminar y continuar
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                onConfirm={confirmTypeChange}
+                confirmLabel="Eliminar y continuar"
+            />
         </>
     );
 }
