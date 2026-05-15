@@ -25,11 +25,11 @@ public class TypeException extends BaseException {
         );
     }
 
-    public static TypeException inUse(String id) {
+    public static TypeException inUse(String name) {
         return new TypeException(
                 HttpStatus.BAD_REQUEST,
                 "ASSET_TYPE_IN_USE",
-                "No se puede eliminar el tipo de activo con id: " + id + " porque tiene activos o modelos asociados"
+                "No se puede eliminar el tipo de activo '" + name + "' porque tiene activos o modelos asociados"
         );
     }
 }

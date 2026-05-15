@@ -104,7 +104,7 @@ public class LocationServiceImpl implements LocationService {
                 .orElseThrow(() -> LocationException.notFound(id.toString()));
 
         if (assetRepository.existsByLocationId(id)) {
-            throw LocationException.inUse(id.toString());
+            throw LocationException.inUse(location.getName());
         }
 
         locationRepository.delete(location);

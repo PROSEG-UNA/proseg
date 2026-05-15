@@ -76,7 +76,7 @@ public class SiteServiceImpl implements SiteService {
                 .orElseThrow(() -> SiteException.notFound(id.toString()));
 
         if (locationRepository.existsBySiteId(id)) {
-            throw SiteException.inUse(id.toString());
+            throw SiteException.inUse(site.getName());
         }
 
         siteRepository.delete(site);

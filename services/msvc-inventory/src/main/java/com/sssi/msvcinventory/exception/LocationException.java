@@ -25,11 +25,11 @@ public class LocationException extends BaseException {
         );
     }
 
-    public static LocationException inUse(String id) {
+    public static LocationException inUse(String name) {
         return new LocationException(
                 HttpStatus.BAD_REQUEST,
                 "LOCATION_IN_USE",
-                "No se puede eliminar la ubicación con id: " + id + " porque tiene activos asociados"
+                "No se puede eliminar la ubicación '" + name + "' porque tiene activos asociados"
         );
     }
 }
