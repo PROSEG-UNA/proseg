@@ -24,10 +24,11 @@ export default function GeneralModal({
     const isSmall = useMediaQuery(theme.breakpoints.down(fullScreenAt));
     const accentColor = theme.vars.palette.tones.rose.fg;
     const headerBg = theme.vars.palette.tones.rose.headerBg;
+    const headerBgEnd = theme.vars.palette.tones.rose.headerBgEnd;
     const hoverBg = theme.vars.palette.tones.rose.hoverBg;
     const buttonShadow = theme.vars.palette.tones.rose.buttonShadow;
     const buttonShadowHover = theme.vars.palette.tones.rose.buttonShadowHover;
-    const headerGradient = `linear-gradient(135deg, ${headerBg} 0%, ${headerBg} 100%)`;
+    const headerGradient = `linear-gradient(135deg, ${headerBg} 0%, ${headerBgEnd} 100%)`;
 
     return (
         <Dialog

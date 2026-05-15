@@ -102,7 +102,7 @@ export default function AssetDetailPanel({ assetId }) {
             <Box sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
                 {hasNetIface && (
                     <Box>
-                        <SectionHeader icon={RouterIcon} label="Interfaz de red" />
+                        <SectionHeader icon={RouterIcon} label="IP y MAC" />
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.625, pl: 2.5 }}>
                             {netIface.ipAddress  && <InfoRow label="IP"  value={netIface.ipAddress} />}
                             {netIface.macAddress && <InfoRow label="MAC" value={netIface.macAddress} />}

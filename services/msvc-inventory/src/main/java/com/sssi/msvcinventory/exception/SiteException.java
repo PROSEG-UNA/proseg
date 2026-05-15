@@ -25,11 +25,11 @@ public class SiteException extends BaseException {
         );
     }
 
-    public static SiteException inUse(String id) {
+    public static SiteException inUse(String name) {
         return new SiteException(
                 HttpStatus.BAD_REQUEST,
                 "SITE_IN_USE",
-                "No se puede eliminar el sitio con id: " + id + " porque tiene ubicaciones asociadas"
+                "No se puede eliminar el sitio '" + name + "' porque tiene ubicaciones asociadas"
         );
     }
 }

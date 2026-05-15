@@ -1,61 +1,55 @@
 import './App.css';
-import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import 'dayjs/locale/es';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
 import AppTheme from './common/theme/AppTheme';
-import {SidebarProvider} from './common/context/SidebarContext';
-import {AuthProvider} from './common/context/AuthContext';
-import {ProtectedRoute, PublicRoute} from './common/components/ProtectedRoute';
+import { SidebarProvider } from './common/context/SidebarContext';
+import { AuthProvider } from './common/context/AuthContext';
+import { ProtectedRoute, PublicRoute } from './common/components/ProtectedRoute';
 import LoginPage from './features/auth/pages/LoginPage';
 import RegisterPage from './features/auth/pages/RegisterPage';
-import InventoryPage from './features/inventory/pages/InventoryPage';
+import ResetPasswordPage from './features/auth/pages/ResetPasswordPage';
+import HomePage from './features/home/pages/HomePage.jsx';
 import AssetPage from './features/inventory/pages/AssetPage';
 import SecurityPage from './features/security/pages/SecurityPage';
 import UserPage from './features/security/pages/UserPage';
 import RolePage from './features/security/pages/RolePage';
 import DashboardLayout from './layouts/DashboardLayout';
-import SetPasswordPage from "./features/security/pages/SetPasswordPage.jsx";
-import ResetPasswordPage from "./features/auth/pages/ResetPasswordPage.jsx";
 
 function App() {
     return (
         <AuthProvider>
-            <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
             <AppTheme defaultColorScheme="light">
-                <CssBaseline/>
-                <Box sx={{minHeight: '100vh', bgcolor: 'background.default'}}>
+                <CssBaseline />
+                <Box className="spsg-root">
                     <SidebarProvider>
                         <Router>
                             <Routes>
-                                <Route path="/" element={<Navigate to="/login" replace/>}/>
-                                <Route path="/login" element={<PublicRoute element={<LoginPage/>}/>}/>
-                                <Route path="/registro" element={<PublicRoute element={<RegisterPage/>}/>}/>
-                                <Route path="/set-password" element={<SetPasswordPage/>}/>
-                                <Route path="/forgot-password" element={<ResetPasswordPage/>}/>
-                                <Route path="/reset-password" element={<ResetPasswordPage/>}/>
+                                <Route path="/" element={<Navigate to="/login" replace />} />
+                                <Route path="/login" element={<PublicRoute element={<LoginPage />} />} />
+                                <Route path="/registro" element={<PublicRoute element={<RegisterPage />} />} />
+                                <Route path="/forgot-password" element={<PublicRoute element={<ResetPasswordPage />} />} />
+                                <Route path="/reset-password" element={<PublicRoute element={<ResetPasswordPage />} />} />
                                 <Route
                                     path="/home"
                                     element={
                                         <ProtectedRoute
                                             element={
                                                 <DashboardLayout>
-                                                    <InventoryPage/>
+                                                    <HomePage />
                                                 </DashboardLayout>
                                             }
                                         />
                                     }
                                 />
-                                <Route path="/inventario" element={<Navigate to="/home" replace/>}/>
+                                <Route path="/inventario" element={<Navigate to="/home" replace />} />
                                 <Route
                                     path="/inventario/activos"
                                     element={
                                         <ProtectedRoute
                                             element={
                                                 <DashboardLayout>
-                                                    <AssetPage/>
+                                                    <AssetPage />
                                                 </DashboardLayout>
                                             }
                                         />
@@ -67,7 +61,7 @@ function App() {
                                         <ProtectedRoute
                                             element={
                                                 <DashboardLayout>
-                                                    <SecurityPage/>
+                                                    <SecurityPage />
                                                 </DashboardLayout>
                                             }
                                         />
@@ -79,7 +73,7 @@ function App() {
                                         <ProtectedRoute
                                             element={
                                                 <DashboardLayout>
-                                                    <UserPage/>
+                                                    <UserPage />
                                                 </DashboardLayout>
                                             }
                                         />
@@ -91,7 +85,7 @@ function App() {
                                         <ProtectedRoute
                                             element={
                                                 <DashboardLayout>
-                                                    <RolePage/>
+                                                    <RolePage />
                                                 </DashboardLayout>
                                             }
                                         />
@@ -102,7 +96,6 @@ function App() {
                     </SidebarProvider>
                 </Box>
             </AppTheme>
-            </LocalizationProvider>
         </AuthProvider>
     );
 }

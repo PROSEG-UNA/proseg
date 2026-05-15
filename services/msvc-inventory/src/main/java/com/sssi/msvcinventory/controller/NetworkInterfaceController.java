@@ -23,7 +23,7 @@ public class NetworkInterfaceController {
     public ResponseEntity<ApiResponse<NetworkInterfaceResponseDto>> create(@Valid @RequestBody NetworkInterfaceRequestDto request) {
         return ApiResponseBuilder.created(
                 networkInterfaceService.create(request),
-                "Interfaz de red creada correctamente"
+                "IP y MAC creada correctamente"
         );
     }
 
@@ -31,7 +31,7 @@ public class NetworkInterfaceController {
     public ResponseEntity<ApiResponse<NetworkInterfaceResponseDto>> findById(@PathVariable UUID id) {
         return ApiResponseBuilder.ok(
                 networkInterfaceService.findById(id),
-                "Interfaz de red obtenida correctamente"
+                "IP y MAC obtenida correctamente"
         );
     }
 
@@ -39,7 +39,7 @@ public class NetworkInterfaceController {
     public ResponseEntity<ApiResponse<NetworkInterfaceResponseDto>> findByAssetId(@PathVariable UUID assetId) {
         return ApiResponseBuilder.ok(
                 networkInterfaceService.findByAssetId(assetId),
-                "Interfaz de red del activo obtenida correctamente"
+                "IP y MAC del activo obtenida correctamente"
         );
     }
 
@@ -49,13 +49,13 @@ public class NetworkInterfaceController {
             @Valid @RequestBody NetworkInterfaceRequestDto request) {
         return ApiResponseBuilder.ok(
                 networkInterfaceService.update(id, request),
-                "Interfaz de red actualizada correctamente"
+                "IP y MAC actualizada correctamente"
         );
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         networkInterfaceService.delete(id);
-        return ApiResponseBuilder.ok(null, "Interfaz de red eliminada correctamente");
+        return ApiResponseBuilder.ok(null, "IP y MAC eliminada correctamente");
     }
 }

@@ -74,7 +74,7 @@ public class BrandServiceImpl implements BrandService {
                 .orElseThrow(() -> BrandException.notFound(id.toString()));
 
         if (modelRepository.existsByBrandId(id)) {
-            throw BrandException.inUse(id.toString());
+            throw BrandException.inUse(brand.getName());
         }
 
         brandRepository.delete(brand);

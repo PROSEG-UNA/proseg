@@ -1,14 +1,11 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import {
-    Dialog, DialogContent, DialogTitle, DialogActions,
-    Typography, Button,
-} from '@mui/material';
+import { Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import TableBase from '../../../../common/components/TablaBase.jsx';
 import RowActionsMenu from '../../../../common/components/RowActionsMenu.jsx';
-import AlertModal from '../../../../common/components/AlertModal.jsx';
+import DialogModal from '../../../../common/components/DialogModal.jsx';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import { useCatalogData } from '../../hooks/useCatalogData';
 import { deleteCatalogItem } from '../../services/catalogService';
@@ -155,30 +152,17 @@ export default function CatalogTableModal({ open, onClose, config }) {
                 row={formRow}
             />
 
-            <Dialog
+            <DialogModal
+                type="delete"
                 open={!!deletingRow}
+                title={`Eliminar ${title}`}
+                message={`¿Estás seguro de que deseas eliminar "${deletingRow?.name}"?\nEsta acción no se puede deshacer.`}
                 onClose={() => !deleting && setDeletingRow(null)}
-                maxWidth="xs"
-                fullWidth
-                slotProps={{ backdrop: { sx: { backdropFilter: 'blur(4px)' } } }}
-            >
-                <DialogTitle>Eliminar {title}</DialogTitle>
-                <DialogContent>
-                    <Typography>
-                        ¿Estás seguro de que deseas eliminar <strong>{deletingRow?.name}</strong>? Esta acción no se puede deshacer.
-                    </Typography>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setDeletingRow(null)} disabled={deleting}>
-                        Cancelar
-                    </Button>
-                    <Button variant="contained" color="error" onClick={handleConfirmDelete} loading={deleting}>
-                        Eliminar
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                onConfirm={handleConfirmDelete}
+                confirmLabel="Eliminar"
+            />
 
-            <AlertModal open={!!alert} type={alert?.type} message={alert?.message} onClose={() => setAlert(null)} />
+            <DialogModal open={!!alert} type={alert?.type} message={alert?.message} onClose={() => setAlert(null)} />
         </>
     );
 }

@@ -1,11 +1,6 @@
 import { useMemo, useState, useCallback, useEffect } from 'react';
-import {
-    Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
-    Button, Box,
-} from '@mui/material';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import TableBase from '../../../../common/components/TablaBase.jsx';
-import AlertModal from '../../../../common/components/AlertModal.jsx';
+import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { useAssetsData } from '../../hooks/useAssetsData';
 import { getAssetsColumns, renderAssetActions } from './assetColumns.jsx';
 import AssetDetailPanel from './AssetDetailPanel.jsx';
@@ -192,39 +187,17 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
                 onSaved={handleEditSaved}
             />
 
-            <Dialog
+            <DialogModal
+                type="delete"
                 open={!!assetToDelete}
+                title="Eliminar activo"
+                message={`¿Seguro que deseas eliminar el activo "${assetToDelete?.name}"?\nEsta acción no se puede deshacer.`}
                 onClose={handleDeleteCancel}
-                maxWidth="xs"
-                fullWidth
-                slotProps={{ backdrop: { sx: { backdropFilter: 'blur(4px)' } } }}
-            >
-                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <DeleteOutlineIcon sx={{ color: 'error.main', fontSize: 26 }} />
-                    <Box component="span" sx={{ fontWeight: 600 }}>Eliminar activo</Box>
-                </DialogTitle>
-                <DialogContent>
-                    <DialogContentText>
-                        ¿Seguro que deseas eliminar el activo
-                        {assetToDelete?.name ? <strong> &quot;{assetToDelete.name}&quot;</strong> : null}?
-                        Esta acción no se puede deshacer.
-                    </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleDeleteCancel} disabled={deleting}>Cancelar</Button>
-                    <Button
-                        onClick={handleDeleteConfirm}
-                        color="error"
-                        variant="contained"
-                        disabled={deleting}
-                        loading={deleting}
-                    >
-                        Eliminar
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                onConfirm={handleDeleteConfirm}
+                confirmLabel="Eliminar"
+            />
 
-            <AlertModal
+            <DialogModal
                 open={!!alert}
                 type={alert?.type}
                 message={alert?.message}

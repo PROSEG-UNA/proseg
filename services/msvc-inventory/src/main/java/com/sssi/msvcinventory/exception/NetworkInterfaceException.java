@@ -21,7 +21,7 @@ public class NetworkInterfaceException extends BaseException {
         return new NetworkInterfaceException(
                 HttpStatus.CONFLICT,
                 "NETWORK_INTERFACE_DUPLICATE_IP",
-                "Ya existe una interfaz de red con la dirección IP: " + ip
+                "Ya existe una IP y MAC con la dirección IP: " + ip
         );
     }
 
@@ -29,7 +29,7 @@ public class NetworkInterfaceException extends BaseException {
         return new NetworkInterfaceException(
                 HttpStatus.CONFLICT,
                 "NETWORK_INTERFACE_DUPLICATE_MAC",
-                "Ya existe una interfaz de red con la dirección MAC: " + mac
+                "Ya existe una IP y MAC con la dirección MAC: " + mac
         );
     }
 
@@ -37,7 +37,7 @@ public class NetworkInterfaceException extends BaseException {
         return new NetworkInterfaceException(
                 HttpStatus.CONFLICT,
                 "NETWORK_INTERFACE_ASSET_CONFLICT",
-                "El activo con id: " + assetId + " ya tiene una interfaz de red asignada"
+                "El activo con id: " + assetId + " ya tiene una IP y MAC asignada"
         );
     }
 
@@ -45,7 +45,7 @@ public class NetworkInterfaceException extends BaseException {
         return new NetworkInterfaceException(
                 HttpStatus.CONFLICT,
                 "NETWORK_INTERFACE_REQUIRED",
-                "No se puede eliminar la interfaz de red: el tipo de activo '" + assetTypeName + "' la requiere"
+                "No se puede eliminar la IP y MAC: el tipo de activo '" + assetTypeName + "' la requiere"
         );
     }
 }

@@ -8,28 +8,28 @@ import {alpha, useTheme} from '@mui/material/styles';
 import { MRT_Localization_ES } from 'material-react-table/locales/es';
 
 export default function TableBase({
-    columns,
-    data,
-    loading = false,
-    error = null,
-    enableRowActions = false,
-    renderRowActions,
-    renderDetailPanel,
-    enableRowSelection = false,
-    rowSelection,
-    onRowSelectionChange,
-    enablePagination = true,
-    enableColumnFilters = true,
-    enableGlobalFilter = true,
-    enableDensityToggle = true,
-    enableFullScreenToggle = true,
-    enableColumnActions = true,
-    enableHiding = true,
-    enableStickyHeader = true,
-    enableStickyFooter = true,
-    maxHeight,
-    tableOptions = {},
-}) {
+                                      columns,
+                                      data,
+                                      loading = false,
+                                      error = null,
+                                      enableRowActions = false,
+                                      renderRowActions,
+                                      renderDetailPanel,
+                                      enableRowSelection = false,
+                                      rowSelection,
+                                      onRowSelectionChange,
+                                      enablePagination = true,
+                                      enableColumnFilters = true,
+                                      enableGlobalFilter = true,
+                                      enableDensityToggle = true,
+                                      enableFullScreenToggle = true,
+                                      enableColumnActions = true,
+                                      enableHiding = true,
+                                      enableStickyHeader = true,
+                                      enableStickyFooter = true,
+                                      maxHeight,
+                                      tableOptions = {},
+                                  }) {
     const theme = useTheme();
 
     const stableColumns = useMemo(() => columns, [columns]);
@@ -92,11 +92,16 @@ export default function TableBase({
         enableTopToolbar: true,
         enableBottomToolbar: enablePagination,
 
-        muiTableContainerProps: {
+        muiTableContainerProps: ({ table }) => ({
             sx: maxHeight
                 ? { maxHeight, overflow: 'auto' }
-                : { height: 'calc(100vh - 315px)', overflow: 'auto' },
-        },
+                : {
+                    height: table.getState().isFullScreen
+                        ? 'calc(100vh - 120px)'
+                        : 'calc(100vh - 315px)',
+                    overflow: 'auto',
+                },
+        }),
 
         paginationDisplayMode: 'pages',
         initialState: {
@@ -185,9 +190,15 @@ export default function TableBase({
 
         muiExpandButtonProps: ({ row }) => ({
             sx: {
-                transition: 'transform 200ms ease',
-                transform: row.getIsExpanded() ? 'rotate(180deg)' : 'rotate(0deg)',
+                '& svg': {
+                    transition: 'transform 200ms ease',
+                    transform: row.getIsExpanded() ? 'rotate(-90deg) !important' : 'rotate(0deg) !important',
+                },
             },
+        }),
+
+        muiLinearProgressProps: ({ isTopToolbar }) => ({
+            sx: { display: isTopToolbar ? undefined : 'none' },
         }),
 
         muiSearchTextFieldProps: {

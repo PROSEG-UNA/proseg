@@ -118,7 +118,7 @@ public class ModelServiceImpl implements ModelService {
                 .orElseThrow(() -> ModelException.notFound(id.toString()));
 
         if (assetRepository.existsByModelId(id)) {
-            throw ModelException.inUse(id.toString());
+            throw ModelException.inUse(model.getName());
         }
 
         modelRepository.delete(model);

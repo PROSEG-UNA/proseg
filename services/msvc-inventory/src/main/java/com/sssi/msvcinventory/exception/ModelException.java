@@ -25,11 +25,11 @@ public class ModelException extends BaseException {
         );
     }
 
-    public static ModelException inUse(String id) {
+    public static ModelException inUse(String name) {
         return new ModelException(
                 HttpStatus.BAD_REQUEST,
                 "ASSET_MODEL_IN_USE",
-                "No se puede eliminar el modelo con id: " + id + " porque tiene activos asociados"
+                "No se puede eliminar el modelo '" + name + "' porque tiene activos asociados"
         );
     }
 }

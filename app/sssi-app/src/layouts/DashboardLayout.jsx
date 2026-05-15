@@ -22,7 +22,7 @@ export function DashboardLayout({ children }) {
             marginLeft: marginLeft,
             display: 'flex',
             flexDirection: 'column',
-            backgroundColor: 'background.default',
+            backgroundColor: 'transparent',
             transition: 'margin-left 0.3s ease-in-out',
             overflow: 'auto',
           }}

@@ -21,7 +21,7 @@ public class AssetException extends BaseException {
         return new AssetException(
                 HttpStatus.UNPROCESSABLE_ENTITY,
                 "ASSET_NETWORK_INTERFACE_REQUIRED",
-                "El tipo de activo '" + assetTypeName + "' requiere una interfaz de red"
+                "El tipo de activo '" + assetTypeName + "' requiere IP y MAC"
         );
     }
 }

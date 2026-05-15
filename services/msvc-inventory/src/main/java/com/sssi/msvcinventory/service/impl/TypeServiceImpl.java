@@ -81,7 +81,7 @@ public class TypeServiceImpl implements TypeService {
                 .orElseThrow(() -> TypeException.notFound(id.toString()));
 
         if (modelRepository.existsByTypeId(id) || assetRepository.existsByModelTypeId(id)) {
-            throw TypeException.inUse(id.toString());
+            throw TypeException.inUse(type.getName());
         }
 
         typeRepository.delete(type);

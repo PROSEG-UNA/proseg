@@ -2,11 +2,9 @@ import { useState, useEffect } from 'react';
 import {
     Box, Typography,
     TextField, FormControlLabel, Switch,
-    Dialog, DialogTitle, DialogContent, DialogActions, Button,
     useTheme,
 } from '@mui/material';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import AlertModal from '../../../../common/components/AlertModal.jsx';
+import DialogModal from '../../../../common/components/DialogModal.jsx';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import { createCatalogItem, updateCatalogItem, fetchCatalogOptions } from '../../services/catalogService';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
@@ -183,8 +181,8 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row }
                                             checked={formValues[field.key] ?? false}
                                             onChange={(e) => {
                                                 const newValue = e.target.checked;
-                                                if (!newValue && isEditMode && field.destructiveWarning) {
-                                                    setPendingBooleanChange({ key: field.key, value: newValue, warning: field.destructiveWarning });
+                                                if (!newValue && isEditMode && field.deleteWarning) {
+                                                    setPendingBooleanChange({ key: field.key, value: newValue, warning: field.deleteWarning });
                                                     return;
                                                 }
                                                 handleChange(field.key, newValue);
@@ -250,44 +248,17 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row }
                 </Box>
             </GeneralModal>
 
-            <AlertModal open={!!alert} type={alert?.type} message={alert?.message} onClose={() => setAlert(null)} />
+            <DialogModal open={!!alert} type={alert?.type} message={alert?.message} onClose={() => setAlert(null)} />
 
-            <Dialog
+            <DialogModal
                 open={!!pendingBooleanChange}
+                message={pendingBooleanChange?.warning}
                 onClose={() => setPendingBooleanChange(null)}
-                maxWidth="xs"
-                fullWidth
-                slotProps={{ backdrop: { sx: { backdropFilter: 'blur(4px)' } } }}
-            >
-                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <WarningAmberIcon sx={{ color: 'warning.main', fontSize: 28 }} />
-                    <Typography component="span" variant="h6" fontWeight={600}>
-                        Acción destructiva
-                    </Typography>
-                </DialogTitle>
-                <DialogContent>
-                    <Typography variant="body1">
-                        {pendingBooleanChange?.warning}
-                    </Typography>
-                </DialogContent>
-                <DialogActions sx={{ px: 3, pb: 2 }}>
-                    <Button onClick={() => setPendingBooleanChange(null)} variant="outlined" sx={{ textTransform: 'none' }}>
-                        Cancelar
-                    </Button>
-                    <Button
-                        onClick={() => {
-                            handleChange(pendingBooleanChange.key, pendingBooleanChange.value);
-                            setPendingBooleanChange(null);
-                        }}
-                        variant="contained"
-                        color="warning"
-                        autoFocus
-                        sx={{ textTransform: 'none' }}
-                    >
-                        Sí, continuar
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                onConfirm={() => {
+                    handleChange(pendingBooleanChange.key, pendingBooleanChange.value);
+                    setPendingBooleanChange(null);
+                }}
+            />
         </>
     );
 }

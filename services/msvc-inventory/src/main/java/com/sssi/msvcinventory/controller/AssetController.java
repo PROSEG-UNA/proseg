@@ -109,7 +109,7 @@ public class AssetController {
             @PathVariable UUID id) {
         return ApiResponseBuilder.ok(
                 assetService.findLastKnownNetworkInterface(id),
-                "Última interfaz de red conocida"
+                "Última IP y MAC conocida"
         );
     }
 
