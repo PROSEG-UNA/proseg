@@ -9,6 +9,7 @@ import { ProtectedRoute, PublicRoute } from './common/components/ProtectedRoute'
 import LoginPage from './features/auth/pages/LoginPage';
 import RegisterPage from './features/auth/pages/RegisterPage';
 import ResetPasswordPage from './features/auth/pages/ResetPasswordPage';
+import SetPasswordPage from './features/security/pages/SetPasswordPage';
 import HomePage from './features/home/pages/HomePage.jsx';
 import AssetPage from './features/inventory/pages/AssetPage';
 import SecurityPage from './features/security/pages/SecurityPage';
@@ -30,6 +31,7 @@ function App() {
                                 <Route path="/registro" element={<PublicRoute element={<RegisterPage />} />} />
                                 <Route path="/forgot-password" element={<PublicRoute element={<ResetPasswordPage />} />} />
                                 <Route path="/reset-password" element={<PublicRoute element={<ResetPasswordPage />} />} />
+                                <Route path="/set-password" element={<PublicRoute element={<SetPasswordPage />} />} />
                                 <Route
                                     path="/home"
                                     element={
