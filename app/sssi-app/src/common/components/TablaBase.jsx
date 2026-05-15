@@ -92,11 +92,16 @@ export default function TableBase({
         enableTopToolbar: true,
         enableBottomToolbar: enablePagination,
 
-        muiTableContainerProps: {
+        muiTableContainerProps: ({ table }) => ({
             sx: maxHeight
                 ? { maxHeight, overflow: 'auto' }
-                : { height: 'calc(100vh - 315px)', overflow: 'auto' },
-        },
+                : {
+                    height: table.getState().isFullScreen
+                        ? 'calc(100vh - 120px)'
+                        : 'calc(100vh - 315px)',
+                    overflow: 'auto',
+                },
+        }),
 
         paginationDisplayMode: 'pages',
         initialState: {
@@ -190,6 +195,10 @@ export default function TableBase({
                     transform: row.getIsExpanded() ? 'rotate(-90deg) !important' : 'rotate(0deg) !important',
                 },
             },
+        }),
+
+        muiLinearProgressProps: ({ isTopToolbar }) => ({
+            sx: { display: isTopToolbar ? undefined : 'none' },
         }),
 
         muiSearchTextFieldProps: {
