@@ -135,6 +135,7 @@ function ForgotPasswordStep({ onSent }) {
             <GeneralModal
                 open={true}
                 onClose={() => {}}
+                showCloseButton={false}
                 maxWidth="xs"
                 fullScreenAt="xs"
                 icon={EmailOutlinedIcon}
@@ -197,6 +198,7 @@ function EmailSentView({ email }) {
             <GeneralModal
                 open={true}
                 onClose={() => {}}
+                showCloseButton={false}
                 maxWidth="xs"
                 fullScreenAt="xs"
                 icon={EmailOutlinedIcon}
@@ -244,6 +246,7 @@ function InvalidTokenView() {
             <GeneralModal
                 open={true}
                 onClose={() => {}}
+                showCloseButton={false}
                 maxWidth="xs"
                 fullScreenAt="xs"
                 icon={ErrorIcon}
@@ -281,6 +284,7 @@ function SuccessView() {
             <GeneralModal
                 open={true}
                 onClose={() => {}}
+                showCloseButton={false}
                 maxWidth="xs"
                 fullScreenAt="xs"
                 icon={CheckCircleIcon}
@@ -372,6 +376,7 @@ function ResetPasswordForm({ token }) {
             <GeneralModal
                 open={true}
                 onClose={() => {}}
+                showCloseButton={false}
                 maxWidth="xs"
                 fullScreenAt="xs"
                 icon={LockResetIcon}
