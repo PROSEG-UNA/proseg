@@ -175,6 +175,7 @@ export function RegisterPage() {
             <GeneralModal
                 open={true}
                 onClose={() => {}}
+                showCloseButton={false}
                 maxWidth="xs"
                 fullScreenAt="xs"
                 icon={PersonAddIcon}

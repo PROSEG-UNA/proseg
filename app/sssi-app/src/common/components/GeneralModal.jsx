@@ -14,6 +14,7 @@ export default function GeneralModal({
     title,
     subtitle,
     loading = false,
+    showCloseButton = true,
     footerLeft,
     primaryButton,
     secondaryButton,
@@ -84,18 +85,20 @@ export default function GeneralModal({
                         )}
                     </Box>
                 </Box>
-                <IconButton
-                    onClick={onClose}
-                    size="small"
-                    sx={{
-                        color: theme.vars.palette.tones.rose.headerTextSubtle,
-                        border: `1px solid ${theme.vars.palette.tones.rose.headerTextBorder}`,
-                        p: 0.625,
-                        '&:hover': { bgcolor: theme.vars.palette.tones.rose.headerOverlayHover, color: '#fff' },
-                    }}
-                >
-                    <CloseIcon sx={{ fontSize: 16 }} />
-                </IconButton>
+                {showCloseButton && (
+                    <IconButton
+                        onClick={onClose}
+                        size="small"
+                        sx={{
+                            color: theme.vars.palette.tones.rose.headerTextSubtle,
+                            border: `1px solid ${theme.vars.palette.tones.rose.headerTextBorder}`,
+                            p: 0.625,
+                            '&:hover': { bgcolor: theme.vars.palette.tones.rose.headerOverlayHover, color: '#fff' },
+                        }}
+                    >
+                        <CloseIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                )}
             </Box>
 
             {loading && (

@@ -82,6 +82,7 @@ export function LoginPage() {
             <GeneralModal
                 open={true}
                 onClose={() => {}}
+                showCloseButton={false}
                 maxWidth="xs"
                 fullScreenAt="xs"
                 icon={AdminPanelSettingsIcon}
