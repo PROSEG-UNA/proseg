@@ -664,7 +664,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                         <>
                             <Divider />
                             <Box>
-                                {sectionLabel('Interfaz de red')}
+                                {sectionLabel('IP y MAC')}
                                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                                     <TextField
                                         label="Dirección IP" value={formValues.ipAddress} required
@@ -858,9 +858,9 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
             <DialogModal
                 type="warning"
                 open={!!pendingTypeChange}
-                title="Eliminar interfaz de red"
+                title="Eliminar IP y MAC"
                 message={[
-                    'El nuevo tipo seleccionado no requiere interfaz de red. La interfaz actualmente asociada a este activo será eliminada al guardar.',
+                    'El nuevo tipo seleccionado no requiere IP y MAC. La IP y MAC actualmente asociada a este activo será eliminada al guardar.',
                     pendingTypeChange?.ipAddress  ? `IP: ${pendingTypeChange.ipAddress}`   : null,
                     pendingTypeChange?.macAddress ? `MAC: ${pendingTypeChange.macAddress}` : null,
                     '¿Deseas continuar?',

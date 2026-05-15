@@ -61,7 +61,7 @@ export const CATALOG_CONFIG = {
             { accessorKey: 'description', header: 'Descripción', size: 200, grow: 2 },
             {
                 accessorKey: 'requiresNetworkInterface',
-                header: 'Interfaz de red',
+                header: 'IP y MAC',
                 size: 130,
                 grow: false,
                 Cell: ({ cell }) => (cell.getValue() ? 'Sí' : 'No'),
@@ -72,9 +72,9 @@ export const CATALOG_CONFIG = {
             { key: 'description', label: 'Descripción', type: 'textarea', required: false },
             {
                 key: 'requiresNetworkInterface',
-                label: 'Requiere interfaz de red',
+                label: 'Requiere IP y MAC',
                 type: 'boolean',
-                deleteWarning: 'Al desactivar esta opción se eliminarán las interfaces de red de todos los activos asociados a este tipo. ¿Deseas continuar?',
+                deleteWarning: 'Al desactivar esta opción se eliminará la IP y MAC de todos los activos asociados a este tipo. ¿Deseas continuar?',
             },
         ],
     },
