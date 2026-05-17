@@ -28,6 +28,18 @@ function formatDate(value) {
 export function getAssetsColumns() {
     return [
         {
+            accessorKey: 'assetNumber',
+            header: 'N° Activo',
+            size: 150,
+            grow: false,
+        },
+        {
+            accessorKey: 'serialNumber',
+            header: 'N° Serie',
+            size: 170,
+            grow: false,
+        },
+        {
             accessorKey: 'name',
             header: 'Nombre',
             size: 200,
@@ -110,6 +122,24 @@ export function getAssetsColumns() {
             grow: false,
             enableColumnFilter: false,
             Cell: ({ cell }) => formatDate(cell.getValue()),
+        },
+        {
+            accessorKey: 'latitude',
+            header: 'Latitud',
+            size: 130,
+            grow: false,
+            enableColumnFilter: false,
+            enableSorting: false,
+            Cell: ({ cell }) => cell.getValue() != null ? cell.getValue() : '—',
+        },
+        {
+            accessorKey: 'longitude',
+            header: 'Longitud',
+            size: 130,
+            grow: false,
+            enableColumnFilter: false,
+            enableSorting: false,
+            Cell: ({ cell }) => cell.getValue() != null ? cell.getValue() : '—',
         },
     ];
 }

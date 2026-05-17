@@ -38,6 +38,13 @@ export async function fetchLastKnownNetworkInterface(assetId) {
     }
 }
 
+export async function checkAssetNumber(value, excludeId = null) {
+    const params = new URLSearchParams({ value });
+    if (excludeId) params.append('excludeId', excludeId);
+    const { data } = await axios.get(`${INVENTORY_ENDPOINTS.assets}/check-asset-number?${params}`, config);
+    return data?.data ?? false;
+}
+
 export async function fetchAssets({ page = 0, size = 10, search = '', filters = {}, sort = [] } = {}) {
     const params = new URLSearchParams();
     params.append('page', String(page));

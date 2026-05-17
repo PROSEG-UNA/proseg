@@ -39,6 +39,8 @@ export function useAssetsData({ pageIndex = 0, pageSize = 10, search = '', filte
                     return {
                         id: asset.id,
                         kind: asset.kind || '—',
+                        assetNumber: asset.assetNumber ?? '—',
+                        serialNumber: asset.serialNumber ?? '—',
                         name: asset.name || '—',
                         description: asset.description || '—',
                         brand: asset.model?.brand?.name || '—',
@@ -52,6 +54,8 @@ export function useAssetsData({ pageIndex = 0, pageSize = 10, search = '', filte
                         acquisitionDate: asset.acquisitionDate || null,
                         warrantyEndDate: asset.warrantyEndDate || null,
                         firmwareSupportEndDate: asset.firmwareSupportEndDate || null,
+                        latitude: asset.latitude ?? null,
+                        longitude: asset.longitude ?? null,
                     };
                 });
 
