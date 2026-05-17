@@ -18,11 +18,13 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.time.Instant;
+import java.util.List;
 
 @RestController
 @RequestMapping("${routes.auth}")
@@ -47,7 +49,10 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<KeycloakUserResponseDto>> getCurrentUser(HttpServletRequest request) {
+        public ResponseEntity<ApiResponse<KeycloakUserResponseDto>> getCurrentUser(
+            HttpServletRequest request,
+            Authentication authentication
+        ) {
         String authToken = null;
         if (request.getCookies() != null) {
             for (Cookie cookie : request.getCookies()) {
@@ -62,6 +67,14 @@ public class AuthController {
         }
         String userId = keycloakAuthService.extractUserIdFromToken(authToken);
         KeycloakUserResponseDto user = keycloakAdminService.getUserById(userId);
+        List<String> permissions = authentication == null
+            ? List.of()
+            : authentication.getAuthorities().stream()
+            .map(authority -> authority.getAuthority())
+            .distinct()
+            .sorted()
+            .toList();
+        user.setPermissions(permissions);
         log.info("Información del usuario obtenida: {}", userId);
         return ApiResponseBuilder.ok(user, "Usuario obtenido exitosamente");
     }

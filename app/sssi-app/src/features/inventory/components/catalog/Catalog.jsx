@@ -9,10 +9,18 @@ import CatalogCard from './CatalogCard';
 import CatalogGrid from './CatalogGrid';
 import CatalogTableModal from './CatalogTableModal';
 import { CATALOG_CONFIG } from './catalogConfig';
+import { usePermissions } from '../../../../common/hooks/usePermissions';
+import { PERMISSIONS } from '../../../../common/constants/permissions';
 
 export default function Catalog() {
     const [tableOpen, setTableOpen] = useState(false);
     const [tableConfig, setTableConfig] = useState(null);
+    const { hasPermission } = usePermissions();
+    const canManageCatalog = hasPermission(PERMISSIONS.INVENTORY.MANAGE);
+
+    if (!canManageCatalog) {
+        return null;
+    }
 
     const handleCatalogClick = (entityName) => {
         setTableConfig(CATALOG_CONFIG[entityName]);

@@ -106,7 +106,7 @@ export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
             setAlert({ type: 'success', message: 'Rol actualizado correctamente.' });
             onSaved?.();
         } catch (err) {
-            setAlert({ type: 'error', message: err?.message || 'Error al actualizar el rol del usuario.' });
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(err, 'Error al actualizar el rol del usuario.') });
         } finally {
             setSaving(false);
         }
