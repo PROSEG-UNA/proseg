@@ -13,7 +13,6 @@ import com.sssi.msvcinventory.service.AssetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Page;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -110,6 +109,16 @@ public class AssetController {
         return ApiResponseBuilder.ok(
                 assetService.findLastKnownNetworkInterface(id),
                 "Última IP y MAC conocida"
+        );
+    }
+
+    @GetMapping("/check-asset-number")
+    public ResponseEntity<ApiResponse<Boolean>> checkAssetNumber(
+            @RequestParam String value,
+            @RequestParam(required = false) UUID excludeId) {
+        return ApiResponseBuilder.ok(
+                assetService.existsByAssetNumber(value, excludeId),
+                "Verificación completada"
         );
     }
 

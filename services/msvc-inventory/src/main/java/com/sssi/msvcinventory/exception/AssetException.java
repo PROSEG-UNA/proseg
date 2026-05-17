@@ -24,4 +24,12 @@ public class AssetException extends BaseException {
                 "El tipo de activo '" + assetTypeName + "' requiere IP y MAC"
         );
     }
+
+    public static AssetException duplicateSerialNumber(String serialNumber) {
+        return new AssetException(
+                HttpStatus.CONFLICT,
+                "DUPLICATE_SERIAL_NUMBER",
+                "Ya existe un activo con el número de serie: " + serialNumber
+        );
+    }
 }

@@ -28,4 +28,6 @@ public interface AssetService {
     void delete(UUID id);
 
     NetworkInterfaceResponseDto findLastKnownNetworkInterface(UUID assetId);
+
+    boolean existsByAssetNumber(String assetNumber, UUID excludeId);
 }

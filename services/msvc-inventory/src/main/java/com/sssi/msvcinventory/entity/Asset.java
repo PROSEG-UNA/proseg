@@ -10,6 +10,7 @@ import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.UuidGenerator;
 import org.hibernate.annotations.Where;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -72,4 +73,18 @@ public class Asset extends BaseEntity {
 
     @OneToOne(mappedBy = "asset", cascade = CascadeType.ALL)
     private NetworkInterface networkInterface;
+
+    @Filterable(type = FilterType.TEXT)
+    @Column(name = "asset_number")
+    private String assetNumber;
+
+    @Filterable(type = FilterType.TEXT)
+    @Column(name = "serial_number", unique = true)
+    private String serialNumber;
+
+    @Column(name = "latitude", precision = 10, scale = 7)
+    private BigDecimal latitude;
+
+    @Column(name = "longitude", precision = 10, scale = 7)
+    private BigDecimal longitude;
 }

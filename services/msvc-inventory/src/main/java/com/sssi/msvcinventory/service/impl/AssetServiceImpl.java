@@ -46,6 +46,11 @@ public class AssetServiceImpl implements AssetService {
     @Override
     @Transactional
     public AssetResponseDto create(AssetRequestDto request) {
+        if (request.getSerialNumber() != null && !request.getSerialNumber().isBlank()
+                && assetRepository.existsBySerialNumber(request.getSerialNumber())) {
+            throw AssetException.duplicateSerialNumber(request.getSerialNumber());
+        }
+
         Model model = modelRepository.findById(request.getModelId())
                 .orElseThrow(() -> ModelException.notFound(request.getModelId().toString()));
 
@@ -120,6 +125,11 @@ public class AssetServiceImpl implements AssetService {
     public AssetResponseDto update(UUID id, AssetRequestDto request) {
         Asset asset = assetRepository.findById(id)
                 .orElseThrow(() -> AssetException.notFound(id.toString()));
+
+        if (request.getSerialNumber() != null && !request.getSerialNumber().isBlank()
+                && assetRepository.existsBySerialNumberAndIdNot(request.getSerialNumber(), id)) {
+            throw AssetException.duplicateSerialNumber(request.getSerialNumber());
+        }
 
         Model model = modelRepository.findById(request.getModelId())
                 .orElseThrow(() -> ModelException.notFound(request.getModelId().toString()));
@@ -213,6 +223,13 @@ public class AssetServiceImpl implements AssetService {
         existing.setMacAddress(dto.getMacAddress());
         existing.markAsActive();
         networkInterfaceRepository.save(existing);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsByAssetNumber(String assetNumber, UUID excludeId) {
+        if (excludeId == null) return assetRepository.existsByAssetNumber(assetNumber);
+        return assetRepository.existsByAssetNumberAndIdNot(assetNumber, excludeId);
     }
 
     private AssetResponseDto toPolymorphicResponse(Asset asset) {

@@ -6,6 +6,7 @@ import com.sssi.msvcinventory.entity.enums.AssetStatus;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -39,4 +40,8 @@ public class AssetResponseDto {
     private LocalDateTime updatedAt;
     private List<String> archiveUrls;
     private NetworkInterfaceResponseDto networkInterface;
+    private String assetNumber;
+    private String serialNumber;
+    private BigDecimal latitude;
+    private BigDecimal longitude;
 }

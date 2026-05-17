@@ -25,4 +25,12 @@ public interface AssetRepository extends JpaRepository<Asset, UUID>, JpaSpecific
     boolean existsByModelBrandId(UUID brandId);
 
     boolean existsByModelTypeId(UUID typeId);
+
+    boolean existsBySerialNumber(String serialNumber);
+
+    boolean existsBySerialNumberAndIdNot(String serialNumber, UUID id);
+
+    boolean existsByAssetNumber(String assetNumber);
+
+    boolean existsByAssetNumberAndIdNot(String assetNumber, UUID id);
 }
