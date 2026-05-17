@@ -15,10 +15,17 @@ import { PERMISSIONS } from '../../../../common/constants/permissions';
 export default function Catalog() {
     const [tableOpen, setTableOpen] = useState(false);
     const [tableConfig, setTableConfig] = useState(null);
-    const { hasPermission } = usePermissions();
-    const canManageCatalog = hasPermission(PERMISSIONS.INVENTORY.MANAGE);
+    const { hasAnyPermission } = usePermissions();
+    const canViewCatalog = hasAnyPermission([
+        PERMISSIONS.INVENTORY.READ,
+        PERMISSIONS.INVENTORY.MANAGE,
+        PERMISSIONS.INVENTORY.DELETE,
+        PERMISSIONS.INVENTORY.LOCATIONS.READ,
+        PERMISSIONS.INVENTORY.LOCATIONS.MANAGE,
+        PERMISSIONS.INVENTORY.LOCATIONS.DELETE,
+    ]);
 
-    if (!canManageCatalog) {
+    if (!canViewCatalog) {
         return null;
     }
 

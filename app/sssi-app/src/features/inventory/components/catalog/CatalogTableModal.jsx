@@ -14,6 +14,14 @@ import CatalogFormModal from './CatalogFormModal.jsx';
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 
+const getInventoryPermissionGroup = (baseUrl = '') => {
+    if (baseUrl.includes('/sites') || baseUrl.includes('/locations')) {
+        return PERMISSIONS.INVENTORY.LOCATIONS;
+    }
+
+    return PERMISSIONS.INVENTORY.CATALOG ?? PERMISSIONS.INVENTORY;
+};
+
 export default function CatalogTableModal({ open, onClose, config }) {
     const { title = '', pluralTitle = '', baseUrl = '', icon: Icon = null, columns: configColumns = [] } = config ?? {};
 
@@ -25,7 +33,12 @@ export default function CatalogTableModal({ open, onClose, config }) {
     const [deleting, setDeleting] = useState(false);
     const [alert, setAlert] = useState(null);
     const { hasPermission } = usePermissions();
-    const canManageCatalog = hasPermission(PERMISSIONS.INVENTORY.MANAGE);
+    const inventoryPermissions = useMemo(() => getInventoryPermissionGroup(baseUrl), [baseUrl]);
+    const canViewCatalog = hasPermission(inventoryPermissions.READ)
+        || hasPermission(inventoryPermissions.MANAGE)
+        || hasPermission(inventoryPermissions.DELETE);
+    const canManageCatalog = hasPermission(inventoryPermissions.MANAGE);
+    const canDeleteCatalog = hasPermission(inventoryPermissions.DELETE);
     const hasCatalogAction = useCallback((action) => {
         if (!Array.isArray(config?.actions)) return true;
         return config.actions.includes(action);
@@ -33,7 +46,7 @@ export default function CatalogTableModal({ open, onClose, config }) {
 
     const canCreateCatalog = canManageCatalog && hasCatalogAction('create');
     const canEditCatalog = canManageCatalog && hasCatalogAction('edit');
-    const canDeleteCatalog = canManageCatalog && hasCatalogAction('delete');
+    const canRemoveCatalog = canDeleteCatalog && hasCatalogAction('delete');
 
     const triggerRefresh = useCallback(() => setLocalRefreshKey((k) => k + 1), []);
 
@@ -95,12 +108,12 @@ export default function CatalogTableModal({ open, onClose, config }) {
                 label: 'Eliminar',
                 icon: <DeleteIcon fontSize="small" />,
                 color: 'error',
-                hidden: !canDeleteCatalog,
+                    hidden: !canRemoveCatalog,
                 onClick: () => handleDelete(row.original),
             },
         ];
         return <RowActionsMenu actions={actions} tooltip="Ver acción" />;
-    }, [handleEdit, handleDelete, canEditCatalog, canDeleteCatalog]);
+    }, [handleEdit, handleDelete, canEditCatalog, canRemoveCatalog]);
 
     const columns = useMemo(
         () => configColumns.map((col) => ({
@@ -148,7 +161,7 @@ export default function CatalogTableModal({ open, onClose, config }) {
                 secondaryButton={{ label: 'Cerrar', onClick: onClose }}
                 primaryButton={canCreateCatalog ? { label: `Crear ${title}`, onClick: handleCreate, startIcon: <AddIcon /> } : null}
             >
-                {isAccessDeniedError ? (
+                {!canViewCatalog || isAccessDeniedError ? (
                     <AccessDeniedState />
                 ) : (
                     <TableBase
@@ -156,8 +169,8 @@ export default function CatalogTableModal({ open, onClose, config }) {
                         data={rows}
                         loading={loading}
                         error={error}
-                        enableRowActions={canEditCatalog || canDeleteCatalog}
-                        renderRowActions={canEditCatalog || canDeleteCatalog ? renderRowActions : undefined}
+                        enableRowActions={canEditCatalog || canRemoveCatalog}
+                        renderRowActions={canEditCatalog || canRemoveCatalog ? renderRowActions : undefined}
                         tableOptions={{
                             positionActionsColumn: 'last',
                             manualPagination: true,
