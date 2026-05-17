@@ -169,7 +169,7 @@ export function RegisterPage() {
     return (
         <>
             <Helmet>
-                <title>Registro | SPSG</title>
+                <title>Registro | PROSEG</title>
             </Helmet>
             <PageShell />
             <GeneralModal

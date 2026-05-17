@@ -39,7 +39,7 @@ export function HomePage() {
                             component="span"
                             sx={(t) => ({ color: t.vars.palette.tones.rose.fg })}
                         >
-                            SPSG
+                            PROSEG
                         </Box>
                     </Typography>
                     <Typography

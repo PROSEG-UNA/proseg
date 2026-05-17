@@ -130,7 +130,7 @@ function ForgotPasswordStep({ onSent }) {
 
     return (
         <>
-            <Helmet><title>Olvidé mi contraseña | SPGS</title></Helmet>
+            <Helmet><title>Olvidé mi contraseña | PROSEG</title></Helmet>
             <LoginBackground />
             <GeneralModal
                 open={true}
@@ -193,7 +193,7 @@ function EmailSentView({ email }) {
 
     return (
         <>
-            <Helmet><title>Revisá tu correo | SPGS</title></Helmet>
+            <Helmet><title>Revisá tu correo | PROSEG</title></Helmet>
             <LoginBackground />
             <GeneralModal
                 open={true}
@@ -218,7 +218,7 @@ function EmailSentView({ email }) {
                         ¡Listo! Revisá tu bandeja
                     </Typography>
                     <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center', lineHeight: 1.7 }}>
-                        Si <strong>{email}</strong> está registrado en SPGS, recibirás un
+                        Si <strong>{email}</strong> está registrado en PROSEG, recibirás un
                         correo con el enlace para restablecer tu contraseña.
                         El enlace es válido por <strong>1 hora</strong>.
                     </Typography>
@@ -289,7 +289,7 @@ function SuccessView() {
                 fullScreenAt="xs"
                 icon={CheckCircleIcon}
                 title="¡Contraseña actualizada!"
-                subtitle="Ya podés iniciar sesión en SPGS"
+                subtitle="Ya podés iniciar sesión en PROSEG"
                 primaryButton={{ label: 'Iniciar sesión', onClick: () => navigate('/login') }}
             >
                 <Box sx={{ p: 3.5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>

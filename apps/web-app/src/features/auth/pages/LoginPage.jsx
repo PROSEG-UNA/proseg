@@ -76,7 +76,7 @@ export function LoginPage() {
     return (
         <>
             <Helmet>
-                <title>Iniciar Sesión | SPSG</title>
+                <title>Iniciar Sesión | PROSEG</title>
             </Helmet>
             <PageShell />
             <GeneralModal

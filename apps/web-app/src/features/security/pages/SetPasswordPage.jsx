@@ -223,7 +223,7 @@ function SuccessView({info}) {
         : `linear-gradient(135deg, ${RED[600]} 0%, ${RED[800]} 100%)`;
     return (
         <PageShell>
-            <ModalHeader title="¡Cuenta activada!" subtitle="Ya podés iniciar sesión en SPGS"/>
+            <ModalHeader title="¡Cuenta activada!" subtitle="Ya podés iniciar sesión en PROSEG"/>
             <Box sx={{p: 3.5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2}}>
                 <Box sx={{
                     width: 64, height: 64, borderRadius: '50%',
@@ -361,9 +361,9 @@ export function SetPasswordPage() {
     return (
         <PageShell>
             <Helmet>
-                <title>Configurar Contraseña | SPSG</title>
+                <title>Configurar Contraseña | PROSEG</title>
             </Helmet>
-            <ModalHeader title="Configurá tu contraseña" subtitle="Activá tu cuenta en SPGS"/>
+            <ModalHeader title="Configurá tu contraseña" subtitle="Activá tu cuenta en PROSEG"/>
 
             {loading && (
                 <LinearProgress sx={{

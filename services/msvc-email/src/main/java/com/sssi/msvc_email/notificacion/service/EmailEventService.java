@@ -69,7 +69,7 @@ public class EmailEventService {
         emailService.sendEmail(
                 Email.builder()
                         .to(List.of(event.getEmail()))
-                        .subject("Bienvenido a SPSG - Registro exitoso")
+                        .subject("Bienvenido a PROSEG - Registro exitoso")
                         .templateDefinition(template)
                         .build()
         );
@@ -102,7 +102,7 @@ public class EmailEventService {
                         emailService.sendEmail(
                                 Email.builder()
                                         .to(List.of(admin.getEmail()))
-                                        .subject("Nuevo usuario requiere aprobación - SPSG")
+                                        .subject("Nuevo usuario requiere aprobación - PROSEG")
                                         .templateDefinition(template)
                                         .build()
                         );
@@ -127,7 +127,7 @@ public class EmailEventService {
         emailService.sendEmail(
                 Email.builder()
                         .to(List.of(event.getEmail()))
-                        .subject("Fuiste invitado a SPGS - Configurá tu contraseña")
+                        .subject("Fuiste invitado a PROSEG - Configurá tu contraseña")
                         .templateDefinition(template)
                         .build()
         );
@@ -171,7 +171,7 @@ public class EmailEventService {
                         emailService.sendEmail(
                                 Email.builder()
                                         .to(List.of(admin.getEmail()))
-                                        .subject("Nuevo usuario creado en SPGS")
+                                        .subject("Nuevo usuario creado en PROSEG")
                                         .templateDefinition(template)
                                         .build()
                         );
@@ -213,7 +213,7 @@ public class EmailEventService {
         emailService.sendEmail(
                 Email.builder()
                         .to(List.of(user.getEmail()))
-                        .subject("Tu cuenta en SPGS fue activada correctamente")
+                        .subject("Tu cuenta en PROSEG fue activada correctamente")
                         .templateDefinition(template)
                         .build()
         );
@@ -234,7 +234,7 @@ public class EmailEventService {
         emailService.sendEmail(
                 Email.builder()
                         .to(List.of(event.getEmail()))
-                        .subject("Restablecé tu contraseña - SPGS")
+                        .subject("Restablecé tu contraseña - PROSEG")
                         .templateDefinition(template)
                         .build()
         );
@@ -263,7 +263,7 @@ public class EmailEventService {
             emailService.sendEmail(
                     Email.builder()
                             .to(List.of(user.getEmail()))
-                            .subject("Tu contraseña fue actualizada en SPSG")
+                            .subject("Tu contraseña fue actualizada en PROSEG")
                             .templateDefinition(template)
                             .build()
             );
@@ -288,7 +288,7 @@ public class EmailEventService {
             emailService.sendEmail(
                     Email.builder()
                             .to(List.of(event.getEmail()))
-                            .subject("Tu contraseña expirará pronto en SPGS")
+                            .subject("Tu contraseña expirará pronto en PROSEG")
                             .templateDefinition(template)
                             .build()
             );
@@ -320,7 +320,7 @@ public class EmailEventService {
             emailService.sendEmail(
                     Email.builder()
                             .to(List.of(event.getEmail()))
-                            .subject("Tu contraseña expiró - Acción requerida en SPSG")
+                            .subject("Tu contraseña expiró - Acción requerida en PROSEG")
                             .templateDefinition(template)
                             .build()
             );
