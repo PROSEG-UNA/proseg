@@ -19,13 +19,13 @@ export function useRoleFormData(role) {
                     fetchAllPrivileges(),
                     fetchPermissionsByRole(role.name),
                 ]);
-                setAllPrivileges(privileges.map((p) => ({ id: p.id, name: p.name, description: p.description || '—' })));
+                setAllPrivileges(privileges.map((p) => ({ id: p.id, name: p.name, description: p.description || '—', domain: p.domain ?? null })));
                 setSelectedIds(assigned.map((p) => p.id));
                 setRoleName(role.name);
                 setDescription(role.description || '');
             } else {
                 const privileges = await fetchAllPrivileges();
-                setAllPrivileges(privileges.map((p) => ({ id: p.id, name: p.name, description: p.description || '—' })));
+                setAllPrivileges(privileges.map((p) => ({ id: p.id, name: p.name, description: p.description || '—', domain: p.domain ?? null })));
                 setSelectedIds([]);
                 setRoleName('');
                 setDescription('');

@@ -12,6 +12,7 @@ import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import InventoryIcon from '@mui/icons-material/Inventory';
+import FolderIcon from '@mui/icons-material/Folder';
 import GeneralModal from '../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../common/components/DialogModal.jsx';
 import { useRoleFormData } from '../hooks/useRoleFormData';
@@ -51,6 +52,14 @@ const DOMAIN_META = {
         icon: InventoryIcon,
         description: 'Gestión de activos y ubicaciones',
     },
+    Archivos: {
+        lightColor: '#7c3aed',
+        darkColor:  '#c084fc',
+        lightBg:    '#faf5ff',
+        darkBg:     'rgba(76,29,149,0.35)',
+        icon: FolderIcon,
+        description: 'Gestión y acceso a archivos del sistema',
+    },
 };
 
 const ROLE_PRESETS = [
@@ -61,7 +70,7 @@ const ROLE_PRESETS = [
         color: '#0f766e',
         darkColor: '#2dd4bf',
         icon: VisibilityIcon,
-        privileges: ['LEER_USUARIOS','LEER_USUARIO','LEER_ROLES_BASE','LEER_ROLES_COMPUESTOS','LEER_COMPOSITES_ROL','LEER_ROLES_USUARIO','LEER_USUARIOS_POR_ROL'],
+        filter: name => name.startsWith('LEER_'),
     },
     {
         id: 'gestion-usuarios',
@@ -88,22 +97,15 @@ const ROLE_PRESETS = [
         color: '#991b1b',
         darkColor: '#fecdd3',
         icon: AdminPanelSettingsIcon,
-        privileges: ['LEER_ROLES_BASE','REMOVER_ROL_USUARIO','LEER_ROLES_COMPUESTOS','APROBAR_USUARIO','ELIMINAR_ROL','ASIGNAR_ROL_USUARIO','LEER_COMPOSITES_ROL','LEER_USUARIO','CREAR_ROL','LEER_USUARIOS_POR_ROL','LEER_ROLES_USUARIO','REGISTRAR_USUARIO','EDITAR_ROL','LEER_USUARIOS'],
+        selectAll: true,
     },
 ];
 
 const groupPrivilegesByDomain = (privileges) => {
-    const groups = { Usuarios: [], Roles: [], 'Roles de Usuario': [], Inventario: [] };
-    const USUARIOS_SET   = new Set(['LEER_USUARIOS','LEER_USUARIO','REGISTRAR_USUARIO','APROBAR_USUARIO','LEER_USUARIOS_POR_ROL']);
-    const ROLES_SET      = new Set(['CREAR_ROL','EDITAR_ROL','ELIMINAR_ROL','LEER_ROLES_BASE','LEER_ROLES_COMPUESTOS','LEER_COMPOSITES_ROL']);
-    const ROL_USR_SET    = new Set(['ASIGNAR_ROL_USUARIO','REMOVER_ROL_USUARIO','LEER_ROLES_USUARIO']);
-    const INVENTARIO_SET = new Set(['LEER_ACTIVOS','GESTIONAR_ACTIVOS','ELIMINAR_ACTIVOS','LEER_UBICACIONES','GESTIONAR_UBICACIONES','ELIMINAR_UBICACIONES']);
+    const groups = { Usuarios: [], Roles: [], 'Roles de Usuario': [], Inventario: [], Archivos: [] };
     privileges.forEach(p => {
-        if (USUARIOS_SET.has(p.name))        groups.Usuarios.push(p);
-        else if (ROLES_SET.has(p.name))      groups.Roles.push(p);
-        else if (ROL_USR_SET.has(p.name))    groups['Roles de Usuario'].push(p);
-        else if (INVENTARIO_SET.has(p.name)) groups.Inventario.push(p);
-        else                                 groups.Usuarios.push(p);
+        const target = p.domain && groups[p.domain] !== undefined ? p.domain : 'Usuarios';
+        groups[target].push(p);
     });
     return groups;
 };
@@ -300,7 +302,11 @@ export default function RoleFormModal({ open, onClose, onSaved, role = null }) {
     };
 
     const applyPreset = (preset) => {
-        const ids = allPrivileges.filter(p => preset.privileges.includes(p.name)).map(p => p.id);
+        const ids = preset.selectAll
+            ? allPrivileges.map(p => p.id)
+            : preset.filter
+                ? allPrivileges.filter(p => preset.filter(p.name)).map(p => p.id)
+                : allPrivileges.filter(p => preset.privileges.includes(p.name)).map(p => p.id);
         setSelectedIds(ids);
         setActivePreset(preset.id);
     };
