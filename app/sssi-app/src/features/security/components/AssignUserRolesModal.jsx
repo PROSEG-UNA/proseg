@@ -3,9 +3,11 @@ import { Radio, Typography, useTheme } from '@mui/material';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import GeneralModal from '../../../common/components/GeneralModal.jsx';
 import TableBase from '../../../common/components/TablaBase.jsx';
+import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
 import DialogModal from '../../../common/components/DialogModal.jsx';
 import { fetchRoles } from '../services/rolesService';
 import { assignSingleRoleToUser, fetchRolesByUserId } from '../services/usersService';
+import { getFriendlyApiErrorMessage } from '../../../common/utils/index.js';
 
 const roleColumns = [
     { accessorKey: 'name',        header: 'Rol',         size: 180, grow: true },
@@ -112,6 +114,8 @@ export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
         }
     };
 
+    const isAccessDeniedError = error && (error.includes('permisos') || error.includes('403') || error.includes('Acceso denegado'));
+
     return (
         <>
             <GeneralModal
@@ -131,13 +135,17 @@ export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
                 secondaryButton={{ label: 'Cancelar', onClick: onClose }}
                 primaryButton={{ label: saving ? 'Guardando…' : 'Guardar cambios', onClick: handleAssign, disabled: saving, loading: saving }}
             >
-                <TableBase
-                    columns={columns}
-                    data={roles}
-                    loading={loading}
-                    error={error}
-                    tableOptions={{ positionToolbarAlertBanner: 'none' }}
-                />
+                {isAccessDeniedError ? (
+                    <AccessDeniedState />
+                ) : (
+                    <TableBase
+                        columns={columns}
+                        data={roles}
+                        loading={loading}
+                        error={error}
+                        tableOptions={{ positionToolbarAlertBanner: 'none' }}
+                    />
+                )}
             </GeneralModal>
 
             <DialogModal

@@ -13,6 +13,7 @@ import { deleteCatalogItem } from '../../services/catalogService';
 import CatalogFormModal from './CatalogFormModal.jsx';
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
+import {getFriendlyApiErrorMessage} from "../../../../common/utils/index.js";
 
 const getInventoryPermissionGroup = (baseUrl = '') => {
     if (baseUrl.includes('/sites') || baseUrl.includes('/locations')) {
@@ -135,16 +136,6 @@ export default function CatalogTableModal({ open, onClose, config }) {
     );
 
     const isAccessDeniedError = error && (error.includes('permisos') || error.includes('403') || error.includes('Acceso denegado'));
-
-    const getFriendlyApiErrorMessage = (error, defaultMessage) => {
-        if (error?.response?.data?.message) {
-            return error.response.data.message;
-        }
-        if (error?.message) {
-            return error.message;
-        }
-        return defaultMessage;
-    };
 
     return (
         <>
