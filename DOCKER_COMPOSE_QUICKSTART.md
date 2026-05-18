@@ -32,4 +32,4 @@ Si realizas cambios en el código fuente de los servicios, es necesario recompil
 docker compose up -d --build msvc-"nombre del servicio"
 ```
 
-Reemplaza `"nombre del servicio"` con el nombre del servicio que deseas actualizar, por ejemplo, `msvc-usuarios` o `msvc-productos`. Esto recompilará solo la imagen del servicio especificado y levantará el contenedor actualizado en segundo plano.
+Reemplaza `"nombre del servicio"` con el nombre del servicio que deseas actualizar, por ejemplo, `msvc-auth` o `msvc-inventory`. Esto recompilará solo la imagen del servicio especificado y levantará el contenedor actualizado en segundo plano.
