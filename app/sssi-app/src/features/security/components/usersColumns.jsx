@@ -50,12 +50,12 @@ export function getUsersColumns() {
     ];
 }
 
-export function renderUsersActions({ onAssignRoles, onApprove, onReject }) {
+export function renderUsersActions({ onAssignRoles, onApprove, onReject, canAssignRoles, canApprove, canReject }) {
     return ({ row }) => {
         const status = row.original.statusRaw;
-        const showApprove = status !== 'APPROVED';
-        const showReject = status !== 'REJECTED';
-        const showAssignRoles = status !== 'REJECTED';
+        const showApprove = canApprove && status !== 'APPROVED';
+        const showReject = canReject && status !== 'REJECTED';
+        const showAssignRoles = canAssignRoles && status !== 'REJECTED';
 
         const approveTitle = status === 'REJECTED' ? 'Activar usuario' : 'Aprobar usuario';
         const rejectTitle = status === 'APPROVED' ? 'Desactivar usuario' : 'Rechazar usuario';

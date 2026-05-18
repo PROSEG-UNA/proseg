@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { fetchUsers } from '../services/usersService';
+import { getFriendlyApiErrorMessage } from '../../../common/utils';
 
 function buildFullName(firstName, lastName) {
     return [firstName, lastName].filter(Boolean).join(' ').trim() || '—';
@@ -55,7 +56,7 @@ export function useUsersData({ pageIndex = 0, pageSize = 10, refreshKey = 0 } = 
                 setTotalPages(response.totalPages ?? 0);
             } catch (err) {
                 if (!ignore) {
-                    setError(err?.message || 'Error al cargar usuarios');
+                    setError(getFriendlyApiErrorMessage(err, 'Error al cargar usuarios'));
                 }
             } finally {
                 if (!ignore) {
