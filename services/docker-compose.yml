@@ -107,7 +107,7 @@ services:
       msvc-eureka:
         condition: service_healthy
       msvc-auth:
-        condition: service_started
+        condition: service_healthy
     networks:
       - sssi-net
 
@@ -147,6 +147,12 @@ services:
         condition: service_healthy
       msvc-eureka:
         condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -fsS http://localhost:8090/api/auth >/dev/null || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
     networks:
       - sssi-net
 

@@ -1,6 +1,7 @@
 import { createContext, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { getCurrentUser } from '../../features/auth/services/authService';
+import { PERMISSIONS } from '../constants/permissions';
 
 export const AuthContext = createContext({
   isAuthenticated: false,
@@ -19,31 +20,40 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const isUserLikePayload = (value) =>
+    Boolean(
+      value &&
+      typeof value === 'object' &&
+      (Object.prototype.hasOwnProperty.call(value, 'id') ||
+        Object.prototype.hasOwnProperty.call(value, 'permissions') ||
+        Object.prototype.hasOwnProperty.call(value, 'authorities') ||
+        Object.prototype.hasOwnProperty.call(value, 'username'))
+    );
+
   const normalizeUserPayload = (payload) => {
     if (!payload) return null;
 
-    const innerData = payload.data;
+    let current = payload;
+    let depth = 0;
 
-    if (
-      innerData &&
-      typeof innerData === 'object' &&
-      (Object.prototype.hasOwnProperty.call(innerData, 'id') ||
-        Object.prototype.hasOwnProperty.call(innerData, 'permissions') ||
-        Object.prototype.hasOwnProperty.call(innerData, 'username'))
-    ) {
-      return innerData;
+    while (current && typeof current === 'object' && depth < 4) {
+      if (isUserLikePayload(current)) {
+        return current;
+      }
+
+      if (isUserLikePayload(current.data)) {
+        return current.data;
+      }
+
+      if (!Object.prototype.hasOwnProperty.call(current, 'data')) {
+        break;
+      }
+
+      current = current.data;
+      depth += 1;
     }
 
-    if (
-      typeof payload === 'object' &&
-      (Object.prototype.hasOwnProperty.call(payload, 'id') ||
-        Object.prototype.hasOwnProperty.call(payload, 'permissions') ||
-        Object.prototype.hasOwnProperty.call(payload, 'username'))
-    ) {
-      return payload;
-    }
-
-    return innerData ?? payload;
+    return isUserLikePayload(current) ? current : null;
   };
 
   const permissions = useMemo(() => {
@@ -51,10 +61,12 @@ export function AuthProvider({ children }) {
     return Array.from(new Set(source.filter(Boolean)));
   }, [user]);
 
-  const hasPermission = (permission) => permissions.includes(permission);
+  const isSuperAdmin = permissions.includes(PERMISSIONS.SUPER_ADMIN);
+
+  const hasPermission = (permission) => isSuperAdmin || permissions.includes(permission);
 
   const hasAnyPermission = (permissionList = []) =>
-    permissionList.some((permission) => permissions.includes(permission));
+    isSuperAdmin || permissionList.some((permission) => permissions.includes(permission));
 
   const refreshAuth = async () => {
     try {
@@ -62,6 +74,7 @@ export function AuthProvider({ children }) {
       const userData = normalizeUserPayload(apiResp);
 
       if (userData) {
+        const resolvedPermissions = userData?.permissions ?? userData?.authorities ?? userData?.roles ?? [];
         setUser(userData);
         setIsAuthenticated(true);
         return userData;
