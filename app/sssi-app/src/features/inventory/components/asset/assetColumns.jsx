@@ -114,19 +114,21 @@ export function getAssetsColumns() {
     ];
 }
 
-export function renderAssetActions({ onEdit, onDelete }) {
+export function renderAssetActions({ onEdit, onDelete, canEdit, canDelete }) {
     return ({ row }) => {
         const actions = [
             {
                 key: 'edit',
                 label: 'Editar activo',
                 icon: <EditIcon fontSize="small" />,
+                hidden: !canEdit,
                 onClick: () => onEdit(row.original),
             },
             {
                 key: 'delete',
                 label: 'Eliminar activo',
                 icon: <DeleteIcon fontSize="small" />,
+                hidden: !canDelete,
                 onClick: () => onDelete(row.original),
             },
         ];

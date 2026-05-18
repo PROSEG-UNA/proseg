@@ -19,13 +19,14 @@ export function getRolesColumns() {
     ];
 }
 
-export function renderRolesActions({ onEdit, onDelete }) {
+export function renderRolesActions({ onEdit, onDelete, canEdit, canDelete }) {
     return ({ row }) => {
         const actions = [
             {
                 key: 'edit',
                 label: 'Editar',
                 icon: <EditIcon fontSize="small" />,
+                hidden: !canEdit,
                 onClick: () => onEdit(row.original),
             },
             {
@@ -33,6 +34,7 @@ export function renderRolesActions({ onEdit, onDelete }) {
                 label: 'Eliminar',
                 icon: <DeleteIcon fontSize="small" />,
                 color: 'error',
+                hidden: !canDelete,
                 onClick: () => onDelete(row.original),
             },
         ];

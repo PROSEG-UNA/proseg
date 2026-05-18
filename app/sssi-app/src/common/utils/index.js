@@ -1,1 +1,1 @@
-export {};
+export { getFriendlyApiErrorMessage } from './errorMessages';

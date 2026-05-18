@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { fetchAssets } from '../services/assetsService';
+import { getFriendlyApiErrorMessage } from '../../../common/utils';
 
 function mapStatusToSpanish(status) {
     switch (status) {
@@ -60,7 +61,7 @@ export function useAssetsData({ pageIndex = 0, pageSize = 10, search = '', filte
                 setTotalPages(response.totalPages ?? 0);
             } catch (err) {
                 if (!ignore) {
-                    setError(err?.message || 'Error al cargar activos');
+                    setError(getFriendlyApiErrorMessage(err, 'Error al cargar activos'));
                 }
             } finally {
                 if (!ignore) {

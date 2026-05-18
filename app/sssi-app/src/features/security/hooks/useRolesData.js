@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { fetchRoles, fetchPermissionsByRole } from '../services/rolesService';
+import { getFriendlyApiErrorMessage } from '../../../common/utils';
 
 export function useRolesData({ pageIndex = 0, pageSize = 10, refreshKey = 0 } = {}) {
     const [rows, setRows] = useState([]);
@@ -33,7 +34,7 @@ export function useRolesData({ pageIndex = 0, pageSize = 10, refreshKey = 0 } = 
                 setTotalElements(response.totalElements ?? 0);
             }
         } catch (err) {
-            if (!ignore) setError(err.message);
+            if (!ignore) setError(getFriendlyApiErrorMessage(err, 'Error al cargar roles'));
         } finally {
             if (!ignore) setLoading(false);
         }
