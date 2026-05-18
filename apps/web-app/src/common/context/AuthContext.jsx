@@ -1,12 +1,16 @@
-import { createContext, useEffect, useState } from 'react';
+import { createContext, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { getCurrentUser } from '../../features/auth/services/authService';
 
 export const AuthContext = createContext({
   isAuthenticated: false,
   user: null,
+  permissions: [],
+  hasPermission: () => false,
+  hasAnyPermission: () => false,
   loading: true,
   setIsAuthenticated: () => {},
+  refreshAuth: async () => null,
   logout: () => {},
 });
 
@@ -15,27 +19,66 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const verifyAuth = async () => {
-      try {
-        const apiResp = await getCurrentUser();
-        const userData = apiResp?.data;
-        if (apiResp && apiResp.status >= 200 && apiResp.status < 300 && userData) {
-          setUser(userData);
-          setIsAuthenticated(true);
-        } else {
-          setUser(null);
-          setIsAuthenticated(false);
-        }
-      } catch (error) {
-        setUser(null);
-        setIsAuthenticated(false);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const normalizeUserPayload = (payload) => {
+    if (!payload) return null;
 
-    verifyAuth();
+    const innerData = payload.data;
+
+    if (
+      innerData &&
+      typeof innerData === 'object' &&
+      (Object.prototype.hasOwnProperty.call(innerData, 'id') ||
+        Object.prototype.hasOwnProperty.call(innerData, 'permissions') ||
+        Object.prototype.hasOwnProperty.call(innerData, 'username'))
+    ) {
+      return innerData;
+    }
+
+    if (
+      typeof payload === 'object' &&
+      (Object.prototype.hasOwnProperty.call(payload, 'id') ||
+        Object.prototype.hasOwnProperty.call(payload, 'permissions') ||
+        Object.prototype.hasOwnProperty.call(payload, 'username'))
+    ) {
+      return payload;
+    }
+
+    return innerData ?? payload;
+  };
+
+  const permissions = useMemo(() => {
+    const source = user?.permissions ?? user?.authorities ?? [];
+    return Array.from(new Set(source.filter(Boolean)));
+  }, [user]);
+
+  const hasPermission = (permission) => permissions.includes(permission);
+
+  const hasAnyPermission = (permissionList = []) =>
+    permissionList.some((permission) => permissions.includes(permission));
+
+  const refreshAuth = async () => {
+    try {
+      const apiResp = await getCurrentUser();
+      const userData = normalizeUserPayload(apiResp);
+
+      if (userData) {
+        setUser(userData);
+        setIsAuthenticated(true);
+        return userData;
+      }
+
+      setUser(null);
+      setIsAuthenticated(false);
+      return null;
+    } catch (error) {
+      setUser(null);
+      setIsAuthenticated(false);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    void refreshAuth().finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -74,7 +117,9 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, loading, setIsAuthenticated, logout }}>
+    <AuthContext.Provider
+      value={{ isAuthenticated, user, permissions, hasPermission, hasAnyPermission, loading, setIsAuthenticated, refreshAuth, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

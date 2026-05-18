@@ -29,14 +29,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 public class UserService {
-
-    private static final String UPPERCASE = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-    private static final String LOWERCASE = "abcdefghijkmnopqrstuvwxyz";
-    private static final String DIGITS = "23456789";
-    private static final String SPECIALS = "!@#$%";
-    private static final String PASSWORD_ALPHABET = UPPERCASE + LOWERCASE + DIGITS + SPECIALS;
-    private static final int GENERATED_PASSWORD_LENGTH = 14;
-
     private final KeycloakAdminService keycloakAdminService;
     private final UserApprobationService userApprobationService;
     private final PasswordPolicyService passwordPolicyService;
@@ -236,30 +228,5 @@ public class UserService {
         return Arrays.stream(User.UserStatus.values())
                 .map(Enum::name)
                 .toList();
-    }
-
-    private String generatePassword() {
-        List<Character> chars = new ArrayList<>(GENERATED_PASSWORD_LENGTH);
-
-        chars.add(randomChar(UPPERCASE));
-        chars.add(randomChar(LOWERCASE));
-        chars.add(randomChar(DIGITS));
-        chars.add(randomChar(SPECIALS));
-
-        for (int i = chars.size(); i < GENERATED_PASSWORD_LENGTH; i++) {
-            chars.add(randomChar(PASSWORD_ALPHABET));
-        }
-
-        Collections.shuffle(chars, secureRandom);
-
-        StringBuilder password = new StringBuilder(GENERATED_PASSWORD_LENGTH);
-        for (Character c : chars) {
-            password.append(c);
-        }
-        return password.toString();
-    }
-
-    private char randomChar(String source) {
-        return source.charAt(secureRandom.nextInt(source.length()));
     }
 }
