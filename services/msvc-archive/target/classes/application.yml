@@ -1,5 +1,0 @@
-spring:
-  application:
-    name: msvc-archive
-  config:
-    import: ${SPRING_CONFIG_IMPORT:optional:configserver:http://msvc-config:8888}
