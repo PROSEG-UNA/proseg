@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
 
   zookeeper:
@@ -9,6 +7,8 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
     ports:
       - "2181:2181"
+    networks:
+      - sssi-net
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
@@ -20,6 +20,303 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 40s
+    networks:
+      - sssi-net
+
+  msvc-config:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        SERVICE_NAME: msvc-config
+    container_name: msvc-config
+    ports:
+      - "8888:8888"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker,native
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s http://localhost:8888 >/dev/null || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+    networks:
+      - sssi-net
+
+  msvc-eureka:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        SERVICE_NAME: msvc-eureka
+    container_name: msvc-eureka
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://msvc-config:8888
+      - EUREKA_INSTANCE_HOSTNAME=msvc-eureka
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
+      - EUREKA_CLIENT_FETCH_REGISTRY=false
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://msvc-eureka:8761/eureka/
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://msvc-eureka:8761/eureka/
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s http://localhost:8761 >/dev/null || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+    depends_on:
+      msvc-config:
+        condition: service_healthy
+    networks:
+      - sssi-net
+
+  msvc-gateway:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        SERVICE_NAME: msvc-gateway
+    container_name: msvc-gateway
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://msvc-config:8888
+      - SERVER_PORT=8081
+      - SPRING_APPLICATION_NAME=msvc-gateway
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://auth.devbychris.com/realms/sssi-realm
+      - KEYCLOAK_ISSUER_URI=https://auth.devbychris.com/realms/sssi-realm
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
+      - EUREKA_CLIENT_FETCH_REGISTRY=false
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://msvc-eureka:8761/eureka/
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://msvc-eureka:8761/eureka/
+    depends_on:
+      msvc-config:
+        condition: service_healthy
+      msvc-eureka:
+        condition: service_healthy
+      msvc-auth:
+        condition: service_healthy
+    networks:
+      - sssi-net
+
+  msvc-auth:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        SERVICE_NAME: msvc-auth
+    container_name: msvc-auth
+    ports:
+      - "8090:8090"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://msvc-config:8888
+      - SERVER_PORT=8090
+      - SPRING_APPLICATION_NAME=msvc-auth
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://auth.devbychris.com/realms/sssi-realm
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://msvc-eureka:8761/eureka/
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://msvc-eureka:8761/eureka/
+      - EUREKA_INSTANCE_HOSTNAME=msvc-auth
+      - API_PREFIX=/api
+      - ROUTES_AUTH=/api/auth
+      - ROUTES_USER=/api/user
+      - ROUTES_ROLE=/api/role
+      - KEYCLOAK_SERVER_URL=https://auth.devbychris.com
+      - KEYCLOAK_REALM=sssi-realm
+      - KEYCLOAK_CLIENT_ID=sssi-app
+      - KEYCLOAK_CLIENT_SECRET=Dl8QcQxHHmu6qERkUMmUJ0qWSulRRx6y
+      - KEYCLOAK_ADMIN_USERNAME=admin
+      - KEYCLOAK_ADMIN_PASSWORD=sssi_user
+    depends_on:
+      kafka:
+        condition: service_healthy
+      msvc-config:
+        condition: service_healthy
+      msvc-eureka:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -fsS http://localhost:8090/api/auth >/dev/null || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+    networks:
+      - sssi-net
+
+  msvc-inventory:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        SERVICE_NAME: msvc-inventory
+    container_name: msvc-inventory
+    ports:
+      - "8095:8095"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://msvc-config:8888
+      - SERVER_PORT=8095
+      - SPRING_APPLICATION_NAME=msvc-inventory
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://auth.devbychris.com/realms/sssi-realm
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://76.13.124.126:5432/sssi-bd
+      - SPRING_DATASOURCE_USERNAME=sssi_user
+      - SPRING_DATASOURCE_PASSWORD=sssi_user
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_SHOW_SQL=true
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://msvc-eureka:8761/eureka/
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://msvc-eureka:8761/eureka/
+      - EUREKA_INSTANCE_HOSTNAME=msvc-inventory
+      - ARCHIVE_BASE_URL=http://msvc-gateway:8081
+    depends_on:
+      msvc-config:
+        condition: service_healthy
+      msvc-eureka:
+        condition: service_healthy
+    networks:
+      - sssi-net
+
+  msvc-archive:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        SERVICE_NAME: msvc-archive
+    container_name: msvc-archive
+    ports:
+      - "8096:8096"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://msvc-config:8888
+      - SERVER_PORT=8096
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://msvc-eureka:8761/eureka/
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://msvc-eureka:8761/eureka/
+      - EUREKA_INSTANCE_HOSTNAME=msvc-archive
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://auth.devbychris.com/realms/sssi-realm
+      - KEYCLOAK_ISSUER_URI=https://auth.devbychris.com/realms/sssi-realm
+      - MINIO_URL=http://minio.devbychris.com:9000
+      - MINIO_ACCESS_KEY=admin
+      - MINIO_SECRET_KEY=admin12345
+      - MINIO_BUCKET=spsg-dev
+      - MINIO_REGION=us-east-1
+      - MINIO_SECURE=false
+    depends_on:
+      msvc-config:
+        condition: service_healthy
+      msvc-eureka:
+        condition: service_healthy
+    networks:
+      - sssi-net
+
+  msvc-transport:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        SERVICE_NAME: msvc-transport
+    container_name: msvc-transport
+    ports:
+      - "8097:8097"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://msvc-config:8888
+      - SERVER_PORT=8097
+      - SPRING_APPLICATION_NAME=msvc-transport
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://auth.devbychris.com/realms/sssi-realm
+      - KEYCLOAK_ISSUER_URI=https://auth.devbychris.com/realms/sssi-realm
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://msvc-eureka:8761/eureka/
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://msvc-eureka:8761/eureka/
+      - EUREKA_INSTANCE_HOSTNAME=msvc-transport
+    depends_on:
+      msvc-config:
+        condition: service_healthy
+      msvc-eureka:
+        condition: service_healthy
+    networks:
+      - sssi-net
+
+  msvc-document-processor:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        SERVICE_NAME: msvc-document-processor
+    container_name: msvc-document-processor
+    ports:
+      - "8098:8098"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://msvc-config:8888
+      - SERVER_PORT=8098
+      - SPRING_APPLICATION_NAME=msvc-document-processor
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://msvc-eureka:8761/eureka/
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://msvc-eureka:8761/eureka/
+      - EUREKA_INSTANCE_HOSTNAME=msvc-document-processor
+    depends_on:
+      msvc-config:
+        condition: service_healthy
+      msvc-eureka:
+        condition: service_healthy
+    networks:
+      - sssi-net
+
+  msvc-email:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        SERVICE_NAME: msvc-email
+    container_name: msvc-email
+    ports:
+      - "9090:9090"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://msvc-config:8888
+      - SERVER_PORT=9090
+      - SPRING_APPLICATION_NAME=msvc-email
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://msvc-eureka:8761/eureka/
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://msvc-eureka:8761/eureka/
+      - EUREKA_INSTANCE_HOSTNAME=msvc-email
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_MAIL_HOST=smtp.gmail.com
+      - SPRING_MAIL_PORT=587
+      - SPRING_MAIL_USERNAME=noreply.prostep@gmail.com
+      - SPRING_MAIL_PASSWORD=rwuj zaeq hrgm znge
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED=true
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_CONNECTIONTIMEOUT=5000
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_TIMEOUT=5000
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_WRITETIMEOUT=5000
+      - SPRING_MAIL_PROPERTIES_MAIL_DEBUG=true
+      - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID=msvc-email
+      - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET=0wqysXJSiZurqXEE9TZSzDk4rhHq2kKY
+      - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_AUTHORIZATION_GRANT_TYPE=client_credentials
+      - SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_TOKEN_URI=https://auth.devbychris.com/realms/sssi-realm/protocol/openid-connect/token
+    depends_on:
+      kafka:
+        condition: service_healthy
+      msvc-config:
+        condition: service_healthy
+      msvc-eureka:
+        condition: service_healthy
+    networks:
+      - sssi-net
+
+networks:
+  sssi-net:
+    driver: bridge

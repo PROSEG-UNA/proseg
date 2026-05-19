@@ -1,6 +1,8 @@
 eureka:
   client:
     register-with-eureka: false
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://msvc-eureka:8761/eureka}
 
 server:
   port: 8081
@@ -23,63 +25,63 @@ spring:
 
       routes:
         - id: msvc-auth
-          uri: http://localhost:8090
+          uri: http://msvc-auth:8090
           predicates:
             - Path=/api/auth/**
           filters:
             - StripPrefix=0
 
         - id: msvc-auth-user
-          uri: http://localhost:8090
+          uri: http://msvc-auth:8090
           predicates:
             - Path=/api/user/**
           filters:
             - StripPrefix=0
 
         - id: msvc-auth-role
-          uri: http://localhost:8090
+          uri: http://msvc-auth:8090
           predicates:
             - Path=/api/role/**
           filters:
             - StripPrefix=0
 
         - id: gateway-actuator
-          uri: http://localhost:8081
+          uri: http://msvc-gateway:8081
           predicates:
             - Path=/actuator/**
           filters:
             - StripPrefix=0
 
         - id: msvc-email
-          uri: http://localhost:9090
+          uri: http://msvc-email:9090
           predicates:
             - Path=/api/email/**
           filters:
             - StripPrefix=2
 
         - id: msvc-inventory
-          uri: http://localhost:8095
+          uri: http://msvc-inventory:8095
           predicates:
             - Path=/api/v1/inventory/**
           filters:
             - StripPrefix=0
 
         - id: msvc-archive
-          uri: http://localhost:8096
+          uri: http://msvc-archive:8096
           predicates:
             - Path=/api/v1/archive/**
           filters:
             - StripPrefix=0
 
         - id: msvc-transport
-          uri: http://localhost:8097
+          uri: http://msvc-transport:8097
           predicates:
             - Path=/api/v1/transport/**
           filters:
             - StripPrefix=0
 
         - id: msvc-document-processor
-          uri: http://localhost:8098
+          uri: http://msvc-document-processor:8098
           predicates:
             - Path=/api/v1/document-processor/**
           filters:
