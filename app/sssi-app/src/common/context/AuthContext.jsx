@@ -1,7 +1,18 @@
 import { createContext, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import { getCurrentUser } from '../../features/auth/services/authService';
+import { getCurrentUser, refreshAccessToken } from '../../features/auth/services/authService';
 import { PERMISSIONS } from '../constants/permissions';
+
+let isRefreshing = false;
+let failedQueue = [];
+
+function processQueue(error) {
+    failedQueue.forEach(({ resolve, reject }) => {
+        if (error) reject(error);
+        else resolve();
+    });
+    failedQueue = [];
+}
 
 export const AuthContext = createContext({
   isAuthenticated: false,
@@ -97,16 +108,47 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const responseInterceptor = axios.interceptors.response.use(
       response => response,
-      error => {
-        if (error.response?.status === 401) {
+      async error => {
+        const originalRequest = error.config;
+
+        if (error.response?.status !== 401) {
+          return Promise.reject(error);
+        }
+
+        if (originalRequest.url?.includes('/auth/refresh')) {
           setIsAuthenticated(false);
           setUser(null);
           const publicPaths = ['/login', '/forgot-password', '/reset-password'];
           if (!publicPaths.includes(window.location.pathname)) {
             window.location.href = '/login';
           }
+          return Promise.reject(error);
         }
-        return Promise.reject(error);
+
+        if (isRefreshing) {
+          return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+          }).then(() => axios(originalRequest))
+            .catch(err => Promise.reject(err));
+        }
+
+        isRefreshing = true;
+        try {
+          await refreshAccessToken();
+          processQueue(null);
+          return axios(originalRequest);
+        } catch (refreshError) {
+          processQueue(refreshError);
+          setIsAuthenticated(false);
+          setUser(null);
+          const publicPaths = ['/login', '/forgot-password', '/reset-password'];
+          if (!publicPaths.includes(window.location.pathname)) {
+            window.location.href = '/login';
+          }
+          return Promise.reject(refreshError);
+        } finally {
+          isRefreshing = false;
+        }
       }
     );
 
