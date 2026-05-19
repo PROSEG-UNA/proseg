@@ -2,7 +2,7 @@ spring:
   application:
     name: msvc-auth
   config:
-    import: optional:configserver:http://localhost:8888
+    import: ${SPRING_CONFIG_IMPORT:optional:configserver:http://msvc-config:8888}
   datasource:
     url: jdbc:postgresql://76.13.124.126:5432/sssi-bd
     username: sssi_user

@@ -27,6 +27,8 @@ import AppsIcon from '@mui/icons-material/Apps';
 import { useColorScheme } from '@mui/material/styles';
 import { SidebarContext } from '../context/SidebarContext';
 import { useAuth } from '../../features/auth/hooks/useAuth';
+import { usePermissions } from '../hooks/usePermissions';
+import { PERMISSIONS } from '../constants/permissions';
 import '../css/Sidebar.css';
 
 const panelSurfaceSx = (t) => ({
@@ -191,6 +193,7 @@ export function Sidebar() {
     const { isMinimized, setIsMinimized } = useContext(SidebarContext);
     const theme = useTheme();
     const { mode, systemMode } = useColorScheme();
+    const { hasAnyPermission } = usePermissions();
     const resolvedMode = mode === 'system' ? systemMode : mode;
 
     const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
@@ -204,8 +207,59 @@ export function Sidebar() {
     const isActive = (path) => location.pathname === path;
     const sidebarWidth = isMinimized ? 80 : 280;
 
-    const inventoryActive = isActive('/inventario/activos');
-    const securityActive = isActive('/seguridad/usuarios') || isActive('/seguridad/roles');
+    const userPermissions = [
+        PERMISSIONS.USERS.CREATE,
+        PERMISSIONS.USERS.READ,
+        PERMISSIONS.USERS.READ_ALL,
+        PERMISSIONS.USERS.READ_ROLES,
+        PERMISSIONS.USERS.APPROVE,
+        PERMISSIONS.USERS.ASSIGN_ROLE,
+        PERMISSIONS.USERS.REMOVE_ROLE,
+        PERMISSIONS.USERS.READ_INVITATIONS,
+        PERMISSIONS.ROLES.READ_USERS_BY_ROLE,
+    ];
+
+    const rolePermissions = [
+        PERMISSIONS.ROLES.READ_BASE,
+        PERMISSIONS.ROLES.READ_COMPOSITE,
+        PERMISSIONS.ROLES.READ_ROLE_COMPOSITES,
+        PERMISSIONS.ROLES.CREATE,
+        PERMISSIONS.ROLES.UPDATE,
+        PERMISSIONS.ROLES.DELETE,
+        PERMISSIONS.ROLES.READ_USERS_BY_ROLE,
+    ];
+
+    const canViewInventorySection = hasAnyPermission([
+        PERMISSIONS.INVENTORY.READ,
+        PERMISSIONS.INVENTORY.MANAGE,
+        PERMISSIONS.INVENTORY.DELETE,
+        PERMISSIONS.INVENTORY.LOCATIONS.READ,
+        PERMISSIONS.INVENTORY.LOCATIONS.MANAGE,
+        PERMISSIONS.INVENTORY.LOCATIONS.DELETE,
+    ]);
+
+    const canViewUsersSubmodule = hasAnyPermission(userPermissions);
+    const canViewRolesSubmodule = hasAnyPermission(rolePermissions);
+
+    const canViewSecuritySection = canViewUsersSubmodule || canViewRolesSubmodule;
+
+    const inventoryItems = canViewInventorySection
+        ? [{ key: 'assets', icon: AppsIcon, label: 'Activos', path: '/inventario/activos' }]
+        : [];
+
+    const securityItems = canViewSecuritySection
+        ? [
+            canViewUsersSubmodule ? { key: 'users', icon: PeopleIcon, label: 'Usuarios', path: '/seguridad/usuarios' } : null,
+            canViewRolesSubmodule ? { key: 'roles', icon: VerifiedUserIcon, label: 'Roles', path: '/seguridad/roles' } : null,
+        ]
+            .filter(Boolean)
+        : [];
+
+    const showInventorySection = canViewInventorySection;
+    const showSecuritySection = canViewSecuritySection;
+
+    const inventoryActive = showInventorySection && inventoryItems.some((item) => isActive(item.path));
+    const securityActive = showSecuritySection && securityItems.some((item) => isActive(item.path));
 
     return (
         <Box
@@ -281,51 +335,55 @@ export function Sidebar() {
                     sx={{ position: 'relative', zIndex: 1, flex: 1, overflowY: 'auto', p: 0 }}
                 >
                     <List sx={{ p: 0 }}>
-                        <ListItem disablePadding sx={{ display: 'block', borderBottom: '1px solid', borderColor: 'divider' }}>
-                            <NavSection
-                                icon={WarehouseIcon}
-                                label="Gestión Inventarios"
-                                expanded={expandedMenu === 'inventory'}
-                                onToggle={() => toggleMenu('inventory')}
-                                hasActive={inventoryActive}
-                            />
-                            <Collapse in={expandedMenu === 'inventory'} timeout={220} unmountOnExit>
-                                <Box sx={{ py: 0.5 }}>
-                                    <NavLeaf
-                                        icon={AppsIcon}
-                                        label="Activos"
-                                        onClick={() => navigate('/inventario/activos')}
-                                        active={isActive('/inventario/activos')}
-                                    />
-                                </Box>
-                            </Collapse>
-                        </ListItem>
+                        {showInventorySection ? (
+                            <ListItem disablePadding sx={{ display: 'block', borderBottom: '1px solid', borderColor: 'divider' }}>
+                                <NavSection
+                                    icon={WarehouseIcon}
+                                    label="Gestión Inventarios"
+                                    expanded={expandedMenu === 'inventory'}
+                                    onToggle={() => toggleMenu('inventory')}
+                                    hasActive={inventoryActive}
+                                />
+                                <Collapse in={expandedMenu === 'inventory'} timeout={220} unmountOnExit>
+                                    <Box sx={{ py: 0.5 }}>
+                                        {inventoryItems.map((item) => (
+                                            <NavLeaf
+                                                key={item.key}
+                                                icon={item.icon}
+                                                label={item.label}
+                                                onClick={() => navigate(item.path)}
+                                                active={isActive(item.path)}
+                                            />
+                                        ))}
+                                    </Box>
+                                </Collapse>
+                            </ListItem>
+                        ) : null}
 
-                        <ListItem disablePadding sx={{ display: 'block', borderBottom: '1px solid', borderColor: 'divider' }}>
-                            <NavSection
-                                icon={ShieldIcon}
-                                label="Gestión Seguridad"
-                                expanded={expandedMenu === 'security'}
-                                onToggle={() => toggleMenu('security')}
-                                hasActive={securityActive}
-                            />
-                            <Collapse in={expandedMenu === 'security'} timeout={220} unmountOnExit>
-                                <Box sx={{ py: 0.5 }}>
-                                    <NavLeaf
-                                        icon={PeopleIcon}
-                                        label="Usuarios"
-                                        onClick={() => navigate('/seguridad/usuarios')}
-                                        active={isActive('/seguridad/usuarios')}
-                                    />
-                                    <NavLeaf
-                                        icon={VerifiedUserIcon}
-                                        label="Roles"
-                                        onClick={() => navigate('/seguridad/roles')}
-                                        active={isActive('/seguridad/roles')}
-                                    />
-                                </Box>
-                            </Collapse>
-                        </ListItem>
+                        {showSecuritySection ? (
+                            <ListItem disablePadding sx={{ display: 'block', borderBottom: '1px solid', borderColor: 'divider' }}>
+                                <NavSection
+                                    icon={ShieldIcon}
+                                    label="Gestión Seguridad"
+                                    expanded={expandedMenu === 'security'}
+                                    onToggle={() => toggleMenu('security')}
+                                    hasActive={securityActive}
+                                />
+                                <Collapse in={expandedMenu === 'security'} timeout={220} unmountOnExit>
+                                    <Box sx={{ py: 0.5 }}>
+                                        {securityItems.map((item) => (
+                                            <NavLeaf
+                                                key={item.key}
+                                                icon={item.icon}
+                                                label={item.label}
+                                                onClick={() => navigate(item.path)}
+                                                active={isActive(item.path)}
+                                            />
+                                        ))}
+                                    </Box>
+                                </Collapse>
+                            </ListItem>
+                        ) : null}
                     </List>
                 </Box>
             )}
@@ -345,18 +403,22 @@ export function Sidebar() {
                         alignItems: 'center',
                     }}
                 >
-                    <MiniNavButton
-                        icon={WarehouseIcon}
-                        title="Gestión Inventarios"
-                        active={inventoryActive}
-                        onClick={() => { setIsMinimized(false); toggleMenu('inventory'); }}
-                    />
-                    <MiniNavButton
-                        icon={ShieldIcon}
-                        title="Gestión Seguridad"
-                        active={securityActive}
-                        onClick={() => { setIsMinimized(false); toggleMenu('security'); }}
-                    />
+                    {showInventorySection ? (
+                        <MiniNavButton
+                            icon={WarehouseIcon}
+                            title="Gestión Inventarios"
+                            active={inventoryActive}
+                            onClick={() => { setIsMinimized(false); toggleMenu('inventory'); }}
+                        />
+                    ) : null}
+                    {showSecuritySection ? (
+                        <MiniNavButton
+                            icon={ShieldIcon}
+                            title="Gestión Seguridad"
+                            active={securityActive}
+                            onClick={() => { setIsMinimized(false); toggleMenu('security'); }}
+                        />
+                    ) : null}
                 </Box>
             )}
 

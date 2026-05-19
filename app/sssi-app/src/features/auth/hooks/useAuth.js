@@ -2,10 +2,11 @@ import { useState, useContext } from 'react';
 import { login, register, logout } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../../common/context/AuthContext';
+import { getFriendlyApiErrorMessage } from '../../../common/utils';
 
 export function useAuth() {
     const navigate = useNavigate();
-    const { logout: logoutAuth, setIsAuthenticated } = useContext(AuthContext);
+    const { logout: logoutAuth, refreshAuth } = useContext(AuthContext);
     const [loading, setLoading] = useState(false);
     const [alert, setAlert] = useState(null);
 
@@ -18,10 +19,10 @@ export function useAuth() {
         setAlert(null);
         try {
             await login(identifier, password);
-            setIsAuthenticated(true);
+            const userData = await refreshAuth();
             navigate('/home');
         } catch (err) {
-            const message = err.response?.data?.message || err.message || 'Error al iniciar sesión';
+            const message = getFriendlyApiErrorMessage(err, 'Error al iniciar sesión');
             setAlert({ type: 'error', message });
         } finally {
             setLoading(false);
@@ -42,7 +43,7 @@ export function useAuth() {
             });
             navigate('/login');
         } catch (err) {
-            const message = err.response?.data?.message || err.message || 'Error al registrar el usuario';
+            const message = getFriendlyApiErrorMessage(err, 'Error al registrar el usuario');
             setAlert({ type: 'error', message });
         } finally {
             setLoading(false);
@@ -57,7 +58,7 @@ export function useAuth() {
             await logoutAuth();
             window.location.href = '/login';
         } catch (err) {
-            const message = err.response?.data?.message || err.message || 'Error al cerrar sesión. Intenta de nuevo.';
+            const message = getFriendlyApiErrorMessage(err, 'Error al cerrar sesión. Intenta de nuevo.');
             setAlert({ type: 'error', message });
             await logoutAuth();
             window.location.reload();

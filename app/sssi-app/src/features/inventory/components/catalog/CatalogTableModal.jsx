@@ -4,12 +4,24 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import TableBase from '../../../../common/components/TablaBase.jsx';
+import AccessDeniedState from '../../../../common/components/AccessDeniedState.jsx';
 import RowActionsMenu from '../../../../common/components/RowActionsMenu.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import { useCatalogData } from '../../hooks/useCatalogData';
 import { deleteCatalogItem } from '../../services/catalogService';
 import CatalogFormModal from './CatalogFormModal.jsx';
+import { usePermissions } from '../../../../common/hooks/usePermissions';
+import { PERMISSIONS } from '../../../../common/constants/permissions';
+import {getFriendlyApiErrorMessage} from "../../../../common/utils/index.js";
+
+const getInventoryPermissionGroup = (baseUrl = '') => {
+    if (baseUrl.includes('/sites') || baseUrl.includes('/locations')) {
+        return PERMISSIONS.INVENTORY.LOCATIONS;
+    }
+
+    return PERMISSIONS.INVENTORY.CATALOG ?? PERMISSIONS.INVENTORY;
+};
 
 export default function CatalogTableModal({ open, onClose, config }) {
     const { title = '', pluralTitle = '', baseUrl = '', icon: Icon = null, columns: configColumns = [] } = config ?? {};
@@ -21,6 +33,21 @@ export default function CatalogTableModal({ open, onClose, config }) {
     const [deletingRow, setDeletingRow] = useState(null);
     const [deleting, setDeleting] = useState(false);
     const [alert, setAlert] = useState(null);
+    const { hasPermission } = usePermissions();
+    const inventoryPermissions = useMemo(() => getInventoryPermissionGroup(baseUrl), [baseUrl]);
+    const canViewCatalog = hasPermission(inventoryPermissions.READ)
+        || hasPermission(inventoryPermissions.MANAGE)
+        || hasPermission(inventoryPermissions.DELETE);
+    const canManageCatalog = hasPermission(inventoryPermissions.MANAGE);
+    const canDeleteCatalog = hasPermission(inventoryPermissions.DELETE);
+    const hasCatalogAction = useCallback((action) => {
+        if (!Array.isArray(config?.actions)) return true;
+        return config.actions.includes(action);
+    }, [config]);
+
+    const canCreateCatalog = canManageCatalog && hasCatalogAction('create');
+    const canEditCatalog = canManageCatalog && hasCatalogAction('edit');
+    const canRemoveCatalog = canDeleteCatalog && hasCatalogAction('delete');
 
     const triggerRefresh = useCallback(() => setLocalRefreshKey((k) => k + 1), []);
 
@@ -51,7 +78,7 @@ export default function CatalogTableModal({ open, onClose, config }) {
             setAlert({ type: 'success', message: `${title} eliminado correctamente` });
         } catch (e) {
             setDeletingRow(null);
-            setAlert({ type: 'error', message: e?.response?.data?.message ?? e?.message ?? 'Error al eliminar' });
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(e, 'Error al eliminar') });
         } finally {
             setDeleting(false);
         }
@@ -74,6 +101,7 @@ export default function CatalogTableModal({ open, onClose, config }) {
                 key: 'edit',
                 label: 'Editar',
                 icon: <EditIcon fontSize="small" />,
+                hidden: !canEditCatalog,
                 onClick: () => handleEdit(row.original),
             },
             {
@@ -81,11 +109,12 @@ export default function CatalogTableModal({ open, onClose, config }) {
                 label: 'Eliminar',
                 icon: <DeleteIcon fontSize="small" />,
                 color: 'error',
+                    hidden: !canRemoveCatalog,
                 onClick: () => handleDelete(row.original),
             },
         ];
         return <RowActionsMenu actions={actions} tooltip="Ver acción" />;
-    }, [handleEdit, handleDelete]);
+    }, [handleEdit, handleDelete, canEditCatalog, canRemoveCatalog]);
 
     const columns = useMemo(
         () => configColumns.map((col) => ({
@@ -106,6 +135,8 @@ export default function CatalogTableModal({ open, onClose, config }) {
         </Typography>
     );
 
+    const isAccessDeniedError = error && (error.includes('permisos') || error.includes('403') || error.includes('Acceso denegado'));
+
     return (
         <>
             <GeneralModal
@@ -119,29 +150,33 @@ export default function CatalogTableModal({ open, onClose, config }) {
                 loading={loading}
                 footerLeft={footerLeft}
                 secondaryButton={{ label: 'Cerrar', onClick: onClose }}
-                primaryButton={{ label: `Crear ${title}`, onClick: handleCreate, startIcon: <AddIcon /> }}
+                primaryButton={canCreateCatalog ? { label: `Crear ${title}`, onClick: handleCreate, startIcon: <AddIcon /> } : null}
             >
-                <TableBase
-                    columns={columns}
-                    data={rows}
-                    loading={loading}
-                    error={error}
-                    enableRowActions
-                    renderRowActions={renderRowActions}
-                    tableOptions={{
-                        positionActionsColumn: 'last',
-                        manualPagination: true,
-                        rowCount: totalElements,
-                        onPaginationChange: setPagination,
-                        state: { pagination },
-                        displayColumnDefOptions: {
-                            'mrt-row-actions': {
-                                muiTableBodyCellProps: { sx: { py: 1.15 } },
+                {!canViewCatalog || isAccessDeniedError ? (
+                    <AccessDeniedState />
+                ) : (
+                    <TableBase
+                        columns={columns}
+                        data={rows}
+                        loading={loading}
+                        error={error}
+                        enableRowActions={canEditCatalog || canRemoveCatalog}
+                        renderRowActions={canEditCatalog || canRemoveCatalog ? renderRowActions : undefined}
+                        tableOptions={{
+                            positionActionsColumn: 'last',
+                            manualPagination: true,
+                            rowCount: totalElements,
+                            onPaginationChange: setPagination,
+                            state: { pagination },
+                            displayColumnDefOptions: {
+                                'mrt-row-actions': {
+                                    muiTableBodyCellProps: { sx: { py: 1.15 } },
+                                },
                             },
-                        },
-                    }}
-                    enableGlobalFilter
-                />
+                        }}
+                        enableGlobalFilter
+                    />
+                )}
             </GeneralModal>
 
             <CatalogFormModal

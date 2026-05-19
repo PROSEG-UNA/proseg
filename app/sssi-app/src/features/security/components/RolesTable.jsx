@@ -5,6 +5,8 @@ import { getRolesColumns, renderRolesActions } from './rolesColumns.jsx';
 import TableBase from '../../../common/components/TablaBase.jsx';
 import RoleFormModal from './RoleFormModal.jsx';
 import DialogModal from '../../../common/components/DialogModal.jsx';
+import { usePermissions } from '../../../common/hooks/usePermissions';
+import { PERMISSIONS } from '../../../common/constants/permissions';
 
 export default function RolesTable({ refreshKey, onRefresh }) {
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
@@ -17,6 +19,10 @@ export default function RolesTable({ refreshKey, onRefresh }) {
     const [deletingRole, setDeletingRole] = useState(null);
     const [deleting, setDeleting] = useState(false);
     const [alert, setAlert] = useState(null);
+    const { hasPermission } = usePermissions();
+    const canEditRole = hasPermission(PERMISSIONS.ROLES.UPDATE);
+    const canDeleteRole = hasPermission(PERMISSIONS.ROLES.DELETE);
+    const canUseActions = canEditRole || canDeleteRole;
 
     const handleEdit = (row) => setEditingRole(row);
     const handleDelete = (row) => setDeletingRole(row);
@@ -29,7 +35,7 @@ export default function RolesTable({ refreshKey, onRefresh }) {
             onRefresh();
         } catch (err) {
             setDeletingRole(null);
-            setAlert({ type: 'error', message: err.response?.data?.message ?? err.message ?? 'Error al eliminar el rol' });
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(err, 'Error al eliminar el rol') });
         } finally {
             setDeleting(false);
         }
@@ -57,11 +63,13 @@ export default function RolesTable({ refreshKey, onRefresh }) {
                 data={rows}
                 loading={loading}
                 error={error}
-                enableRowActions
-                renderRowActions={renderRolesActions({
+                enableRowActions={canUseActions}
+                renderRowActions={canUseActions ? renderRolesActions({
                     onEdit: handleEdit,
                     onDelete: handleDelete,
-                })}
+                    canEdit: canEditRole,
+                    canDelete: canDeleteRole,
+                }) : undefined}
                 tableOptions={{
                     positionActionsColumn: 'last',
                     manualPagination: true,

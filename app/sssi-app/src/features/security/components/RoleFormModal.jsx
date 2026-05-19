@@ -372,7 +372,7 @@ export default function RoleFormModal({ open, onClose, onSaved, role = null }) {
             setAlert({ type: 'success', message: isEditMode ? `Rol "${roleName}" actualizado correctamente` : `Rol "${roleName}" creado correctamente` });
             onSaved?.();
         } catch (e) {
-            setAlert({ type: 'error', message: e?.message || 'Error al guardar' });
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(e, 'Error al guardar') });
         } finally {
             setSaving(false);
         }
