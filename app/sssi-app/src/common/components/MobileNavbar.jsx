@@ -22,12 +22,65 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
+import { usePermissions } from '../hooks/usePermissions';
+import { PERMISSIONS } from '../constants/permissions';
 import { alpha } from '@mui/material/styles';
 
 export function MobileNavbar() {
   const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [expandedMenu, setExpandedMenu] = useState(null);
+  const { hasAnyPermission } = usePermissions();
+
+  const userPermissions = [
+    PERMISSIONS.USERS.CREATE,
+    PERMISSIONS.USERS.READ,
+    PERMISSIONS.USERS.READ_ALL,
+    PERMISSIONS.USERS.READ_ROLES,
+    PERMISSIONS.USERS.APPROVE,
+    PERMISSIONS.USERS.ASSIGN_ROLE,
+    PERMISSIONS.USERS.REMOVE_ROLE,
+    PERMISSIONS.USERS.READ_INVITATIONS,
+    PERMISSIONS.ROLES.READ_USERS_BY_ROLE,
+  ];
+
+  const rolePermissions = [
+    PERMISSIONS.ROLES.READ_BASE,
+    PERMISSIONS.ROLES.READ_COMPOSITE,
+    PERMISSIONS.ROLES.READ_ROLE_COMPOSITES,
+    PERMISSIONS.ROLES.CREATE,
+    PERMISSIONS.ROLES.UPDATE,
+    PERMISSIONS.ROLES.DELETE,
+    PERMISSIONS.ROLES.READ_USERS_BY_ROLE,
+  ];
+
+  const canViewInventorySection = hasAnyPermission([
+    PERMISSIONS.INVENTORY.READ,
+    PERMISSIONS.INVENTORY.MANAGE,
+    PERMISSIONS.INVENTORY.DELETE,
+    PERMISSIONS.INVENTORY.LOCATIONS.READ,
+    PERMISSIONS.INVENTORY.LOCATIONS.MANAGE,
+    PERMISSIONS.INVENTORY.LOCATIONS.DELETE,
+  ]);
+
+  const canViewUsersSubmodule = hasAnyPermission(userPermissions);
+  const canViewRolesSubmodule = hasAnyPermission(rolePermissions);
+  const canViewSecuritySection = canViewUsersSubmodule || canViewRolesSubmodule;
+
+  const inventoryItems = canViewInventorySection
+    ? [{ key: 'assets', label: 'Activos', path: '/inventario/activos' }]
+    : [];
+
+  const securityItems = canViewSecuritySection
+    ? [
+        canViewUsersSubmodule ? { key: 'users', label: 'Usuarios', path: '/seguridad/usuarios' } : null,
+        canViewRolesSubmodule ? { key: 'roles', label: 'Roles', path: '/seguridad/roles' } : null,
+      ]
+      .filter(Boolean)
+    : [];
+
+  const showInventorySection = canViewInventorySection;
+  const showSecuritySection = canViewSecuritySection;
 
   const toggleDrawer = (open) => (event) => {
     if (event.type === 'keydown' && (event.key === 'Tab' || event.key === 'Shift')) {
@@ -116,145 +169,129 @@ export function MobileNavbar() {
             </Box>
 
             <List sx={{ flex: 1, overflowY: 'auto', p: 0 }}>
-              <ListItem disablePadding sx={{ display: 'block' }}>
-                <ListItemButton
-                  onClick={() => toggleMenu('inventory')}
-                  sx={(theme) => ({
-                    '&&': {
-                      py: 3,
-                      minHeight: 72,
-                    },
-                    borderBottom: '1px solid rgba(0,0,0,0.1)',
-                    color: 'text.primary',
-                    '&:hover': {
-                      backgroundColor: alpha(theme.palette.primary.main, 0.05),
-                    },
-                  })}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <WarehouseIcon sx={{ mr: 2, fontSize: 20 }} />
-                      <ListItemText
-                        primary="Gestión Inventarios"
-                        sx={{ '& .MuiListItemText-primary': { fontSize: '1.05rem', fontWeight: 600, lineHeight: 1.2 } }}
-                      />
-                    </Box>
-                    {expandedMenu === 'inventory' ? (
-                      <ExpandLessIcon sx={{ color: 'text.primary' }} />
-                    ) : (
-                      <ExpandMoreIcon sx={{ color: 'text.primary' }} />
-                    )}
-                  </Box>
-                </ListItemButton>
-                <Collapse in={expandedMenu === 'inventory'} timeout="auto" unmountOnExit>
-                  <List component="div" disablePadding sx={(theme) => ({ backgroundColor: alpha(theme.palette.primary.main, 0.05) })}>
-                    <ListItem disablePadding>
-                      <ListItemButton
-                        onClick={() => handleNavigation('/inventario/activos')}
-                        sx={(theme) => ({
-                          '&&': {
-                            py: 2,
-                            minHeight: 56,
-                          },
-                          pl: 6,
-                          color: 'text.primary',
-                          '&:hover': {
-                            backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                            fontWeight: 600,
-                          },
-                        })}
-                      >
+              {showInventorySection ? (
+                <ListItem disablePadding sx={{ display: 'block' }}>
+                  <ListItemButton
+                    onClick={() => toggleMenu('inventory')}
+                    sx={(theme) => ({
+                      '&&': {
+                        py: 3,
+                        minHeight: 72,
+                      },
+                      borderBottom: '1px solid rgba(0,0,0,0.1)',
+                      color: 'text.primary',
+                      '&:hover': {
+                        backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                      },
+                    })}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <WarehouseIcon sx={{ mr: 2, fontSize: 20 }} />
                         <ListItemText
-                          primary="Activos"
-                          sx={{ '& .MuiListItemText-primary': { fontSize: '0.98rem', fontWeight: 500 } }}
+                          primary="Gestión Inventarios"
+                          sx={{ '& .MuiListItemText-primary': { fontSize: '1.05rem', fontWeight: 600, lineHeight: 1.2 } }}
                         />
-                      </ListItemButton>
-                    </ListItem>
-                  </List>
-                </Collapse>
-              </ListItem>
+                      </Box>
+                      {expandedMenu === 'inventory' ? (
+                        <ExpandLessIcon sx={{ color: 'text.primary' }} />
+                      ) : (
+                        <ExpandMoreIcon sx={{ color: 'text.primary' }} />
+                      )}
+                    </Box>
+                  </ListItemButton>
+                  <Collapse in={expandedMenu === 'inventory'} timeout="auto" unmountOnExit>
+                    <List component="div" disablePadding sx={(theme) => ({ backgroundColor: alpha(theme.palette.primary.main, 0.05) })}>
+                      {inventoryItems.map((item) => (
+                        <ListItem key={item.key} disablePadding>
+                          <ListItemButton
+                            onClick={() => handleNavigation(item.path)}
+                            sx={(theme) => ({
+                              '&&': {
+                                py: 2,
+                                minHeight: 56,
+                              },
+                              pl: 6,
+                              color: 'text.primary',
+                              '&:hover': {
+                                backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                                fontWeight: 600,
+                              },
+                            })}
+                          >
+                            <ListItemText
+                              primary={item.label}
+                              sx={{ '& .MuiListItemText-primary': { fontSize: '0.98rem', fontWeight: 500 } }}
+                            />
+                          </ListItemButton>
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Collapse>
+                </ListItem>
+              ) : null}
 
-              <ListItem disablePadding sx={{ display: 'block' }}>
-                <ListItemButton
-                  onClick={() => toggleMenu('security')}
-                  sx={(theme) => ({
-                    '&&': {
-                      py: 3,
-                      minHeight: 72,
-                    },
-                    borderBottom: '1px solid rgba(0,0,0,0.1)',
-                    color: 'text.primary',
-                    '&:hover': {
-                      backgroundColor: alpha(theme.palette.primary.main, 0.05),
-                    },
-                  })}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <VerifiedUserIcon sx={{ mr: 2, fontSize: 20 }} />
-                      <ListItemText
-                        primary="Gestión Seguridad"
-                        sx={{ '& .MuiListItemText-primary': { fontSize: '1.05rem', fontWeight: 600, lineHeight: 1.2 } }}
-                      />
+              {showSecuritySection ? (
+                <ListItem disablePadding sx={{ display: 'block' }}>
+                  <ListItemButton
+                    onClick={() => toggleMenu('security')}
+                    sx={(theme) => ({
+                      '&&': {
+                        py: 3,
+                        minHeight: 72,
+                      },
+                      borderBottom: '1px solid rgba(0,0,0,0.1)',
+                      color: 'text.primary',
+                      '&:hover': {
+                        backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                      },
+                    })}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <VerifiedUserIcon sx={{ mr: 2, fontSize: 20 }} />
+                        <ListItemText
+                          primary="Gestión Seguridad"
+                          sx={{ '& .MuiListItemText-primary': { fontSize: '1.05rem', fontWeight: 600, lineHeight: 1.2 } }}
+                        />
+                      </Box>
+                      {expandedMenu === 'security' ? (
+                        <ExpandLessIcon sx={{ color: 'text.primary' }} />
+                      ) : (
+                        <ExpandMoreIcon sx={{ color: 'text.primary' }} />
+                      )}
                     </Box>
-                    {expandedMenu === 'security' ? (
-                      <ExpandLessIcon sx={{ color: 'text.primary' }} />
-                    ) : (
-                      <ExpandMoreIcon sx={{ color: 'text.primary' }} />
-                    )}
-                  </Box>
-                </ListItemButton>
-                <Collapse in={expandedMenu === 'security'} timeout="auto" unmountOnExit>
-                  <List component="div" disablePadding sx={(theme) => ({ backgroundColor: alpha(theme.palette.primary.main, 0.05) })}>
-                    <ListItem disablePadding>
-                      <ListItemButton
-                        onClick={() => handleNavigation('/seguridad/usuarios')}
-                        sx={(theme) => ({
-                          '&&': {
-                            py: 2,
-                            minHeight: 56,
-                          },
-                          pl: 6,
-                          color: 'text.primary',
-                          '&:hover': {
-                            backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                            fontWeight: 600,
-                          },
-                        })}
-                      >
-                        <PeopleIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                        <ListItemText
-                          primary="Usuarios"
-                          sx={{ '& .MuiListItemText-primary': { fontSize: '0.98rem', fontWeight: 500 } }}
-                        />
-                      </ListItemButton>
-                    </ListItem>
-                    <ListItem disablePadding>
-                      <ListItemButton
-                        onClick={() => handleNavigation('/seguridad/roles')}
-                        sx={(theme) => ({
-                          '&&': {
-                            py: 2,
-                            minHeight: 56,
-                          },
-                          pl: 6,
-                          color: 'text.primary',
-                          '&:hover': {
-                            backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                            fontWeight: 600,
-                          },
-                        })}
-                      >
-                        <VerifiedUserIcon sx={{ mr: 1.5, fontSize: 20 }} />
-                        <ListItemText
-                          primary="Roles"
-                          sx={{ '& .MuiListItemText-primary': { fontSize: '0.98rem', fontWeight: 500 } }}
-                        />
-                      </ListItemButton>
-                    </ListItem>
-                  </List>
-                </Collapse>
-              </ListItem>
+                  </ListItemButton>
+                  <Collapse in={expandedMenu === 'security'} timeout="auto" unmountOnExit>
+                    <List component="div" disablePadding sx={(theme) => ({ backgroundColor: alpha(theme.palette.primary.main, 0.05) })}>
+                      {securityItems.map((item) => (
+                        <ListItem key={item.key} disablePadding>
+                          <ListItemButton
+                            onClick={() => handleNavigation(item.path)}
+                            sx={(theme) => ({
+                              '&&': {
+                                py: 2,
+                                minHeight: 56,
+                              },
+                              pl: 6,
+                              color: 'text.primary',
+                              '&:hover': {
+                                backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                                fontWeight: 600,
+                              },
+                            })}
+                          >
+                            <ListItemText
+                              primary={item.label}
+                              sx={{ '& .MuiListItemText-primary': { fontSize: '0.98rem', fontWeight: 500 } }}
+                            />
+                          </ListItemButton>
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Collapse>
+                </ListItem>
+              ) : null}
             </List>
 
             <Box sx={{ p: 2, borderTop: '1px solid rgba(0,0,0,0.1)' }}>

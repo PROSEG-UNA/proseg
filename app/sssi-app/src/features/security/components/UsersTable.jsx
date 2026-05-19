@@ -7,6 +7,8 @@ import {fetchUserStatuses, resendInvitation, updateUserApproval} from '../servic
 import { getUsersColumns, renderUsersActions } from './usersColumns.jsx';
 import AssignUserRolesModal from './AssignUserRolesModal.jsx';
 import ReplayIcon from '@mui/icons-material/Replay';
+import { usePermissions } from '../../../common/hooks/usePermissions';
+import { PERMISSIONS } from '../../../common/constants/permissions';
 
 const ALL_TAB_VALUE = 'ALL';
 
@@ -32,6 +34,10 @@ export default function UsersTable({ refreshKey = 0 }) {
     const [alert, setAlert] = useState(null);
     const [statusTab, setStatusTab] = useState(ALL_TAB_VALUE);
     const [availableStatuses, setAvailableStatuses] = useState(['PENDING', 'APPROVED', 'REJECTED', 'INVITED']);
+    const { hasPermission } = usePermissions();
+    const canAssignRoles = hasPermission(PERMISSIONS.USERS.ASSIGN_ROLE);
+    const canApproveUsers = hasPermission(PERMISSIONS.USERS.APPROVE);
+    const canUseActions = canAssignRoles || canApproveUsers;
 
     const triggerRefresh = useCallback(() => {
         setLocalRefreshKey((k) => k + 1);
@@ -73,7 +79,7 @@ export default function UsersTable({ refreshKey = 0 }) {
             setAlert({ type: 'success', message });
             triggerRefresh();
         } catch (err) {
-            setAlert({ type: 'error', message: err?.message || 'Error al aprobar usuario.' });
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(err, 'Error al aprobar usuario.') });
         }
     };
 
@@ -86,7 +92,7 @@ export default function UsersTable({ refreshKey = 0 }) {
             setAlert({ type: 'success', message });
             triggerRefresh();
         } catch (err) {
-            setAlert({ type: 'error', message: err?.message || 'Error al rechazar usuario.' });
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(err, 'Error al rechazar usuario.') });
         }
     };
 
@@ -132,8 +138,7 @@ export default function UsersTable({ refreshKey = 0 }) {
                                 setAlert({
                                     type: 'error',
                                     message:
-                                        err?.response?.data?.message ||
-                                        'Error al reenviar invitación.',
+                                        getFriendlyApiErrorMessage(err, 'Error al reenviar invitación.'),
                                 });
                             }
                         }}
@@ -188,12 +193,15 @@ export default function UsersTable({ refreshKey = 0 }) {
                 data={filteredRows}
                 loading={loading}
                 error={error}
-                enableRowActions
-                renderRowActions={renderUsersActions({
+                enableRowActions={canUseActions}
+                renderRowActions={canUseActions ? renderUsersActions({
                     onAssignRoles: setSelectedUser,
                     onApprove: handleApprove,
                     onReject: handleReject,
-                })}
+                    canAssignRoles,
+                    canApprove: canApproveUsers,
+                    canReject: canApproveUsers,
+                }) : undefined}
                 tableOptions={{
                     positionActionsColumn: 'last',
                     manualPagination: true,

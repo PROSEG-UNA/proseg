@@ -7,6 +7,8 @@ import AssetDetailPanel from './AssetDetailPanel.jsx';
 import AssetFormModal from './AssetFormModal.jsx';
 import { deleteAsset } from '../../services/assetsService.js';
 import { useDebounce } from '../../../../common/hooks/useDebounce.js';
+import { usePermissions } from '../../../../common/hooks/usePermissions';
+import { PERMISSIONS } from '../../../../common/constants/permissions';
 
 const COLUMN_TO_BACKEND_KEY = {
     assetNumber: 'assetNumber',
@@ -33,6 +35,10 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
     const [editAssetId, setEditAssetId] = useState(null);
     const [assetToDelete, setAssetToDelete] = useState(null);
     const [deleting, setDeleting] = useState(false);
+    const { hasPermission } = usePermissions();
+    const canManageAssets = hasPermission(PERMISSIONS.INVENTORY.MANAGE);
+    const canDeleteAssets = hasPermission(PERMISSIONS.INVENTORY.DELETE);
+    const canUseActions = canManageAssets || canDeleteAssets;
 
     const debouncedGlobalFilter = useDebounce(globalFilter, 350);
     const debouncedColumnFilters = useDebounce(columnFilters, 350);
@@ -139,11 +145,13 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
                 data={rows}
                 loading={loading}
                 error={error}
-                enableRowActions
-                renderRowActions={renderAssetActions({
+                enableRowActions={canUseActions}
+                renderRowActions={canUseActions ? renderAssetActions({
                     onEdit: handleEdit,
                     onDelete: handleDelete,
-                })}
+                    canEdit: canManageAssets,
+                    canDelete: canDeleteAssets,
+                }) : undefined}
                 tableOptions={{
                     positionActionsColumn: 'last',
                     manualPagination: true,

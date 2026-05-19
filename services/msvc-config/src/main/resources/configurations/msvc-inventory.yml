@@ -36,16 +36,16 @@ spring:
 
 eureka:
   instance:
-    hostname: localhost
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:msvc-inventory}
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://msvc-eureka:8761/eureka}
 
 api:
   prefix: /api/v1/inventory
 
 archive:
-  base-url: http://localhost:8081
+  base-url: ${ARCHIVE_BASE_URL:http://msvc-gateway:8081}
 
 routes:
   brands: ${api.prefix}/brands
