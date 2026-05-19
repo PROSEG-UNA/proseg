@@ -11,6 +11,8 @@ import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 
 const COLUMN_TO_BACKEND_KEY = {
+    assetNumber: 'assetNumber',
+    serialNumber: 'serialNumber',
     name: 'name',
     description: 'description',
     type: 'model.type.name',
@@ -163,12 +165,15 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
                     state: { pagination, globalFilter, columnFilters, sorting },
                     initialState: {
                         columnVisibility: {
+                            serialNumber: false,
                             description: false,
                             site: false,
                             status: false,
                             acquisitionDate: false,
                             warrantyEndDate: false,
                             firmwareSupportEndDate: false,
+                            latitude: false,
+                            longitude: false,
                         },
                     },
                     displayColumnDefOptions: {

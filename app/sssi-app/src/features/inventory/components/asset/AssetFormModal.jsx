@@ -15,7 +15,7 @@ import SearchableSelect from '../../../../common/components/SearchableSelect.jsx
 import CatalogFormModal from '../catalog/CatalogFormModal.jsx';
 import { CATALOG_CONFIG } from '../catalog/catalogConfig.js';
 import { fetchCatalogOptions } from '../../services/catalogService.js';
-import { createAsset, updateAsset, fetchAssetById, fetchLastKnownNetworkInterface } from '../../services/assetsService.js';
+import { createAsset, updateAsset, fetchAssetById, fetchLastKnownNetworkInterface, checkAssetNumber } from '../../services/assetsService.js';
 import { uploadPhoto, registerArchive, fetchAssetArchives, deleteArchive } from '../../services/assetArchiveService.js';
 import { INVENTORY_ENDPOINTS } from '../../services/endpoints.js';
 
@@ -34,6 +34,8 @@ const INIT = {
     status: '', statusDescription: '',
     acquisitionDate: '', warrantyEndDate: '', firmwareSupportEndDate: '',
     ipAddress: '', macAddress: '',
+    assetNumber: '', serialNumber: '',
+    latitude: '', longitude: '',
 };
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -63,6 +65,8 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
     const [photosToDelete, setPhotosToDelete]       = useState([]);
     const [isDragOver, setIsDragOver]               = useState(false);
     const [pendingTypeChange, setPendingTypeChange] = useState(null);
+    const [assetNumberExists, setAssetNumberExists] = useState(false);
+    const [showAssetNumberConfirm, setShowAssetNumberConfirm] = useState(false);
     const fileInputRef = useRef(null);
 
     const selectedType             = types.find(t => t.id === formValues.typeId) ?? null;
@@ -86,6 +90,8 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         setAlert(null);
         setIsDragOver(false);
         setPendingTypeChange(null);
+        setAssetNumberExists(false);
+        setShowAssetNumberConfirm(false);
     }, [open]);
 
     useEffect(() => {
@@ -142,6 +148,10 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                         firmwareSupportEndDate: asset.firmwareSupportEndDate ?? '',
                         ipAddress:              asset.networkInterface?.ipAddress ?? '',
                         macAddress:             asset.networkInterface?.macAddress ?? '',
+                        assetNumber:            asset.assetNumber ?? '',
+                        serialNumber:           asset.serialNumber ?? '',
+                        latitude:               asset.latitude != null ? String(asset.latitude) : '',
+                        longitude:              asset.longitude != null ? String(asset.longitude) : '',
                     });
                     if (asset.model?.type) {
                         setTypes(prev => prev.some(t => t.id === asset.model.type.id) ? prev : [...prev, asset.model.type]);
@@ -175,7 +185,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
     useEffect(loadAssetData, [open, assetId]);
 
     const validateField = (key, value) => {
-        const required = ['name', 'brandId', 'typeId', 'modelId', 'locationId', 'status'];
+        const required = ['name', 'brandId', 'typeId', 'modelId', 'locationId', 'status', 'assetNumber', 'serialNumber'];
         let error = '';
 
         if (required.includes(key) && (!value || (typeof value === 'string' && !value.trim()))) {
@@ -197,6 +207,15 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
             if (mac.length < 12 || mac.length > 17) {
                 error = 'La dirección MAC debe tener entre 12 y 17 caracteres';
             }
+        }
+
+        if (!error && key === 'latitude' && value !== '') {
+            const n = parseFloat(value);
+            if (isNaN(n) || n < -90 || n > 90) error = 'La latitud debe estar entre -90 y 90';
+        }
+        if (!error && key === 'longitude' && value !== '') {
+            const n = parseFloat(value);
+            if (isNaN(n) || n < -180 || n > 180) error = 'La longitud debe estar entre -180 y 180';
         }
 
         setErrors(prev => ({ ...prev, [key]: error }));
@@ -269,6 +288,23 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         validateField(key, formValues[key]);
     };
 
+    const handleAssetNumberBlur = async () => {
+        setTouched(prev => ({ ...prev, assetNumber: true }));
+        if (!formValues.assetNumber?.trim()) {
+            setAssetNumberExists(false);
+            return;
+        }
+        try {
+            const exists = await checkAssetNumber(
+                formValues.assetNumber.trim(),
+                isEdit ? assetId : null
+            );
+            setAssetNumberExists(exists);
+        } catch {
+            setAssetNumberExists(false);
+        }
+    };
+
     const getOptionsByKey = (key) => {
         if (key === 'brandId')    return brands;
         if (key === 'typeId')     return types;
@@ -319,46 +355,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         } catch (_) {}
     };
 
-    const handleSave = async () => {
-        const requiredFields = ['name', 'brandId', 'typeId', 'modelId', 'locationId', 'status'];
-
-        const newTouched = {};
-        const newErrors  = {};
-
-        requiredFields.forEach(key => {
-            newTouched[key] = true;
-            const val = formValues[key];
-            if (!val || (typeof val === 'string' && !val.trim())) {
-                newErrors[key] = 'Este campo es requerido';
-            }
-        });
-
-        if (!newErrors.name && formValues.name.trim().length < 2) {
-            newErrors.name    = 'Mínimo 2 caracteres';
-            newTouched.name   = true;
-        }
-        if (!newErrors.ipAddress && formValues.ipAddress?.trim()) {
-            if (!/^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/.test(formValues.ipAddress.trim())) {
-                newErrors.ipAddress  = 'La dirección IP no tiene un formato válido';
-                newTouched.ipAddress = true;
-            }
-        }
-        if (!newErrors.macAddress && formValues.macAddress?.trim()) {
-            const mac = formValues.macAddress.trim();
-            if (mac.length < 12 || mac.length > 17) {
-                newErrors.macAddress  = 'La dirección MAC debe tener entre 12 y 17 caracteres';
-                newTouched.macAddress = true;
-            }
-        }
-
-        setTouched(prev => ({ ...prev, ...newTouched }));
-        setErrors(prev  => ({ ...prev, ...newErrors  }));
-
-        if (Object.keys(newErrors).length > 0) {
-            setAlert({ type: 'warning', message: 'Revisa los datos antes de continuar' });
-            return;
-        }
-
+    const doSave = async () => {
         setSaving(true);
         try {
             const payload = {
@@ -371,6 +368,10 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 acquisitionDate:         formValues.acquisitionDate               || null,
                 warrantyEndDate:         formValues.warrantyEndDate               || null,
                 firmwareSupportEndDate:  formValues.firmwareSupportEndDate        || null,
+                assetNumber:             formValues.assetNumber?.trim()           || null,
+                serialNumber:            formValues.serialNumber?.trim()          || null,
+                latitude:                formValues.latitude !== '' ? parseFloat(formValues.latitude) : null,
+                longitude:               formValues.longitude !== '' ? parseFloat(formValues.longitude) : null,
                 ...(requiresNetworkInterface && formValues.ipAddress?.trim() && formValues.macAddress?.trim() && {
                     networkInterface: {
                         ipAddress:  formValues.ipAddress.trim(),
@@ -420,6 +421,68 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleSave = async () => {
+        const requiredFields = ['name', 'brandId', 'typeId', 'modelId', 'locationId', 'status', 'assetNumber', 'serialNumber'];
+
+        const newTouched = {};
+        const newErrors  = {};
+
+        requiredFields.forEach(key => {
+            newTouched[key] = true;
+            const val = formValues[key];
+            if (!val || (typeof val === 'string' && !val.trim())) {
+                newErrors[key] = 'Este campo es requerido';
+            }
+        });
+
+        if (!newErrors.name && formValues.name.trim().length < 2) {
+            newErrors.name    = 'Mínimo 2 caracteres';
+            newTouched.name   = true;
+        }
+        if (!newErrors.ipAddress && formValues.ipAddress?.trim()) {
+            if (!/^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/.test(formValues.ipAddress.trim())) {
+                newErrors.ipAddress  = 'La dirección IP no tiene un formato válido';
+                newTouched.ipAddress = true;
+            }
+        }
+        if (!newErrors.macAddress && formValues.macAddress?.trim()) {
+            const mac = formValues.macAddress.trim();
+            if (mac.length < 12 || mac.length > 17) {
+                newErrors.macAddress  = 'La dirección MAC debe tener entre 12 y 17 caracteres';
+                newTouched.macAddress = true;
+            }
+        }
+        if (formValues.latitude !== '') {
+            const n = parseFloat(formValues.latitude);
+            if (isNaN(n) || n < -90 || n > 90) {
+                newErrors.latitude  = 'La latitud debe estar entre -90 y 90';
+                newTouched.latitude = true;
+            }
+        }
+        if (formValues.longitude !== '') {
+            const n = parseFloat(formValues.longitude);
+            if (isNaN(n) || n < -180 || n > 180) {
+                newErrors.longitude  = 'La longitud debe estar entre -180 y 180';
+                newTouched.longitude = true;
+            }
+        }
+
+        setTouched(prev => ({ ...prev, ...newTouched }));
+        setErrors(prev  => ({ ...prev, ...newErrors  }));
+
+        if (Object.keys(newErrors).length > 0) {
+            setAlert({ type: 'warning', message: 'Revisa los datos antes de continuar' });
+            return;
+        }
+
+        if (assetNumberExists) {
+            setShowAssetNumberConfirm(true);
+            return;
+        }
+
+        await doSave();
     };
 
     const handleFileSelect = (files) => {
@@ -533,6 +596,47 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     <Divider />
 
                     <Box>
+                        {sectionLabel('Identificación')}
+                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                            <Box>
+                                <TextField
+                                    label="Número de activo" value={formValues.assetNumber}
+                                    required
+                                    onChange={e => handleChange('assetNumber', e.target.value)}
+                                    onBlur={handleAssetNumberBlur}
+                                    fullWidth size="small" disabled={saving}
+                                    error={touched.assetNumber && !!errors.assetNumber}
+                                    sx={fieldSx}
+                                    helperText={
+                                        touched.assetNumber && errors.assetNumber
+                                            ? errors.assetNumber
+                                            : assetNumberExists
+                                                ? 'Este número ya está en uso (válido para adquisiciones en conjunto)'
+                                                : ' '
+                                    }
+                                    FormHelperTextProps={{
+                                        sx: (!errors.assetNumber || !touched.assetNumber) && assetNumberExists
+                                            ? { color: 'warning.main' }
+                                            : undefined,
+                                    }}
+                                />
+                            </Box>
+                            <TextField
+                                label="Número de serie" value={formValues.serialNumber}
+                                required
+                                onChange={e => handleChange('serialNumber', e.target.value)}
+                                onBlur={() => handleBlur('serialNumber')}
+                                fullWidth size="small" disabled={saving}
+                                error={touched.serialNumber && !!errors.serialNumber}
+                                helperText={touched.serialNumber ? (errors.serialNumber || ' ') : ' '}
+                                sx={fieldSx}
+                            />
+                        </Box>
+                    </Box>
+
+                    <Divider />
+
+                    <Box>
                         {sectionLabel('Clasificación')}
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                             <SearchableSelect
@@ -604,6 +708,38 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                             onCreate={() => openCatalogModal('locationId')}
                             createLabel="Crear nueva Locación"
                         />
+                    </Box>
+
+                    <Divider />
+
+                    <Box>
+                        {sectionLabel('Coordenadas')}
+                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                            <TextField
+                                label="Latitud" value={formValues.latitude}
+                                onChange={e => handleChange('latitude', e.target.value)}
+                                onBlur={() => handleBlur('latitude')}
+                                fullWidth size="small" disabled={saving}
+                                type="number"
+                                inputProps={{ step: 'any' }}
+                                error={touched.latitude && !!errors.latitude}
+                                helperText={touched.latitude ? (errors.latitude || ' ') : ' '}
+                                placeholder="-33.4500000"
+                                sx={fieldSx}
+                            />
+                            <TextField
+                                label="Longitud" value={formValues.longitude}
+                                onChange={e => handleChange('longitude', e.target.value)}
+                                onBlur={() => handleBlur('longitude')}
+                                fullWidth size="small" disabled={saving}
+                                type="number"
+                                inputProps={{ step: 'any' }}
+                                error={touched.longitude && !!errors.longitude}
+                                helperText={touched.longitude ? (errors.longitude || ' ') : ' '}
+                                placeholder="-70.6500000"
+                                sx={fieldSx}
+                            />
+                        </Box>
                     </Box>
 
                     <Divider />
@@ -853,6 +989,16 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 type={alert?.type}
                 message={alert?.message}
                 onClose={() => setAlert(null)}
+            />
+
+            <DialogModal
+                type="warning"
+                open={showAssetNumberConfirm}
+                title="Número de activo duplicado"
+                message={'El número de activo ingresado ya existe en otro activo.\n\nEsto es válido en adquisiciones en conjunto (por ejemplo, varias cámaras de un mismo paquete).\n\n¿Deseas continuar de todas formas?'}
+                onClose={() => setShowAssetNumberConfirm(false)}
+                onConfirm={async () => { setShowAssetNumberConfirm(false); await doSave(); }}
+                confirmLabel="Continuar"
             />
 
             <DialogModal
