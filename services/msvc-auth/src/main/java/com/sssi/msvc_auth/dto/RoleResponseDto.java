@@ -14,4 +14,5 @@ public class RoleResponseDto {
     private String name;
     private String description;
     private boolean composite;
+    private String domain;
 }

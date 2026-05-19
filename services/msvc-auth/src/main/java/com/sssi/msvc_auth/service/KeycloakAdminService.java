@@ -267,7 +267,7 @@ public class KeycloakAdminService {
 
     public List<RoleResponseDto> getBaseRoles() {
         String adminToken = getAdminToken();
-        String rolesUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles";
+        String rolesUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles?briefRepresentation=false";
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + adminToken);
@@ -283,11 +283,16 @@ public class KeycloakAdminService {
             for (JsonNode node : rolesNode) {
                 String name = node.path("name").asText();
                 if (!node.path("composite").asBoolean(false) && !isInternalRole(name)) {
+                    JsonNode domainNode = node.path("attributes").path("domain");
+                    String domain = domainNode.isArray() && domainNode.size() > 0
+                            ? domainNode.get(0).asText(null)
+                            : null;
                     roles.add(RoleResponseDto.builder()
                             .id(node.path("id").asText())
                             .name(name)
                             .description(node.path("description").asText(null))
                             .composite(false)
+                            .domain(domain)
                             .build());
                 }
             }
