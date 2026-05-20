@@ -14,12 +14,17 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("${routes.locations:/api/v1/inventory/locations}")
 @RequiredArgsConstructor
 public class LocationController {
+
+    private static final Set<String> RESERVED_PARAMS = Set.of("search", "sort", "page", "size");
 
     private final LocationService locationService;
 
@@ -41,10 +46,15 @@ public class LocationController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<LocationResponseDto>>> findAll(
-            @PageableDefault(size = 10, page = 0) Pageable pageable
-    ) {
+            @RequestParam(required = false) String search,
+            @RequestParam Map<String, String> allParams,
+            @PageableDefault(size = 10, page = 0) Pageable pageable) {
+
+        Map<String, String> filters = new HashMap<>(allParams);
+        RESERVED_PARAMS.forEach(filters::remove);
+
         return ApiResponseBuilder.ok(
-                PageMapper.from(locationService.findAll(pageable)),
+                PageMapper.from(locationService.findAll(search, filters, pageable)),
                 "Lista de locations"
         );
     }

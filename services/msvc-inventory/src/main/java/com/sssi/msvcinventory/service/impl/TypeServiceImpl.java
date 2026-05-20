@@ -10,12 +10,16 @@ import com.sssi.msvcinventory.repository.AssetRepository;
 import com.sssi.msvcinventory.repository.NetworkInterfaceRepository;
 import com.sssi.msvcinventory.repository.TypeRepository;
 import com.sssi.msvcinventory.service.TypeService;
+import com.sssi.msvcinventory.specification.GenericSpecifications;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -48,9 +52,18 @@ public class TypeServiceImpl implements TypeService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<TypeResponseDto> findAll(Pageable pageable) {
-        return typeRepository.findAll(pageable)
-                .map(typeMapper::toResponse);
+    public Page<TypeResponseDto> findAll(String search, Map<String, String> filters, Pageable pageable) {
+        Specification<Type> spec = Specification
+                .where(GenericSpecifications.<Type>withSearch(Type.class, search))
+                .and(GenericSpecifications.<Type>withColumnFilters(Type.class, filters));
+
+        Pageable sanitized = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                GenericSpecifications.sanitizeSort(Type.class, pageable.getSort())
+        );
+
+        return typeRepository.findAll(spec, sanitized).map(typeMapper::toResponse);
     }
 
     @Override

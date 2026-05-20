@@ -14,12 +14,16 @@ import com.sssi.msvcinventory.repository.AssetRepository;
 import com.sssi.msvcinventory.repository.TypeRepository;
 import com.sssi.msvcinventory.repository.BrandRepository;
 import com.sssi.msvcinventory.service.ModelService;
+import com.sssi.msvcinventory.specification.GenericSpecifications;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -62,9 +66,18 @@ public class ModelServiceImpl implements ModelService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ModelResponseDto> findAll(Pageable pageable) {
-        return modelRepository.findAll(pageable)
-                .map(modelMapper::toResponse);
+    public Page<ModelResponseDto> findAll(String search, Map<String, String> filters, Pageable pageable) {
+        Specification<Model> spec = Specification
+                .where(GenericSpecifications.<Model>withSearch(Model.class, search))
+                .and(GenericSpecifications.<Model>withColumnFilters(Model.class, filters));
+
+        Pageable sanitized = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                GenericSpecifications.sanitizeSort(Model.class, pageable.getSort())
+        );
+
+        return modelRepository.findAll(spec, sanitized).map(modelMapper::toResponse);
     }
 
     @Override

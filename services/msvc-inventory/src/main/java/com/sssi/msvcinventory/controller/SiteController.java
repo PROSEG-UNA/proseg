@@ -14,12 +14,17 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("${routes.sites:/api/v1/inventory/sites}")
 @RequiredArgsConstructor
 public class SiteController {
+
+    private static final Set<String> RESERVED_PARAMS = Set.of("search", "sort", "page", "size");
 
     private final SiteService siteService;
 
@@ -41,10 +46,15 @@ public class SiteController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<SiteResponseDto>>> findAll(
-            @PageableDefault(size = 10, page = 0) Pageable pageable
-    ) {
+            @RequestParam(required = false) String search,
+            @RequestParam Map<String, String> allParams,
+            @PageableDefault(size = 10, page = 0) Pageable pageable) {
+
+        Map<String, String> filters = new HashMap<>(allParams);
+        RESERVED_PARAMS.forEach(filters::remove);
+
         return ApiResponseBuilder.ok(
-                PageMapper.from(siteService.findAll(pageable)),
+                PageMapper.from(siteService.findAll(search, filters, pageable)),
                 "Lista de sites"
         );
     }

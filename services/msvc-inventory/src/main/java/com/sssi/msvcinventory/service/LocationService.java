@@ -5,6 +5,7 @@ import com.sssi.msvcinventory.dto.response.LocationResponseDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.Map;
 import java.util.UUID;
 
 public interface LocationService {
@@ -13,7 +14,7 @@ public interface LocationService {
 
     LocationResponseDto findById(UUID id);
 
-    Page<LocationResponseDto> findAll(Pageable pageable);
+    Page<LocationResponseDto> findAll(String search, Map<String, String> filters, Pageable pageable);
 
     Page<LocationResponseDto> findBySiteId(UUID siteId, Pageable pageable);
 

@@ -14,12 +14,17 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("${routes.brands:/api/v1/inventory/brands}")
 @RequiredArgsConstructor
 public class BrandController {
+
+    private static final Set<String> RESERVED_PARAMS = Set.of("search", "sort", "page", "size");
 
     private final BrandService brandService;
 
@@ -41,10 +46,15 @@ public class BrandController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<BrandResponseDto>>> findAll(
+            @RequestParam(required = false) String search,
+            @RequestParam Map<String, String> allParams,
             @PageableDefault(size = 10, page = 0) Pageable pageable) {
 
+        Map<String, String> filters = new HashMap<>(allParams);
+        RESERVED_PARAMS.forEach(filters::remove);
+
         return ApiResponseBuilder.ok(
-                PageMapper.from(brandService.findAll(pageable)),
+                PageMapper.from(brandService.findAll(search, filters, pageable)),
                 "Lista de brands"
         );
     }

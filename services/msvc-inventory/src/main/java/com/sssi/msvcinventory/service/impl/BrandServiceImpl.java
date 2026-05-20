@@ -8,12 +8,16 @@ import com.sssi.msvcinventory.mapper.BrandMapper;
 import com.sssi.msvcinventory.repository.ModelRepository;
 import com.sssi.msvcinventory.repository.BrandRepository;
 import com.sssi.msvcinventory.service.BrandService;
+import com.sssi.msvcinventory.specification.GenericSpecifications;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -46,9 +50,18 @@ public class BrandServiceImpl implements BrandService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<BrandResponseDto> findAll(Pageable pageable) {
-        return brandRepository.findAll(pageable)
-                .map(brandMapper::toResponse);
+    public Page<BrandResponseDto> findAll(String search, Map<String, String> filters, Pageable pageable) {
+        Specification<Brand> spec = Specification
+                .where(GenericSpecifications.<Brand>withSearch(Brand.class, search))
+                .and(GenericSpecifications.<Brand>withColumnFilters(Brand.class, filters));
+
+        Pageable sanitized = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                GenericSpecifications.sanitizeSort(Brand.class, pageable.getSort())
+        );
+
+        return brandRepository.findAll(spec, sanitized).map(brandMapper::toResponse);
     }
 
     @Override

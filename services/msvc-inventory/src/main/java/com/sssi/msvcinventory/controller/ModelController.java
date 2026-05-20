@@ -14,12 +14,17 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("${routes.models:/api/v1/inventory/models}")
 @RequiredArgsConstructor
 public class ModelController {
+
+    private static final Set<String> RESERVED_PARAMS = Set.of("search", "sort", "page", "size");
 
     private final ModelService modelService;
 
@@ -41,9 +46,15 @@ public class ModelController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<ModelResponseDto>>> findAll(
+            @RequestParam(required = false) String search,
+            @RequestParam Map<String, String> allParams,
             @PageableDefault(size = 10, page = 0) Pageable pageable) {
+
+        Map<String, String> filters = new HashMap<>(allParams);
+        RESERVED_PARAMS.forEach(filters::remove);
+
         return ApiResponseBuilder.ok(
-                PageMapper.from(modelService.findAll(pageable)),
+                PageMapper.from(modelService.findAll(search, filters, pageable)),
                 "Lista de modelos de activo"
         );
     }
