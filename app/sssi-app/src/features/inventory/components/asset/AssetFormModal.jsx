@@ -9,6 +9,7 @@ import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
+import CoordinateMapPicker from './CoordinateMapPicker.jsx';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
@@ -225,6 +226,14 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
     const handleChange = (key, value) => {
         setFormValues(prev => ({ ...prev, [key]: value }));
         if (touched[key]) validateField(key, value);
+    };
+
+    const handleCoordinatesChange = (lat, lng) => {
+        const latStr = lat.toFixed(7);
+        const lngStr = lng.toFixed(7);
+        setFormValues(prev => ({ ...prev, latitude: latStr, longitude: lngStr }));
+        setTouched(prev => ({ ...prev, latitude: true, longitude: true }));
+        setErrors(prev => ({ ...prev, latitude: null, longitude: null }));
     };
 
     const handleBrandChange = (value) => {
@@ -714,32 +723,17 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
 
                     <Box>
                         {sectionLabel('Coordenadas')}
-                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-                            <TextField
-                                label="Latitud" value={formValues.latitude}
-                                onChange={e => handleChange('latitude', e.target.value)}
-                                onBlur={() => handleBlur('latitude')}
-                                fullWidth size="small" disabled={saving}
-                                type="number"
-                                inputProps={{ step: 'any' }}
-                                error={touched.latitude && !!errors.latitude}
-                                helperText={touched.latitude ? (errors.latitude || ' ') : ' '}
-                                placeholder="-33.4500000"
-                                sx={fieldSx}
-                            />
-                            <TextField
-                                label="Longitud" value={formValues.longitude}
-                                onChange={e => handleChange('longitude', e.target.value)}
-                                onBlur={() => handleBlur('longitude')}
-                                fullWidth size="small" disabled={saving}
-                                type="number"
-                                inputProps={{ step: 'any' }}
-                                error={touched.longitude && !!errors.longitude}
-                                helperText={touched.longitude ? (errors.longitude || ' ') : ' '}
-                                placeholder="-70.6500000"
-                                sx={fieldSx}
-                            />
-                        </Box>
+                        <CoordinateMapPicker
+                            latitude={formValues.latitude}
+                            longitude={formValues.longitude}
+                            onCoordinatesChange={handleCoordinatesChange}
+                            onLatitudeChange={v => handleChange('latitude', v)}
+                            onLongitudeChange={v => handleChange('longitude', v)}
+                            onBlur={key => handleBlur(key)}
+                            disabled={saving}
+                            errors={errors}
+                            touched={touched}
+                        />
                     </Box>
 
                     <Divider />
