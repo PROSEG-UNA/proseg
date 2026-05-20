@@ -1,6 +1,8 @@
 package com.sssi.msvcinventory.entity;
 
 import com.sssi.common.entity.BaseEntity;
+import com.sssi.common.specification.Filterable;
+import com.sssi.common.specification.FilterType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
@@ -26,9 +28,11 @@ public class Type extends BaseEntity {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
+    @Filterable(type = FilterType.TEXT)
     @Column(nullable = false)
     private String name;
 
+    @Filterable(type = FilterType.TEXT)
     private String description;
 
     @Builder.Default
