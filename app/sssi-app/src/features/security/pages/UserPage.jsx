@@ -3,11 +3,11 @@ import {
   Box,
   Typography,
   Container,
-  Button,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import { RoseButton } from '../../../common/components/RoseButton';
 import { Header } from '../../../common/components/Header';
 import { NavDrawer } from '../../../common/components/NavDrawer';
 import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
@@ -55,9 +55,9 @@ export function UserPage() {
                   Lista de Usuarios
                 </Typography>
                 {canCreateUser ? (
-                  <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
+                  <RoseButton startIcon={<AddIcon />} onClick={() => setCreateOpen(true)} sx={{ px: '28px' }}>
                     Crear
-                  </Button>
+                  </RoseButton>
                 ) : null}
               </Box>
 
