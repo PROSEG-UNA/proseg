@@ -39,7 +39,7 @@ export default function CoordinateMapPicker({
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            <Box sx={{ height: 300, borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'divider', cursor: disabled ? 'default' : 'crosshair' }}>
+            <Box aria-label="Selector de coordenadas" sx={{ height: 300, borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'divider', cursor: disabled ? 'default' : 'crosshair' }}>
                 <MapContainer
                     center={center}
                     zoom={hasCoords ? 13 : DEFAULT_ZOOM}
