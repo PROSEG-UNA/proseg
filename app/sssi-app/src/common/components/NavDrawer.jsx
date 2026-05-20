@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/hooks/useAuth';
 import {
   Box,
-  Button,
   Collapse,
   Drawer,
   IconButton,
@@ -13,6 +12,7 @@ import {
   ListItemText,
   Typography,
 } from '@mui/material';
+import { RoseButton } from './RoseButton';
 import AppsIcon from '@mui/icons-material/Apps';
 import CloseIcon from '@mui/icons-material/Close';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
@@ -203,7 +203,6 @@ export function NavDrawer({ open, onClose }) {
             overflow: 'hidden',
             color: 'text.primary',
             ...panelSurfaceSx(t),
-            backgroundImage: 'none',
           }),
         },
       }}
@@ -292,32 +291,13 @@ export function NavDrawer({ open, onClose }) {
         </List>
 
         <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-          <Button
+          <RoseButton
             fullWidth
-            variant="contained"
             startIcon={<LogoutIcon sx={{ fontSize: 18 }} />}
             onClick={handleLogout}
-            disableElevation
-            sx={(t) => ({
-              textTransform: 'none',
-              fontWeight: 700,
-              fontSize: '0.86rem',
-              borderRadius: '10px',
-              py: 1,
-              letterSpacing: '0.01em',
-              color: '#fff',
-              background: `linear-gradient(135deg, ${t.vars.palette.tones.rose.headerBg} 0%, ${t.vars.palette.tones.rose.headerBg} 100%)`,
-              boxShadow: t.palette.tones.rose.shadowResting,
-              transition: 'box-shadow 0.22s ease, transform 0.22s ease, background 0.22s ease',
-              '&:hover': {
-                background: t.palette.primary.dark,
-                boxShadow: t.palette.tones.rose.shadowHover,
-                transform: 'translateY(-1px)',
-              },
-            })}
           >
             Cerrar Sesión
-          </Button>
+          </RoseButton>
         </Box>
       </Box>
     </Drawer>
