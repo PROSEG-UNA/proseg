@@ -11,6 +11,7 @@ export const CATALOG_CONFIG = {
         pluralTitle: 'Sedes',
         baseUrl: INVENTORY_ENDPOINTS.sites,
         icon: BusinessIcon,
+        columnToBackendKey: { name: 'name', description: 'description' },
         columns: [
             { accessorKey: 'name', header: 'Nombre', size: 160, grow: true },
             { accessorKey: 'description', header: 'Descripción', size: 200, grow: 2 },
@@ -25,6 +26,7 @@ export const CATALOG_CONFIG = {
         pluralTitle: 'Locaciones',
         baseUrl: INVENTORY_ENDPOINTS.locations,
         icon: PlaceIcon,
+        columnToBackendKey: { name: 'name', site: 'site.name', description: 'description' },
         columns: [
             { accessorKey: 'name', header: 'Nombre', size: 160, grow: true },
             {
@@ -56,6 +58,7 @@ export const CATALOG_CONFIG = {
         pluralTitle: 'Tipos',
         baseUrl: INVENTORY_ENDPOINTS.types,
         icon: CategoryIcon,
+        columnToBackendKey: { name: 'name', description: 'description' },
         columns: [
             { accessorKey: 'name', header: 'Nombre', size: 160, grow: true },
             { accessorKey: 'description', header: 'Descripción', size: 200, grow: 2 },
@@ -64,6 +67,8 @@ export const CATALOG_CONFIG = {
                 header: 'IP y MAC',
                 size: 130,
                 grow: false,
+                enableColumnFilter: false,
+                enableSorting: false,
                 Cell: ({ cell }) => (cell.getValue() ? 'Sí' : 'No'),
             },
         ],
@@ -83,6 +88,7 @@ export const CATALOG_CONFIG = {
         pluralTitle: 'Marcas',
         baseUrl: INVENTORY_ENDPOINTS.brands,
         icon: LabelIcon,
+        columnToBackendKey: { name: 'name' },
         columns: [
             { accessorKey: 'name', header: 'Nombre', size: 200, grow: true },
         ],
@@ -95,6 +101,7 @@ export const CATALOG_CONFIG = {
         pluralTitle: 'Modelos',
         baseUrl: INVENTORY_ENDPOINTS.models,
         icon: DevicesIcon,
+        columnToBackendKey: { name: 'name', brand: 'brand.name', type: 'type.name' },
         columns: [
             { accessorKey: 'name', header: 'Nombre', size: 160, grow: true },
             {

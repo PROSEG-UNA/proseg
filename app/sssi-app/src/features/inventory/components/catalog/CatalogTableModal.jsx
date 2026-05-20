@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useDebounce } from '../../../../common/hooks/useDebounce.js';
 import { Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -27,6 +28,9 @@ export default function CatalogTableModal({ open, onClose, config }) {
     const { title = '', pluralTitle = '', baseUrl = '', icon: Icon = null, columns: configColumns = [] } = config ?? {};
 
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
+    const [globalFilter, setGlobalFilter] = useState('');
+    const [columnFilters, setColumnFilters] = useState([]);
+    const [sorting, setSorting] = useState([]);
     const [localRefreshKey, setLocalRefreshKey] = useState(0);
     const [formOpen, setFormOpen] = useState(false);
     const [formRow, setFormRow] = useState(null);
@@ -49,19 +53,54 @@ export default function CatalogTableModal({ open, onClose, config }) {
     const canEditCatalog = canManageCatalog && hasCatalogAction('edit');
     const canRemoveCatalog = canDeleteCatalog && hasCatalogAction('delete');
 
+    const columnToBackendKey = config?.columnToBackendKey ?? {};
+
+    const debouncedGlobalFilter = useDebounce(globalFilter, 350);
+    const debouncedColumnFilters = useDebounce(columnFilters, 350);
+
+    const backendFilters = useMemo(() => {
+        const out = {};
+        debouncedColumnFilters.forEach(({ id, value }) => {
+            const key = columnToBackendKey[id];
+            if (!key || value === null || value === undefined || value === '') return;
+            out[key] = value;
+        });
+        return out;
+    }, [debouncedColumnFilters, columnToBackendKey]);
+
+    const backendSort = useMemo(
+        () => sorting
+            .map(({ id, desc }) => {
+                const key = columnToBackendKey[id] ?? id;
+                return `${key},${desc ? 'desc' : 'asc'}`;
+            }),
+        [sorting, columnToBackendKey]
+    );
+
     const triggerRefresh = useCallback(() => setLocalRefreshKey((k) => k + 1), []);
 
     const resetOnOpen = () => {
         if (!open) return;
         setPagination({ pageIndex: 0, pageSize: 10 });
+        setGlobalFilter('');
+        setColumnFilters([]);
+        setSorting([]);
     };
 
     useEffect(resetOnOpen, [open]);
+
+    const resetPageOnFilterChange = () => {
+        setPagination((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }));
+    };
+    useEffect(resetPageOnFilterChange, [debouncedGlobalFilter, backendFilters, backendSort]);
 
     const { rows, loading, error, totalElements } = useCatalogData({
         baseUrl,
         pageIndex: pagination.pageIndex,
         pageSize: pagination.pageSize,
+        search: debouncedGlobalFilter,
+        filters: backendFilters,
+        sort: backendSort,
         refreshKey: localRefreshKey,
     });
 
@@ -165,9 +204,14 @@ export default function CatalogTableModal({ open, onClose, config }) {
                         tableOptions={{
                             positionActionsColumn: 'last',
                             manualPagination: true,
+                            manualFiltering: true,
+                            manualSorting: true,
                             rowCount: totalElements,
                             onPaginationChange: setPagination,
-                            state: { pagination },
+                            onGlobalFilterChange: setGlobalFilter,
+                            onColumnFiltersChange: setColumnFilters,
+                            onSortingChange: setSorting,
+                            state: { pagination, globalFilter, columnFilters, sorting },
                             displayColumnDefOptions: {
                                 'mrt-row-actions': {
                                     muiTableBodyCellProps: { sx: { py: 1.15 } },
