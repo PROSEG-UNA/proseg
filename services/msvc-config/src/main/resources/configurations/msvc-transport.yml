@@ -16,7 +16,6 @@ eureka:
   client:
     service-url:
       defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://msvc-eureka:8761/eureka}
-
 api:
   prefix: /api/v1/transport
 
