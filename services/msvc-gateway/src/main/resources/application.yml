@@ -80,6 +80,13 @@ spring:
           filters:
             - StripPrefix=0
 
+        - id: msvc-maintenance
+          uri: ${DOCUMENT_PROCESSOR_SERVICE_URL:http://localhost:8099}
+          predicates:
+            - Path=/api/v1/maintenance/**
+          filters:
+            - StripPrefix=0
+
 cors:
   allowed-origins: http://localhost:5173,http://localhost:5174
 
