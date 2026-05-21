@@ -1,14 +1,15 @@
 package com.sssi.msvc_maintenance.dto.request;
 
+import com.sssi.common.utils.ValidationUtils;
 import com.sssi.msvc_maintenance.entity.enums.MaintenancePriority;
 import com.sssi.msvc_maintenance.entity.enums.MaintenanceStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.time.LocalDate;
-import java.util.UUID;
 
 @Getter
 @Setter
@@ -17,17 +18,33 @@ import java.util.UUID;
 @Builder
 public class MaintenanceRequestRequestDto {
 
-    @NotNull(message = "La compañía es obligatoria")
-    private UUID companyId;
+    @NotBlank(message = "La compañía es obligatoria")
+    @Pattern(
+            regexp = ValidationUtils.UUID_REGEX,
+            message = "El id de la compañía debe tener un formato UUID válido"
+    )
+    private String companyId;
 
-    @NotNull(message = "El activo es obligatorio")
-    private UUID assetId;
+    @NotBlank(message = "El activo es obligatorio")
+    @Pattern(
+            regexp = ValidationUtils.UUID_REGEX,
+            message = "El id del activo debe tener un formato UUID válido"
+    )
+    private String assetId;
 
     @NotBlank(message = "El título es obligatorio")
     @Size(max = 150, message = "El título no puede superar los 150 caracteres")
+    @Pattern(
+            regexp = ValidationUtils.SAFE_TEXT_REGEX,
+            message = "El título contiene caracteres inválidos"
+    )
     private String title;
 
-    @Size(max = 5000, message = "La descripción no puede superar los 5000 caracteres")
+    @Size(max = 600, message = "La descripción no puede superar los 600 caracteres")
+    @Pattern(
+            regexp = ValidationUtils.SAFE_TEXT_REGEX,
+            message = "La descripción contiene caracteres inválidos"
+    )
     private String description;
 
     @NotNull(message = "El estado es obligatorio")
@@ -38,6 +55,10 @@ public class MaintenanceRequestRequestDto {
 
     private LocalDate scheduledDate;
 
-    @Size(max = 5000, message = "Las observaciones no pueden superar los 5000 caracteres")
+    @Size(max = 600, message = "Las observaciones no pueden superar los 600 caracteres")
+    @Pattern(
+            regexp = ValidationUtils.SAFE_TEXT_REGEX,
+            message = "Las observaciones contienen caracteres inválidos"
+    )
     private String observations;
 }

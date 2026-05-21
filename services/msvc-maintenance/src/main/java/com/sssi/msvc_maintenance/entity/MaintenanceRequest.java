@@ -34,9 +34,6 @@ public class MaintenanceRequest extends BaseEntity {
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
 
-    /**
-     * Cross-service reference to asset in msvc-inventory — no DB-level FK constraint.
-     */
     @Column(name = "asset_id", nullable = false)
     private UUID assetId;
 
