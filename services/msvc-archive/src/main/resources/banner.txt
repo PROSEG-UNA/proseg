@@ -1,0 +1,8 @@
+                                                 __    _
+   ____ ___  ______   _______   ____ ___________/ /_  (_)   _____
+  / __ `__ \/ ___/ | / / ___/  / __ `/ ___/ ___/ __ \/ / | / / _ \
+ / / / / / (__  )| |/ / /__   / /_/ / /  / /__/ / / / /| |/ /  __/
+/_/ /_/ /_/____/ |___/\___/   \__,_/_/   \___/_/ /_/_/ |___/\___/
+${AnsiColor.BRIGHT_CYAN}═════════════════════════════════════════════════════════════${AnsiColor.DEFAULT}
+${AnsiColor.BRIGHT_MAGENTA}    :: SSSI :: ${AnsiColor.BRIGHT_WHITE}Booting up Spring Boot ${spring-boot.version}${AnsiColor.BRIGHT_RED} :: UNA-CR :: ${AnsiColor.DEFAULT}
+${AnsiColor.BRIGHT_YELLOW}═════════════════════════════════════════════════════════════${AnsiColor.DEFAULT}
