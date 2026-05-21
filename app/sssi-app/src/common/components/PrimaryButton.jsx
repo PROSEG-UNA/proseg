@@ -1,6 +1,6 @@
 import { Button } from '@mui/material';
 
-export function RoseButton({ children, ...rest }) {
+export function PrimaryButton({ children, ...rest }) {
   return (
     <Button
       variant="contained"
@@ -30,4 +30,4 @@ export function RoseButton({ children, ...rest }) {
   );
 }
 
-export default RoseButton;
+export default PrimaryButton;

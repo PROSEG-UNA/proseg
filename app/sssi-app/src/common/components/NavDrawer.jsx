@@ -12,7 +12,7 @@ import {
   ListItemText,
   Typography,
 } from '@mui/material';
-import { RoseButton } from './RoseButton';
+import { PrimaryButton } from './PrimaryButton.jsx';
 import AppsIcon from '@mui/icons-material/Apps';
 import CloseIcon from '@mui/icons-material/Close';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
@@ -291,13 +291,13 @@ export function NavDrawer({ open, onClose }) {
         </List>
 
         <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-          <RoseButton
+          <PrimaryButton
             fullWidth
             startIcon={<LogoutIcon sx={{ fontSize: 18 }} />}
             onClick={handleLogout}
           >
             Cerrar Sesión
-          </RoseButton>
+          </PrimaryButton>
         </Box>
       </Box>
     </Drawer>
