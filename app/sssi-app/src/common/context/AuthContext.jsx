@@ -101,11 +101,15 @@ export function AuthProvider({ children }) {
     }
   };
 
-  useEffect(() => {
+  const initAuth = () => {
     void refreshAuth().finally(() => setLoading(false));
-  }, []);
+  };
 
   useEffect(() => {
+    initAuth();
+  }, []);
+
+  const setupResponseInterceptor = () => {
     const responseInterceptor = axios.interceptors.response.use(
       response => response,
       async error => {
@@ -126,10 +130,10 @@ export function AuthProvider({ children }) {
         }
 
         if (isRefreshing) {
-          return new Promise((resolve, reject) => {
+          await new Promise((resolve, reject) => {
             failedQueue.push({ resolve, reject });
-          }).then(() => axios(originalRequest))
-            .catch(err => Promise.reject(err));
+          });
+          return axios(originalRequest);
         }
 
         isRefreshing = true;
@@ -155,6 +159,10 @@ export function AuthProvider({ children }) {
     return () => {
       axios.interceptors.response.eject(responseInterceptor);
     };
+  };
+
+  useEffect(() => {
+    return setupResponseInterceptor();
   }, []);
 
   const logout = async () => {
