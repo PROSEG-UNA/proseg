@@ -5,6 +5,7 @@ import com.sssi.msvcinventory.dto.response.TypeResponseDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.Map;
 import java.util.UUID;
 
 public interface TypeService {
@@ -13,7 +14,7 @@ public interface TypeService {
 
     TypeResponseDto findById(UUID id);
 
-    Page<TypeResponseDto> findAll(Pageable pageable);
+    Page<TypeResponseDto> findAll(String search, Map<String, String> filters, Pageable pageable);
 
     TypeResponseDto update(UUID id, TypeRequestDto request);
 

@@ -4,6 +4,7 @@ import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.api.response.PageResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
 import com.sssi.common.api.util.PageMapper;
+import com.sssi.common.specification.FilterConstants;
 import com.sssi.msvcinventory.dto.request.ModelRequestDto;
 import com.sssi.msvcinventory.dto.response.ModelResponseDto;
 import com.sssi.msvcinventory.service.ModelService;
@@ -14,6 +15,8 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -41,9 +44,15 @@ public class ModelController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<ModelResponseDto>>> findAll(
+            @RequestParam(required = false) String search,
+            @RequestParam Map<String, String> allParams,
             @PageableDefault(size = 10, page = 0) Pageable pageable) {
+
+        Map<String, String> filters = new HashMap<>(allParams);
+        FilterConstants.RESERVED_PARAMS.forEach(filters::remove);
+
         return ApiResponseBuilder.ok(
-                PageMapper.from(modelService.findAll(pageable)),
+                PageMapper.from(modelService.findAll(search, filters, pageable)),
                 "Lista de modelos de activo"
         );
     }

@@ -11,12 +11,16 @@ import com.sssi.msvcinventory.repository.AssetRepository;
 import com.sssi.msvcinventory.repository.LocationRepository;
 import com.sssi.msvcinventory.repository.SiteRepository;
 import com.sssi.msvcinventory.service.LocationService;
+import com.sssi.msvcinventory.specification.GenericSpecifications;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -57,9 +61,18 @@ public class LocationServiceImpl implements LocationService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<LocationResponseDto> findAll(Pageable pageable) {
-        return locationRepository.findAll(pageable)
-                .map(locationMapper::toResponse);
+    public Page<LocationResponseDto> findAll(String search, Map<String, String> filters, Pageable pageable) {
+        Specification<Location> spec = Specification
+                .where(GenericSpecifications.<Location>withSearch(Location.class, search))
+                .and(GenericSpecifications.<Location>withColumnFilters(Location.class, filters));
+
+        Pageable sanitized = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                GenericSpecifications.sanitizeSort(Location.class, pageable.getSort())
+        );
+
+        return locationRepository.findAll(spec, sanitized).map(locationMapper::toResponse);
     }
 
     @Override

@@ -8,12 +8,16 @@ import com.sssi.msvcinventory.mapper.SiteMapper;
 import com.sssi.msvcinventory.repository.LocationRepository;
 import com.sssi.msvcinventory.repository.SiteRepository;
 import com.sssi.msvcinventory.service.SiteService;
+import com.sssi.msvcinventory.specification.GenericSpecifications;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -46,9 +50,18 @@ public class SiteServiceImpl implements SiteService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<SiteResponseDto> findAll(Pageable pageable) {
-        return siteRepository.findAll(pageable)
-                .map(siteMapper::toResponse);
+    public Page<SiteResponseDto> findAll(String search, Map<String, String> filters, Pageable pageable) {
+        Specification<Site> spec = Specification
+                .where(GenericSpecifications.<Site>withSearch(Site.class, search))
+                .and(GenericSpecifications.<Site>withColumnFilters(Site.class, filters));
+
+        Pageable sanitized = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                GenericSpecifications.sanitizeSort(Site.class, pageable.getSort())
+        );
+
+        return siteRepository.findAll(spec, sanitized).map(siteMapper::toResponse);
     }
 
     @Override

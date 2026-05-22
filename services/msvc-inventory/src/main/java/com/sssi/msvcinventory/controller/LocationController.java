@@ -4,6 +4,7 @@ import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.api.response.PageResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
 import com.sssi.common.api.util.PageMapper;
+import com.sssi.common.specification.FilterConstants;
 import com.sssi.msvcinventory.dto.request.LocationRequestDto;
 import com.sssi.msvcinventory.dto.response.LocationResponseDto;
 import com.sssi.msvcinventory.service.LocationService;
@@ -14,6 +15,8 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -41,10 +44,15 @@ public class LocationController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<LocationResponseDto>>> findAll(
-            @PageableDefault(size = 10, page = 0) Pageable pageable
-    ) {
+            @RequestParam(required = false) String search,
+            @RequestParam Map<String, String> allParams,
+            @PageableDefault(size = 10, page = 0) Pageable pageable) {
+
+        Map<String, String> filters = new HashMap<>(allParams);
+        FilterConstants.RESERVED_PARAMS.forEach(filters::remove);
+
         return ApiResponseBuilder.ok(
-                PageMapper.from(locationService.findAll(pageable)),
+                PageMapper.from(locationService.findAll(search, filters, pageable)),
                 "Lista de locations"
         );
     }
