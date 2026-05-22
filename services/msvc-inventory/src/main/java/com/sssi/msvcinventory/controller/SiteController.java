@@ -4,6 +4,7 @@ import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.api.response.PageResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
 import com.sssi.common.api.util.PageMapper;
+import com.sssi.common.specification.FilterConstants;
 import com.sssi.msvcinventory.dto.request.SiteRequestDto;
 import com.sssi.msvcinventory.dto.response.SiteResponseDto;
 import com.sssi.msvcinventory.service.SiteService;
@@ -16,15 +17,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("${routes.sites:/api/v1/inventory/sites}")
 @RequiredArgsConstructor
 public class SiteController {
-
-    private static final Set<String> RESERVED_PARAMS = Set.of("search", "sort", "page", "size");
 
     private final SiteService siteService;
 
@@ -51,7 +49,7 @@ public class SiteController {
             @PageableDefault(size = 10, page = 0) Pageable pageable) {
 
         Map<String, String> filters = new HashMap<>(allParams);
-        RESERVED_PARAMS.forEach(filters::remove);
+        FilterConstants.RESERVED_PARAMS.forEach(filters::remove);
 
         return ApiResponseBuilder.ok(
                 PageMapper.from(siteService.findAll(search, filters, pageable)),

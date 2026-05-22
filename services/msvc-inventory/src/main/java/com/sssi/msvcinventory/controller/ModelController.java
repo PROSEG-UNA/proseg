@@ -4,6 +4,7 @@ import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.api.response.PageResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
 import com.sssi.common.api.util.PageMapper;
+import com.sssi.common.specification.FilterConstants;
 import com.sssi.msvcinventory.dto.request.ModelRequestDto;
 import com.sssi.msvcinventory.dto.response.ModelResponseDto;
 import com.sssi.msvcinventory.service.ModelService;
@@ -16,15 +17,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("${routes.models:/api/v1/inventory/models}")
 @RequiredArgsConstructor
 public class ModelController {
-
-    private static final Set<String> RESERVED_PARAMS = Set.of("search", "sort", "page", "size");
 
     private final ModelService modelService;
 
@@ -51,7 +49,7 @@ public class ModelController {
             @PageableDefault(size = 10, page = 0) Pageable pageable) {
 
         Map<String, String> filters = new HashMap<>(allParams);
-        RESERVED_PARAMS.forEach(filters::remove);
+        FilterConstants.RESERVED_PARAMS.forEach(filters::remove);
 
         return ApiResponseBuilder.ok(
                 PageMapper.from(modelService.findAll(search, filters, pageable)),

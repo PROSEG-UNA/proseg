@@ -4,6 +4,7 @@ import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.api.response.PageResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
 import com.sssi.common.api.util.PageMapper;
+import com.sssi.common.specification.FilterConstants;
 import com.sssi.msvcinventory.dto.request.BrandRequestDto;
 import com.sssi.msvcinventory.dto.response.BrandResponseDto;
 import com.sssi.msvcinventory.service.BrandService;
@@ -16,15 +17,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("${routes.brands:/api/v1/inventory/brands}")
 @RequiredArgsConstructor
 public class BrandController {
-
-    private static final Set<String> RESERVED_PARAMS = Set.of("search", "sort", "page", "size");
 
     private final BrandService brandService;
 
@@ -51,7 +49,7 @@ public class BrandController {
             @PageableDefault(size = 10, page = 0) Pageable pageable) {
 
         Map<String, String> filters = new HashMap<>(allParams);
-        RESERVED_PARAMS.forEach(filters::remove);
+        FilterConstants.RESERVED_PARAMS.forEach(filters::remove);
 
         return ApiResponseBuilder.ok(
                 PageMapper.from(brandService.findAll(search, filters, pageable)),
