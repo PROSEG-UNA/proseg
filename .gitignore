@@ -41,3 +41,8 @@ services/msvc-archive/target/classes/com/sssi/msvc_archive/service/ArchiveServic
 services/msvc-archive/target/classes/com/sssi/msvc_archive/config/CookieBearerTokenResolver.class
 *.class
 *.class
+.env
+.env.*
+!.env.example
+!.env.prod.example
+target/
