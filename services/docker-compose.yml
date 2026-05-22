@@ -125,7 +125,7 @@ services:
       - SPRING_CONFIG_IMPORT=optional:configserver:http://msvc-config:8888
       - SERVER_PORT=8090
       - SPRING_APPLICATION_NAME=msvc-auth
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=76.13.124.126:9094
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://auth.devbychris.com/realms/sssi-realm
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://msvc-eureka:8761/eureka/
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://msvc-eureka:8761/eureka/

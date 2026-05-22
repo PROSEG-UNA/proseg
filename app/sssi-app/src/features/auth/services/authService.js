@@ -37,3 +37,8 @@ export async function resetPassword(token, newPassword) {
     const { data } = await axios.post(`${BASE_URL}/reset-password`, { token, newPassword }, config);
     return data;
 }
+
+export async function refreshAccessToken() {
+    const { data } = await axios.post(`${BASE_URL}/refresh`, {}, config);
+    return data;
+}

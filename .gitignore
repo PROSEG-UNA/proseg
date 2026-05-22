@@ -14,6 +14,7 @@
 httpRequests/
 queries/
 /services/parent/
+/services/*/target/
 services/msvc-common/target/msvc-common-1.0-SNAPSHOT.jar
 /services/msvc-common/target
 *.class

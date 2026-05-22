@@ -3,11 +3,11 @@ import {
   Box,
   Typography,
   Container,
-  Button,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import { PrimaryButton } from '../../../common/components/PrimaryButton.jsx';
 import { Header } from '../../../common/components/Header';
 import { NavDrawer } from '../../../common/components/NavDrawer';
 import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
@@ -53,9 +53,9 @@ export function RolePage() {
                   Lista de Roles
                 </Typography>
                 {canCreateRole ? (
-                  <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
+                  <PrimaryButton startIcon={<AddIcon />} onClick={() => setCreateOpen(true)} sx={{ px: '28px' }}>
                     Crear
-                  </Button>
+                  </PrimaryButton>
                 ) : null}
               </Box>
 

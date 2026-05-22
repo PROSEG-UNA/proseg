@@ -27,6 +27,7 @@
         <module>msvc-archive</module>
         <module>msvc-transport</module>
         <module>msvc-document-processor</module>
+        <module>msvc-maintenance</module>
     </modules>
 
     <properties>

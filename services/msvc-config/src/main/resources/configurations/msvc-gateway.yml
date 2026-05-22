@@ -86,3 +86,10 @@ spring:
             - Path=/api/v1/document-processor/**
           filters:
             - StripPrefix=0
+
+        - id: msvc-maintenance
+          uri: http://msvc-maintenance:8099
+          predicates:
+            - Path=/api/v1/document-maintenance/**
+          filters:
+            - StripPrefix=0
