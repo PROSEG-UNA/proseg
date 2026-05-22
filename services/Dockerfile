@@ -14,6 +14,7 @@ COPY msvc-inventory ./msvc-inventory
 COPY msvc-archive ./msvc-archive
 COPY msvc-transport ./msvc-transport
 COPY msvc-document-processor ./msvc-document-processor
+COPY msvc-maintenance ./msvc-maintenance
 
 RUN mvn clean package -pl ${SERVICE_NAME} -am -DskipTests
 
