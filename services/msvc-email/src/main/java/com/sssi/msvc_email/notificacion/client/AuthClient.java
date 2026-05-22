@@ -11,7 +11,7 @@ import java.util.List;
 
 @FeignClient(
         name = "msvc-auth",
-        url = "localhost:8081/api",
+    url = "${GATEWAY_BASE_URL:http://msvc-gateway:8081}/api",
         configuration = FeignConfig.class
 )
 public interface AuthClient {

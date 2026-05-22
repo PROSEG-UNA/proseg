@@ -1,0 +1,56 @@
+server:
+  port: ${SERVER_PORT:9090}
+
+spring:
+  application:
+    name: msvc-email
+  config:
+    import: ${SPRING_CONFIG_IMPORT:optional:configserver:http://msvc-config:8888}
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:change-me}
+    password: ${SPRING_MAIL_PASSWORD:change-me}
+    properties:
+      mail:
+        smtp:
+          auth: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:true}
+            required: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED:true}
+          connectiontimeout: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_CONNECTIONTIMEOUT:5000}
+          timeout: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_TIMEOUT:5000}
+          writetimeout: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_WRITETIMEOUT:5000}
+        debug: ${SPRING_MAIL_PROPERTIES_MAIL_DEBUG:false}
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: ${SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID:msvc-email}
+            client-secret: ${SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET:change-me}
+            authorization-grant-type: client_credentials
+        provider:
+          keycloak:
+            token-uri: ${SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_TOKEN_URI:https://auth.example.com/realms/sssi-realm/protocol/openid-connect/token}
+  thymeleaf:
+    prefix: classpath:/templates/email/
+    suffix: .html
+    mode: HTML
+    encoding: UTF-8
+
+eureka:
+  instance:
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:msvc-email}
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://msvc-eureka:8761/eureka/}
+
+app:
+  urls:
+    login: ${APP_URLS_LOGIN:https://app.example.com/login}
+    approvals: ${APP_URLS_APPROVALS:https://app.example.com/login}
+    set-password: ${APP_URLS_SET_PASSWORD:https://app.example.com/set-password}
+    reset-password: ${APP_URLS_RESET_PASSWORD:https://app.example.com/reset-password}
