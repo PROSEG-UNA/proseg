@@ -14,6 +14,23 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
+@NamedEntityGraph(
+        name = "Asset.withRelations",
+        attributeNodes = {
+                @NamedAttributeNode(value = "model", subgraph = "model-subgraph"),
+                @NamedAttributeNode(value = "location", subgraph = "location-subgraph"),
+                @NamedAttributeNode("networkInterface")
+        },
+        subgraphs = {
+                @NamedSubgraph(name = "model-subgraph", attributeNodes = {
+                        @NamedAttributeNode("brand"),
+                        @NamedAttributeNode("type")
+                }),
+                @NamedSubgraph(name = "location-subgraph", attributeNodes = {
+                        @NamedAttributeNode("site")
+                })
+        }
+)
 @Entity
 @Table(name = "asset_table")
 @Inheritance(strategy = InheritanceType.JOINED)
