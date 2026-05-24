@@ -106,7 +106,7 @@ services:
       msvc-eureka:
         condition: service_healthy
       msvc-auth:
-        condition: service_healthy
+        condition: service_started
     networks:
       - sssi-net
 
@@ -144,7 +144,7 @@ services:
       msvc-eureka:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -sS http://localhost:8090/api/auth/login >/dev/null 2>&1"]
+      test: [ "CMD-SHELL", "curl -sS -X POST http://localhost:8090/api/auth/login -H 'Content-Type: application/json' -d '{}' -o /dev/null -w '%{http_code}' | grep -E '200|400|401|403' >/dev/null || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 20
