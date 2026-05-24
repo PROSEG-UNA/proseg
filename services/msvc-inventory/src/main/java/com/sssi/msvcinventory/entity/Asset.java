@@ -89,6 +89,10 @@ public class Asset extends BaseEntity {
     @Column(name = "firmware_support_end_date")
     private LocalDate firmwareSupportEndDate;
 
+    @Filterable(type = FilterType.DATE)
+    @Column(name = "decommission_date")
+    private LocalDate decommissionDate;
+
     @OneToOne(mappedBy = "asset", cascade = CascadeType.ALL)
     private NetworkInterface networkInterface;
 

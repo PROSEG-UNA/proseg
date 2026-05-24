@@ -41,6 +41,8 @@ public class AssetRequestDto {
 
     private LocalDate firmwareSupportEndDate;
 
+    private LocalDate decommissionDate;
+
     @Valid
     private NetworkInterfaceEmbeddedRequestDto networkInterface;
 
