@@ -22,7 +22,7 @@ jobs:
             cd ${{ secrets.VPS_APP_DIR }}
             git pull origin main
 
-            cd app
+            cd app/sssi-app
             npm install
             npm run build
 
