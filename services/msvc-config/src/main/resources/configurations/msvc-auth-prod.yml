@@ -15,8 +15,8 @@ spring:
           issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:https://auth.example.com/realms/sssi-realm}
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/sssi-bd}
-    username: ${SPRING_DATASOURCE_USERNAME:change-me}
-    password: ${SPRING_DATASOURCE_PASSWORD:change-me}
+    username: ${SPRING_DATASOURCE_USERNAME:sssi_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:sssi_user}
     driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.postgresql.Driver}
   jpa:
     hibernate:
@@ -51,10 +51,10 @@ keycloak:
   realm: ${KEYCLOAK_REALM:sssi-realm}
   client:
     id: ${KEYCLOAK_CLIENT_ID:sssi-app}
-    secret: ${KEYCLOAK_CLIENT_SECRET:change-me}
+    secret: ${KEYCLOAK_CLIENT_SECRET:Dl8QcQxHHmu6qERkUMmUJ0qWSulRRx6y}
   admin:
-    username: ${KEYCLOAK_ADMIN_USERNAME:change-me}
-    password: ${KEYCLOAK_ADMIN_PASSWORD:change-me}
+    username: ${KEYCLOAK_ADMIN_USERNAME:admin}
+    password: ${KEYCLOAK_ADMIN_PASSWORD:sssi_user}
 
 app:
   cookie:
@@ -64,6 +64,6 @@ app:
     notification-days: ${APP_PASSWORD_NOTIFICATION_DAYS:7,3,1}
 
 turnstile:
-  secret-key: ${TURNSTILE_SECRET_KEY:change-me}
+  secret-key: ${TURNSTILE_SECRET_KEY:0x4AAAAAADEo_xVst3UEPKg1xo7CgackmKA}
   max-retries: ${TURNSTILE_MAX_RETRIES:3}
   dev-mode: ${TURNSTILE_DEV_MODE:false}

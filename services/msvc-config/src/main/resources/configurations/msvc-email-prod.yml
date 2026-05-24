@@ -11,8 +11,8 @@ spring:
   mail:
     host: ${SPRING_MAIL_HOST:smtp.gmail.com}
     port: ${SPRING_MAIL_PORT:587}
-    username: ${SPRING_MAIL_USERNAME:change-me}
-    password: ${SPRING_MAIL_PASSWORD:change-me}
+    username: ${SPRING_MAIL_USERNAME:noreply.prostep@gmail.com}
+    password: ${SPRING_MAIL_PASSWORD:rwuj zaeq hrgm znge}
     properties:
       mail:
         smtp:
@@ -30,7 +30,7 @@ spring:
         registration:
           keycloak:
             client-id: ${SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID:msvc-email}
-            client-secret: ${SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET:change-me}
+            client-secret: ${SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET:0wqysXJSiZurqXEE9TZSzDk4rhHq2kKY}
             authorization-grant-type: client_credentials
         provider:
           keycloak:
