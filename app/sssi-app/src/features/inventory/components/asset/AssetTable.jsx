@@ -174,6 +174,7 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
                             acquisitionDate: false,
                             warrantyEndDate: false,
                             firmwareSupportEndDate: false,
+                            decommissionDate: false,
                             latitude: false,
                             longitude: false,
                         },

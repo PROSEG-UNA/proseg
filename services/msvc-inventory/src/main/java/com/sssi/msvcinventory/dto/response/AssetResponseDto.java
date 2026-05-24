@@ -36,6 +36,7 @@ public class AssetResponseDto {
     private LocalDate acquisitionDate;
     private LocalDate warrantyEndDate;
     private LocalDate firmwareSupportEndDate;
+    private LocalDate decommissionDate;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<String> archiveUrls;

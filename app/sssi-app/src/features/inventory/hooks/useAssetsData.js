@@ -4,11 +4,8 @@ import { getFriendlyApiErrorMessage } from '../../../common/utils';
 
 function mapStatusToSpanish(status) {
     switch (status) {
-        case 'BUENO': return 'Bueno';
-        case 'REGULAR': return 'Regular';
-        case 'MALO': return 'Malo';
-        case 'EN_REPARACION': return 'En reparación';
-        case 'BAJA': return 'Baja';
+        case 'APROBADO': return 'Aprobado';
+        case 'DE_BAJA': return 'De baja';
         default: return status || '—';
     }
 }
@@ -55,6 +52,7 @@ export function useAssetsData({ pageIndex = 0, pageSize = 10, search = '', filte
                         acquisitionDate: asset.acquisitionDate || null,
                         warrantyEndDate: asset.warrantyEndDate || null,
                         firmwareSupportEndDate: asset.firmwareSupportEndDate || null,
+                        decommissionDate: asset.decommissionDate || null,
                         latitude: asset.latitude ?? null,
                         longitude: asset.longitude ?? null,
                     };

@@ -21,18 +21,15 @@ import { uploadPhoto, registerArchive, fetchAssetArchives, deleteArchive } from 
 import { INVENTORY_ENDPOINTS } from '../../services/endpoints.js';
 
 const STATUS_OPTIONS = [
-    { value: 'BUENO',           label: 'Bueno' },
-    { value: 'REGULAR',         label: 'Regular' },
-    { value: 'MALO',            label: 'Malo' },
-    { value: 'EN_REPARACION',   label: 'En reparación' },
-    { value: 'BAJA',            label: 'Baja' },
+    { value: 'APROBADO', label: 'Aprobado' },
+    { value: 'DE_BAJA',  label: 'De baja' },
 ];
 
 const INIT = {
     executingUnit: '', responsibleEmployee: '', responsibleEmployeeId: '',
     brandId: '', typeId: '', modelId: '',
     locationId: '',
-    status: '',
+    status: '', decommissionDate: '',
     acquisitionDate: '', warrantyEndDate: '', firmwareSupportEndDate: '',
     ipAddress: '', macAddress: '',
     assetNumber: '', serialNumber: '',
@@ -147,6 +144,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                         acquisitionDate:        asset.acquisitionDate ?? '',
                         warrantyEndDate:        asset.warrantyEndDate ?? '',
                         firmwareSupportEndDate: asset.firmwareSupportEndDate ?? '',
+                        decommissionDate:      asset.decommissionDate ?? '',
                         ipAddress:              asset.networkInterface?.ipAddress ?? '',
                         macAddress:             asset.networkInterface?.macAddress ?? '',
                         assetNumber:            asset.assetNumber ?? '',
@@ -219,6 +217,12 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
     };
 
     const handleChange = (key, value) => {
+        if (key === 'status' && value === 'APROBADO') {
+            setFormValues(prev => ({ ...prev, status: value, decommissionDate: '' }));
+            setErrors(prev => ({ ...prev, decommissionDate: '' }));
+            if (touched[key]) validateField(key, value);
+            return;
+        }
         setFormValues(prev => ({ ...prev, [key]: value }));
         if (touched[key]) validateField(key, value);
     };
@@ -372,6 +376,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 acquisitionDate:         formValues.acquisitionDate               || null,
                 warrantyEndDate:         formValues.warrantyEndDate               || null,
                 firmwareSupportEndDate:  formValues.firmwareSupportEndDate        || null,
+                decommissionDate:        formValues.decommissionDate             || null,
                 assetNumber:             formValues.assetNumber?.trim()           || null,
                 serialNumber:            formValues.serialNumber?.trim()          || null,
                 latitude:                formValues.latitude !== '' ? parseFloat(formValues.latitude) : null,
@@ -467,7 +472,6 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 newTouched.longitude = true;
             }
         }
-
         setTouched(prev => ({ ...prev, ...newTouched }));
         setErrors(prev  => ({ ...prev, ...newErrors  }));
 
@@ -733,7 +737,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
 
                     <Box>
                         {sectionLabel('Estado')}
-                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr' }, gap: 2, maxWidth: 300 }}>
+                        <Box sx={{ display: 'grid', gridTemplateColumns: formValues.status === 'DE_BAJA' ? { xs: '1fr', sm: '1fr 1fr' } : '1fr', gap: 2 }}>
                             <TextField
                                 select label="Estado" value={formValues.status} required
                                 onChange={e => handleChange('status', e.target.value)}
@@ -745,6 +749,24 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                             >
                                 {STATUS_OPTIONS.map(o => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
                             </TextField>
+                            {formValues.status === 'DE_BAJA' && (
+                                <DatePicker
+                                    label="Fecha de baja"
+                                    value={formValues.decommissionDate ? dayjs(formValues.decommissionDate) : null}
+                                    onChange={v => handleChange('decommissionDate', v ? v.format('YYYY-MM-DD') : '')}
+                                    disabled={saving}
+                                    slotProps={{
+                                        textField: {
+                                            size: 'small',
+                                            fullWidth: true,
+                                            error: touched.decommissionDate && !!errors.decommissionDate,
+                                            helperText: touched.decommissionDate ? (errors.decommissionDate || ' ') : ' ',
+                                            sx: fieldSx,
+                                            onBlur: () => handleBlur('decommissionDate'),
+                                        },
+                                    }}
+                                />
+                            )}
                         </Box>
                     </Box>
 

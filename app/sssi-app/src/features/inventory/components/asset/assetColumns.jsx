@@ -4,18 +4,13 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import RowActionsMenu from '../../../../common/components/RowActionsMenu.jsx';
 
 const STATUS_FILTER_OPTIONS = [
-    { value: 'BUENO', label: 'Bueno' },
-    { value: 'REGULAR', label: 'Regular' },
-    { value: 'MALO', label: 'Malo' },
-    { value: 'EN_REPARACION', label: 'En reparación' },
-    { value: 'BAJA', label: 'Baja' },
+    { value: 'APROBADO', label: 'Aprobado' },
+    { value: 'DE_BAJA', label: 'De baja' },
 ];
 
 function statusChipColor(statusRaw) {
-    if (statusRaw === 'BUENO') return 'success';
-    if (statusRaw === 'REGULAR') return 'warning';
-    if (statusRaw === 'MALO') return 'error';
-    if (statusRaw === 'EN_REPARACION') return 'info';
+    if (statusRaw === 'APROBADO') return 'success';
+    if (statusRaw === 'DE_BAJA') return 'error';
     return 'default';
 }
 
@@ -124,6 +119,14 @@ export function getAssetsColumns() {
         {
             accessorKey: 'firmwareSupportEndDate',
             header: 'Fecha de fin Firmware',
+            size: 180,
+            grow: false,
+            enableColumnFilter: false,
+            Cell: ({ cell }) => formatDate(cell.getValue()),
+        },
+        {
+            accessorKey: 'decommissionDate',
+            header: 'Fecha de Baja',
             size: 180,
             grow: false,
             enableColumnFilter: false,
