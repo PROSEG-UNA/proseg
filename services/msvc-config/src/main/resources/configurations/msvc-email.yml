@@ -1,0 +1,44 @@
+server:
+  port: 9090
+
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: msvc-email
+            client-secret: 0wqysXJSiZurqXEE9TZSzDk4rhHq2kKY
+            authorization-grant-type: client_credentials
+        provider:
+          keycloak:
+            token-uri: https://auth.devbychris.com/realms/sssi-realm/protocol/openid-connect/token
+  application:
+    name: msvc-email
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:76.13.124.126:9094}
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: noreply.prostep@gmail.com
+    password: rwuj zaeq hrgm znge
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+        debug: true
+  thymeleaf:
+    prefix: classpath:/templates/email/
+
+eureka:
+  instance:
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:msvc-email}
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://msvc-eureka:8761/eureka}

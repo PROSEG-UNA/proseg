@@ -1,0 +1,54 @@
+.security-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.security-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.security-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.security-activity-log {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.security-activity-item {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.security-activity-item:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.security-footer {
+  padding: 2rem;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .security-content {
+    padding: 1rem;
+  }
+
+  .security-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+}
+

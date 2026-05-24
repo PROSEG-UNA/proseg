@@ -1,0 +1,18 @@
+package com.sssi.msvc_gateway.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.reactive.function.client.WebClient;
+
+@Configuration
+public class WebClientConfig {
+
+    @Bean
+    public WebClient authServiceClient(
+            @Value("${services.auth.url:http://msvc-auth:8090}") String authServiceUrl) {
+        return WebClient.builder()
+                .baseUrl(authServiceUrl)
+                .build();
+    }
+}

@@ -1,0 +1,73 @@
+import { useState, useCallback } from 'react';
+import {
+  Box,
+  Typography,
+  Container,
+  useMediaQuery,
+  useTheme,
+} from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import { PrimaryButton } from '../../../common/components/PrimaryButton.jsx';
+import { Header } from '../../../common/components/Header';
+import { NavDrawer } from '../../../common/components/NavDrawer';
+import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
+import '../css/RolePage.css';
+import RolesTable from '../components/RolesTable.jsx';
+import RoleFormModal from '../components/RoleFormModal.jsx';
+import { usePermissions } from '../../../common/hooks/usePermissions';
+import { PERMISSIONS } from '../../../common/constants/permissions';
+
+export function RolePage() {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const { hasPermission } = usePermissions();
+
+  const handleRefresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+  const theme = useTheme();
+  const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
+  const canViewRoles = hasPermission(PERMISSIONS.ROLES.READ_COMPOSITE);
+  const canCreateRole = hasPermission(PERMISSIONS.ROLES.CREATE);
+
+  return (
+      <Box className="role-page">
+        <Header
+            title="Gestión de Roles"
+            onMenuClick={isMediumOrDown ? () => setDrawerOpen(true) : undefined}
+        />
+        <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+
+        <Container maxWidth="xl" className="role-content">
+          {canViewRoles ? (
+            <>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                <Typography
+                    variant="h5"
+                    sx={{
+                      fontWeight: 700,
+                      color: 'primary.icon',
+                      fontSize: '1.65rem',
+                      letterSpacing: '0.3px',
+                    }}
+                >
+                  Lista de Roles
+                </Typography>
+                {canCreateRole ? (
+                  <PrimaryButton startIcon={<AddIcon />} onClick={() => setCreateOpen(true)} sx={{ px: '28px' }}>
+                    Crear
+                  </PrimaryButton>
+                ) : null}
+              </Box>
+
+              <RolesTable refreshKey={refreshKey} onRefresh={handleRefresh} />
+              <RoleFormModal open={createOpen} onClose={() => setCreateOpen(false)} onSaved={handleRefresh} />
+            </>
+          ) : (
+            <AccessDeniedState />
+          )}
+        </Container>
+      </Box>
+  );
+}
+
+export default RolePage;

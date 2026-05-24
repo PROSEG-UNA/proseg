@@ -1,0 +1,23 @@
+server:
+  port: 8097
+
+spring:
+  application:
+    name: msvc-transport
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:https://auth.devbychris.com/realms/sssi-realm}
+
+eureka:
+  instance:
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:msvc-transport}
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://msvc-eureka:8761/eureka}
+api:
+  prefix: /api/v1/transport
+
+routes:
+  transport: ${api.prefix}
