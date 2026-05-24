@@ -13,8 +13,9 @@ import { PERMISSIONS } from '../../../../common/constants/permissions';
 const COLUMN_TO_BACKEND_KEY = {
     assetNumber: 'assetNumber',
     serialNumber: 'serialNumber',
-    name: 'name',
-    description: 'description',
+    executingUnit: 'executingUnit',
+    responsibleEmployee: 'responsibleEmployee',
+    responsibleEmployeeId: 'responsibleEmployeeId',
     type: 'model.type.name',
     brand: 'model.brand.name',
     model: 'model.name',
@@ -165,9 +166,10 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
                     state: { pagination, globalFilter, columnFilters, sorting },
                     initialState: {
                         columnVisibility: {
-                            serialNumber: false,
-                            description: false,
                             site: false,
+                            executingUnit: false,
+                            responsibleEmployee: false,
+                            responsibleEmployeeId: false,
                             status: false,
                             acquisitionDate: false,
                             warrantyEndDate: false,
@@ -204,7 +206,7 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
                 type="delete"
                 open={!!assetToDelete}
                 title="Eliminar activo"
-                message={`¿Seguro que deseas eliminar el activo "${assetToDelete?.name}"?\nEsta acción no se puede deshacer.`}
+                message={`¿Seguro que deseas eliminar el activo "${assetToDelete?.assetNumber}"?\nEsta acción no se puede deshacer.`}
                 onClose={handleDeleteCancel}
                 onConfirm={handleDeleteConfirm}
                 confirmLabel="Eliminar"

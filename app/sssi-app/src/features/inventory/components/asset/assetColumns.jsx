@@ -40,18 +40,6 @@ export function getAssetsColumns() {
             grow: false,
         },
         {
-            accessorKey: 'name',
-            header: 'Nombre',
-            size: 200,
-            grow: true,
-        },
-        {
-            accessorKey: 'description',
-            header: 'Descripción',
-            size: 220,
-            grow: true,
-        },
-        {
             accessorKey: 'type',
             header: 'Tipo',
             size: 140,
@@ -80,6 +68,24 @@ export function getAssetsColumns() {
             header: 'Ubicación',
             size: 180,
             grow: true,
+        },
+        {
+            accessorKey: 'executingUnit',
+            header: 'Unidad Ejecutora',
+            size: 180,
+            grow: true,
+        },
+        {
+            accessorKey: 'responsibleEmployee',
+            header: 'Funcionario',
+            size: 200,
+            grow: true,
+        },
+        {
+            accessorKey: 'responsibleEmployeeId',
+            header: 'ID Funcionario',
+            size: 160,
+            grow: false,
         },
         {
             accessorKey: 'status',
