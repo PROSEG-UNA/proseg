@@ -50,13 +50,6 @@ public class Asset extends BaseEntity {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Filterable(type = FilterType.TEXT)
-    @Column(nullable = false)
-    private String name;
-
-    @Filterable(type = FilterType.TEXT)
-    private String description;
-
     @Filterable(type = FilterType.TEXT, nestedPaths = {"name", "brand.name", "type.name"})
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "asset_model_id", nullable = false)
@@ -73,8 +66,16 @@ public class Asset extends BaseEntity {
     private AssetStatus status;
 
     @Filterable(type = FilterType.TEXT)
-    @Column(name = "status_description")
-    private String statusDescription;
+    @Column(name = "executing_unit")
+    private String executingUnit;
+
+    @Filterable(type = FilterType.TEXT)
+    @Column(name = "responsible_employee")
+    private String responsibleEmployee;
+
+    @Filterable(type = FilterType.TEXT)
+    @Column(name = "responsible_employee_id")
+    private String responsibleEmployeeId;
 
     @Filterable(type = FilterType.DATE)
     @Column(name = "acquisition_date")

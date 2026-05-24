@@ -31,7 +31,7 @@ public class NetworkInterfaceServiceImpl implements NetworkInterfaceService {
                 .orElseThrow(() -> AssetException.notFound(request.getAssetId().toString()));
 
         if (networkInterfaceRepository.existsByAssetId(request.getAssetId())) {
-            throw NetworkInterfaceException.assetAlreadyHasInterface(asset.getName());
+            throw NetworkInterfaceException.assetAlreadyHasInterface(asset.getAssetNumber());
         }
         if (networkInterfaceRepository.existsByIpAddress(request.getIpAddress())) {
             throw NetworkInterfaceException.duplicateIp(request.getIpAddress());
