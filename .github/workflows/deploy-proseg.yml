@@ -17,10 +17,11 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
+          script_stop: true
           script: |
             cd ${{ secrets.VPS_APP_DIR }}
             git pull origin main
 
             cd services
-            docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+            docker compose --env-file .env.prod.example -f docker-compose.prod.yml up -d --build
             docker image prune -f
