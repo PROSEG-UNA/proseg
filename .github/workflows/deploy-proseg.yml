@@ -22,6 +22,13 @@ jobs:
             cd ${{ secrets.VPS_APP_DIR }}
             git pull origin main
 
-            cd services
+            cd app
+            npm install
+            npm run build
+
+            cd ../services
             docker compose --env-file .env.prod.example -f docker-compose.prod.yml up -d --build
             docker image prune -f
+
+            nginx -t
+            systemctl reload nginx
