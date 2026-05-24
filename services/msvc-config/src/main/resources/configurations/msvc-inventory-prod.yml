@@ -1,0 +1,58 @@
+server:
+  port: ${SERVER_PORT:8095}
+
+spring:
+  application:
+    name: msvc-inventory
+  config:
+    import: ${SPRING_CONFIG_IMPORT:optional:configserver:http://msvc-config:8888}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:https://auth.example.com/realms/sssi-realm}
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/sssi-bd}
+    username: ${SPRING_DATASOURCE_USERNAME:sssi_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:sssi_user}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.postgresql.Driver}
+    hikari:
+      maximum-pool-size: ${SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE:10}
+      minimum-idle: ${SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE:5}
+      idle-timeout: ${SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT:30000}
+      max-lifetime: ${SPRING_DATASOURCE_HIKARI_MAX_LIFETIME:180000}
+      connection-timeout: ${SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT:30000}
+      validation-timeout: ${SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT:5000}
+      connection-test-query: ${SPRING_DATASOURCE_HIKARI_CONNECTION_TEST_QUERY:SELECT 1}
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+    show-sql: ${SPRING_JPA_SHOW_SQL:false}
+    properties:
+      hibernate:
+        dialect: ${SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT:org.hibernate.dialect.PostgreSQLDialect}
+
+eureka:
+  instance:
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:msvc-inventory}
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://msvc-eureka:8761/eureka/}
+
+api:
+  prefix: /api/v1/inventory
+
+archive:
+  base-url: ${ARCHIVE_BASE_URL:http://msvc-gateway:8081}
+
+routes:
+  brands: ${api.prefix}/brands
+  locations: ${api.prefix}/locations
+  sites: ${api.prefix}/sites
+  types: ${api.prefix}/types
+  models: ${api.prefix}/models
+  assets: ${api.prefix}/assets
+  network-interfaces: ${api.prefix}/network-interfaces
+  alarm-sensors: ${api.prefix}/assets/alarm-sensors
+  images: ${api.prefix}/images
+  asset-archives: ${api.prefix}/asset-archives

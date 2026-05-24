@@ -33,11 +33,11 @@ public class NetworkInterfaceException extends BaseException {
         );
     }
 
-    public static NetworkInterfaceException assetAlreadyHasInterface(String assetName) {
+    public static NetworkInterfaceException assetAlreadyHasInterface(String assetNumber) {
         return new NetworkInterfaceException(
                 HttpStatus.CONFLICT,
                 "NETWORK_INTERFACE_ASSET_CONFLICT",
-                "El activo '" + assetName + "' ya tiene una IP y MAC asignada"
+                "El activo con número '" + assetNumber + "' ya tiene una IP y MAC asignada"
         );
     }
 

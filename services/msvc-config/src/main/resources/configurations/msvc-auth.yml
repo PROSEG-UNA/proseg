@@ -5,7 +5,7 @@ spring:
   application:
     name: msvc-auth
   kafka:
-    bootstrap-servers: 76.13.124.126:9094
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:76.13.124.126:9094}
   security:
     oauth2:
       resourceserver:

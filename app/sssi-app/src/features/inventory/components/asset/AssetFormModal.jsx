@@ -21,18 +21,15 @@ import { uploadPhoto, registerArchive, fetchAssetArchives, deleteArchive } from 
 import { INVENTORY_ENDPOINTS } from '../../services/endpoints.js';
 
 const STATUS_OPTIONS = [
-    { value: 'BUENO',           label: 'Bueno' },
-    { value: 'REGULAR',         label: 'Regular' },
-    { value: 'MALO',            label: 'Malo' },
-    { value: 'EN_REPARACION',   label: 'En reparación' },
-    { value: 'BAJA',            label: 'Baja' },
+    { value: 'APROBADO', label: 'Aprobado' },
+    { value: 'DE_BAJA',  label: 'De baja' },
 ];
 
 const INIT = {
-    name: '', description: '',
+    executingUnit: '', responsibleEmployee: '', responsibleEmployeeId: '',
     brandId: '', typeId: '', modelId: '',
     locationId: '',
-    status: '', statusDescription: '',
+    status: '', decommissionDate: '',
     acquisitionDate: '', warrantyEndDate: '', firmwareSupportEndDate: '',
     ipAddress: '', macAddress: '',
     assetNumber: '', serialNumber: '',
@@ -136,17 +133,18 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 if (cancelled) return;
                 if (asset) {
                     setFormValues({
-                        name:                   asset.name ?? '',
-                        description:            asset.description ?? '',
+                        executingUnit:          asset.executingUnit ?? '',
+                        responsibleEmployee:    asset.responsibleEmployee ?? '',
+                        responsibleEmployeeId:  asset.responsibleEmployeeId ?? '',
                         brandId:                asset.model?.brand?.id ?? '',
                         typeId:                 asset.model?.type?.id ?? '',
                         modelId:                asset.model?.id ?? '',
                         locationId:             asset.location?.id ?? '',
                         status:                 asset.status ?? '',
-                        statusDescription:      asset.statusDescription ?? '',
                         acquisitionDate:        asset.acquisitionDate ?? '',
                         warrantyEndDate:        asset.warrantyEndDate ?? '',
                         firmwareSupportEndDate: asset.firmwareSupportEndDate ?? '',
+                        decommissionDate:      asset.decommissionDate ?? '',
                         ipAddress:              asset.networkInterface?.ipAddress ?? '',
                         macAddress:             asset.networkInterface?.macAddress ?? '',
                         assetNumber:            asset.assetNumber ?? '',
@@ -186,16 +184,11 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
     useEffect(loadAssetData, [open, assetId]);
 
     const validateField = (key, value) => {
-        const required = ['name', 'brandId', 'typeId', 'modelId', 'locationId', 'status', 'assetNumber', 'serialNumber'];
+        const required = ['brandId', 'typeId', 'modelId', 'locationId', 'status', 'assetNumber', 'serialNumber'];
         let error = '';
 
         if (required.includes(key) && (!value || (typeof value === 'string' && !value.trim()))) {
             error = 'Este campo es requerido';
-        }
-
-        if (!error && key === 'name' && value?.trim()) {
-            if (value.trim().length < 2)   error = 'Mínimo 2 caracteres';
-            if (value.trim().length > 150) error = 'Máximo 150 caracteres';
         }
 
         if (!error && key === 'ipAddress' && value?.trim()) {
@@ -224,6 +217,12 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
     };
 
     const handleChange = (key, value) => {
+        if (key === 'status' && value === 'APROBADO') {
+            setFormValues(prev => ({ ...prev, status: value, decommissionDate: '' }));
+            setErrors(prev => ({ ...prev, decommissionDate: '' }));
+            if (touched[key]) validateField(key, value);
+            return;
+        }
         setFormValues(prev => ({ ...prev, [key]: value }));
         if (touched[key]) validateField(key, value);
     };
@@ -368,15 +367,16 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         setSaving(true);
         try {
             const payload = {
-                name:                    formValues.name.trim(),
-                description:             formValues.description?.trim()           || null,
+                executingUnit:           formValues.executingUnit?.trim()         || null,
+                responsibleEmployee:     formValues.responsibleEmployee?.trim()   || null,
+                responsibleEmployeeId:   formValues.responsibleEmployeeId?.trim() || null,
                 modelId:                 formValues.modelId,
                 locationId:              formValues.locationId,
                 status:                  formValues.status,
-                statusDescription:       formValues.statusDescription?.trim()     || null,
                 acquisitionDate:         formValues.acquisitionDate               || null,
                 warrantyEndDate:         formValues.warrantyEndDate               || null,
                 firmwareSupportEndDate:  formValues.firmwareSupportEndDate        || null,
+                decommissionDate:        formValues.decommissionDate             || null,
                 assetNumber:             formValues.assetNumber?.trim()           || null,
                 serialNumber:            formValues.serialNumber?.trim()          || null,
                 latitude:                formValues.latitude !== '' ? parseFloat(formValues.latitude) : null,
@@ -433,7 +433,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
     };
 
     const handleSave = async () => {
-        const requiredFields = ['name', 'brandId', 'typeId', 'modelId', 'locationId', 'status', 'assetNumber', 'serialNumber'];
+        const requiredFields = ['brandId', 'typeId', 'modelId', 'locationId', 'status', 'assetNumber', 'serialNumber'];
 
         const newTouched = {};
         const newErrors  = {};
@@ -445,11 +445,6 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 newErrors[key] = 'Este campo es requerido';
             }
         });
-
-        if (!newErrors.name && formValues.name.trim().length < 2) {
-            newErrors.name    = 'Mínimo 2 caracteres';
-            newTouched.name   = true;
-        }
         if (!newErrors.ipAddress && formValues.ipAddress?.trim()) {
             if (!/^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/.test(formValues.ipAddress.trim())) {
                 newErrors.ipAddress  = 'La dirección IP no tiene un formato válido';
@@ -477,7 +472,6 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 newTouched.longitude = true;
             }
         }
-
         setTouched(prev => ({ ...prev, ...newTouched }));
         setErrors(prev  => ({ ...prev, ...newErrors  }));
 
@@ -582,29 +576,6 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
 
                     <Box>
-                        {sectionLabel('Información básica')}
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            <TextField
-                                label="Nombre" value={formValues.name} required
-                                onChange={e => handleChange('name', e.target.value)}
-                                onBlur={() => handleBlur('name')}
-                                fullWidth size="small" disabled={saving}
-                                error={touched.name && !!errors.name}
-                                helperText={touched.name ? (errors.name || ' ') : ' '}
-                                sx={fieldSx}
-                            />
-                            <TextField
-                                label="Descripción" value={formValues.description}
-                                onChange={e => handleChange('description', e.target.value)}
-                                fullWidth size="small" multiline rows={2} disabled={saving}
-                                sx={fieldSx}
-                            />
-                        </Box>
-                    </Box>
-
-                    <Divider />
-
-                    <Box>
                         {sectionLabel('Identificación')}
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                             <Box>
@@ -702,6 +673,32 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     <Divider />
 
                     <Box>
+                        {sectionLabel('Responsable')}
+                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2 }}>
+                            <TextField
+                                label="Unidad Ejecutora" value={formValues.executingUnit}
+                                onChange={e => handleChange('executingUnit', e.target.value)}
+                                fullWidth size="small" disabled={saving}
+                                sx={fieldSx}
+                            />
+                            <TextField
+                                label="Nombre Funcionario" value={formValues.responsibleEmployee}
+                                onChange={e => handleChange('responsibleEmployee', e.target.value)}
+                                fullWidth size="small" disabled={saving}
+                                sx={fieldSx}
+                            />
+                            <TextField
+                                label="Identificación Funcionario" value={formValues.responsibleEmployeeId}
+                                onChange={e => handleChange('responsibleEmployeeId', e.target.value)}
+                                fullWidth size="small" disabled={saving}
+                                sx={fieldSx}
+                            />
+                        </Box>
+                    </Box>
+
+                    <Divider />
+
+                    <Box>
                         {sectionLabel('Ubicación')}
                         <SearchableSelect
                             label="Locación" value={formValues.locationId} required
@@ -740,7 +737,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
 
                     <Box>
                         {sectionLabel('Estado')}
-                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 2fr' }, gap: 2 }}>
+                        <Box sx={{ display: 'grid', gridTemplateColumns: formValues.status === 'DE_BAJA' ? { xs: '1fr', sm: '1fr 1fr' } : '1fr', gap: 2 }}>
                             <TextField
                                 select label="Estado" value={formValues.status} required
                                 onChange={e => handleChange('status', e.target.value)}
@@ -752,12 +749,24 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                             >
                                 {STATUS_OPTIONS.map(o => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
                             </TextField>
-                            <TextField
-                                label="Descripción del estado" value={formValues.statusDescription}
-                                onChange={e => handleChange('statusDescription', e.target.value)}
-                                fullWidth size="small" disabled={saving}
-                                sx={fieldSx}
-                            />
+                            {formValues.status === 'DE_BAJA' && (
+                                <DatePicker
+                                    label="Fecha de baja"
+                                    value={formValues.decommissionDate ? dayjs(formValues.decommissionDate) : null}
+                                    onChange={v => handleChange('decommissionDate', v ? v.format('YYYY-MM-DD') : '')}
+                                    disabled={saving}
+                                    slotProps={{
+                                        textField: {
+                                            size: 'small',
+                                            fullWidth: true,
+                                            error: touched.decommissionDate && !!errors.decommissionDate,
+                                            helperText: touched.decommissionDate ? (errors.decommissionDate || ' ') : ' ',
+                                            sx: fieldSx,
+                                            onBlur: () => handleBlur('decommissionDate'),
+                                        },
+                                    }}
+                                />
+                            )}
                         </Box>
                     </Box>
 

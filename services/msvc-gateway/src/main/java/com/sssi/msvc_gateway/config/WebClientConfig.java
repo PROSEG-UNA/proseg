@@ -10,7 +10,7 @@ public class WebClientConfig {
 
     @Bean
     public WebClient authServiceClient(
-            @Value("${services.auth.url:http://localhost:8090}") String authServiceUrl) {
+            @Value("${services.auth.url:http://msvc-auth:8090}") String authServiceUrl) {
         return WebClient.builder()
                 .baseUrl(authServiceUrl)
                 .build();

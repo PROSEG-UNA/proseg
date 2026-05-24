@@ -1,0 +1,104 @@
+services:
+  auth:
+    url: ${SERVICES_AUTH_URL:http://msvc-auth:8090}
+
+eureka:
+  client:
+    register-with-eureka: false
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://msvc-eureka:8761/eureka/}
+
+server:
+  port: ${SERVER_PORT:8081}
+
+spring:
+  application:
+    name: msvc-gateway
+  config:
+    import: ${SPRING_CONFIG_IMPORT:optional:configserver:http://msvc-config:8888}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:https://auth.example.com/realms/sssi-realm}
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+      routes:
+        - id: msvc-auth
+          uri: ${AUTH_SERVICE_URL:http://msvc-auth:8090}
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=0
+
+        - id: msvc-auth-user
+          uri: ${AUTH_SERVICE_URL:http://msvc-auth:8090}
+          predicates:
+            - Path=/api/user/**
+          filters:
+            - StripPrefix=0
+
+        - id: msvc-auth-role
+          uri: ${AUTH_SERVICE_URL:http://msvc-auth:8090}
+          predicates:
+            - Path=/api/role/**
+          filters:
+            - StripPrefix=0
+
+        - id: gateway-actuator
+          uri: ${GATEWAY_BASE_URL:http://msvc-gateway:8081}
+          predicates:
+            - Path=/actuator/**
+          filters:
+            - StripPrefix=0
+
+        - id: msvc-email
+          uri: ${EMAIL_SERVICE_URL:http://msvc-email:9090}
+          predicates:
+            - Path=/api/email/**
+          filters:
+            - StripPrefix=2
+
+        - id: msvc-inventory
+          uri: ${INVENTORY_SERVICE_URL:http://msvc-inventory:8095}
+          predicates:
+            - Path=/api/v1/inventory/**
+          filters:
+            - StripPrefix=0
+
+        - id: msvc-archive
+          uri: ${ARCHIVE_SERVICE_URL:http://msvc-archive:8096}
+          predicates:
+            - Path=/api/v1/archive/**
+          filters:
+            - StripPrefix=0
+
+        - id: msvc-transport
+          uri: ${TRANSPORT_SERVICE_URL:http://msvc-transport:8097}
+          predicates:
+            - Path=/api/v1/transport/**
+          filters:
+            - StripPrefix=0
+
+        - id: msvc-document-processor
+          uri: ${DOCUMENT_PROCESSOR_SERVICE_URL:http://msvc-document-processor:8098}
+          predicates:
+            - Path=/api/v1/document-processor/**
+          filters:
+            - StripPrefix=0
+
+        - id: msvc-maintenance
+          uri: ${MAINTENANCE_SERVICE_URL:http://msvc-maintenance:8099}
+          predicates:
+            - Path=/api/v1/document-maintenance/**
+          filters:
+            - StripPrefix=0
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:https://proseg.devbychris.com}
+
+keycloak:
+  client-id: ${KEYCLOAK_CLIENT_ID:sssi-app}

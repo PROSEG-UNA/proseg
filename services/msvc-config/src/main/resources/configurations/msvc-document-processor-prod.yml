@@ -1,0 +1,15 @@
+server:
+  port: ${SERVER_PORT:8098}
+
+spring:
+  application:
+    name: msvc-document-processor
+  config:
+    import: ${SPRING_CONFIG_IMPORT:optional:configserver:http://msvc-config:8888}
+
+eureka:
+  instance:
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:msvc-document-processor}
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://msvc-eureka:8761/eureka/}
