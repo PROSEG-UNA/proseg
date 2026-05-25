@@ -87,9 +87,10 @@ public class TokenRefreshFilter implements WebFilter {
                     exchange.getResponse().addCookie(buildCookie(REFRESH_COOKIE, newRefreshToken));
 
                     ServerWebExchange mutatedExchange = exchange.mutate()
-                            .request(r -> r.headers(headers ->
-                                    headers.set(HttpHeaders.COOKIE, buildUpdatedCookieHeader(exchange, newAccessToken))
-                            ))
+                            .request(r -> r.headers(headers -> {
+                                    headers.set(HttpHeaders.COOKIE, buildUpdatedCookieHeader(exchange, newAccessToken));
+                                    headers.setBearerAuth(newAccessToken);
+                            }))
                             .build();
 
                     log.debug("Token renovado exitosamente");
