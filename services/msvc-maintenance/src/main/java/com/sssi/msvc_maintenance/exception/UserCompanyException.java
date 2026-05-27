@@ -9,19 +9,19 @@ public class UserCompanyException extends BaseException {
         super(status, errorCode, message);
     }
 
-    public static UserCompanyException notFound(String id) {
+    public static UserCompanyException notFound() {
         return new UserCompanyException(
                 HttpStatus.NOT_FOUND,
                 "USER_COMPANY_NOT_FOUND",
-                "Relación usuario-compañía no encontrada con id: " + id
+                "No encontramos la asignacion de empresa solicitada."
         );
     }
 
-    public static UserCompanyException duplicateRelation(String keycloakUserId, String companyId) {
+    public static UserCompanyException duplicateRelation() {
         return new UserCompanyException(
                 HttpStatus.CONFLICT,
                 "USER_COMPANY_DUPLICATE",
-                "La relación ya existe para usuario '" + keycloakUserId + "' y compañía '" + companyId + "'"
+                "Este usuario ya tiene asignada esa empresa."
         );
     }
 }

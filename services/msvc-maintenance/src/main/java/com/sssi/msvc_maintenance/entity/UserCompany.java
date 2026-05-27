@@ -3,7 +3,9 @@ package com.sssi.msvc_maintenance.entity;
 import com.sssi.common.entity.BaseEntity;
 import com.sssi.common.specification.Filterable;
 import com.sssi.common.specification.FilterType;
+import com.sssi.common.utils.ValidationUtils;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Pattern;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.UuidGenerator;
@@ -33,7 +35,13 @@ public class UserCompany extends BaseEntity {
 
     @Filterable(type = FilterType.TEXT)
     @Column(name = "keycloak_user_id", nullable = false)
+    @Pattern(regexp = ValidationUtils.KEYCLOAK_ID_REGEX, message = "El id del usuario contiene caracteres inválidos")
     private String keycloakUserId;
+
+    @Filterable(type = FilterType.TEXT)
+    @Column(name = "created_user_email", length = 254, nullable = true)
+    @Pattern(regexp = ValidationUtils.EMAIL_REGEX, message = "El correo electrónico tiene un formato inválido")
+    private String userEmail;
 
     @Filterable(type = FilterType.TEXT, nestedPaths = {"name", "legalId"})
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
