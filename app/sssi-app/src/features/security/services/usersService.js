@@ -4,9 +4,13 @@ const BASE_URL = '/api/user';
 const config = { withCredentials: true };
 
 export async function fetchUsers({ page = 0, size = 10 } = {}) {
+    return searchUsers({ page, size });
+}
+
+export async function searchUsers({ page = 0, size = 10, search = '' } = {}) {
     const { data } = await axios.get(BASE_URL, {
         ...config,
-        params: { page, size },
+        params: { page, size, search: search?.trim() || undefined },
     });
 
     return data?.data ?? {
@@ -84,3 +88,8 @@ export async function resendInvitation(userId) {
 
     return data;
 }
+
+export const userRoleActions = {
+    assignRoleToUser,
+    removeRoleFromUser,
+};
