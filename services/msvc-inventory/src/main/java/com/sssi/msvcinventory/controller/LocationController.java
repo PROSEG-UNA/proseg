@@ -30,7 +30,7 @@ public class LocationController {
     public ResponseEntity<ApiResponse<LocationResponseDto>> create(@Valid @RequestBody LocationRequestDto request) {
         return ApiResponseBuilder.created(
                 locationService.create(request),
-                "Location creada correctamente"
+                "Ubicación creada correctamente"
         );
     }
 
@@ -38,7 +38,7 @@ public class LocationController {
     public ResponseEntity<ApiResponse<LocationResponseDto>> findById(@PathVariable UUID id) {
         return ApiResponseBuilder.ok(
                 locationService.findById(id),
-                "Location obtenida correctamente"
+                "Ubicación obtenida correctamente"
         );
     }
 
@@ -53,7 +53,7 @@ public class LocationController {
 
         return ApiResponseBuilder.ok(
                 PageMapper.from(locationService.findAll(search, filters, pageable)),
-                "Lista de locations"
+                "Lista de ubicaciones"
         );
     }
 
@@ -64,7 +64,7 @@ public class LocationController {
 
         return ApiResponseBuilder.ok(
                 PageMapper.from(locationService.findByCampusId(campusId, pageable)),
-                "Locations por campus"
+                "Ubicaciones por campus"
         );
     }
 
@@ -75,7 +75,7 @@ public class LocationController {
 
         return ApiResponseBuilder.ok(
                 PageMapper.from(locationService.findByBuildingId(buildingId, pageable)),
-                "Locations por building"
+                "Ubicaciones por edificio"
         );
     }
 
@@ -86,7 +86,7 @@ public class LocationController {
 
         return ApiResponseBuilder.ok(
                 locationService.update(id, request),
-                "Location actualizada correctamente"
+                "Ubicación actualizada correctamente"
         );
     }
 
@@ -95,7 +95,7 @@ public class LocationController {
         locationService.delete(id);
         return ApiResponseBuilder.ok(
                 null,
-                "Location eliminada correctamente"
+                "Ubicación eliminada correctamente"
         );
     }
 }

@@ -30,7 +30,7 @@ public class BuildingController {
     public ResponseEntity<ApiResponse<BuildingResponseDto>> create(@Valid @RequestBody BuildingRequestDto request) {
         return ApiResponseBuilder.created(
                 buildingService.create(request),
-                "Building creado correctamente"
+                "Edificio creado correctamente"
         );
     }
 
@@ -38,7 +38,7 @@ public class BuildingController {
     public ResponseEntity<ApiResponse<BuildingResponseDto>> findById(@PathVariable UUID id) {
         return ApiResponseBuilder.ok(
                 buildingService.findById(id),
-                "Building obtenido correctamente"
+                "Edificio obtenido correctamente"
         );
     }
 
@@ -53,7 +53,7 @@ public class BuildingController {
 
         return ApiResponseBuilder.ok(
                 PageMapper.from(buildingService.findAll(search, filters, pageable)),
-                "Lista de buildings"
+                "Lista de edificios"
         );
     }
 
@@ -64,7 +64,7 @@ public class BuildingController {
 
         return ApiResponseBuilder.ok(
                 PageMapper.from(buildingService.findByCampusId(campusId, pageable)),
-                "Buildings por campus"
+                "Edificios por campus"
         );
     }
 
@@ -75,7 +75,7 @@ public class BuildingController {
 
         return ApiResponseBuilder.ok(
                 buildingService.update(id, request),
-                "Building actualizado correctamente"
+                "Edificio actualizado correctamente"
         );
     }
 
@@ -84,7 +84,7 @@ public class BuildingController {
         buildingService.delete(id);
         return ApiResponseBuilder.ok(
                 null,
-                "Building eliminado correctamente"
+                "Edificio eliminado correctamente"
         );
     }
 }

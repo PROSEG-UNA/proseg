@@ -30,7 +30,7 @@ public class BrandController {
     public ResponseEntity<ApiResponse<BrandResponseDto>> create(@Valid @RequestBody BrandRequestDto request) {
         return ApiResponseBuilder.created(
                 brandService.create(request),
-                "Brand creada correctamente"
+                "Marca creada correctamente"
         );
     }
 
@@ -38,7 +38,7 @@ public class BrandController {
     public ResponseEntity<ApiResponse<BrandResponseDto>> findById(@PathVariable UUID id) {
         return ApiResponseBuilder.ok(
                 brandService.findById(id),
-                "Brand obtenida correctamente"
+                "Marca obtenida correctamente"
         );
     }
 
@@ -53,7 +53,7 @@ public class BrandController {
 
         return ApiResponseBuilder.ok(
                 PageMapper.from(brandService.findAll(search, filters, pageable)),
-                "Lista de brands"
+                "Lista de marcas"
         );
     }
 
@@ -64,7 +64,7 @@ public class BrandController {
 
         return ApiResponseBuilder.ok(
                 brandService.update(id, request),
-                "Brand actualizada correctamente"
+                "Marca actualizada correctamente"
         );
     }
 
@@ -73,7 +73,7 @@ public class BrandController {
         brandService.delete(id);
         return ApiResponseBuilder.ok(
                 null,
-                "Brand eliminada correctamente"
+                "Marca eliminada correctamente"
         );
     }
 }
