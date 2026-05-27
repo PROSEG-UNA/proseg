@@ -9,11 +9,11 @@ public class CompanyException extends BaseException {
         super(status, errorCode, message);
     }
 
-    public static CompanyException notFound(String id) {
+    public static CompanyException notFound() {
         return new CompanyException(
                 HttpStatus.NOT_FOUND,
                 "COMPANY_NOT_FOUND",
-                "Compañía no encontrada con id: " + id
+                "No encontramos la empresa seleccionada. Verifica la información e inténtalo nuevamente."
         );
     }
 
@@ -21,7 +21,7 @@ public class CompanyException extends BaseException {
         return new CompanyException(
                 HttpStatus.CONFLICT,
                 "COMPANY_DUPLICATE_NAME",
-                "Ya existe una compañía con el nombre: " + name
+                "Ya existe una empresa con el nombre: " + name
         );
     }
 
@@ -29,7 +29,7 @@ public class CompanyException extends BaseException {
         return new CompanyException(
                 HttpStatus.CONFLICT,
                 "COMPANY_DUPLICATE_LEGAL_ID",
-                "Ya existe una compañía con la cédula jurídica: " + legalId
+                "Ya existe una empresa con la cédula jurídica: " + legalId
         );
     }
 
@@ -37,7 +37,15 @@ public class CompanyException extends BaseException {
         return new CompanyException(
                 HttpStatus.BAD_REQUEST,
                 "COMPANY_IN_USE",
-                "No se puede eliminar la compañía '" + name + "' porque tiene registros relacionados"
+                "No se puede eliminar la empresa '" + name + "' porque tiene registros relacionados"
+        );
+    }
+
+    public static CompanyException invalidKeycloakUser(String userId) {
+        return new CompanyException(
+                HttpStatus.NOT_FOUND,
+                "INVALID_KEYCLOAK_USER",
+                "No existe un usuario en Keycloak con el id: " + userId
         );
     }
 }

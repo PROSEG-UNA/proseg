@@ -1,16 +1,12 @@
-package com.sssi.msvc_maintenance.dto.response;
+package com.sssi.msvc_email.notificacion.dto;
 
-import lombok.*;
+import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@Data
 public class CompanyResponseDto {
 
     private UUID id;
@@ -20,7 +16,6 @@ public class CompanyResponseDto {
     private String contactPhone;
     private String address;
     private List<String> keycloakUserIds;
-    private List<UserCompanyResponseDto> userCompanies;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

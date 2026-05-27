@@ -1,13 +1,12 @@
-package com.sssi.msvc_email.notificacion.client;
+package com.sssi.msvc_maintenance.client;
 
 import com.sssi.common.api.response.ApiResponse;
-import com.sssi.msvc_email.config.FeignConfig;
-import com.sssi.msvc_email.notificacion.dto.KeycloakUserResponseDto;
+import com.sssi.msvc_maintenance.config.FeignConfig;
+import com.sssi.msvc_maintenance.dto.response.KeycloakUserDto;
+import com.sssi.msvc_maintenance.dto.response.KeycloakUserResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-
-import java.util.List;
 
 @FeignClient(
         name = "msvc-auth",
@@ -17,8 +16,11 @@ import java.util.List;
 public interface AuthClient {
 
     @GetMapping("/user/keycloak/{id}")
-    ApiResponse<KeycloakUserResponseDto> getUserById(@PathVariable String id);
+    ApiResponse<KeycloakUserDto> getUserById(@PathVariable String id);
 
-    @GetMapping("/role/{roleName}/users")
-    ApiResponse<List<KeycloakUserResponseDto>> getUsersByRole(@PathVariable String roleName);
+    @GetMapping("/user/keycloak/{id}")
+    ApiResponse<KeycloakUserResponse> findUserByKeycloakId(
+            @PathVariable String id
+    );
 }
+

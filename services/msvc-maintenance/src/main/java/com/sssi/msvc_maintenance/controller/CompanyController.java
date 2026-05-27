@@ -6,8 +6,13 @@ import com.sssi.common.api.util.ApiResponseBuilder;
 import com.sssi.common.api.util.PageMapper;
 import com.sssi.common.specification.FilterConstants;
 import com.sssi.msvc_maintenance.dto.request.CompanyRequestDto;
+import com.sssi.msvc_maintenance.dto.request.CompanyUserRequestDto;
 import com.sssi.msvc_maintenance.dto.response.CompanyResponseDto;
+import com.sssi.msvc_maintenance.dto.response.KeycloakUserResponse;
+import com.sssi.msvc_maintenance.dto.response.UserCompanyResponseDto;
+import com.sssi.msvc_maintenance.mapper.UserCompanyMapper;
 import com.sssi.msvc_maintenance.service.CompanyService;
+import com.sssi.msvc_maintenance.service.impl.CompanyUserManagementService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -33,12 +39,14 @@ import java.util.UUID;
 public class CompanyController {
 
     private final CompanyService companyService;
+    private final CompanyUserManagementService companyUserManagementService;
+    private final UserCompanyMapper userCompanyMapper;
 
     @PostMapping
     public ResponseEntity<ApiResponse<CompanyResponseDto>> create(@Valid @RequestBody CompanyRequestDto request) {
         return ApiResponseBuilder.created(
                 companyService.create(request),
-                "Compañía creada correctamente"
+                "Empresa creada correctamente"
         );
     }
 
@@ -46,7 +54,29 @@ public class CompanyController {
     public ResponseEntity<ApiResponse<CompanyResponseDto>> findById(@PathVariable UUID id) {
         return ApiResponseBuilder.ok(
                 companyService.findById(id),
-                "Compañía obtenida correctamente"
+                "Empresa obtenida correctamente"
+        );
+    }
+
+    @GetMapping("/{id}/users")
+    public ResponseEntity<ApiResponse<List<KeycloakUserResponse>>> findUsers(
+            @PathVariable UUID id
+    ) {
+        return ApiResponseBuilder.ok(
+                companyUserManagementService.findUsersByCompanyId(id),
+                "Usuarios asociados a la empresa"
+        );
+    }
+
+    @PostMapping("/{id}/users")
+    public ResponseEntity<ApiResponse<UserCompanyResponseDto>> assignUser(
+            @PathVariable UUID id,
+            @Valid @RequestBody CompanyUserRequestDto request) {
+        return ApiResponseBuilder.created(
+                userCompanyMapper.toResponse(
+                        companyUserManagementService.assignUserToCompany(id, request.getKeycloakUserId())
+                ),
+                "Usuario vinculado correctamente"
         );
     }
 
@@ -61,7 +91,7 @@ public class CompanyController {
 
         return ApiResponseBuilder.ok(
                 PageMapper.from(companyService.findAll(search, filters, pageable)),
-                "Lista de compañías"
+                "Lista de empresas"
         );
     }
 
@@ -72,7 +102,7 @@ public class CompanyController {
 
         return ApiResponseBuilder.ok(
                 companyService.update(id, request),
-                "Compañía actualizada correctamente"
+                "Empresa actualizada correctamente"
         );
     }
 
@@ -81,7 +111,16 @@ public class CompanyController {
         companyService.delete(id);
         return ApiResponseBuilder.ok(
                 null,
-                "Compañía eliminada correctamente"
+                "Empresa eliminada correctamente"
+        );
+    }
+
+    @DeleteMapping("/{id}/users/{userId}")
+    public ResponseEntity<ApiResponse<Void>> unassignUser(@PathVariable UUID id, @PathVariable String userId) {
+        companyUserManagementService.removeUserFromCompany(id, userId);
+        return ApiResponseBuilder.ok(
+                null,
+                "Usuario desasignado correctamente"
         );
     }
 }
