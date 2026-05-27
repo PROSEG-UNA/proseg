@@ -3,9 +3,11 @@ package com.sssi.msvc_maintenance.entity;
 import com.sssi.common.entity.BaseEntity;
 import com.sssi.common.specification.Filterable;
 import com.sssi.common.specification.FilterType;
+import com.sssi.common.utils.ValidationUtils;
 import com.sssi.msvc_maintenance.entity.enums.MaintenancePriority;
 import com.sssi.msvc_maintenance.entity.enums.MaintenanceStatus;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Pattern;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.UuidGenerator;
@@ -43,10 +45,12 @@ public class MaintenanceRequest extends BaseEntity {
 
     @Filterable(type = FilterType.TEXT)
     @Column(nullable = false)
+    @Pattern(regexp = ValidationUtils.SAFE_TEXT_REGEX, message = "El título contiene caracteres inválidos")
     private String title;
 
     @Filterable(type = FilterType.TEXT)
     @Column(columnDefinition = "TEXT")
+    @Pattern(regexp = ValidationUtils.SAFE_TEXT_REGEX, message = "La descripción contiene caracteres inválidos")
     private String description;
 
     @Filterable(type = FilterType.ENUM)
@@ -67,6 +71,7 @@ public class MaintenanceRequest extends BaseEntity {
 
     @Filterable(type = FilterType.TEXT)
     @Column(columnDefinition = "TEXT")
+    @Pattern(regexp = ValidationUtils.SAFE_TEXT_REGEX, message = "Las observaciones contienen caracteres inválidos")
     private String observations;
 
     @OneToMany(mappedBy = "maintenanceRequest", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

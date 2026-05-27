@@ -1,4 +1,4 @@
-package com.sssi.msvc_email.notificacion.dto;
+package com.sssi.msvc_maintenance.dto.response;
 
 import lombok.Data;
 
@@ -10,3 +10,4 @@ public class KeycloakUserDto {
     private String firstName;
     private String lastName;
 }
+
