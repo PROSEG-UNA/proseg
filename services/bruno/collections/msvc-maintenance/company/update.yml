@@ -1,0 +1,25 @@
+info:
+  name: update
+  type: http
+  seq: 7
+
+http:
+  method: PUT
+  url: "{{gatewayUrl}}/api/{{apiVersion}}/maintenance/companies/f96c39b1-e7ff-4379-bf33-704a877e1c0a"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Tecnologías Empresariales CR S.A.",
+        "legalId": "3-101-845721",
+        "contactEmail": "contacto@teccr.com",
+        "contactPhone": "8888-4567",
+        "address": "San Rafael de Escazú, San José, Costa Rica"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

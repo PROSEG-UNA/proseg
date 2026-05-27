@@ -1,0 +1,29 @@
+info:
+  name: create
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{gatewayUrl}}/api/{{apiVersion}}/maintenance/companies"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Tecnologías Empresariales CR S.A.",
+        "legalId": "3-101-845722",
+        "contactEmail": "contacto@teccr.com",
+        "contactPhone": "8888-4567",
+        "address": "San Rafael de Escazú, San José, Costa Rica",
+        "keycloakUserIds": [
+          "8d20a5ba-25ba-4a22-a816-1894c09d8fd0",
+          "d791be07-87aa-4b26-8de1-d88db2b324c4"
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
