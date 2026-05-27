@@ -9,7 +9,7 @@ import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import { createCatalogItem, updateCatalogItem, fetchCatalogOptions } from '../../services/catalogService';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
 
-export default function CatalogFormModal({ open, onClose, onSaved, config, row }) {
+export default function CatalogFormModal({ open, onClose, onSaved, config, row, initialValues }) {
     const theme = useTheme();
 
     const { title = '', icon: Icon = null, formFields = [], baseUrl = '' } = config ?? {};
@@ -34,10 +34,17 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row }
                 values[field.key] = field.getInitialValue ? field.getInitialValue(row) : (row?.[field.key] ?? false);
             } else if (field.type === 'select') {
                 values[field.key] = field.getInitialValue ? field.getInitialValue(row) : '';
+            } else if (field.type === 'number') {
+                values[field.key] = field.getInitialValue ? field.getInitialValue(row) : (row?.[field.key] ?? '');
             } else {
                 values[field.key] = row?.[field.key] ?? '';
             }
         });
+        if (!isEditMode && initialValues) {
+            Object.entries(initialValues).forEach(([k, v]) => {
+                if (v !== undefined && v !== null) values[k] = v;
+            });
+        }
         setFormValues(values);
         setErrors({});
         setTouched({});
@@ -80,13 +87,21 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row }
     const validateSingleField = (key, value) => {
         const field = formFields.find((f) => f.key === key);
         if (!field || !field.required || field.type === 'boolean') return true;
-        const empty = !value || (typeof value === 'string' && !value.trim());
+        const empty = value === undefined || value === null || value === '' || (typeof value === 'string' && !value.trim());
         setErrors((prev) => ({ ...prev, [key]: empty ? 'Este campo es requerido' : '' }));
         return !empty;
     };
 
     const handleChange = (key, value) => {
-        setFormValues((prev) => ({ ...prev, [key]: value }));
+        setFormValues((prev) => {
+            const next = { ...prev, [key]: value };
+            formFields.forEach((field) => {
+                if (field.dependsOn === key) {
+                    next[field.key] = '';
+                }
+            });
+            return next;
+        });
         if (touched[key]) validateSingleField(key, value);
     };
 
@@ -102,7 +117,7 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row }
             newTouched[field.key] = true;
             if (field.required && field.type !== 'boolean') {
                 const val = formValues[field.key];
-                const empty = !val || (typeof val === 'string' && !val.trim());
+                const empty = val === undefined || val === null || val === '' || (typeof val === 'string' && !val.trim());
                 if (empty) newErrors[field.key] = 'Este campo es requerido';
             }
         });
@@ -130,6 +145,14 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row }
         } finally {
             setSaving(false);
         }
+    };
+
+    const getFilteredOptions = (field) => {
+        const all = selectOptions[field.key] ?? [];
+        if (!field.dependsOn || !field.filterBy) return all;
+        const parentValue = formValues[field.dependsOn];
+        if (!parentValue) return [];
+        return all.filter((opt) => field.filterBy(opt, parentValue));
     };
 
     const fieldSx = {
@@ -205,6 +228,7 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row }
                         }
 
                         if (field.type === 'select') {
+                            const disabled = saving || loadingOptions || (field.dependsOn && !formValues[field.dependsOn]);
                             return (
                                 <SearchableSelect
                                     key={field.key}
@@ -215,13 +239,38 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row }
                                     fullWidth
                                     size="small"
                                     required={field.required}
-                                    disabled={saving || loadingOptions}
+                                    disabled={!!disabled}
+                                    error={touched[field.key] && !!errors[field.key]}
+                                    helperText={
+                                        field.dependsOn && !formValues[field.dependsOn]
+                                            ? ' '
+                                            : (touched[field.key] ? (errors[field.key] || ' ') : ' ')
+                                    }
+                                    sx={fieldSx}
+                                    items={getFilteredOptions(field)}
+                                    getItemLabel={field.getOptionLabel}
+                                    getItemValue={field.getOptionValue}
+                                />
+                            );
+                        }
+
+                        if (field.type === 'number') {
+                            return (
+                                <TextField
+                                    key={field.key}
+                                    label={field.label}
+                                    value={formValues[field.key] ?? ''}
+                                    onChange={(e) => handleChange(field.key, e.target.value === '' ? '' : Number(e.target.value))}
+                                    onBlur={() => handleBlur(field.key)}
+                                    fullWidth
+                                    size="small"
+                                    type="number"
+                                    inputProps={{ min: 0 }}
+                                    required={field.required}
+                                    disabled={saving}
                                     error={touched[field.key] && !!errors[field.key]}
                                     helperText={touched[field.key] ? (errors[field.key] || ' ') : ' '}
                                     sx={fieldSx}
-                                    items={selectOptions[field.key] ?? []}
-                                    getItemLabel={field.getOptionLabel}
-                                    getItemValue={field.getOptionValue}
                                 />
                             );
                         }

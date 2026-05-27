@@ -17,7 +17,7 @@ import { PERMISSIONS } from '../../../../common/constants/permissions';
 import {getFriendlyApiErrorMessage} from "../../../../common/utils/index.js";
 
 const getInventoryPermissionGroup = (baseUrl = '') => {
-    if (baseUrl.includes('/sites') || baseUrl.includes('/locations')) {
+    if (baseUrl.includes('/campuses') || baseUrl.includes('/locations')) {
         return PERMISSIONS.INVENTORY.LOCATIONS;
     }
 
