@@ -19,7 +19,7 @@ public interface AssetService {
 
     Page<AssetResponseDto> findByLocationId(UUID locationId, Pageable pageable);
 
-    Page<AssetResponseDto> findBySiteId(UUID siteId, Pageable pageable);
+    Page<AssetResponseDto> findByCampusId(UUID campusId, Pageable pageable);
 
     Page<AssetResponseDto> findByTypeId(UUID typeId, Pageable pageable);
 

@@ -25,7 +25,7 @@ public interface AssetRepository extends JpaRepository<Asset, UUID>, JpaSpecific
     Page<Asset> findByLocationId(UUID locationId, Pageable pageable);
 
     @EntityGraph("Asset.withRelations")
-    Page<Asset> findByLocationSiteId(UUID siteId, Pageable pageable);
+    Page<Asset> findByLocationFloorBuildingCampusId(UUID campusId, Pageable pageable);
 
     @EntityGraph("Asset.withRelations")
     Page<Asset> findByModelTypeId(UUID typeId, Pageable pageable);

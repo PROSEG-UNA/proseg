@@ -57,14 +57,25 @@ public class LocationController {
         );
     }
 
-    @GetMapping("/site/{siteId}")
-    public ResponseEntity<ApiResponse<PageResponse<LocationResponseDto>>> findBySiteId(
-            @PathVariable UUID siteId,
+    @GetMapping("/campus/{campusId}")
+    public ResponseEntity<ApiResponse<PageResponse<LocationResponseDto>>> findByCampusId(
+            @PathVariable UUID campusId,
             @PageableDefault(size = 10, page = 0) Pageable pageable) {
 
         return ApiResponseBuilder.ok(
-                PageMapper.from(locationService.findBySiteId(siteId, pageable)),
-                "Locations por site"
+                PageMapper.from(locationService.findByCampusId(campusId, pageable)),
+                "Locations por campus"
+        );
+    }
+
+    @GetMapping("/building/{buildingId}")
+    public ResponseEntity<ApiResponse<PageResponse<LocationResponseDto>>> findByBuildingId(
+            @PathVariable UUID buildingId,
+            @PageableDefault(size = 10, page = 0) Pageable pageable) {
+
+        return ApiResponseBuilder.ok(
+                PageMapper.from(locationService.findByBuildingId(buildingId, pageable)),
+                "Locations por building"
         );
     }
 

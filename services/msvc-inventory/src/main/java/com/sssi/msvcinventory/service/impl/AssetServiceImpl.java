@@ -108,8 +108,8 @@ public class AssetServiceImpl implements AssetService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<AssetResponseDto> findBySiteId(UUID siteId, Pageable pageable) {
-        return assetRepository.findByLocationSiteId(siteId, pageable)
+    public Page<AssetResponseDto> findByCampusId(UUID campusId, Pageable pageable) {
+        return assetRepository.findByLocationFloorBuildingCampusId(campusId, pageable)
                 .map(this::toPolymorphicResponse);
     }
 

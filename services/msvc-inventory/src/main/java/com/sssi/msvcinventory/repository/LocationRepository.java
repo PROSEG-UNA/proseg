@@ -13,13 +13,17 @@ import java.util.UUID;
 @Repository
 public interface LocationRepository extends JpaRepository<Location, UUID>, JpaSpecificationExecutor<Location> {
 
-    List<Location> findBySiteId(UUID siteId);
+    List<Location> findByFloorId(UUID floorId);
 
-    boolean existsBySiteId(UUID siteId);
+    boolean existsByFloorId(UUID floorId);
 
-    boolean existsByNameIgnoreCaseAndSiteId(String name, UUID siteId);
+    boolean existsByDescriptionIgnoreCaseAndFloorId(String description, UUID floorId);
 
-    boolean existsByNameIgnoreCaseAndSiteIdAndIdNot(String name, UUID siteId, UUID id);
+    boolean existsByDescriptionIgnoreCaseAndFloorIdAndIdNot(String description, UUID floorId, UUID id);
 
-    Page<Location> findBySiteId(UUID siteId, Pageable pageable);
+    Page<Location> findByFloorId(UUID floorId, Pageable pageable);
+
+    Page<Location> findByFloorBuildingId(UUID buildingId, Pageable pageable);
+
+    Page<Location> findByFloorBuildingCampusId(UUID campusId, Pageable pageable);
 }

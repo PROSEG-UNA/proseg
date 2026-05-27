@@ -17,19 +17,19 @@ public class LocationException extends BaseException {
         );
     }
 
-    public static LocationException duplicateName(String name) {
+    public static LocationException duplicateDescription(String description) {
         return new LocationException(
                 HttpStatus.CONFLICT,
-                "LOCATION_DUPLICATE_NAME",
-                "Ya existe una ubicación con el nombre '" + name + "' en el sitio indicado"
+                "LOCATION_DUPLICATE_DESCRIPTION",
+                "Ya existe una ubicación con la descripción '" + description + "' en el piso indicado"
         );
     }
 
-    public static LocationException inUse(String name) {
+    public static LocationException inUse(String description) {
         return new LocationException(
                 HttpStatus.BAD_REQUEST,
                 "LOCATION_IN_USE",
-                "No se puede eliminar la ubicación '" + name + "' porque tiene activos asociados"
+                "No se puede eliminar la ubicación '" + description + "' porque tiene activos asociados"
         );
     }
 }

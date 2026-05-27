@@ -10,11 +10,11 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SiteResponseDto {
+public class BuildingResponseDto {
 
     private UUID id;
     private String name;
-    private String description;
+    private CampusResponseDto campus;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
