@@ -9,19 +9,19 @@ public class MaintenanceRequestException extends BaseException {
         super(status, errorCode, message);
     }
 
-    public static MaintenanceRequestException notFound(String id) {
+    public static MaintenanceRequestException notFound() {
         return new MaintenanceRequestException(
                 HttpStatus.NOT_FOUND,
                 "MAINTENANCE_REQUEST_NOT_FOUND",
-                "Solicitud de mantenimiento no encontrada con id: " + id
+                "No encontramos la solicitud de mantenimiento seleccionada."
         );
     }
 
-    public static MaintenanceRequestException inUse(String id) {
+    public static MaintenanceRequestException inUse() {
         return new MaintenanceRequestException(
                 HttpStatus.BAD_REQUEST,
                 "MAINTENANCE_REQUEST_IN_USE",
-                "No se puede eliminar la solicitud de mantenimiento '" + id + "' porque tiene técnicos asociados"
+                "No se puede eliminar esta solicitud porque tiene tecnicos asignados."
         );
     }
 }

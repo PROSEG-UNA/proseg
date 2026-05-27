@@ -40,7 +40,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         UUID assetId = parseUuid(request.getAssetId(), "assetId");
 
         Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> CompanyException.notFound(companyId.toString()));
+                .orElseThrow(CompanyException::notFound);
 
         MaintenanceRequest maintenanceRequest = maintenanceRequestMapper.toEntity(request);
         maintenanceRequest.setCompany(company);
@@ -54,7 +54,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
     public MaintenanceRequestResponseDto findById(UUID id) {
         return maintenanceRequestRepository.findById(id)
                 .map(maintenanceRequestMapper::toResponse)
-                .orElseThrow(() -> MaintenanceRequestException.notFound(id.toString()));
+                .orElseThrow(MaintenanceRequestException::notFound);
     }
 
     @Override
@@ -78,7 +78,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
     public Page<MaintenanceRequestResponseDto> findByCompanyId(UUID companyId, Pageable pageable) {
 
         if (!companyRepository.existsById(companyId)) {
-            throw CompanyException.notFound(companyId.toString());
+            throw CompanyException.notFound();
         }
 
         return maintenanceRequestRepository.findByCompanyId(companyId, pageable)
@@ -90,13 +90,13 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
     public MaintenanceRequestResponseDto update(UUID id, MaintenanceRequestRequestDto request) {
 
         MaintenanceRequest maintenanceRequest = maintenanceRequestRepository.findById(id)
-                .orElseThrow(() -> MaintenanceRequestException.notFound(id.toString()));
+                .orElseThrow(MaintenanceRequestException::notFound);
 
         UUID companyId = parseUuid(request.getCompanyId(), "companyId");
         UUID assetId = parseUuid(request.getAssetId(), "assetId");
 
         Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> CompanyException.notFound(companyId.toString()));
+                .orElseThrow(CompanyException::notFound);
 
         maintenanceRequestMapper.updateEntityFromRequest(request, maintenanceRequest);
         maintenanceRequest.setCompany(company);
@@ -110,10 +110,10 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
     public void delete(UUID id) {
 
         MaintenanceRequest maintenanceRequest = maintenanceRequestRepository.findById(id)
-                .orElseThrow(() -> MaintenanceRequestException.notFound(id.toString()));
+                .orElseThrow(MaintenanceRequestException::notFound);
 
         if (maintenanceTechnicianRepository.existsByMaintenanceRequestId(id)) {
-            throw MaintenanceRequestException.inUse(id.toString());
+            throw MaintenanceRequestException.inUse();
         }
 
         maintenanceRequestRepository.delete(maintenanceRequest);
@@ -122,8 +122,8 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
     private UUID parseUuid(String value, String fieldName) {
         try {
             return UUID.fromString(value);
-        } catch (Exception ex) {
-            throw new IllegalArgumentException("El campo '" + fieldName + "' debe ser un UUID válido");
+        } catch (IllegalArgumentException | NullPointerException ex) {
+            throw new IllegalArgumentException("El campo '" + fieldName + "' debe ser un UUID válido", ex);
         }
     }
 }

@@ -35,7 +35,7 @@ public class MaintenanceTechnicianServiceImpl implements MaintenanceTechnicianSe
     public MaintenanceTechnicianResponseDto create(UUID maintenanceRequestId, MaintenanceTechnicianRequestDto request) {
 
         MaintenanceRequest maintenanceRequest = maintenanceRequestRepository.findById(maintenanceRequestId)
-                .orElseThrow(() -> MaintenanceRequestException.notFound(maintenanceRequestId.toString()));
+                .orElseThrow(MaintenanceRequestException::notFound);
 
         MaintenanceTechnician technician = maintenanceTechnicianMapper.toEntity(request);
         technician.setMaintenanceRequest(maintenanceRequest);
@@ -48,7 +48,7 @@ public class MaintenanceTechnicianServiceImpl implements MaintenanceTechnicianSe
     public MaintenanceTechnicianResponseDto findById(UUID id) {
         return maintenanceTechnicianRepository.findById(id)
                 .map(maintenanceTechnicianMapper::toResponse)
-                .orElseThrow(() -> MaintenanceTechnicianException.notFound(id.toString()));
+                .orElseThrow(MaintenanceTechnicianException::notFound);
     }
 
     @Override
@@ -72,7 +72,7 @@ public class MaintenanceTechnicianServiceImpl implements MaintenanceTechnicianSe
     public Page<MaintenanceTechnicianResponseDto> findByMaintenanceRequestId(UUID maintenanceRequestId, Pageable pageable) {
 
         if (!maintenanceRequestRepository.existsById(maintenanceRequestId)) {
-            throw MaintenanceRequestException.notFound(maintenanceRequestId.toString());
+            throw MaintenanceRequestException.notFound();
         }
 
         return maintenanceTechnicianRepository.findByMaintenanceRequestId(maintenanceRequestId, pageable)
@@ -84,7 +84,7 @@ public class MaintenanceTechnicianServiceImpl implements MaintenanceTechnicianSe
     public MaintenanceTechnicianResponseDto update(UUID id, MaintenanceTechnicianRequestDto request) {
 
         MaintenanceTechnician technician = maintenanceTechnicianRepository.findById(id)
-                .orElseThrow(() -> MaintenanceTechnicianException.notFound(id.toString()));
+                .orElseThrow(MaintenanceTechnicianException::notFound);
 
         maintenanceTechnicianMapper.updateEntityFromRequest(request, technician);
 
@@ -96,7 +96,7 @@ public class MaintenanceTechnicianServiceImpl implements MaintenanceTechnicianSe
     public void delete(UUID id) {
 
         MaintenanceTechnician technician = maintenanceTechnicianRepository.findById(id)
-                .orElseThrow(() -> MaintenanceTechnicianException.notFound(id.toString()));
+                .orElseThrow(MaintenanceTechnicianException::notFound);
 
         maintenanceTechnicianRepository.delete(technician);
     }

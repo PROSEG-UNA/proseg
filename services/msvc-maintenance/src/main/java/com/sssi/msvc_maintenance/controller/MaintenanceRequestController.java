@@ -74,7 +74,7 @@ public class MaintenanceRequestController {
 
         return ApiResponseBuilder.ok(
                 PageMapper.from(maintenanceRequestService.findByCompanyId(companyId, pageable)),
-                "Solicitudes por compañía"
+                "Solicitudes por empresa"
         );
     }
 

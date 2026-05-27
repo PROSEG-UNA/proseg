@@ -9,11 +9,11 @@ public class MaintenanceTechnicianException extends BaseException {
         super(status, errorCode, message);
     }
 
-    public static MaintenanceTechnicianException notFound(String id) {
+    public static MaintenanceTechnicianException notFound() {
         return new MaintenanceTechnicianException(
                 HttpStatus.NOT_FOUND,
                 "MAINTENANCE_TECHNICIAN_NOT_FOUND",
-                "Técnico de mantenimiento no encontrado con id: " + id
+                "No encontramos el tecnico de mantenimiento seleccionado."
         );
     }
 }
