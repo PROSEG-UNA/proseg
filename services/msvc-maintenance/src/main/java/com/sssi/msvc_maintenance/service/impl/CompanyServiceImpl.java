@@ -1,7 +1,10 @@
 package com.sssi.msvc_maintenance.service.impl;
 
+import com.sssi.common.api.response.ApiResponse;
+import com.sssi.msvc_maintenance.client.AuthClient;
 import com.sssi.msvc_maintenance.dto.request.CompanyRequestDto;
 import com.sssi.msvc_maintenance.dto.response.CompanyResponseDto;
+import com.sssi.msvc_maintenance.dto.response.KeycloakUserDto;
 import com.sssi.msvc_maintenance.entity.Company;
 import com.sssi.msvc_maintenance.exception.CompanyException;
 import com.sssi.msvc_maintenance.mapper.CompanyMapper;
@@ -29,21 +32,28 @@ public class CompanyServiceImpl implements CompanyService {
     private final UserCompanyRepository userCompanyRepository;
     private final MaintenanceRequestRepository maintenanceRequestRepository;
     private final CompanyMapper companyMapper;
+    private final CompanyUserManagementService companyUserManagementService;
+    private final AuthClient authClient;
 
     @Override
     @Transactional
     public CompanyResponseDto create(CompanyRequestDto request) {
-
-        if (companyRepository.existsByNameIgnoreCase(request.getName())) {
-            throw CompanyException.duplicateName(request.getName());
-        }
-
         if (companyRepository.existsByLegalIdIgnoreCase(request.getLegalId())) {
             throw CompanyException.duplicateLegalId(request.getLegalId());
         }
-
+        if (companyRepository.existsByNameIgnoreCase(request.getName())) {
+            throw CompanyException.duplicateName(request.getName());
+        }
+        validateKeycloakUsers(request);
         Company company = companyMapper.toEntity(request);
-        return companyMapper.toResponse(companyRepository.save(company));
+        Company savedCompany = companyRepository.save(company);
+        savedCompany.setUserCompanies(
+                companyUserManagementService.syncUsers(
+                        savedCompany,
+                        request.getKeycloakUserIds()
+                )
+        );
+        return companyMapper.toResponse(savedCompany);
     }
 
     @Override
@@ -51,7 +61,7 @@ public class CompanyServiceImpl implements CompanyService {
     public CompanyResponseDto findById(UUID id) {
         return companyRepository.findById(id)
                 .map(companyMapper::toResponse)
-                .orElseThrow(() -> CompanyException.notFound(id.toString()));
+                .orElseThrow(CompanyException::notFound);
     }
 
     @Override
@@ -60,47 +70,57 @@ public class CompanyServiceImpl implements CompanyService {
         Specification<Company> spec = Specification
                 .where(GenericSpecifications.<Company>withSearch(Company.class, search))
                 .and(GenericSpecifications.<Company>withColumnFilters(Company.class, filters));
-
         Pageable sanitized = PageRequest.of(
                 pageable.getPageNumber(),
                 pageable.getPageSize(),
                 GenericSpecifications.sanitizeSort(Company.class, pageable.getSort())
         );
-
         return companyRepository.findAll(spec, sanitized).map(companyMapper::toResponse);
     }
 
     @Override
     @Transactional
     public CompanyResponseDto update(UUID id, CompanyRequestDto request) {
-
         Company company = companyRepository.findById(id)
-                .orElseThrow(() -> CompanyException.notFound(id.toString()));
-
+                .orElseThrow(CompanyException::notFound);
         if (companyRepository.existsByNameIgnoreCaseAndIdNot(request.getName(), id)) {
             throw CompanyException.duplicateName(request.getName());
         }
-
         if (companyRepository.existsByLegalIdIgnoreCaseAndIdNot(request.getLegalId(), id)) {
             throw CompanyException.duplicateLegalId(request.getLegalId());
         }
-
         companyMapper.updateEntityFromRequest(request, company);
-        return companyMapper.toResponse(companyRepository.save(company));
+        Company savedCompany = companyRepository.save(company);
+        savedCompany.setUserCompanies(companyUserManagementService.syncUsers(savedCompany, request.getKeycloakUserIds()));
+        return companyMapper.toResponse(savedCompany);
     }
 
     @Override
     @Transactional
     public void delete(UUID id) {
-
         Company company = companyRepository.findById(id)
-                .orElseThrow(() -> CompanyException.notFound(id.toString()));
-
+                .orElseThrow(CompanyException::notFound);
         if (userCompanyRepository.existsByCompanyId(id) || maintenanceRequestRepository.existsByCompanyId(id)) {
             throw CompanyException.inUse(company.getName());
         }
-
         companyRepository.delete(company);
+    }
+
+    private void validateKeycloakUsers(CompanyRequestDto request) {
+        if (request.getKeycloakUserIds() == null || request.getKeycloakUserIds().isEmpty()) {
+            return;
+        }
+        for (String userId : request.getKeycloakUserIds()) {
+            try {
+                ApiResponse<KeycloakUserDto> response =
+                        authClient.getUserById(userId);
+                if (response == null || response.getData() == null) {
+                    throw CompanyException.invalidKeycloakUser(userId);
+                }
+            } catch (Exception ex) {
+                throw CompanyException.invalidKeycloakUser(userId);
+            }
+        }
     }
 }
 
