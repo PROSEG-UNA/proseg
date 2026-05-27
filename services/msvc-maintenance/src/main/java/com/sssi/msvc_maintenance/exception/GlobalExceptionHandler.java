@@ -36,17 +36,25 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
-        List<String> errors = ex.getBindingResult().getFieldErrors()
+
+        List<String> errors = ex.getBindingResult()
+                .getFieldErrors()
                 .stream()
-                .map(e -> e.getField() + ": " + e.getDefaultMessage())
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .toList();
 
-        return ApiResponseBuilder.error("Error de validación", errors, HttpStatus.BAD_REQUEST);
+        return ApiResponseBuilder.error(
+                "Error de validación",
+                errors,
+                HttpStatus.BAD_REQUEST
+        );
     }
 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiErrorResponse> handleResponseStatusException(ResponseStatusException ex) {
+
         HttpStatus status = HttpStatus.resolve(ex.getStatusCode().value());
+
         if (status == null) {
             status = HttpStatus.INTERNAL_SERVER_ERROR;
         }
@@ -60,25 +68,43 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGeneric(Exception ex) {
+
         HttpStatus status;
 
         if (ex instanceof ResponseStatusException rse) {
-            status = HttpStatus.valueOf(rse.getStatusCode().value());
-            String reason = rse.getReason() != null ? rse.getReason() : ex.getMessage();
-            return ApiResponseBuilder.error(reason, List.of("SPRING_ERROR"), status);
-        }
 
-        var annotation = ex.getClass().getAnnotation(ResponseStatus.class);
-        if (annotation != null) {
-            status = annotation.value();
+            status = HttpStatus.valueOf(rse.getStatusCode().value());
+
+            String reason = rse.getReason() != null
+                    ? rse.getReason()
+                    : ex.getMessage();
+
             return ApiResponseBuilder.error(
-                    annotation.reason().isBlank() ? ex.getMessage() : annotation.reason(),
+                    reason,
                     List.of("SPRING_ERROR"),
                     status
             );
         }
 
-        return ApiResponseBuilder.error(ex.getMessage(), List.of("SPRING_ERROR"), HttpStatus.INTERNAL_SERVER_ERROR);
+        ResponseStatus annotation = ex.getClass().getAnnotation(ResponseStatus.class);
+
+        if (annotation != null) {
+
+            status = annotation.value();
+
+            return ApiResponseBuilder.error(
+                    annotation.reason().isBlank()
+                            ? ex.getMessage()
+                            : annotation.reason(),
+                    List.of("SPRING_ERROR"),
+                    status
+            );
+        }
+
+        return ApiResponseBuilder.error(
+                ex.getMessage(),
+                List.of("SPRING_ERROR"),
+                HttpStatus.INTERNAL_SERVER_ERROR
+        );
     }
 }
-
