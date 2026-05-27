@@ -19,8 +19,8 @@ const COLUMN_TO_BACKEND_KEY = {
     type: 'model.type.name',
     brand: 'model.brand.name',
     model: 'model.name',
-    site: 'location.site.name',
-    location: 'location.name',
+    campus: 'location.floor.building.campus.name',
+    location: 'location.description',
     status: 'status',
     acquisitionDate: 'acquisitionDate',
     warrantyEndDate: 'warrantyEndDate',
@@ -166,7 +166,7 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
                     state: { pagination, globalFilter, columnFilters, sorting },
                     initialState: {
                         columnVisibility: {
-                            site: false,
+                            campus: false,
                             executingUnit: false,
                             responsibleEmployee: false,
                             responsibleEmployeeId: false,

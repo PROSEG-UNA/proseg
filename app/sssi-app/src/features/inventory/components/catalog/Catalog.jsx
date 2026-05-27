@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Container } from '@mui/material';
 import BusinessIcon from '@mui/icons-material/Business';
+import ApartmentIcon from '@mui/icons-material/Apartment';
 import PlaceIcon from '@mui/icons-material/Place';
 import CategoryIcon from '@mui/icons-material/Category';
 import LabelIcon from '@mui/icons-material/Label';
@@ -36,15 +37,23 @@ export default function Catalog() {
 
     return (
         <>
-            <Container maxWidth="xl" sx={{ pt: 1, pb: 1,  mt: 3, mb: -1  }}>
+            <Container maxWidth="xl" sx={{ pt: 1, pb: 1,  mt: 2, mb: 1}}>
                 <CatalogGrid>
                     <CatalogCard
-                        title="Sedes"
-                        entityName="site"
+                        title="Campus"
+                        entityName="campus"
                         onClick={handleCatalogClick}
                         icon={BusinessIcon}
                         tone="rose"
-                        description="Sede o campus universitario"
+                        description="Campus universitario"
+                    />
+                    <CatalogCard
+                        title="Edificios"
+                        entityName="building"
+                        onClick={handleCatalogClick}
+                        icon={ApartmentIcon}
+                        tone="rose"
+                        description="Edificio dentro de una sede"
                     />
                     <CatalogCard
                         title="Locaciones"

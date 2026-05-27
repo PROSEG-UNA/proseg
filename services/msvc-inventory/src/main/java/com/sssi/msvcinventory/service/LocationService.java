@@ -16,7 +16,9 @@ public interface LocationService {
 
     Page<LocationResponseDto> findAll(String search, Map<String, String> filters, Pageable pageable);
 
-    Page<LocationResponseDto> findBySiteId(UUID siteId, Pageable pageable);
+    Page<LocationResponseDto> findByCampusId(UUID campusId, Pageable pageable);
+
+    Page<LocationResponseDto> findByBuildingId(UUID buildingId, Pageable pageable);
 
     LocationResponseDto update(UUID id, LocationRequestDto request);
 

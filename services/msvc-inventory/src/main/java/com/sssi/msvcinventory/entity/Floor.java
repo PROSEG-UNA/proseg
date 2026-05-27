@@ -12,15 +12,17 @@ import org.hibernate.annotations.UuidGenerator;
 import java.util.UUID;
 
 @Entity
-@Table(name = "site_table")
+@Table(name = "floor_table", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"name", "building_id"})
+})
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@SQLDelete(sql = "UPDATE site_table SET is_deleted = true WHERE id = ?")
+@SQLDelete(sql = "UPDATE floor_table SET is_deleted = true WHERE id = ?")
 @Where(clause = "is_deleted = false")
-public class Site extends BaseEntity {
+public class Floor extends BaseEntity {
 
     @Id
     @GeneratedValue
@@ -32,6 +34,8 @@ public class Site extends BaseEntity {
     @Column(nullable = false)
     private String name;
 
-    @Filterable(type = FilterType.TEXT)
-    private String description;
+    @Filterable(type = FilterType.TEXT, nestedPaths = {"name", "campus.name"})
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "building_id", nullable = false)
+    private Building building;
 }

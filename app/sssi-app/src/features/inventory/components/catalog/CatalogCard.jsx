@@ -16,7 +16,7 @@ export default function CatalogCard({ title, entityName, onClick, icon: Icon, to
                 alignItems: 'center',
                 gap: 1.5,
                 p: 1.5,
-                minHeight: { xs: 'unset', md: 110 },
+                minHeight: { xs: 'unset', md: 95 },
                 borderRadius: '14px',
                 border: '1px solid',
                 borderColor: 'divider',
