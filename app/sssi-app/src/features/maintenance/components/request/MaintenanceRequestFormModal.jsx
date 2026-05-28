@@ -287,11 +287,10 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                         }}
                         sx={fieldSx}
                     />
-                    <TextField
-                        select
+                    <SearchableSelect
                         label="Activo"
                         value={formValues.assetId}
-                        onChange={(e) => handleChange('assetId', e.target.value)}
+                        onChange={(value) => handleChange('assetId', value)}
                         onBlur={() => handleBlur('assetId')}
                         required
                         fullWidth
@@ -300,22 +299,11 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                         error={touched.assetId && !!errors.assetId}
                         helperText={touched.assetId ? (errors.assetId || ' ') : 'Selecciona un activo del inventario'}
                         sx={fieldSx}
-                    >
-                        {assets.length === 0 ? (
-                            <MenuItem disabled value="">Sin resultados</MenuItem>
-                        ) : (
-                            assets.map((asset) => (
-                                <MenuItem key={asset.id} value={asset.id}>
-                                    {(asset.assetNumber || asset.id)} · {asset.modelName || 'Sin modelo'} · {asset.locationName || 'Sin ubicacion'}
-                                </MenuItem>
-                            ))
-                        )}
-                        {formValues.assetId && !assets.some((asset) => asset.id === formValues.assetId) ? (
-                            <MenuItem value={formValues.assetId} sx={{ display: 'none' }}>
-                                {formValues.assetId}
-                            </MenuItem>
-                        ) : null}
-                    </TextField>
+                        items={assets}
+                        getItemLabel={(asset) => `${asset.assetNumber || asset.id} · ${asset.modelName || 'Sin modelo'} · ${asset.locationName || 'Sin ubicacion'}`}
+                        getItemValue={(asset) => asset.id}
+                        hideSearch
+                    />
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mt: -0.5, mb: 0.5 }}>
                         <IconButton size="small" disabled={assetPage === 0 || saving || loadingOptions || loadingAssets} onClick={() => setAssetPage((p) => Math.max(0, p - 1))}>
                             <NavigateBeforeIcon fontSize="small" />
