@@ -1,26 +1,22 @@
 import { useEffect, useState } from 'react';
-import { Box, Button, Chip, Divider, IconButton, InputAdornment, MenuItem, TextField, Typography } from '@mui/material';
+import { Box, Button, Chip, Divider, Typography } from '@mui/material';
 import PeopleIcon from '@mui/icons-material/People';
-import SearchIcon from '@mui/icons-material/Search';
-import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
-import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { useDebounce } from '../../../../common/hooks/useDebounce.js';
 import { fetchCompanyUsers, unassignCompanyUser, assignCompanyUsersBulk } from '../../services/companiesService';
 import { searchUsers } from '../../../security/services/usersService';
+import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
 
 function userLabel(user) {
     const name = [user.firstName, user.lastName].filter(Boolean).join(' ');
-    return name || user.username || user.keycloakUserId || 'Usuario';
+    return name || user.username || user.id || 'Usuario';
 }
 
 export default function CompanyUsersModal({ open, companyId, companyName, onClose, onSaved }) {
     const [users, setUsers] = useState([]);
     const [availableUsers, setAvailableUsers] = useState([]);
-    const [totalPages, setTotalPages] = useState(0);
     const [search, setSearch] = useState('');
-    const [page, setPage] = useState(0);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [selectedUserId, setSelectedUserId] = useState('');
@@ -29,6 +25,7 @@ export default function CompanyUsersModal({ open, companyId, companyName, onClos
     const [confirmAssign, setConfirmAssign] = useState(false);
     const [alert, setAlert] = useState(null);
     const [confirmRemove, setConfirmRemove] = useState(null);
+    const [duplicateWarning, setDuplicateWarning] = useState(null);
     const debouncedSearch = useDebounce(search, 350);
 
     const loadUsers = () => {
@@ -59,11 +56,10 @@ export default function CompanyUsersModal({ open, companyId, companyName, onClos
         let cancelled = false;
         setLoading(true);
 
-        searchUsers({ page, size: 8, search: debouncedSearch })
+        searchUsers({ page: 0, size: 8, search: debouncedSearch })
             .then((response) => {
                 if (cancelled) return;
                 setAvailableUsers(response.content ?? []);
-                setTotalPages(response.totalPages ?? 0);
             })
             .catch((error) => {
                 if (!cancelled) {
@@ -83,7 +79,7 @@ export default function CompanyUsersModal({ open, companyId, companyName, onClos
 
     useEffect(() => {
         return loadAvailableUsers();
-    }, [open, page, debouncedSearch]);
+    }, [open, debouncedSearch]);
 
     useEffect(() => {
         if (!open) {
@@ -91,18 +87,13 @@ export default function CompanyUsersModal({ open, companyId, companyName, onClos
             setSelectedUser(null);
             setSelectedUsers({});
             setSearch('');
-            setPage(0);
             setAlert(null);
             setConfirmRemove(null);
+            setDuplicateWarning(null);
             setUsers([]);
             setAvailableUsers([]);
-            setTotalPages(0);
         }
     }, [open]);
-
-    useEffect(() => {
-        setPage(0);
-    }, [search]);
 
     useEffect(() => {
         if (!selectedUserId) {
@@ -119,6 +110,10 @@ export default function CompanyUsersModal({ open, companyId, companyName, onClos
     const handleAddSelected = () => {
         if (!selectedUser) {
             setAlert({ type: 'warning', message: 'Selecciona un usuario de la lista' });
+            return;
+        }
+        if (users.some((user) => user.id === selectedUser.id) || selectedUsers[selectedUser.id]) {
+            setDuplicateWarning(selectedUser);
             return;
         }
         setSelectedUsers((prev) => ({ ...prev, [selectedUser.id]: selectedUser }));
@@ -139,6 +134,11 @@ export default function CompanyUsersModal({ open, companyId, companyName, onClos
         const ids = Object.keys(selectedUsers);
         if (!companyId || ids.length === 0) {
             setAlert({ type: 'warning', message: 'Selecciona al menos un usuario para vincular' });
+            return;
+        }
+        const alreadyLinked = ids.some((id) => users.some((user) => user.id === id));
+        if (alreadyLinked) {
+            setAlert({ type: 'warning', message: 'No puedes vincular usuarios que ya están en la empresa' });
             return;
         }
 
@@ -188,55 +188,27 @@ export default function CompanyUsersModal({ open, companyId, companyName, onClos
             >
                 <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                        <TextField
-                            label="Buscar usuario"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            fullWidth
-                            size="small"
-                            disabled={saving}
-                            placeholder="Busca por nombre, correo o usuario"
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">
-                                        <SearchIcon fontSize="small" />
-                                    </InputAdornment>
-                                ),
-                            }}
-                            helperText="Selecciona el usuario deseado desde los resultados paginados"
-                        />
-
-                        <TextField
-                            select
-                            label="Usuarios encontrados"
+                        <SearchableSelect
+                            label="Usuarios del sistema"
                             value={selectedUserId}
-                            onChange={(e) => {
-                                const nextId = e.target.value;
+                            onChange={(nextId) => {
                                 setSelectedUserId(nextId);
                                 setSelectedUser(availableUsers.find((user) => user.id === nextId) ?? null);
                             }}
+                            onBlur={() => {}}
+                            items={availableUsers}
+                            getItemLabel={(user) => `${userLabel(user)} · ${user.email || '—'}`}
+                            getItemValue={(user) => user.id}
                             fullWidth
                             size="small"
                             disabled={saving}
-                            helperText={selectedUser ? `ID: ${selectedUser.id} · Correo: ${selectedUser.email || '—'}` : 'Elige un usuario de la lista'}
-                        >
-                            {availableUsers.length === 0 ? (
-                                <MenuItem disabled value="">
-                                    Sin resultados
-                                </MenuItem>
-                            ) : (
-                                availableUsers.map((user) => (
-                                    <MenuItem key={user.id} value={user.id}>
-                                        {userLabel(user)} · {user.email || '—'}
-                                    </MenuItem>
-                                ))
-                            )}
-                            {selectedUser && !availableUsers.some((user) => user.id === selectedUser.id) ? (
-                                <MenuItem value={selectedUser.id} sx={{ display: 'none' }}>
-                                    {userLabel(selectedUser)} · {selectedUser.email || '—'}
-                                </MenuItem>
-                            ) : null}
-                        </TextField>
+                            helperText={selectedUser ? `ID: ${selectedUser.id} · Correo: ${selectedUser.email || '—'}` : 'Busca y selecciona un usuario del sistema'}
+                            externalSearch={search}
+                            onSearchChange={(value) => {
+                                setSearch(value);
+                            }}
+                            pageSize={8}
+                        />
 
                         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                             <Button size="small" variant="outlined" onClick={handleAddSelected} disabled={saving || !selectedUser} sx={{ textTransform: 'none' }}>Agregar</Button>
@@ -253,17 +225,7 @@ export default function CompanyUsersModal({ open, companyId, companyName, onClos
                             )}
                         </Box>
 
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                            <IconButton size="small" disabled={page === 0 || saving} onClick={() => setPage((p) => Math.max(0, p - 1))}>
-                                <NavigateBeforeIcon fontSize="small" />
-                            </IconButton>
-                            <Typography sx={{ fontSize: 12, color: 'text.secondary', minWidth: 60, textAlign: 'center' }}>
-                                {totalPages === 0 ? '0 / 0' : `${page + 1} / ${totalPages}`}
-                            </Typography>
-                            <IconButton size="small" disabled={totalPages === 0 || page >= totalPages - 1 || saving} onClick={() => setPage((p) => p + 1)}>
-                                <NavigateNextIcon fontSize="small" />
-                            </IconButton>
-                        </Box>
+                        {/* Pagination removed from modal - handled by SearchableSelect dropdown */}
                     </Box>
 
                     <Divider />
@@ -327,6 +289,16 @@ export default function CompanyUsersModal({ open, companyId, companyName, onClos
                 type={alert?.type}
                 message={alert?.message}
                 onClose={() => setAlert(null)}
+            />
+
+            <DialogModal
+                open={!!duplicateWarning}
+                type="warning"
+                title="Usuario ya vinculado"
+                message={`No puedes vincular a "${duplicateWarning ? `${duplicateWarning.firstName || ''} ${duplicateWarning.lastName || ''}`.trim() || duplicateWarning.username || duplicateWarning.id : ''}" porque ya está en la empresa.`}
+                onClose={() => setDuplicateWarning(null)}
+                confirmLabel="Entendido"
+                cancelLabel="Cerrar"
             />
 
             <DialogModal
