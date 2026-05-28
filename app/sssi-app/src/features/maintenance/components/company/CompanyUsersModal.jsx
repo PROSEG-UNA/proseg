@@ -7,7 +7,7 @@ import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { useDebounce } from '../../../../common/hooks/useDebounce.js';
-import { assignCompanyUser, fetchCompanyUsers, unassignCompanyUser } from '../../services/companiesService';
+import { fetchCompanyUsers, unassignCompanyUser, assignCompanyUsersBulk } from '../../services/companiesService';
 import { searchUsers } from '../../../security/services/usersService';
 
 function userLabel(user) {
@@ -25,6 +25,8 @@ export default function CompanyUsersModal({ open, companyId, companyName, onClos
     const [saving, setSaving] = useState(false);
     const [selectedUserId, setSelectedUserId] = useState('');
     const [selectedUser, setSelectedUser] = useState(null);
+    const [selectedUsers, setSelectedUsers] = useState({});
+    const [confirmAssign, setConfirmAssign] = useState(false);
     const [alert, setAlert] = useState(null);
     const [confirmRemove, setConfirmRemove] = useState(null);
     const debouncedSearch = useDebounce(search, 350);
@@ -87,6 +89,7 @@ export default function CompanyUsersModal({ open, companyId, companyName, onClos
         if (!open) {
             setSelectedUserId('');
             setSelectedUser(null);
+            setSelectedUsers({});
             setSearch('');
             setPage(0);
             setAlert(null);
@@ -113,21 +116,42 @@ export default function CompanyUsersModal({ open, companyId, companyName, onClos
         }
     }, [availableUsers, selectedUserId]);
 
-    const handleAssign = async () => {
-        if (!companyId || !selectedUser) {
+    const handleAddSelected = () => {
+        if (!selectedUser) {
             setAlert({ type: 'warning', message: 'Selecciona un usuario de la lista' });
             return;
         }
+        setSelectedUsers((prev) => ({ ...prev, [selectedUser.id]: selectedUser }));
+        setSelectedUserId('');
+        setSelectedUser(null);
+    };
 
+    const handleRemoveSelected = (userId) => {
+        setSelectedUsers((prev) => {
+            const copy = { ...prev };
+            delete copy[userId];
+            return copy;
+        });
+    };
+
+    const handleAssign = async () => {
+        // bulk assign selectedUsers
+        const ids = Object.keys(selectedUsers);
+        if (!companyId || ids.length === 0) {
+            setAlert({ type: 'warning', message: 'Selecciona al menos un usuario para vincular' });
+            return;
+        }
+
+        setConfirmAssign(false);
         setSaving(true);
         try {
-            await assignCompanyUser(companyId, selectedUser.id);
-            setSelectedUserId('');
+            await assignCompanyUsersBulk(companyId, ids);
+            setSelectedUsers({});
             const data = await fetchCompanyUsers(companyId);
             setUsers(Array.isArray(data) ? data : []);
             onSaved?.();
         } catch (error) {
-            setAlert({ type: 'error', message: error?.response?.data?.message ?? error?.message ?? 'No se pudo vincular el usuario' });
+            setAlert({ type: 'error', message: error?.response?.data?.message ?? error?.message ?? 'No se pudo vincular los usuarios' });
         } finally {
             setSaving(false);
         }
@@ -160,7 +184,7 @@ export default function CompanyUsersModal({ open, companyId, companyName, onClos
                 subtitle="Gestiona las cuentas vinculadas a esta empresa"
                 loading={loading || saving}
                 secondaryButton={{ label: 'Cerrar', onClick: onClose, disabled: saving }}
-                primaryButton={{ label: saving ? 'Vinculando…' : 'Vincular', onClick: handleAssign, disabled: saving }}
+                primaryButton={{ label: saving ? 'Vinculando…' : 'Vincular', onClick: () => setConfirmAssign(true), disabled: saving }}
             >
                 <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -213,6 +237,21 @@ export default function CompanyUsersModal({ open, companyId, companyName, onClos
                                 </MenuItem>
                             ) : null}
                         </TextField>
+
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                            <Button size="small" variant="outlined" onClick={handleAddSelected} disabled={saving || !selectedUser} sx={{ textTransform: 'none' }}>Agregar</Button>
+                            <Typography sx={{ color: 'text.secondary', fontSize: 12 }}>Usuarios seleccionados:</Typography>
+                        </Box>
+
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            {Object.values(selectedUsers).length === 0 ? (
+                                <Typography sx={{ color: 'text.secondary', fontSize: 13.5 }}>No hay usuarios seleccionados.</Typography>
+                            ) : (
+                                Object.values(selectedUsers).map((u) => (
+                                    <Chip key={u.id} label={`${userLabel(u)} · ${u.email || '—'}`} onDelete={() => handleRemoveSelected(u.id)} />
+                                ))
+                            )}
+                        </Box>
 
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                             <IconButton size="small" disabled={page === 0 || saving} onClick={() => setPage((p) => Math.max(0, p - 1))}>
@@ -298,6 +337,15 @@ export default function CompanyUsersModal({ open, companyId, companyName, onClos
                 onClose={() => setConfirmRemove(null)}
                 onConfirm={handleRemove}
                 confirmLabel="Desasignar"
+            />
+
+            <DialogModal
+                open={!!confirmAssign}
+                title="Vincular usuarios"
+                message={`¿Deseas vincular ${Object.keys(selectedUsers).length} usuario(s) a la empresa?`}
+                onClose={() => setConfirmAssign(false)}
+                onConfirm={handleAssign}
+                confirmLabel="Vincular"
             />
         </>
     );

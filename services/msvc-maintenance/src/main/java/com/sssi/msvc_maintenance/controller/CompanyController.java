@@ -11,6 +11,7 @@ import com.sssi.msvc_maintenance.dto.response.CompanyResponseDto;
 import com.sssi.msvc_maintenance.dto.response.KeycloakUserResponse;
 import com.sssi.msvc_maintenance.dto.response.UserCompanyResponseDto;
 import com.sssi.msvc_maintenance.mapper.UserCompanyMapper;
+import com.sssi.msvc_maintenance.dto.request.CompanyUsersRequestDto;
 import com.sssi.msvc_maintenance.service.CompanyService;
 import com.sssi.msvc_maintenance.service.impl.CompanyUserManagementService;
 import jakarta.validation.Valid;
@@ -78,6 +79,21 @@ public class CompanyController {
                 ),
                 "Usuario vinculado correctamente"
         );
+    }
+
+    @PostMapping("/{id}/users/batch")
+    public ResponseEntity<ApiResponse<List<UserCompanyResponseDto>>> assignUsers(
+            @PathVariable UUID id,
+            @Valid @RequestBody CompanyUsersRequestDto request) {
+
+        List<String> keycloakIds = request.getKeycloakUserIds();
+        List<com.sssi.msvc_maintenance.entity.UserCompany> created = companyUserManagementService.assignUsersToCompany(id, keycloakIds);
+
+        List<UserCompanyResponseDto> response = created.stream()
+                .map(userCompanyMapper::toResponse)
+                .toList();
+
+        return ApiResponseBuilder.created(response, "Usuarios vinculados correctamente");
     }
 
     @GetMapping

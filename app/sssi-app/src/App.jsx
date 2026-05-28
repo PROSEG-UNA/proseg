@@ -16,7 +16,8 @@ import SecurityPage from './features/security/pages/SecurityPage';
 import UserPage from './features/security/pages/UserPage';
 import RolePage from './features/security/pages/RolePage';
 import DashboardLayout from './layouts/DashboardLayout';
-import MaintenancePage from "./features/maintenance/pages/MaintenancePage.jsx";
+import CompaniesPage from "./features/maintenance/pages/CompaniesPage.jsx";
+import RequestsPage from "./features/maintenance/pages/RequestsPage.jsx";
 
 function App() {
     return (
@@ -95,12 +96,24 @@ function App() {
                                     }
                                 />
                                 <Route
-                                    path="/mantenimiento"
+                                    path="/mantenimiento/empresas"
                                     element={
                                         <ProtectedRoute
                                             element={
                                                 <DashboardLayout>
-                                                    <MaintenancePage />
+                                                    <CompaniesPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/mantenimiento/solicitudes"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout>
+                                                    <RequestsPage />
                                                 </DashboardLayout>
                                             }
                                         />

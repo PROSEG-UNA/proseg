@@ -80,6 +80,58 @@ public class CompanyUserManagementService {
     }
 
     @Transactional
+    public List<UserCompany> assignUsersToCompany(UUID companyId, Collection<String> keycloakUserIds) {
+        Company company = findCompany(companyId);
+        List<String> normalized = normalizeIds(keycloakUserIds);
+        List<String> added = new ArrayList<>();
+        List<UserCompany> created = new ArrayList<>();
+
+        for (String kid : normalized) {
+            Optional<UserCompany> existing = userCompanyRepository
+                    .findByCompanyIdAndKeycloakUserIdIncludingDeleted(companyId, kid);
+
+            if (existing.isPresent()) {
+                UserCompany uc = existing.get();
+                if (!uc.isDeleted()) continue; // already active
+                uc.markAsActive();
+                // try to fetch email
+                try {
+                    ApiResponse<KeycloakUserResponse> response = authClient.findUserByKeycloakId(kid);
+                    if (response != null && response.getData() != null) uc.setUserEmail(response.getData().email());
+                } catch (Exception ex) {
+                    log.debug("Could not fetch email for user {}: {}", kid, ex.getMessage());
+                }
+                created.add(userCompanyRepository.save(uc));
+                added.add(kid);
+                continue;
+            }
+
+            String userEmail = null;
+            try {
+                ApiResponse<KeycloakUserResponse> response = authClient.findUserByKeycloakId(kid);
+                if (response != null && response.getData() != null) userEmail = response.getData().email();
+            } catch (Exception ex) {
+                log.debug("Could not fetch email for user {}: {}", kid, ex.getMessage());
+            }
+
+            UserCompany createdRelation = userCompanyRepository.save(UserCompany.builder()
+                    .company(company)
+                    .keycloakUserId(kid)
+                    .userEmail(userEmail)
+                    .build());
+            created.add(createdRelation);
+            added.add(kid);
+        }
+
+        if (!added.isEmpty()) {
+            eventPublisher.publishEvent(new UserAssignedDomainEvent(companyId, added));
+        }
+
+        company.setUserCompanies(userCompanyRepository.findAllByCompanyId(companyId));
+        return created;
+    }
+
+    @Transactional
     public void removeUserFromCompany(UUID companyId, String keycloakUserId) {
         UserCompany userCompany = userCompanyRepository.findByCompanyIdAndKeycloakUserId(companyId, keycloakUserId)
                 .orElseThrow(UserCompanyException::notFound);

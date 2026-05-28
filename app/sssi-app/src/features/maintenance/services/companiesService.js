@@ -40,6 +40,16 @@ export async function assignCompanyUser(companyId, keycloakUserId) {
     return data?.data;
 }
 
+export async function assignCompanyUsersBulk(companyId, keycloakUserIds = []) {
+    // backend expects a single DTO { keycloakUserIds: [...] }
+    const { data } = await axios.post(
+        `${MAINTENANCE_ENDPOINTS.companies}/${companyId}/users/batch`,
+        { keycloakUserIds },
+        maintenanceConfig
+    );
+    return data?.data ?? [];
+}
+
 export async function unassignCompanyUser(companyId, userId) {
     const { data } = await axios.delete(
         `${MAINTENANCE_ENDPOINTS.companies}/${companyId}/users/${userId}`,
