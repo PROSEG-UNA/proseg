@@ -10,6 +10,8 @@ import ReplayIcon from '@mui/icons-material/Replay';
 import { usePermissions } from '../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../common/constants/permissions';
 
+const STORAGE_KEY = 'users-table-column-visibility';
+const DEFAULT_COLUMN_VISIBILITY = {};
 const ALL_TAB_VALUE = 'ALL';
 
 function toStatusLabel(status) {
@@ -28,6 +30,13 @@ function toStatusLabel(status) {
 }
 
 export default function UsersTable({ refreshKey = 0 }) {
+    const [columnVisibility, setColumnVisibility] = useState(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            try { return JSON.parse(saved); } catch { return DEFAULT_COLUMN_VISIBILITY; }
+        }
+        return DEFAULT_COLUMN_VISIBILITY;
+    });
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
     const [selectedUser, setSelectedUser] = useState(null);
     const [localRefreshKey, setLocalRefreshKey] = useState(0);
@@ -38,6 +47,12 @@ export default function UsersTable({ refreshKey = 0 }) {
     const canAssignRoles = hasPermission(PERMISSIONS.USERS.ASSIGN_ROLE);
     const canApproveUsers = hasPermission(PERMISSIONS.USERS.APPROVE);
     const canUseActions = canAssignRoles || canApproveUsers;
+
+    const persistColumnVisibility = () => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(columnVisibility));
+    };
+
+    useEffect(persistColumnVisibility, [columnVisibility]);
 
     const triggerRefresh = useCallback(() => {
         setLocalRefreshKey((k) => k + 1);
@@ -207,7 +222,8 @@ export default function UsersTable({ refreshKey = 0 }) {
                     manualPagination: true,
                     rowCount: statusTab === ALL_TAB_VALUE ? totalElements : filteredRows.length,
                     onPaginationChange: setPagination,
-                    state: { pagination },
+                    onColumnVisibilityChange: setColumnVisibility,
+                    state: { pagination, columnVisibility },
                     displayColumnDefOptions: {
                         'mrt-row-actions': {
                             muiTableBodyCellProps: {

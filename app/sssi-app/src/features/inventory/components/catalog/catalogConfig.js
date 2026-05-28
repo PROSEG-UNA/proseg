@@ -1,4 +1,5 @@
 import BusinessIcon from '@mui/icons-material/Business';
+import ApartmentIcon from '@mui/icons-material/Apartment';
 import PlaceIcon from '@mui/icons-material/Place';
 import CategoryIcon from '@mui/icons-material/Category';
 import LabelIcon from '@mui/icons-material/Label';
@@ -6,19 +7,47 @@ import DevicesIcon from '@mui/icons-material/Devices';
 import { INVENTORY_ENDPOINTS } from '../../services/endpoints';
 
 export const CATALOG_CONFIG = {
-    site: {
-        title: 'Sede',
-        pluralTitle: 'Sedes',
-        baseUrl: INVENTORY_ENDPOINTS.sites,
+    campus: {
+        title: 'Campus',
+        pluralTitle: 'Campus',
+        baseUrl: INVENTORY_ENDPOINTS.campuses,
         icon: BusinessIcon,
-        columnToBackendKey: { name: 'name', description: 'description' },
+        columnToBackendKey: { name: 'name' },
         columns: [
-            { accessorKey: 'name', header: 'Nombre', size: 160, grow: true },
-            { accessorKey: 'description', header: 'Descripción', size: 200, grow: 2 },
+            { accessorKey: 'name', header: 'Nombre', size: 200, grow: true },
         ],
         formFields: [
             { key: 'name', label: 'Nombre', type: 'text', required: true },
-            { key: 'description', label: 'Descripción', type: 'textarea', required: false },
+        ],
+    },
+    building: {
+        title: 'Edificio',
+        pluralTitle: 'Edificios',
+        baseUrl: INVENTORY_ENDPOINTS.buildings,
+        icon: ApartmentIcon,
+        columnToBackendKey: { name: 'name', campus: 'campus.name' },
+        columns: [
+            { accessorKey: 'name', header: 'Nombre', size: 160, grow: true },
+            {
+                id: 'campus',
+                header: 'Campus',
+                accessorFn: (row) => row.campus?.name ?? '-',
+                size: 140,
+                grow: 1,
+            },
+        ],
+        formFields: [
+            { key: 'name', label: 'Nombre', type: 'text', required: true },
+            {
+                key: 'campusId',
+                label: 'Campus',
+                type: 'select',
+                required: true,
+                optionsUrl: INVENTORY_ENDPOINTS.campuses,
+                getOptionLabel: (opt) => opt.name,
+                getOptionValue: (opt) => opt.id,
+                getInitialValue: (row) => row?.campus?.id ?? '',
+            },
         ],
     },
     location: {
@@ -26,31 +55,67 @@ export const CATALOG_CONFIG = {
         pluralTitle: 'Locaciones',
         baseUrl: INVENTORY_ENDPOINTS.locations,
         icon: PlaceIcon,
-        columnToBackendKey: { name: 'name', site: 'site.name', description: 'description' },
+        columnToBackendKey: {
+            campus: 'floor.building.campus.name',
+            building: 'floor.building.name',
+            floor: 'floor.name',
+            description: 'description',
+        },
         columns: [
-            { accessorKey: 'name', header: 'Nombre', size: 160, grow: true },
+            { accessorKey: 'description', header: 'Descripción', size: 180, grow: 2 },
             {
-                id: 'site',
-                header: 'Sede',
-                accessorFn: (row) => row.site?.name ?? '-',
-                size: 140,
+                id: 'campus',
+                header: 'Campus',
+                accessorFn: (row) => row.floor?.building?.campus?.name ?? '-',
+                size: 130,
                 grow: 1,
             },
-            { accessorKey: 'description', header: 'Descripción', size: 200, grow: 2 },
+            {
+                id: 'building',
+                header: 'Edificio',
+                accessorFn: (row) => row.floor?.building?.name ?? '-',
+                size: 130,
+                grow: 1,
+            },
+            {
+                id: 'floor',
+                header: 'Piso',
+                accessorFn: (row) => row.floor?.name ?? '-',
+                size: 80,
+                grow: 0,
+            },
         ],
         formFields: [
-            { key: 'name', label: 'Nombre', type: 'text', required: true },
             {
-                key: 'siteId',
-                label: 'Sede',
+                key: 'campusId',
+                label: 'Campus',
                 type: 'select',
                 required: true,
-                optionsUrl: INVENTORY_ENDPOINTS.sites,
+                optionsUrl: INVENTORY_ENDPOINTS.campuses,
                 getOptionLabel: (opt) => opt.name,
                 getOptionValue: (opt) => opt.id,
-                getInitialValue: (row) => row?.site?.id ?? '',
+                getInitialValue: (row) => row?.floor?.building?.campus?.id ?? '',
             },
-            { key: 'description', label: 'Descripción', type: 'textarea', required: false },
+            {
+                key: 'buildingId',
+                label: 'Edificio',
+                type: 'select',
+                required: true,
+                optionsUrl: INVENTORY_ENDPOINTS.buildings,
+                getOptionLabel: (opt) => opt.name,
+                getOptionValue: (opt) => opt.id,
+                getInitialValue: (row) => row?.floor?.building?.id ?? '',
+                dependsOn: 'campusId',
+                filterBy: (opt, campusId) => opt.campus?.id === campusId,
+            },
+            {
+                key: 'floorNumber',
+                label: 'Número de piso',
+                type: 'number',
+                required: true,
+                getInitialValue: (row) => row?.floor?.name ? parseInt(row.floor.name) : '',
+            },
+            { key: 'description', label: 'Descripción', type: 'textarea', required: true },
         ],
     },
     type: {

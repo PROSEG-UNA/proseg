@@ -30,7 +30,7 @@ public class LocationController {
     public ResponseEntity<ApiResponse<LocationResponseDto>> create(@Valid @RequestBody LocationRequestDto request) {
         return ApiResponseBuilder.created(
                 locationService.create(request),
-                "Location creada correctamente"
+                "Ubicación creada correctamente"
         );
     }
 
@@ -38,7 +38,7 @@ public class LocationController {
     public ResponseEntity<ApiResponse<LocationResponseDto>> findById(@PathVariable UUID id) {
         return ApiResponseBuilder.ok(
                 locationService.findById(id),
-                "Location obtenida correctamente"
+                "Ubicación obtenida correctamente"
         );
     }
 
@@ -53,18 +53,29 @@ public class LocationController {
 
         return ApiResponseBuilder.ok(
                 PageMapper.from(locationService.findAll(search, filters, pageable)),
-                "Lista de locations"
+                "Lista de ubicaciones"
         );
     }
 
-    @GetMapping("/site/{siteId}")
-    public ResponseEntity<ApiResponse<PageResponse<LocationResponseDto>>> findBySiteId(
-            @PathVariable UUID siteId,
+    @GetMapping("/campus/{campusId}")
+    public ResponseEntity<ApiResponse<PageResponse<LocationResponseDto>>> findByCampusId(
+            @PathVariable UUID campusId,
             @PageableDefault(size = 10, page = 0) Pageable pageable) {
 
         return ApiResponseBuilder.ok(
-                PageMapper.from(locationService.findBySiteId(siteId, pageable)),
-                "Locations por site"
+                PageMapper.from(locationService.findByCampusId(campusId, pageable)),
+                "Ubicaciones por campus"
+        );
+    }
+
+    @GetMapping("/building/{buildingId}")
+    public ResponseEntity<ApiResponse<PageResponse<LocationResponseDto>>> findByBuildingId(
+            @PathVariable UUID buildingId,
+            @PageableDefault(size = 10, page = 0) Pageable pageable) {
+
+        return ApiResponseBuilder.ok(
+                PageMapper.from(locationService.findByBuildingId(buildingId, pageable)),
+                "Ubicaciones por edificio"
         );
     }
 
@@ -75,7 +86,7 @@ public class LocationController {
 
         return ApiResponseBuilder.ok(
                 locationService.update(id, request),
-                "Location actualizada correctamente"
+                "Ubicación actualizada correctamente"
         );
     }
 
@@ -84,7 +95,7 @@ public class LocationController {
         locationService.delete(id);
         return ApiResponseBuilder.ok(
                 null,
-                "Location eliminada correctamente"
+                "Ubicación eliminada correctamente"
         );
     }
 }

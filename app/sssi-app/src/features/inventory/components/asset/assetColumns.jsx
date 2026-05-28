@@ -53,8 +53,8 @@ export function getAssetsColumns() {
             grow: true,
         },
         {
-            accessorKey: 'site',
-            header: 'Sede',
+            accessorKey: 'campus',
+            header: 'Campus',
             size: 160,
             grow: true,
         },

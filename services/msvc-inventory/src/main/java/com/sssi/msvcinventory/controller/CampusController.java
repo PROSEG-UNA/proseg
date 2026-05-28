@@ -5,9 +5,9 @@ import com.sssi.common.api.response.PageResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
 import com.sssi.common.api.util.PageMapper;
 import com.sssi.common.specification.FilterConstants;
-import com.sssi.msvcinventory.dto.request.SiteRequestDto;
-import com.sssi.msvcinventory.dto.response.SiteResponseDto;
-import com.sssi.msvcinventory.service.SiteService;
+import com.sssi.msvcinventory.dto.request.CampusRequestDto;
+import com.sssi.msvcinventory.dto.response.CampusResponseDto;
+import com.sssi.msvcinventory.service.CampusService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -20,30 +20,30 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("${routes.sites:/api/v1/inventory/sites}")
+@RequestMapping("${routes.campuses:/api/v1/inventory/campuses}")
 @RequiredArgsConstructor
-public class SiteController {
+public class CampusController {
 
-    private final SiteService siteService;
+    private final CampusService campusService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<SiteResponseDto>> create(@Valid @RequestBody SiteRequestDto request) {
+    public ResponseEntity<ApiResponse<CampusResponseDto>> create(@Valid @RequestBody CampusRequestDto request) {
         return ApiResponseBuilder.created(
-                siteService.create(request),
-                "Site creado correctamente"
+                campusService.create(request),
+                "Campus creado correctamente"
         );
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<SiteResponseDto>> findById(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<CampusResponseDto>> findById(@PathVariable UUID id) {
         return ApiResponseBuilder.ok(
-                siteService.findById(id),
-                "Site obtenido correctamente"
+                campusService.findById(id),
+                "Campus obtenido correctamente"
         );
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<PageResponse<SiteResponseDto>>> findAll(
+    public ResponseEntity<ApiResponse<PageResponse<CampusResponseDto>>> findAll(
             @RequestParam(required = false) String search,
             @RequestParam Map<String, String> allParams,
             @PageableDefault(size = 10, page = 0) Pageable pageable) {
@@ -52,28 +52,28 @@ public class SiteController {
         FilterConstants.RESERVED_PARAMS.forEach(filters::remove);
 
         return ApiResponseBuilder.ok(
-                PageMapper.from(siteService.findAll(search, filters, pageable)),
-                "Lista de sites"
+                PageMapper.from(campusService.findAll(search, filters, pageable)),
+                "Lista de campus"
         );
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<SiteResponseDto>> update(
+    public ResponseEntity<ApiResponse<CampusResponseDto>> update(
             @PathVariable UUID id,
-            @Valid @RequestBody SiteRequestDto request) {
+            @Valid @RequestBody CampusRequestDto request) {
 
         return ApiResponseBuilder.ok(
-                siteService.update(id, request),
-                "Site actualizado correctamente"
+                campusService.update(id, request),
+                "Campus actualizado correctamente"
         );
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
-        siteService.delete(id);
+        campusService.delete(id);
         return ApiResponseBuilder.ok(
                 null,
-                "Site eliminado correctamente"
+                "Campus eliminado correctamente"
         );
     }
 }

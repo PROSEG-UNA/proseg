@@ -55,24 +55,29 @@ public class SecurityConfig {
 
                         // --- Ubicaciones ---
                         .requestMatchers(HttpMethod.GET,
-                                "/api/v1/inventory/sites",
-                                "/api/v1/inventory/sites/**",
+                                "/api/v1/inventory/campuses",
+                                "/api/v1/inventory/campuses/**",
+                                "/api/v1/inventory/buildings",
+                                "/api/v1/inventory/buildings/**",
                                 "/api/v1/inventory/locations",
                                 "/api/v1/inventory/locations/**"
                         ).hasAuthority(Privileges.Ubicaciones.LEER)
 
                         .requestMatchers(HttpMethod.POST,
-                                "/api/v1/inventory/sites",
+                                "/api/v1/inventory/campuses",
+                                "/api/v1/inventory/buildings",
                                 "/api/v1/inventory/locations"
                         ).hasAuthority(Privileges.Ubicaciones.GESTIONAR)
 
                         .requestMatchers(HttpMethod.PUT,
-                                "/api/v1/inventory/sites/**",
+                                "/api/v1/inventory/campuses/**",
+                                "/api/v1/inventory/buildings/**",
                                 "/api/v1/inventory/locations/**"
                         ).hasAuthority(Privileges.Ubicaciones.GESTIONAR)
 
                         .requestMatchers(HttpMethod.DELETE,
-                                "/api/v1/inventory/sites/**",
+                                "/api/v1/inventory/campuses/**",
+                                "/api/v1/inventory/buildings/**",
                                 "/api/v1/inventory/locations/**"
                         ).hasAuthority(Privileges.Ubicaciones.ELIMINAR)
 

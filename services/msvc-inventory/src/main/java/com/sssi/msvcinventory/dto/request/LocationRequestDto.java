@@ -1,8 +1,6 @@
 package com.sssi.msvcinventory.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.util.UUID;
@@ -14,13 +12,17 @@ import java.util.UUID;
 @Builder
 public class LocationRequestDto {
 
-    @NotBlank(message = "El nombre de la ubicación es obligatorio")
-    @Size(min = 2, max = 100, message = "El nombre debe tener entre 2 y 100 caracteres")
-    private String name;
+    @NotNull(message = "El campus es obligatorio")
+    private UUID campusId;
 
-    @NotNull(message = "El sitio es obligatorio")
-    private UUID siteId;
+    @NotNull(message = "El edificio es obligatorio")
+    private UUID buildingId;
 
-    @Size(max = 255, message = "La descripción no puede superar los 255 caracteres")
+    @NotNull(message = "El número de piso es obligatorio")
+    @Min(value = 0, message = "El número de piso debe ser 0 o mayor")
+    private Integer floorNumber;
+
+    @NotBlank(message = "La descripción de la ubicación es obligatoria")
+    @Size(min = 1, max = 255, message = "La descripción debe tener entre 2 y 255 caracteres")
     private String description;
 }

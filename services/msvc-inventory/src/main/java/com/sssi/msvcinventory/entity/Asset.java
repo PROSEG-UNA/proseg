@@ -27,7 +27,13 @@ import java.util.UUID;
                         @NamedAttributeNode("type")
                 }),
                 @NamedSubgraph(name = "location-subgraph", attributeNodes = {
-                        @NamedAttributeNode("site")
+                        @NamedAttributeNode(value = "floor", subgraph = "floor-subgraph")
+                }),
+                @NamedSubgraph(name = "floor-subgraph", attributeNodes = {
+                        @NamedAttributeNode(value = "building", subgraph = "building-subgraph")
+                }),
+                @NamedSubgraph(name = "building-subgraph", attributeNodes = {
+                        @NamedAttributeNode("campus")
                 })
         }
 )
@@ -55,7 +61,7 @@ public class Asset extends BaseEntity {
     @JoinColumn(name = "asset_model_id", nullable = false)
     private Model model;
 
-    @Filterable(type = FilterType.TEXT, nestedPaths = {"name"})
+    @Filterable(type = FilterType.TEXT, nestedPaths = {"description"})
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "location_id", nullable = false)
     private Location location;
