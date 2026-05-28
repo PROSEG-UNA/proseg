@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Box, TextField, Typography, Button, MenuItem, IconButton, InputAdornment, useTheme } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
+import { Box, TextField, Typography, Button, useTheme } from '@mui/material';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import BusinessIcon from '@mui/icons-material/Business';
@@ -291,35 +290,37 @@ export default function CompanyFormModal({ open, onClose, onSaved, companyId = n
                         sx={{ ...fieldSx, gridColumn: '1 / -1' }}
                     />
                     <Box sx={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 1 }}>
-                        <TextField
-                            label="Buscar usuario Keycloak"
-                            value={userSearch}
-                            onChange={(e) => setUserSearch(e.target.value)}
-                            fullWidth
-                            size="small"
-                            disabled={saving || loadingUsers}
-                            placeholder="Busca por nombre, correo o usuario"
-                            InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon fontSize="small"/></InputAdornment>) }}
-                            sx={fieldSx}
-                        />
-
                         <SearchableSelect
-                            label="Usuarios encontrados"
+                            label="Usuarios del sistema"
                             value={''}
                             onChange={(id) => {
-                                const user = availableUsers.find(u => u.id === id);
-                                if (user) setSelectedUsers(prev => ({ ...prev, [user.id]: user }));
+                                const user = availableUsers.find((u) => u.id === id);
+                                if (!user) return;
+                                if (selectedUsers[user.id]) {
+                                    setAlert({ type: 'warning', message: 'El usuario ya está seleccionado' });
+                                } else {
+                                    setSelectedUsers((prev) => ({ ...prev, [user.id]: user }));
+                                }
                                 setUserSearch('');
                             }}
                             onBlur={() => {}}
                             items={availableUsers}
-                            getItemLabel={(u) => `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.username + (u.email ? ` · ${u.email}` : '')}
+                            getItemLabel={(u) => {
+                                const name = `${u.firstName || ''} ${u.lastName || ''}`.trim();
+                                if (name) return `${name} - ${u.email || u.username || u.id}`;
+                                return `${u.username || u.email || u.id} - ${u.email || '—'}`;
+                            }}
                             getItemValue={(u) => u.id}
                             fullWidth
                             size="small"
                             disabled={saving || loadingUsers}
-                            helperText="Selecciona usuarios para asociarlos (se agregan como 'chips')"
-                            hideSearch
+                            helperText="Busca y agrega usuarios desde el sistema"
+                            externalSearch={userSearch}
+                            onSearchChange={(value) => {
+                                setUserSearch(value);
+                                setUserPage(0);
+                            }}
+                            pageSize={8}
                         />
 
                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -327,15 +328,19 @@ export default function CompanyFormModal({ open, onClose, onSaved, companyId = n
                                 <Typography sx={{ color: 'text.secondary', fontSize: 13.5 }}>No hay usuarios seleccionados.</Typography>
                             ) : (
                                 Object.values(selectedUsers).map(u => (
-                                    <Button key={u.id} size="small" variant="outlined" onClick={() => setSelectedUsers(prev => { const c = { ...prev }; delete c[u.id]; return c; })} sx={{ textTransform: 'none' }}>{u.email || u.id} ×</Button>
+                                    <Button key={u.id} size="small" variant="outlined" onClick={() => setSelectedUsers(prev => { const c = { ...prev }; delete c[u.id]; return c; })} sx={{ textTransform: 'none' }}>{`${(u.firstName || u.username || u.id)} - ${u.email || u.id}`} ×</Button>
                                 ))
                             )}
                         </Box>
 
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                            <IconButton size="small" disabled={userPage === 0 || loadingUsers} onClick={() => setUserPage(p => Math.max(0, p - 1))}><NavigateBeforeIcon fontSize="small"/></IconButton>
+                            <Button size="small" variant="text" disabled={userPage === 0 || loadingUsers} onClick={() => setUserPage((p) => Math.max(0, p - 1))} sx={{ minWidth: 0, textTransform: 'none' }}>
+                                <NavigateBeforeIcon fontSize="small" />
+                            </Button>
                             <Typography sx={{ fontSize: 12, color: 'text.secondary', minWidth: 60, textAlign: 'center' }}>{usersTotalPages === 0 ? '0 / 0' : `${userPage + 1} / ${usersTotalPages}`}</Typography>
-                            <IconButton size="small" disabled={usersTotalPages === 0 || userPage >= usersTotalPages - 1 || loadingUsers} onClick={() => setUserPage(p => p + 1)}><NavigateNextIcon fontSize="small"/></IconButton>
+                            <Button size="small" variant="text" disabled={usersTotalPages === 0 || userPage >= usersTotalPages - 1 || loadingUsers} onClick={() => setUserPage((p) => p + 1)} sx={{ minWidth: 0, textTransform: 'none' }}>
+                                <NavigateNextIcon fontSize="small" />
+                            </Button>
                         </Box>
                     </Box>
                     <Typography sx={{ gridColumn: '1 / -1', color: 'text.secondary', fontSize: 12.5 }}>
