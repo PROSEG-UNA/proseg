@@ -45,4 +45,8 @@ public class MaintenanceTechnicianRequestDto {
     private String phone;
 
     private boolean leader;
+
+    // Optional: link to an existing system user
+    @Pattern(regexp = "[a-zA-Z0-9-_.]{1,255}", message = "El id de usuario de Keycloak contiene caracteres inválidos")
+    private String keycloakUserId;
 }

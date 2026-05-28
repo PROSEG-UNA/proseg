@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Box, FormControlLabel, Switch, TextField, Typography, useTheme } from '@mui/material';
+import { Box, FormControlLabel, Switch, TextField, Typography, useTheme, InputAdornment, MenuItem } from '@mui/material';
 import MiscellaneousServicesIcon from '@mui/icons-material/MiscellaneousServices';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
 import { createMaintenanceTechnician, fetchMaintenanceTechnicianById, updateMaintenanceTechnician } from '../../services/techniciansService';
 import { fetchMaintenanceRequests } from '../../services/requestsService';
+import { searchUsers } from '../../../security/services/usersService';
+import { useDebounce } from '../../../../common/hooks/useDebounce.js';
 
 const INITIAL_VALUES = {
     maintenanceRequestId: '',
@@ -27,6 +29,10 @@ export default function MaintenanceTechnicianFormModal({ open, onClose, onSaved,
     const [saving, setSaving] = useState(false);
     const [loadingTechnician, setLoadingTechnician] = useState(false);
     const [loadingOptions, setLoadingOptions] = useState(false);
+    const [availableUsers, setAvailableUsers] = useState([]);
+    const [userSearch, setUserSearch] = useState('');
+    const [userPage, setUserPage] = useState(0);
+    const debouncedUserSearch = useDebounce(userSearch, 350);
     const [requests, setRequests] = useState([]);
     const [alert, setAlert] = useState(null);
 
@@ -66,6 +72,21 @@ export default function MaintenanceTechnicianFormModal({ open, onClose, onSaved,
     }, [open, isEdit, maintenanceRequestId]);
 
     useEffect(() => {
+        if (!open) return;
+        let cancelled = false;
+        setLoadingOptions(true);
+
+        searchUsers({ page: userPage, size: 8, search: debouncedUserSearch })
+            .then((page) => {
+                if (!cancelled) setAvailableUsers(page.content ?? []);
+            })
+            .catch(() => {})
+            .finally(() => { if (!cancelled) setLoadingOptions(false); });
+
+        return () => { cancelled = true; };
+    }, [open, userPage, debouncedUserSearch]);
+
+    useEffect(() => {
         if (!open || !technicianId) return;
         let cancelled = false;
         setLoadingTechnician(true);
@@ -79,6 +100,7 @@ export default function MaintenanceTechnicianFormModal({ open, onClose, onSaved,
                     position: technician.position ?? '',
                     email: technician.email ?? '',
                     phone: technician.phone ?? '',
+                    keycloakUserId: technician.keycloakUserId ?? '',
                     leader: !!technician.leader,
                 });
             })
@@ -159,11 +181,7 @@ export default function MaintenanceTechnicianFormModal({ open, onClose, onSaved,
             return;
         }
 
-        const resolvedRequestId = maintenanceRequestId || formValues.maintenanceRequestId;
-        if (!isEdit && !resolvedRequestId) {
-            setAlert({ type: 'warning', message: 'Debes seleccionar la solicitud de mantenimiento' });
-            return;
-        }
+        const resolvedRequestId = maintenanceRequestId || formValues.maintenanceRequestId || null;
 
         setSaving(true);
         try {
@@ -173,6 +191,7 @@ export default function MaintenanceTechnicianFormModal({ open, onClose, onSaved,
                 email: formValues.email.trim() || null,
                 phone: formValues.phone.trim() || null,
                 leader: !!formValues.leader,
+                keycloakUserId: formValues.keycloakUserId || null,
             };
 
             if (isEdit) {
@@ -247,6 +266,48 @@ export default function MaintenanceTechnicianFormModal({ open, onClose, onSaved,
                             El técnico se asociará a la solicitud seleccionada desde el detalle.
                         </Typography>
                     )}
+                    <TextField
+                        label="Buscar usuario del sistema (opcional)"
+                        value={userSearch}
+                        onChange={(e) => setUserSearch(e.target.value)}
+                        fullWidth
+                        size="small"
+                        disabled={saving}
+                        placeholder="Busca por nombre, correo o usuario"
+                        InputProps={{ startAdornment: <InputAdornment position="start">🔍</InputAdornment> }}
+                    />
+
+                    <TextField
+                        select
+                        label="Usuarios encontrados"
+                        value={formValues.keycloakUserId || ''}
+                        onChange={(e) => {
+                            const v = e.target.value;
+                            setFormValues((prev) => ({ ...prev, keycloakUserId: v }));
+                            const sel = availableUsers.find(u => u.id === v);
+                            if (sel) {
+                                // auto fill if empty
+                                setFormValues((prev) => ({
+                                    ...prev,
+                                    fullName: prev.fullName || ((sel.firstName || '') + ' ' + (sel.lastName || '')).trim(),
+                                    email: prev.email || sel.email || '',
+                                    phone: prev.phone || '',
+                                }));
+                            }
+                        }}
+                        fullWidth
+                        size="small"
+                        disabled={saving}
+                        helperText={formValues.keycloakUserId ? `ID: ${formValues.keycloakUserId}` : 'Elige un usuario del sistema (opcional)'}
+                    >
+                        {availableUsers.length === 0 ? (
+                            <MenuItem disabled value="">Sin resultados</MenuItem>
+                        ) : (
+                            availableUsers.map((user) => (
+                                <MenuItem key={user.id} value={user.id}>{`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username} · {user.email || '—'}</MenuItem>
+                            ))
+                        )}
+                    </TextField>
                     <TextField
                         label="Nombre completo"
                         value={formValues.fullName}

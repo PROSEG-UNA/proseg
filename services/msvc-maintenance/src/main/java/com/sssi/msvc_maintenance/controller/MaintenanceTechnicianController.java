@@ -36,7 +36,7 @@ public class MaintenanceTechnicianController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<MaintenanceTechnicianResponseDto>> create(
-            @RequestParam UUID maintenanceRequestId,
+            @RequestParam(required = false) UUID maintenanceRequestId,
             @Valid @RequestBody MaintenanceTechnicianRequestDto request) {
 
         return ApiResponseBuilder.created(

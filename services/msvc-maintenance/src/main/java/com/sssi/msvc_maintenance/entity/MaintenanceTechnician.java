@@ -31,8 +31,8 @@ public class MaintenanceTechnician extends BaseEntity {
     private UUID id;
 
     @Filterable(type = FilterType.TEXT, nestedPaths = {"title"})
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "maintenance_request_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "maintenance_request_id", nullable = true)
     private MaintenanceRequest maintenanceRequest;
 
     @Filterable(type = FilterType.TEXT)
@@ -57,4 +57,8 @@ public class MaintenanceTechnician extends BaseEntity {
     @Builder.Default
     @Column(nullable = false)
     private boolean leader = false;
+
+    @Filterable(type = FilterType.TEXT)
+    @Column(name = "keycloak_user_id", length = 255)
+    private String keycloakUserId;
 }

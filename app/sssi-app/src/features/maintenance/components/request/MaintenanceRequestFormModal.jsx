@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
-import { Box, MenuItem, TextField, Typography, useTheme } from '@mui/material';
+import { Box, IconButton, InputAdornment, MenuItem, TextField, Typography, useTheme } from '@mui/material';
 import ConstructionIcon from '@mui/icons-material/Construction';
+import SearchIcon from '@mui/icons-material/Search';
+import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
-import { createMaintenanceRequest, fetchMaintenanceRequestById, updateMaintenanceRequest } from '../../services/requestsService';
+import { createMaintenanceRequest, fetchMaintenanceAssets, fetchMaintenanceRequestById, updateMaintenanceRequest } from '../../services/requestsService';
 import { fetchCompanies } from '../../services/companiesService';
 import { MAINTENANCE_PRIORITY_OPTIONS, MAINTENANCE_STATUS_OPTIONS } from '../../maintenanceUtils';
+import { useDebounce } from '../../../../common/hooks/useDebounce.js';
 
 const INITIAL_VALUES = {
     companyId: '',
@@ -32,8 +36,14 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
     const [saving, setSaving] = useState(false);
     const [loadingRequest, setLoadingRequest] = useState(false);
     const [loadingOptions, setLoadingOptions] = useState(false);
+    const [loadingAssets, setLoadingAssets] = useState(false);
     const [companies, setCompanies] = useState([]);
+    const [assets, setAssets] = useState([]);
+    const [assetSearch, setAssetSearch] = useState('');
+    const [assetPage, setAssetPage] = useState(0);
+    const [assetTotalPages, setAssetTotalPages] = useState(0);
     const [alert, setAlert] = useState(null);
+    const debouncedAssetSearch = useDebounce(assetSearch, 350);
 
     useEffect(() => {
         if (!open) {
@@ -43,7 +53,12 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
             setSaving(false);
             setLoadingRequest(false);
             setLoadingOptions(false);
+            setLoadingAssets(false);
             setCompanies([]);
+            setAssets([]);
+            setAssetSearch('');
+            setAssetPage(0);
+            setAssetTotalPages(0);
             setAlert(null);
             return;
         }
@@ -69,6 +84,31 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
             cancelled = true;
         };
     }, [open]);
+
+    useEffect(() => {
+        if (!open) return;
+        let cancelled = false;
+        setLoadingAssets(true);
+
+        fetchMaintenanceAssets({ page: assetPage, size: 8, search: debouncedAssetSearch })
+            .then((page) => {
+                if (cancelled) return;
+                setAssets(page.content ?? []);
+                setAssetTotalPages(page.totalPages ?? 0);
+            })
+            .catch(() => {})
+            .finally(() => {
+                if (!cancelled) setLoadingAssets(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [open, assetPage, debouncedAssetSearch]);
+
+    useEffect(() => {
+        setAssetPage(0);
+    }, [assetSearch]);
 
     useEffect(() => {
         if (!open || !requestId) return;
@@ -210,7 +250,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                 subtitle={isEdit ? 'Actualiza los datos de la solicitud' : 'Registra una nueva solicitud de mantenimiento'}
                 loading={saving || loadingRequest}
                 secondaryButton={{ label: 'Cancelar', onClick: onClose, disabled: saving }}
-                primaryButton={{ label: saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear solicitud', onClick: handleSave, disabled: saving || loadingRequest || loadingOptions }}
+                primaryButton={{ label: saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear solicitud', onClick: handleSave, disabled: saving || loadingRequest || loadingOptions || loadingAssets }}
                 contentSx={contentSx}
             >
                 <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 3, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
@@ -222,7 +262,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                         required
                         fullWidth
                         size="small"
-                        disabled={saving || loadingOptions}
+                        disabled={saving || loadingOptions || loadingAssets}
                         error={touched.companyId && !!errors.companyId}
                         helperText={touched.companyId ? (errors.companyId || ' ') : ' '}
                         sx={fieldSx}
@@ -231,18 +271,62 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                         getItemValue={(company) => company.id}
                     />
                     <TextField
-                        label="Id del activo"
+                        label="Buscar activo"
+                        value={assetSearch}
+                        onChange={(e) => setAssetSearch(e.target.value)}
+                        fullWidth
+                        size="small"
+                        disabled={saving || loadingOptions || loadingAssets}
+                        placeholder="Busca por numero de activo, serie o modelo"
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <SearchIcon fontSize="small" />
+                                </InputAdornment>
+                            ),
+                        }}
+                        sx={fieldSx}
+                    />
+                    <TextField
+                        select
+                        label="Activo"
                         value={formValues.assetId}
                         onChange={(e) => handleChange('assetId', e.target.value)}
                         onBlur={() => handleBlur('assetId')}
                         required
                         fullWidth
                         size="small"
-                        disabled={saving}
+                        disabled={saving || loadingOptions}
                         error={touched.assetId && !!errors.assetId}
-                        helperText={touched.assetId ? (errors.assetId || ' ') : ' '}
+                        helperText={touched.assetId ? (errors.assetId || ' ') : 'Selecciona un activo del inventario'}
                         sx={fieldSx}
-                    />
+                    >
+                        {assets.length === 0 ? (
+                            <MenuItem disabled value="">Sin resultados</MenuItem>
+                        ) : (
+                            assets.map((asset) => (
+                                <MenuItem key={asset.id} value={asset.id}>
+                                    {(asset.assetNumber || asset.id)} · {asset.modelName || 'Sin modelo'} · {asset.locationName || 'Sin ubicacion'}
+                                </MenuItem>
+                            ))
+                        )}
+                        {formValues.assetId && !assets.some((asset) => asset.id === formValues.assetId) ? (
+                            <MenuItem value={formValues.assetId} sx={{ display: 'none' }}>
+                                {formValues.assetId}
+                            </MenuItem>
+                        ) : null}
+                    </TextField>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mt: -0.5, mb: 0.5 }}>
+                        <IconButton size="small" disabled={assetPage === 0 || saving || loadingOptions || loadingAssets} onClick={() => setAssetPage((p) => Math.max(0, p - 1))}>
+                            <NavigateBeforeIcon fontSize="small" />
+                        </IconButton>
+                        <Typography sx={{ fontSize: 12, color: 'text.secondary', minWidth: 60, textAlign: 'center' }}>
+                            {assetTotalPages === 0 ? '0 / 0' : `${assetPage + 1} / ${assetTotalPages}`}
+                        </Typography>
+                        <IconButton size="small" disabled={assetTotalPages === 0 || assetPage >= assetTotalPages - 1 || saving || loadingOptions || loadingAssets} onClick={() => setAssetPage((p) => p + 1)}>
+                            <NavigateNextIcon fontSize="small" />
+                        </IconButton>
+                    </Box>
                     <TextField
                         label="Título"
                         value={formValues.title}
