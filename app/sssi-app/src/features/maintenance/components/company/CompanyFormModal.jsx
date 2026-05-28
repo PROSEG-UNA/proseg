@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Box, TextField, Typography, useTheme } from '@mui/material';
+import { Box, TextField, Typography, Button, MenuItem, IconButton, InputAdornment, useTheme } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
+import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import BusinessIcon from '@mui/icons-material/Business';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { createCompany, fetchCompanyById, updateCompany } from '../../services/companiesService';
-import { joinTextList, normalizeTextList } from '../../maintenanceUtils';
+import { searchUsers } from '../../../security/services/usersService';
+import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
+import { useDebounce } from '../../../../common/hooks/useDebounce.js';
 
 const INITIAL_VALUES = {
     name: '',
@@ -12,7 +17,7 @@ const INITIAL_VALUES = {
     contactEmail: '',
     contactPhone: '',
     address: '',
-    keycloakUserIdsText: '',
+    // selected users will be stored in selectedUsers map
 };
 
 export default function CompanyFormModal({ open, onClose, onSaved, companyId = null }) {
@@ -25,6 +30,13 @@ export default function CompanyFormModal({ open, onClose, onSaved, companyId = n
     const [touched, setTouched] = useState({});
     const [saving, setSaving] = useState(false);
     const [loadingCompany, setLoadingCompany] = useState(false);
+    const [availableUsers, setAvailableUsers] = useState([]);
+    const [usersTotalPages, setUsersTotalPages] = useState(0);
+    const [userSearch, setUserSearch] = useState('');
+    const [userPage, setUserPage] = useState(0);
+    const debouncedUserSearch = useDebounce(userSearch, 350);
+    const [selectedUsers, setSelectedUsers] = useState({});
+    const [loadingUsers, setLoadingUsers] = useState(false);
     const [alert, setAlert] = useState(null);
 
     useEffect(() => {
@@ -40,6 +52,7 @@ export default function CompanyFormModal({ open, onClose, onSaved, companyId = n
 
         if (!companyId) {
             setFormValues(INITIAL_VALUES);
+            setSelectedUsers({});
             return;
         }
 
@@ -55,8 +68,12 @@ export default function CompanyFormModal({ open, onClose, onSaved, companyId = n
                     contactEmail: company.contactEmail ?? '',
                     contactPhone: company.contactPhone ?? '',
                     address: company.address ?? '',
-                    keycloakUserIdsText: joinTextList(company.keycloakUserIds ?? []),
                 });
+
+                // initialize selectedUsers map from company.keycloakUserIds
+                const initialUserMap = {};
+                (company.keycloakUserIds ?? []).forEach((id) => { initialUserMap[id] = { id }; });
+                setSelectedUsers(initialUserMap);
             })
             .catch((error) => {
                 if (!cancelled) {
@@ -71,6 +88,23 @@ export default function CompanyFormModal({ open, onClose, onSaved, companyId = n
             cancelled = true;
         };
     }, [open, companyId]);
+
+    useEffect(() => {
+        if (!open) return;
+        let cancelled = false;
+        setLoadingUsers(true);
+
+        searchUsers({ page: userPage, size: 8, search: debouncedUserSearch })
+            .then((page) => {
+                if (cancelled) return;
+                setAvailableUsers(page.content ?? []);
+                setUsersTotalPages(page.totalPages ?? 0);
+            })
+            .catch(() => {})
+            .finally(() => { if (!cancelled) setLoadingUsers(false); });
+
+        return () => { cancelled = true; };
+    }, [open, userPage, debouncedUserSearch]);
 
     const validateField = (key, value) => {
         let error = '';
@@ -144,7 +178,7 @@ export default function CompanyFormModal({ open, onClose, onSaved, companyId = n
                 contactEmail: formValues.contactEmail.trim() || null,
                 contactPhone: formValues.contactPhone.trim() || null,
                 address: formValues.address.trim() || null,
-                keycloakUserIds: normalizeTextList(formValues.keycloakUserIdsText),
+                keycloakUserIds: Object.keys(selectedUsers),
             };
 
             if (isEdit) {
@@ -256,18 +290,54 @@ export default function CompanyFormModal({ open, onClose, onSaved, companyId = n
                         minRows={3}
                         sx={{ ...fieldSx, gridColumn: '1 / -1' }}
                     />
-                    <TextField
-                        label="Ids de usuarios Keycloak"
-                        value={formValues.keycloakUserIdsText}
-                        onChange={(e) => handleChange('keycloakUserIdsText', e.target.value)}
-                        fullWidth
-                        size="small"
-                        disabled={saving}
-                        multiline
-                        minRows={4}
-                        helperText="Separa los ids con salto de línea, coma o punto y coma"
-                        sx={{ ...fieldSx, gridColumn: '1 / -1' }}
-                    />
+                    <Box sx={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <TextField
+                            label="Buscar usuario Keycloak"
+                            value={userSearch}
+                            onChange={(e) => setUserSearch(e.target.value)}
+                            fullWidth
+                            size="small"
+                            disabled={saving || loadingUsers}
+                            placeholder="Busca por nombre, correo o usuario"
+                            InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon fontSize="small"/></InputAdornment>) }}
+                            sx={fieldSx}
+                        />
+
+                        <SearchableSelect
+                            label="Usuarios encontrados"
+                            value={''}
+                            onChange={(id) => {
+                                const user = availableUsers.find(u => u.id === id);
+                                if (user) setSelectedUsers(prev => ({ ...prev, [user.id]: user }));
+                                setUserSearch('');
+                            }}
+                            onBlur={() => {}}
+                            items={availableUsers}
+                            getItemLabel={(u) => `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.username + (u.email ? ` · ${u.email}` : '')}
+                            getItemValue={(u) => u.id}
+                            fullWidth
+                            size="small"
+                            disabled={saving || loadingUsers}
+                            helperText="Selecciona usuarios para asociarlos (se agregan como 'chips')"
+                            hideSearch
+                        />
+
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            {Object.values(selectedUsers).length === 0 ? (
+                                <Typography sx={{ color: 'text.secondary', fontSize: 13.5 }}>No hay usuarios seleccionados.</Typography>
+                            ) : (
+                                Object.values(selectedUsers).map(u => (
+                                    <Button key={u.id} size="small" variant="outlined" onClick={() => setSelectedUsers(prev => { const c = { ...prev }; delete c[u.id]; return c; })} sx={{ textTransform: 'none' }}>{u.email || u.id} ×</Button>
+                                ))
+                            )}
+                        </Box>
+
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                            <IconButton size="small" disabled={userPage === 0 || loadingUsers} onClick={() => setUserPage(p => Math.max(0, p - 1))}><NavigateBeforeIcon fontSize="small"/></IconButton>
+                            <Typography sx={{ fontSize: 12, color: 'text.secondary', minWidth: 60, textAlign: 'center' }}>{usersTotalPages === 0 ? '0 / 0' : `${userPage + 1} / ${usersTotalPages}`}</Typography>
+                            <IconButton size="small" disabled={usersTotalPages === 0 || userPage >= usersTotalPages - 1 || loadingUsers} onClick={() => setUserPage(p => p + 1)}><NavigateNextIcon fontSize="small"/></IconButton>
+                        </Box>
+                    </Box>
                     <Typography sx={{ gridColumn: '1 / -1', color: 'text.secondary', fontSize: 12.5 }}>
                         Los usuarios vinculados pueden administrarse luego desde el panel de detalle de la empresa.
                     </Typography>
