@@ -81,7 +81,7 @@ spring:
             - StripPrefix=0
 
         - id: msvc-maintenance
-          uri: ${DOCUMENT_PROCESSOR_SERVICE_URL:http://localhost:8099}
+          uri: ${MAINTENANCE_SERVICE_URL:http://localhost:8099}
           predicates:
             - Path=/api/v1/maintenance/**
           filters:

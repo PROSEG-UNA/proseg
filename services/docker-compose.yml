@@ -274,6 +274,35 @@ services:
     networks:
       - sssi-net
 
+  msvc-maintenance:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        SERVICE_NAME: msvc-maintenance
+    container_name: msvc-maintenance
+    ports:
+      - "8099:8099"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://msvc-config:8888
+      - SERVER_PORT=8099
+      - SPRING_APPLICATION_NAME=msvc-maintenance
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://auth.devbychris.com/realms/sssi-realm
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://msvc-eureka:8761/eureka/
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://msvc-eureka:8761/eureka/
+      - EUREKA_INSTANCE_HOSTNAME=msvc-maintenance
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+      msvc-config:
+        condition: service_healthy
+      msvc-eureka:
+        condition: service_healthy
+    networks:
+      - sssi-net
+
   msvc-email:
     build:
       context: .
