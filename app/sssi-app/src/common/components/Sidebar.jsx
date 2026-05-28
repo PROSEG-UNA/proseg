@@ -20,7 +20,6 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import MenuIcon from '@mui/icons-material/Menu';
 import BuildIcon from '@mui/icons-material/Build';
-import EngineeringIcon from '@mui/icons-material/Engineering';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
@@ -29,9 +28,11 @@ import AppsIcon from '@mui/icons-material/Apps';
 import { useColorScheme } from '@mui/material/styles';
 import { SidebarContext } from '../context/SidebarContext';
 import { useAuth } from '../../features/auth/hooks/useAuth';
-import { usePermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/permissions';
 import '../css/Sidebar.css';
+import {usePermissions} from "../hooks/index.js";
+import BusinessIcon from '@mui/icons-material/Business';
+import ConstructionIcon from '@mui/icons-material/Construction';
 
 const panelSurfaceSx = (t) => ({
     background: `
@@ -263,8 +264,12 @@ export function Sidebar() {
         ? [{ key: 'assets', icon: AppsIcon, label: 'Activos', path: '/inventario/activos' }]
         : [];
 
+    // Split mantenimiento into submodules: Empresas and Solicitudes
     const maintenanceItems = canViewMaintenanceSection
-        ? [{ key: 'module', icon: EngineeringIcon, label: 'Mantenimiento', path: '/mantenimiento' }]
+        ? [
+            { key: 'companies', icon: BusinessIcon, label: 'Empresas', path: '/mantenimiento/empresas' },
+            { key: 'requests', icon: ConstructionIcon, label: 'Solicitudes', path: '/mantenimiento/solicitudes' },
+        ]
         : [];
 
     const securityItems = canViewSecuritySection

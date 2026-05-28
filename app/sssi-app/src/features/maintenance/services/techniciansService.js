@@ -16,11 +16,8 @@ export async function fetchTechniciansByRequestId(requestId, options = {}) {
 }
 
 export async function createMaintenanceTechnician(maintenanceRequestId, payload) {
-    const { data } = await axios.post(
-        `${MAINTENANCE_ENDPOINTS.technicians}?maintenanceRequestId=${maintenanceRequestId}`,
-        payload,
-        maintenanceConfig
-    );
+    const url = maintenanceRequestId ? `${MAINTENANCE_ENDPOINTS.technicians}?maintenanceRequestId=${maintenanceRequestId}` : `${MAINTENANCE_ENDPOINTS.technicians}`;
+    const { data } = await axios.post(url, payload, maintenanceConfig);
     return data?.data;
 }
 
