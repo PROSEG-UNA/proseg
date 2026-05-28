@@ -5,6 +5,7 @@ import com.sssi.common.api.response.PageResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
 import com.sssi.common.api.util.PageMapper;
 import com.sssi.common.specification.FilterConstants;
+import com.sssi.msvc_maintenance.dto.response.MaintenanceAssetOptionDto;
 import com.sssi.msvc_maintenance.dto.request.MaintenanceRequestRequestDto;
 import com.sssi.msvc_maintenance.dto.response.MaintenanceRequestResponseDto;
 import com.sssi.msvc_maintenance.service.MaintenanceRequestService;
@@ -64,6 +65,17 @@ public class MaintenanceRequestController {
         return ApiResponseBuilder.ok(
                 PageMapper.from(maintenanceRequestService.findAll(search, filters, pageable)),
                 "Lista de solicitudes de mantenimiento"
+        );
+    }
+
+    @GetMapping("/assets")
+    public ResponseEntity<ApiResponse<PageResponse<MaintenanceAssetOptionDto>>> findAvailableAssets(
+            @RequestParam(required = false) String search,
+            @PageableDefault(size = 10, page = 0) Pageable pageable) {
+
+        return ApiResponseBuilder.ok(
+                PageMapper.from(maintenanceRequestService.findAvailableAssets(search, pageable)),
+                "Lista de activos disponibles"
         );
     }
 

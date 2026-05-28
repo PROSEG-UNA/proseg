@@ -6,6 +6,10 @@ export async function fetchMaintenanceRequests(options = {}) {
     return fetchPage(MAINTENANCE_ENDPOINTS.requests, options);
 }
 
+export async function fetchMaintenanceAssets(options = {}) {
+    return fetchPage(`${MAINTENANCE_ENDPOINTS.requests}/assets`, options);
+}
+
 export async function fetchMaintenanceRequestById(requestId) {
     const { data } = await axios.get(`${MAINTENANCE_ENDPOINTS.requests}/${requestId}`, maintenanceConfig);
     return data?.data ?? null;

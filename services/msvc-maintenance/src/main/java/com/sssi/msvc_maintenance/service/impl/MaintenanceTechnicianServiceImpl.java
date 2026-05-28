@@ -7,6 +7,10 @@ import com.sssi.msvc_maintenance.entity.MaintenanceTechnician;
 import com.sssi.msvc_maintenance.exception.MaintenanceRequestException;
 import com.sssi.msvc_maintenance.exception.MaintenanceTechnicianException;
 import com.sssi.msvc_maintenance.mapper.MaintenanceTechnicianMapper;
+import com.sssi.msvc_maintenance.client.AuthClient;
+import com.sssi.msvc_maintenance.dto.response.KeycloakUserResponse;
+import com.sssi.common.api.response.ApiResponse;
+import lombok.extern.slf4j.Slf4j;
 import com.sssi.msvc_maintenance.repository.MaintenanceRequestRepository;
 import com.sssi.msvc_maintenance.repository.MaintenanceTechnicianRepository;
 import com.sssi.msvc_maintenance.service.MaintenanceTechnicianService;
@@ -24,21 +28,42 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class MaintenanceTechnicianServiceImpl implements MaintenanceTechnicianService {
 
     private final MaintenanceTechnicianRepository maintenanceTechnicianRepository;
     private final MaintenanceRequestRepository maintenanceRequestRepository;
     private final MaintenanceTechnicianMapper maintenanceTechnicianMapper;
+    private final AuthClient authClient;
 
     @Override
     @Transactional
     public MaintenanceTechnicianResponseDto create(UUID maintenanceRequestId, MaintenanceTechnicianRequestDto request) {
 
-        MaintenanceRequest maintenanceRequest = maintenanceRequestRepository.findById(maintenanceRequestId)
-                .orElseThrow(MaintenanceRequestException::notFound);
-
         MaintenanceTechnician technician = maintenanceTechnicianMapper.toEntity(request);
-        technician.setMaintenanceRequest(maintenanceRequest);
+
+        if (maintenanceRequestId != null) {
+            MaintenanceRequest maintenanceRequest = maintenanceRequestRepository.findById(maintenanceRequestId)
+                    .orElseThrow(MaintenanceRequestException::notFound);
+            technician.setMaintenanceRequest(maintenanceRequest);
+        }
+
+        // If a keycloak user id is provided, try to enrich technician data from auth service
+        if (request.getKeycloakUserId() != null && (technician.getFullName() == null || technician.getFullName().isBlank())) {
+            try {
+                ApiResponse<KeycloakUserResponse> resp = authClient.findUserByKeycloakId(request.getKeycloakUserId());
+                if (resp != null && resp.getData() != null) {
+                    KeycloakUserResponse u = resp.getData();
+                    if ((technician.getFullName() == null || technician.getFullName().isBlank()) && (u.firstName() != null || u.lastName() != null)) {
+                        String name = ((u.firstName() != null ? u.firstName() : "") + " " + (u.lastName() != null ? u.lastName() : "")).trim();
+                        if (!name.isBlank()) technician.setFullName(name);
+                    }
+                    if ((technician.getEmail() == null || technician.getEmail().isBlank()) && u.email() != null) technician.setEmail(u.email());
+                }
+            } catch (Exception ex) {
+                log.debug("Could not fetch keycloak user {}: {}", request.getKeycloakUserId(), ex.getMessage());
+            }
+        }
 
         return maintenanceTechnicianMapper.toResponse(maintenanceTechnicianRepository.save(technician));
     }
