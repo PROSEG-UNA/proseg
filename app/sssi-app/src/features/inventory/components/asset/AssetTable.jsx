@@ -10,6 +10,22 @@ import { useDebounce } from '../../../../common/hooks/useDebounce.js';
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 
+const STORAGE_KEY = 'asset-table-column-visibility';
+
+const DEFAULT_COLUMN_VISIBILITY = {
+    campus: false,
+    executingUnit: false,
+    responsibleEmployee: false,
+    responsibleEmployeeId: false,
+    status: false,
+    acquisitionDate: false,
+    warrantyEndDate: false,
+    firmwareSupportEndDate: false,
+    decommissionDate: false,
+    latitude: false,
+    longitude: false,
+};
+
 const COLUMN_TO_BACKEND_KEY = {
     assetNumber: 'assetNumber',
     serialNumber: 'serialNumber',
@@ -28,6 +44,13 @@ const COLUMN_TO_BACKEND_KEY = {
 };
 
 export default function AssetTable({ refreshKey = 0, onRefresh }) {
+    const [columnVisibility, setColumnVisibility] = useState(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            try { return JSON.parse(saved); } catch { return DEFAULT_COLUMN_VISIBILITY; }
+        }
+        return DEFAULT_COLUMN_VISIBILITY;
+    });
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
@@ -65,6 +88,12 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
             .filter(Boolean),
         [sorting]
     );
+
+    const persistColumnVisibility = () => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(columnVisibility));
+    };
+
+    useEffect(persistColumnVisibility, [columnVisibility]);
 
     const resetPageOnFilterChange = () => {
         setPagination((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }));
@@ -163,22 +192,8 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
                     onGlobalFilterChange: setGlobalFilter,
                     onColumnFiltersChange: setColumnFilters,
                     onSortingChange: setSorting,
-                    state: { pagination, globalFilter, columnFilters, sorting },
-                    initialState: {
-                        columnVisibility: {
-                            campus: false,
-                            executingUnit: false,
-                            responsibleEmployee: false,
-                            responsibleEmployeeId: false,
-                            status: false,
-                            acquisitionDate: false,
-                            warrantyEndDate: false,
-                            firmwareSupportEndDate: false,
-                            decommissionDate: false,
-                            latitude: false,
-                            longitude: false,
-                        },
-                    },
+                    onColumnVisibilityChange: setColumnVisibility,
+                    state: { pagination, globalFilter, columnFilters, sorting, columnVisibility },
                     displayColumnDefOptions: {
                         'mrt-row-expand': {
                             muiTableBodyCellProps: {
