@@ -39,7 +39,7 @@ public class UserCompany extends BaseEntity {
     private String keycloakUserId;
 
     @Filterable(type = FilterType.TEXT)
-    @Column(name = "created_user_email", length = 254, nullable = true)
+    @Column(name = "user_email", length = 254, nullable = true)
     @Pattern(regexp = ValidationUtils.EMAIL_REGEX, message = "El correo electrónico tiene un formato inválido")
     private String userEmail;
 
