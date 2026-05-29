@@ -16,6 +16,8 @@ import SecurityPage from './features/security/pages/SecurityPage';
 import UserPage from './features/security/pages/UserPage';
 import RolePage from './features/security/pages/RolePage';
 import DashboardLayout from './layouts/DashboardLayout';
+import CompaniesPage from "./features/maintenance/pages/CompaniesPage.jsx";
+import RequestsPage from "./features/maintenance/pages/RequestsPage.jsx";
 
 function App() {
     return (
@@ -88,6 +90,30 @@ function App() {
                                             element={
                                                 <DashboardLayout>
                                                     <RolePage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/mantenimiento/empresas"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout>
+                                                    <CompaniesPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/mantenimiento/solicitudes"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout>
+                                                    <RequestsPage />
                                                 </DashboardLayout>
                                             }
                                         />

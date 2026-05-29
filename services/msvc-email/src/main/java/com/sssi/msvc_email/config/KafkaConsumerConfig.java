@@ -100,4 +100,10 @@ public class KafkaConsumerConfig {
     passwordExpiredResetRequestedListenerFactory() {
         return listenerFactory(PasswordExpiredResetRequiredEvent.class);
     }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, CompanyUsersAssignedEvent>
+    companyUsersAssignedListenerFactory() {
+        return listenerFactory(CompanyUsersAssignedEvent.class);
+    }
 }

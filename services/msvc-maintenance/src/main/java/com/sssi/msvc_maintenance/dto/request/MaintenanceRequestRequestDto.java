@@ -18,10 +18,10 @@ import java.time.LocalDate;
 @Builder
 public class MaintenanceRequestRequestDto {
 
-    @NotBlank(message = "La compañía es obligatoria")
+    @NotBlank(message = "La empresa es obligatoria")
     @Pattern(
             regexp = ValidationUtils.UUID_REGEX,
-            message = "El id de la compañía debe tener un formato UUID válido"
+            message = "El id de la empresa debe tener un formato UUID válido"
     )
     private String companyId;
 

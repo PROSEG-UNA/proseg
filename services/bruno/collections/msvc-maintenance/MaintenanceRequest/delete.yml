@@ -1,0 +1,15 @@
+info:
+  name: delete
+  type: http
+  seq: 5
+
+http:
+  method: DELETE
+  url: "{{gatewayUrl}}/api/{{apiVersion}}/maintenance/requests/6cfe36ee-6fe4-42f1-8cc3-c0c565cb3a4f"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

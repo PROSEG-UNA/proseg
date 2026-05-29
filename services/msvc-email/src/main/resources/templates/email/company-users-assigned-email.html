@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Acceso empresarial habilitado - PROSEG</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+       style="background:#f4f6f8;padding:24px 12px;">
+    <tr>
+        <td align="center">
+
+            <table role="presentation" width="620" cellspacing="0" cellpadding="0"
+                   style="max-width:620px;background:#ffffff;border-radius:10px;
+                          overflow:hidden;border:1px solid #e5e7eb;">
+
+                <!-- HEADER -->
+                <tr>
+                    <td style="background:#b91c1c;padding:22px 24px;color:#ffffff;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                            <tr>
+                                <td style="vertical-align:middle;">
+                                    <h1 style="margin:0;font-size:22px;line-height:1.25;font-weight:700;">
+                                        Acceso empresarial habilitado
+                                    </h1>
+                                    <p style="margin:8px 0 0 0;font-size:14px;opacity:0.95;">
+                                        Fuiste vinculado a una empresa en PROSEG.
+                                    </p>
+                                </td>
+                                <td align="right" style="vertical-align:middle;">
+                                    <img src="cid:flower.png" alt="PROSEG LOGO"
+                                         width="42" height="42"
+                                         style="display:block;border-radius:10px;
+                                                background:rgba(255,255,255,0.12);padding:4px;"/>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <!-- BODY -->
+                <tr>
+                    <td style="padding:28px 24px;">
+
+                        <p style="margin:0 0 16px 0;font-size:15px;">
+                            Hola <strong th:text="${firstName}">Nombre</strong>,
+                        </p>
+
+                        <p style="margin:0 0 20px 0;font-size:15px;line-height:1.6;color:#374151;">
+                            Tu cuenta fue asociada a la empresa
+                            <strong th:text="${companyName}">Nombre Empresa</strong>
+                            en <strong>PROSEG</strong>. A partir de ahora podés registrar y gestionar
+                            solicitudes de mantenimiento de activos en nombre de esa organización.
+                        </p>
+
+                        <!-- COMPANY INFO TABLE -->
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+                               style="border:1px solid #e5e7eb;border-radius:8px;
+                                      background:#f9fafb;margin-bottom:24px;">
+                            <tr>
+                                <td colspan="2"
+                                    style="padding:14px 16px;font-size:15px;font-weight:bold;
+                                           background:#fef2f2;border-bottom:1px solid #fee2e2;
+                                           color:#b91c1c;">
+                                    Datos de la empresa asignada
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:12px 16px;font-size:14px;width:40%;
+                                           border-bottom:1px solid #e5e7eb;">
+                                    <strong>Nombre:</strong>
+                                </td>
+                                <td style="padding:12px 16px;font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;"
+                                    th:text="${companyName}">
+                                    Nombre Empresa
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:12px 16px;font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+                                    <strong>RUC / ID Legal:</strong>
+                                </td>
+                                <td style="padding:12px 16px;font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;"
+                                    th:text="${legalId}">
+                                    123456789
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:12px 16px;font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+                                    <strong>Email de contacto:</strong>
+                                </td>
+                                <td style="padding:12px 16px;font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;"
+                                    th:text="${contactEmail}">
+                                    contacto@empresa.com
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:12px 16px;font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+                                    <strong>Teléfono:</strong>
+                                </td>
+                                <td style="padding:12px 16px;font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;"
+                                    th:text="${contactPhone}">
+                                    +506 0000-0000
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:12px 16px;font-size:14px;">
+                                    <strong>Dirección:</strong>
+                                </td>
+                                <td style="padding:12px 16px;font-size:14px;"
+                                    th:text="${address}">
+                                    Dirección empresa
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- INFO BLOCK -->
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+                               style="border-left:4px solid #16a34a;background:#f0fdf4;
+                                      border-radius:4px;margin-bottom:20px;">
+                            <tr>
+                                <td style="padding:12px 14px;font-size:13px;
+                                           color:#166534;line-height:1.6;">
+                                    Podés iniciar sesión y comenzar a registrar solicitudes de
+                                    mantenimiento de activos en nombre de
+                                    <strong th:text="${companyName}">esta empresa</strong>
+                                    desde el sistema.
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- WARNING BLOCK -->
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+                               style="border-left:4px solid #3b82f6;background:#eff6ff;
+                                      border-radius:4px;margin-bottom:24px;">
+                            <tr>
+                                <td style="padding:12px 14px;font-size:13px;
+                                           color:#1e40af;line-height:1.5;">
+                                    Si creés que esta asignación fue un error, comunicate con
+                                    un administrador del sistema a la brevedad.
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- BUTTON -->
+                        <p style="margin:0 0 24px 0;text-align:center;">
+                            <a th:href="${loginUrl}"
+                               style="display:inline-block;background:#b91c1c;color:#ffffff;
+                                      text-decoration:none;padding:12px 28px;border-radius:8px;
+                                      font-size:15px;font-weight:600;letter-spacing:0.3px;">
+                                Ir al sistema
+                            </a>
+                        </p>
+
+                        <!-- TIMESTAMP -->
+                        <p style="margin:0;font-size:12px;color:#6b7280;">
+                            Asignación registrada el:
+                            <span th:text="${timestamp}">01/01/2026 00:00</span>
+                        </p>
+
+                    </td>
+                </tr>
+
+                <!-- FOOTER -->
+                <tr>
+                    <td style="background:#f9fafb;padding:14px 24px;
+                                border-top:1px solid #e5e7eb;font-size:12px;
+                                color:#9ca3af;text-align:center;">
+                        Mensaje automático · SPGS
+                    </td>
+                </tr>
+
+            </table>
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>

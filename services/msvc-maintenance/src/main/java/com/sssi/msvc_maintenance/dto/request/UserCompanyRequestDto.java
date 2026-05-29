@@ -19,10 +19,16 @@ public class UserCompanyRequestDto {
     )
     private String keycloakUserId;
 
-    @NotBlank(message = "La compañía es obligatoria")
+    @NotBlank(message = "La empresa es obligatoria")
     @Pattern(
             regexp = ValidationUtils.UUID_REGEX,
-            message = "El id de la compañía debe tener un formato UUID válido"
+            message = "El id de la empresa debe tener un formato UUID válido"
     )
     private String companyId;
+
+    @Pattern(
+            regexp = ValidationUtils.EMAIL_REGEX,
+            message = "El correo electrónico tiene un formato inválido"
+    )
+    private String userEmail;
 }

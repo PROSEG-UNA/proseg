@@ -29,4 +29,6 @@ public final class KafkaTopics {
     public static final String PASSWORD_EXPIRING_SOON_TOPIC = "password-expiring-soon-v1";
 
     public static final String PASSWORD_EXPIRED_RESET_REQUIRED_TOPIC = "password-expired-reset-required-v1";
+
+    public static final String USER_COMPANY_ASSIGNED_TOPIC = "user-company-assigned-v1";
 }

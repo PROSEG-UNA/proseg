@@ -17,4 +17,5 @@ public class MaintenanceTechnicianResponseDto {
     private String email;
     private String phone;
     private boolean leader;
+    private String keycloakUserId;
 }

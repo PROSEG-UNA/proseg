@@ -1,0 +1,23 @@
+info:
+  name: assignUsers
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{gatewayUrl}}/api/{{apiVersion}}/maintenance/companies/6667da22-1e84-44f0-ac89-d590ea4e9945/users/batch"
+  body:
+    type: json
+    data: |-
+      {
+        "keycloakUserIds": [
+          "d791be07-87aa-4b26-8de1-d88db2b324c4"
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
