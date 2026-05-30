@@ -38,17 +38,19 @@ export default function GeneralModal({
             fullScreen={isSmall}
             maxWidth={maxWidth}
             fullWidth
-            slotProps={{ backdrop: { sx: { backdropFilter: 'blur(3px)' } } }}
-            PaperProps={{
-                sx: {
-                    maxHeight: isSmall ? '100vh' : '92vh',
-                    height: isSmall ? '100vh' : 'auto',
-                    borderRadius: isSmall ? 0 : '16px',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    boxShadow: theme.vars.palette.tones.rose.shadowModal,
-                    bgcolor: 'background.paperWarm',
+            slotProps={{
+                backdrop: { sx: { backdropFilter: 'blur(3px)' } },
+                paper: {
+                    sx: {
+                        maxHeight: isSmall ? '100vh' : '92vh',
+                        height: isSmall ? '100vh' : 'auto',
+                        borderRadius: isSmall ? 0 : '16px',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        boxShadow: theme.vars.palette.tones.rose.shadowModal,
+                        bgcolor: 'background.paperWarm',
+                    },
                 },
             }}
         >
@@ -152,7 +154,8 @@ export default function GeneralModal({
                             loading={primaryButton.loading}
                             sx={{
                                 background: headerGradient,
-                                textTransform: 'none', fontWeight: 700, fontSize: 12.5, borderRadius: '8px',
+                                textTransform: 'none', fontWeight: 700, fontSize: { xs: 10.5, sm: 12.5 }, borderRadius: '8px',
+                                whiteSpace: 'nowrap',
                                 boxShadow: buttonShadow,
                                 px: 2, letterSpacing: '0.01em',
                                 '&:hover': {
