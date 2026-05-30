@@ -1,11 +1,21 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
     MaterialReactTable,
     useMaterialReactTable,
+    MRT_GlobalFilterTextField,
+    MRT_ToggleFiltersButton,
+    MRT_ShowHideColumnsButton,
+    MRT_ToggleDensePaddingButton,
+    MRT_ToggleFullScreenButton,
+    MRT_ToolbarAlertBanner,
+    MRT_LinearProgressBar,
 } from 'material-react-table';
-import { Box } from '@mui/material';
-import {alpha, useTheme} from '@mui/material/styles';
+import { Box, IconButton, TextField, useMediaQuery } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import SearchIcon from '@mui/icons-material/Search';
+import CloseIcon from '@mui/icons-material/Close';
 import { MRT_Localization_ES } from 'material-react-table/locales/es';
+import { headerSurfaceSx } from '../theme/sxStyles';
 
 export default function TableBase({
                                       columns,
@@ -31,21 +41,17 @@ export default function TableBase({
                                       tableOptions = {},
                                   }) {
     const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
     const stableColumns = useMemo(() => columns, [columns]);
     const tableOptionsState = tableOptions.state ?? {};
     const tableOptionsInitialState = tableOptions.initialState ?? {};
 
-    const isDark = theme.palette.mode === 'dark';
-
-    const surfaceElevated = isDark
-        ? alpha('#ffffff', 0.04)
-        : alpha('#000000', 0.015);
-
     const mergedState = {
         ...tableOptionsState,
         isLoading: loading,
-        showLoadingOverlay: loading,
+        showLoadingOverlay: false,
         showProgressBars: loading,
         showAlertBanner: !!error,
         ...(enableRowSelection && rowSelection != null ? { rowSelection } : {}),
@@ -114,17 +120,17 @@ export default function TableBase({
         localization: MRT_Localization_ES,
 
         mrtTheme: (muiTheme) => ({
-            baseBackgroundColor: muiTheme.palette.background.default,
+            baseBackgroundColor: muiTheme.palette.background.paperWarm,
         }),
 
         muiTableProps: {
-            sx: { backgroundColor: 'background.default' },
+            sx: { backgroundColor: 'background.paperWarm' },
         },
 
         muiTablePaperProps: {
             elevation: 0,
             sx: {
-                backgroundColor: 'background.default',
+                backgroundColor: 'background.paperWarm',
                 border: '1px solid',
                 borderColor: 'divider',
                 borderRadius: `${theme.shape.borderRadius}px`,
@@ -139,27 +145,101 @@ export default function TableBase({
             },
         },
 
-        muiTopToolbarProps: {
-            sx: { backgroundColor: 'background.paper' },
+        renderTopToolbar: ({ table }) => {
+            const toolbarSx = (t) => ({ ...headerSurfaceSx(t), position: 'relative' });
+            const actionIcons = (
+                <>
+                    {enableColumnFilters && <MRT_ToggleFiltersButton table={table} />}
+                    {enableHiding && <MRT_ShowHideColumnsButton table={table} />}
+                    {enableDensityToggle && <MRT_ToggleDensePaddingButton table={table} />}
+                    {enableFullScreenToggle && <MRT_ToggleFullScreenButton table={table} />}
+                </>
+            );
+            if (isMobile && isMobileSearchOpen) {
+                return (
+                    <Box sx={toolbarSx}>
+                        <MRT_LinearProgressBar isTopToolbar table={table} />
+                        <Box sx={{ display: 'flex', flexDirection: 'column', p: 1, gap: 1 }}>
+                            <TextField
+                                autoFocus
+                                fullWidth
+                                size="small"
+                                variant="outlined"
+                                placeholder="Buscar..."
+                                value={table.getState().globalFilter ?? ''}
+                                onChange={(e) => table.setGlobalFilter(e.target.value)}
+                                slotProps={{
+                                    input: {
+                                        endAdornment: (
+                                            <IconButton
+                                                size="small"
+                                                edge="end"
+                                                onClick={() => {
+                                                    table.setGlobalFilter('');
+                                                    setIsMobileSearchOpen(false);
+                                                }}
+                                            >
+                                                <CloseIcon fontSize="small" />
+                                            </IconButton>
+                                        ),
+                                    },
+                                }}
+                            />
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                {actionIcons}
+                            </Box>
+                        </Box>
+                        <MRT_ToolbarAlertBanner stackAlertBanner table={table} />
+                    </Box>
+                );
+            }
+            if (isMobile) {
+                return (
+                    <Box sx={toolbarSx}>
+                        <MRT_LinearProgressBar isTopToolbar table={table} />
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', px: 1, py: 0.5 }}>
+                            {enableGlobalFilter && (
+                                <IconButton size="small" onClick={() => setIsMobileSearchOpen(true)}>
+                                    <SearchIcon fontSize="small" />
+                                </IconButton>
+                            )}
+                            {actionIcons}
+                        </Box>
+                        <MRT_ToolbarAlertBanner stackAlertBanner table={table} />
+                    </Box>
+                );
+            }
+            return (
+                <Box sx={toolbarSx}>
+                    <MRT_LinearProgressBar isTopToolbar table={table} />
+                    <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 0.5 }}>
+                        {enableGlobalFilter && <MRT_GlobalFilterTextField table={table} />}
+                        <Box sx={{ ml: 'auto', display: 'flex' }}>
+                            {actionIcons}
+                        </Box>
+                    </Box>
+                    <MRT_ToolbarAlertBanner stackAlertBanner table={table} />
+                </Box>
+            );
         },
 
         muiBottomToolbarProps: {
-            sx: { backgroundColor: 'background.paper' },
+            sx: (t) => ({ ...headerSurfaceSx(t) }),
         },
 
         muiTableHeadCellProps: {
-            sx: {
-                backgroundColor: 'background.paper',
+            sx: (t) => ({
+                ...headerSurfaceSx(t),
                 fontWeight: 600,
                 fontSize: '0.9rem',
                 border: 'none',
                 '&:focus, &:focus-within': { outline: 'none' },
-            },
+            }),
         },
 
         muiTableBodyCellProps: {
             sx: {
-                backgroundColor: 'background.default',
+                backgroundColor: 'background.paperWarm',
                 fontSize: '0.9rem',
                 borderTop: '1px solid',
                 borderTopColor: 'divider',
@@ -168,17 +248,20 @@ export default function TableBase({
         },
 
         muiTableBodyRowProps: {
-            sx: {
-                backgroundColor: 'background.default',
+            sx: (t) => ({
+                backgroundColor: 'background.paperWarm',
                 '&:hover td': { backgroundColor: 'action.hover' },
                 '&:last-of-type td': {
                     borderBottom: '1px solid',
                     borderBottomColor: 'divider',
                 },
-                '&:nth-of-type(odd) td': {
-                    backgroundColor: surfaceElevated,
+                '&:nth-of-type(even) td': {
+                    backgroundColor: 'rgba(0,0,0,0.015)',
+                    ...t.applyStyles('dark', {
+                        backgroundColor: 'rgba(255,255,255,0.04)',
+                    }),
                 },
-            },
+            }),
         },
 
         muiDetailPanelProps: {
