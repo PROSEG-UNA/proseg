@@ -11,7 +11,7 @@ export function DashboardLayout({ children }) {
   const marginLeft = !isMediumOrDown ? (isMinimized ? '80px' : '280px') : '0px';
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
       <Box sx={{ display: 'flex', flex: 1 }}>
         {!isMediumOrDown && <Sidebar />}
 

@@ -96,7 +96,7 @@ function PageShell({children}) {
     return (
         <Box
             sx={{
-                minHeight: '100vh',
+                minHeight: '100dvh',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -345,7 +345,7 @@ export function SetPasswordPage() {
     if (tokenValid === null) {
         return (
             <Box sx={{
-                minHeight: '100vh',
+                minHeight: '100dvh',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
