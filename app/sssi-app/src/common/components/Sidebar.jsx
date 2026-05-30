@@ -30,19 +30,7 @@ import { useAuth } from '../../features/auth/hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/permissions';
 import '../css/Sidebar.css';
-
-const panelSurfaceSx = (t) => ({
-    background: `
-        radial-gradient(ellipse 80% 40% at 50% 0%, hsla(0, 70%, 55%, 0.05) 0%, transparent 70%),
-        linear-gradient(180deg, hsl(220, 30%, 99%) 0%, hsl(220, 28%, 97%) 100%)
-    `,
-    ...t.applyStyles('dark', {
-        background: `
-            radial-gradient(ellipse 80% 40% at 50% 0%, hsla(0, 65%, 45%, 0.1) 0%, transparent 70%),
-            linear-gradient(180deg, hsl(228, 16%, 10%) 0%, hsl(228, 16%, 7%) 100%)
-        `,
-    }),
-});
+import { panelSurfaceSx } from '../theme/sxStyles';
 
 const neutralHoverSx = (t) => ({
     bgcolor: 'hsla(220, 20%, 50%, 0.05)',
@@ -197,11 +185,21 @@ export function Sidebar() {
     const resolvedMode = mode === 'system' ? systemMode : mode;
 
     const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
+    const [showExpandedContent, setShowExpandedContent] = useState(!isMinimized);
 
     useEffect(() => {
         if (isMediumOrDown) setIsMinimized(true);
         else setIsMinimized(false);
     }, [isMediumOrDown, setIsMinimized]);
+
+    useEffect(() => {
+        if (isMinimized) {
+            setShowExpandedContent(false);
+            return;
+        }
+        const timer = setTimeout(() => setShowExpandedContent(true), 270);
+        return () => clearTimeout(timer);
+    }, [isMinimized]);
 
     const toggleMenu = (menu) => setExpandedMenu(expandedMenu === menu ? null : menu);
     const isActive = (path) => location.pathname === path;
@@ -277,9 +275,8 @@ export function Sidebar() {
                 overflow: 'hidden',
                 color: 'text.primary',
                 transition: 'width 0.3s ease-in-out',
-                ...panelSurfaceSx(t),
                 borderRight: '1px solid',
-                borderColor: 'divider',
+                ...panelSurfaceSx(t),
             })}
         >
             <Box
@@ -329,7 +326,7 @@ export function Sidebar() {
                 </IconButton>
             </Box>
 
-            {!isMinimized && (
+            {showExpandedContent && (
                 <Box
                     className="sidebar-nav"
                     sx={{ position: 'relative', zIndex: 1, flex: 1, overflowY: 'auto', p: 0 }}
@@ -434,7 +431,7 @@ export function Sidebar() {
                     justifyContent: 'center',
                 }}
             >
-                {isMinimized ? (
+                {!showExpandedContent ? (
                     <Tooltip title="Cerrar Sesión" placement="right" arrow>
                         <IconButton
                             onClick={handleLogout}

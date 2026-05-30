@@ -1,11 +1,26 @@
-export const surfaceSx = (t) => ({
-  background: 'hsla(220, 30%, 100%, 0.85)',
+export const headerSurfaceSx = (t, { gradient = false } = {}) => ({
+  background: 'hsla(220, 20%, 99%, 0.85)',
+  boxShadow: '0 2px 8px rgba(100, 108, 130, 0.10)',
   ...t.applyStyles('dark', {
-    background: `
-      radial-gradient(ellipse 70% 120% at 50% -10%, rgba(196, 30, 58, 0.06) 0%, transparent 65%),
-      linear-gradient(180deg, rgba(30, 12, 15, 0.95) 0%, rgba(20, 10, 12, 0.92) 100%)
-    `,
-    boxShadow: '0 1px 0 rgba(255,255,255,0.03)',
-    borderColor: 'rgba(255,255,255,0.06)',
+    background: gradient
+      ? `linear-gradient(180deg, rgb(18, 17, 18) 0%, rgb(13, 11, 13) 100%)`
+      : 'rgb(18, 17, 18)',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.4)',
+  }),
+});
+
+export const panelSurfaceSx = (t, { gradient = false } = {}) => ({
+  background: gradient
+    ? `
+        radial-gradient(ellipse 80% 40% at 50% 0%, hsla(0, 70%, 55%, 0.05) 0%, transparent 70%),
+        linear-gradient(180deg, hsl(220, 20%, 99%) 0%, hsl(220, 18%, 97%) 100%)
+      `
+    : 'hsl(220, 20%, 99%)',
+  borderColor: 'divider',
+  ...t.applyStyles('dark', {
+    background: gradient
+      ? `linear-gradient(180deg, rgb(23, 21, 22) 0%, rgb(19, 16, 17) 100%)`
+      : 'rgb(23, 21, 22)',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   }),
 });
