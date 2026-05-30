@@ -43,6 +43,7 @@ export function useFormValidation(initialFormData, fieldNames = []) {
   };
 
   const validateForm = () => {
+    setTouched(prev => ({ ...prev, ...Object.fromEntries(fieldNames.map(f => [f, true])) }));
     const newErrors = {};
     let isFormValid = true;
 

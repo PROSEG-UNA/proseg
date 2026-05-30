@@ -109,6 +109,12 @@ function ForgotPasswordStep({ onSent }) {
             '&.Mui-focused fieldset': { borderColor: accentColor },
         },
         '& .MuiInputLabel-root.Mui-focused': { color: accentColor },
+        '& .MuiInputBase-input': { color: 'text.primary' },
+        '[data-mui-color-scheme="dark"] &': {
+            '& .MuiFormHelperText-root.Mui-error': { color: 'hsl(220, 20%, 65%)' },
+            '& .MuiInputLabel-root.Mui-error':     { color: 'hsl(220, 20%, 65%)' },
+            '& .MuiFormLabel-asterisk.Mui-error':  { color: 'hsl(220, 20%, 65%)' },
+        },
     };
 
     const handleSubmit = async () => {
@@ -338,6 +344,12 @@ function ResetPasswordForm({ token }) {
             '&.Mui-focused fieldset': { borderColor: accentColor },
         },
         '& .MuiInputLabel-root.Mui-focused': { color: accentColor },
+        '& .MuiInputBase-input': { color: 'text.primary' },
+        '[data-mui-color-scheme="dark"] &': {
+            '& .MuiFormHelperText-root.Mui-error': { color: 'hsl(220, 20%, 65%)' },
+            '& .MuiInputLabel-root.Mui-error':     { color: 'hsl(220, 20%, 65%)' },
+            '& .MuiFormLabel-asterisk.Mui-error':  { color: 'hsl(220, 20%, 65%)' },
+        },
     };
 
     const handleSubmit = async () => {
@@ -407,30 +419,32 @@ function ResetPasswordForm({ token }) {
                         </Alert>
                     )}
 
-                    <Box sx={{ position: 'relative', mb: 1.5 }}>
-                        <TextField
-                            label="Nueva contraseña"
-                            type={showPwd ? 'text' : 'password'}
-                            value={password}
-                            onChange={e => setPassword(e.target.value)}
-                            fullWidth size="small"
-                            sx={{ ...fieldSx, '& .MuiOutlinedInput-input': { paddingRight: '40px' } }}
-                        />
-                        <IconButton
-                            onClick={() => setShowPwd(p => !p)}
-                            tabIndex={-1}
-                            aria-label={showPwd ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                            size="small"
-                            sx={{
-                                position: 'absolute', right: 8, top: '50%',
-                                transform: 'translateY(-50%)',
-                                color: 'text.secondary', p: 0.5,
-                                '&:hover': { color: accentColor, bgcolor: 'transparent' },
-                            }}
-                        >
-                            {showPwd ? <VisibilityOff sx={{ fontSize: 18 }} /> : <Visibility sx={{ fontSize: 18 }} />}
-                        </IconButton>
-                    </Box>
+                    <TextField
+                        label="Nueva contraseña"
+                        type={showPwd ? 'text' : 'password'}
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        fullWidth size="small"
+                        helperText=" "
+                        sx={{ ...fieldSx, mb: 0.5 }}
+                        slotProps={{
+                            input: {
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <IconButton
+                                            onClick={() => setShowPwd(p => !p)}
+                                            tabIndex={-1}
+                                            aria-label={showPwd ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                            edge="end" size="small"
+                                            sx={{ color: 'text.secondary', p: 0.5, '&:hover': { color: accentColor, bgcolor: 'transparent' } }}
+                                        >
+                                            {showPwd ? <VisibilityOff sx={{ fontSize: 18 }} /> : <Visibility sx={{ fontSize: 18 }} />}
+                                        </IconButton>
+                                    </InputAdornment>
+                                ),
+                            },
+                        }}
+                    />
 
                     {password && (
                         <Box sx={{ mb: 1.5 }}>
@@ -460,38 +474,38 @@ function ResetPasswordForm({ token }) {
                         </Box>
                     )}
 
-                    <Box sx={{ position: 'relative', mb: 2 }}>
-                        <TextField
-                            label="Confirmar contraseña"
-                            type={showCfm ? 'text' : 'password'}
-                            value={confirm}
-                            onChange={e => setConfirm(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-                            fullWidth size="small"
-                            sx={{ ...fieldSx, '& .MuiOutlinedInput-input': { paddingRight: '40px' } }}
-                            error={mismatch}
-                            helperText={
-                                mismatch ? 'Las contraseñas no coinciden' :
-                                    passwordsMatch ? '✓ Las contraseñas coinciden' : ''
-                            }
-                            FormHelperTextProps={{ sx: { color: passwordsMatch ? '#059669' : undefined, fontWeight: 600 } }}
-                        />
-                        <IconButton
-                            onClick={() => setShowCfm(p => !p)}
-                            tabIndex={-1}
-                            aria-label={showCfm ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                            size="small"
-                            sx={{
-                                position: 'absolute', right: 8,
-                                top: (mismatch || passwordsMatch) ? 'calc(50% - 10px)' : '50%',
-                                transform: 'translateY(-50%)',
-                                color: 'text.secondary', p: 0.5,
-                                '&:hover': { color: accentColor, bgcolor: 'transparent' },
-                            }}
-                        >
-                            {showCfm ? <VisibilityOff sx={{ fontSize: 18 }} /> : <Visibility sx={{ fontSize: 18 }} />}
-                        </IconButton>
-                    </Box>
+                    <TextField
+                        label="Confirmar contraseña"
+                        type={showCfm ? 'text' : 'password'}
+                        value={confirm}
+                        onChange={e => setConfirm(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+                        fullWidth size="small"
+                        sx={{ ...fieldSx, mb: 1 }}
+                        error={mismatch}
+                        helperText={
+                            mismatch ? 'Las contraseñas no coinciden' :
+                            passwordsMatch ? '✓ Las contraseñas coinciden' : ' '
+                        }
+                        slotProps={{
+                            formHelperText: { sx: { color: passwordsMatch ? '#059669' : undefined, fontWeight: 600 } },
+                            input: {
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <IconButton
+                                            onClick={() => setShowCfm(p => !p)}
+                                            tabIndex={-1}
+                                            aria-label={showCfm ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                            edge="end" size="small"
+                                            sx={{ color: 'text.secondary', p: 0.5, '&:hover': { color: accentColor, bgcolor: 'transparent' } }}
+                                        >
+                                            {showCfm ? <VisibilityOff sx={{ fontSize: 18 }} /> : <Visibility sx={{ fontSize: 18 }} />}
+                                        </IconButton>
+                                    </InputAdornment>
+                                ),
+                            },
+                        }}
+                    />
 
                     <Box sx={{
                         p: 1.75, mb: 2.5,
