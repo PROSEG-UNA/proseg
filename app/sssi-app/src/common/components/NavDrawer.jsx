@@ -26,19 +26,7 @@ import ShieldIcon from '@mui/icons-material/Shield';
 import { useColorScheme } from '@mui/material/styles';
 import { usePermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/permissions';
-
-const panelSurfaceSx = (t) => ({
-  background: `
-    radial-gradient(ellipse 80% 40% at 50% 0%, hsla(0, 70%, 55%, 0.05) 0%, transparent 70%),
-    linear-gradient(180deg, hsl(220, 30%, 99%) 0%, hsl(220, 28%, 97%) 100%)
-  `,
-  ...t.applyStyles('dark', {
-    background: `
-      radial-gradient(ellipse 80% 40% at 50% 0%, hsla(0, 65%, 45%, 0.1) 0%, transparent 70%),
-      linear-gradient(180deg, hsl(228, 16%, 10%) 0%, hsl(228, 16%, 7%) 100%)
-    `,
-  }),
-});
+import { panelSurfaceSx } from '../theme/sxStyles';
 
 const iconBoxSx = (t, { active = false } = {}) => ({
   width: 34, height: 34, mr: 1.5,
@@ -217,7 +205,6 @@ export function NavDrawer({ open, onClose }) {
             width: 280,
             border: 'none',
             borderRight: '1px solid',
-            borderColor: 'divider',
             position: 'relative',
             overflow: 'hidden',
             color: 'text.primary',

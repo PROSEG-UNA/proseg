@@ -5,13 +5,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import { useAuth } from '../../features/auth/hooks/useAuth';
-
-const surfaceSx = (t) => ({
-  background: 'hsla(220, 30%, 100%, 0.85)',
-  ...t.applyStyles('dark', {
-    background: 'linear-gradient(180deg, hsla(228, 16%, 11%, 0.85) 0%, hsla(228, 16%, 9%, 0.85) 100%)',
-  }),
-});
+import { headerSurfaceSx as surfaceSx } from '../theme/sxStyles';
 
 const iconButtonSx = (t) => ({
   color: 'text.secondary',
@@ -54,8 +48,6 @@ export function Header({ title, onMenuClick, navButtons = [] }) {
         ...surfaceSx(t),
         backdropFilter: 'blur(14px) saturate(140%)',
         WebkitBackdropFilter: 'blur(14px) saturate(140%)',
-        borderBottom: '1px solid',
-        borderColor: 'divider',
       })}
     >
       <Toolbar sx={{ position: 'relative', zIndex: 1, gap: 0.5, minHeight: { xs: 60, sm: 64 } }}>

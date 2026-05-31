@@ -7,11 +7,11 @@ import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx'
 import DialogModal from '../../../common/components/DialogModal.jsx';
 import { fetchRoles } from '../services/rolesService';
 import { assignSingleRoleToUser, fetchRolesByUserId } from '../services/usersService';
-import { getFriendlyApiErrorMessage } from '../../../common/utils/index.js';
+import { getFriendlyApiErrorMessage, formatRoleName } from '../../../common/utils/index.js';
 
 const roleColumns = [
-    { accessorKey: 'name',        header: 'Rol',         size: 180, grow: true },
-    { accessorKey: 'description', header: 'Descripción', size: 260, grow: 2   },
+    { accessorKey: 'name', header: 'Rol', size: 180, grow: true, Cell: ({ cell }) => formatRoleName(cell.getValue()) },
+    { accessorKey: 'description', header: 'Descripción', size: 260, grow: 2 },
 ];
 
 export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
@@ -76,7 +76,7 @@ export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
                         checked={selectedRoleId === row.original.id}
                         onChange={() => setSelectedRoleId(row.original.id)}
                         value={row.original.id}
-                        inputProps={{ 'aria-label': `Seleccionar rol ${row.original.name}` }}
+                        inputProps={{ 'aria-label': `Seleccionar rol ${formatRoleName(row.original.name)}` }}
                     />
                 ),
                 enableColumnFilter: false,

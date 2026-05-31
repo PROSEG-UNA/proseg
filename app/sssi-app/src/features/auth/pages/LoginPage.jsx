@@ -6,6 +6,7 @@ import {
     Typography,
     Link,
     IconButton,
+    InputAdornment,
     useTheme,
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -59,6 +60,12 @@ export function LoginPage() {
             },
         },
         '& .MuiInputLabel-root.Mui-focused': { color: accentColor },
+        '& .MuiInputBase-input': { color: 'text.primary' },
+        '[data-mui-color-scheme="dark"] &': {
+            '& .MuiFormHelperText-root.Mui-error': { color: 'hsl(220, 20%, 65%)' },
+            '& .MuiInputLabel-root.Mui-error': { color: 'hsl(220, 20%, 65%)' },
+            '& .MuiFormLabel-asterisk.Mui-error': { color: 'hsl(220, 20%, 65%)' },
+        },
     };
 
     const handleSubmit = (e) => {
@@ -91,7 +98,9 @@ export function LoginPage() {
                 loading={loading}
                 footerLeft={
                     <Typography variant="body2" sx={{ fontSize: 12, color: 'text.secondary' }}>
-                        ¿No estás registrado?{' '}
+                        ¿No estás registrado?
+                        <Box component="br" sx={{ display: { sm: 'none' } }} />
+                        <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{' '}</Box>
                         <Link
                             component={RouterLink}
                             to="/registro"
@@ -115,6 +124,7 @@ export function LoginPage() {
                 }}
             >
                 <Box component="form" onSubmit={handleSubmit} sx={{ px: 4, pt: 3, pb: 2 }}>
+                    <button type="submit" style={{ display: 'none' }} tabIndex={-1} />
                     <Typography sx={{
                         fontSize: 10.5, fontWeight: 800, color: 'text.disabled',
                         letterSpacing: '0.08em', textTransform: 'uppercase', mb: 1.5,
@@ -135,51 +145,51 @@ export function LoginPage() {
                         variant="outlined"
                         required
                         disabled={loading}
+                        touched={true}
                         error={touched.identifier && !!errors.identifier}
-                        helperText={touched.identifier && errors.identifier}
-                        sx={{ ...fieldSx, mb: 1.5 }}
+                        helperText={(touched.identifier && errors.identifier) || ' '}
+                        sx={{ ...fieldSx, mb: 1 }}
                     />
 
-                    <Box sx={{ position: 'relative', mb: 1 }}>
-                        <TextField
-                            fullWidth
-                            label="Contraseña"
-                            name="loginPassword"
-                            type={showPassword ? 'text' : 'password'}
-                            value={formData.loginPassword}
-                            onChange={handleChange}
-                            onBlur={handleBlur}
-                            size="small"
-                            variant="outlined"
-                            required
-                            disabled={loading}
-                            error={hasPasswordError}
-                            helperText={hasPasswordError ? errors.loginPassword : ''}
-                            sx={{
-                                ...fieldSx,
-                                '& .MuiOutlinedInput-input': { paddingRight: '40px' },
-                            }}
-                        />
-                        <IconButton
-                            onClick={() => setShowPassword((p) => !p)}
-                            tabIndex={-1}
-                            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                            size="small"
-                            sx={{
-                                position: 'absolute',
-                                right: 8,
-                                top: hasPasswordError ? 'calc(50% - 10px)' : '50%',
-                                transform: 'translateY(-50%)',
-                                color: 'text.secondary',
-                                p: 0.5,
-                                '&:hover': { color: accentColor, bgcolor: 'transparent' },
-                            }}
-                        >
-                            {showPassword
-                                ? <VisibilityOffIcon sx={{ fontSize: 18 }} />
-                                : <VisibilityIcon sx={{ fontSize: 18 }} />}
-                        </IconButton>
-                    </Box>
+                    <TextField
+                        fullWidth
+                        label="Contraseña"
+                        name="loginPassword"
+                        type={showPassword ? 'text' : 'password'}
+                        value={formData.loginPassword}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        size="small"
+                        variant="outlined"
+                        required
+                        disabled={loading}
+                        error={hasPasswordError}
+                        helperText={hasPasswordError ? errors.loginPassword : ' '}
+                        sx={fieldSx}
+                        slotProps={{
+                            input: {
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <IconButton
+                                            onClick={() => setShowPassword((p) => !p)}
+                                            tabIndex={-1}
+                                            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                            edge="end"
+                                            size="small"
+                                            sx={{
+                                                color: 'text.secondary',
+                                                '&:hover': { color: accentColor, bgcolor: 'transparent' },
+                                            }}
+                                        >
+                                            {showPassword
+                                                ? <VisibilityOffIcon sx={{ fontSize: 18 }} />
+                                                : <VisibilityIcon sx={{ fontSize: 18 }} />}
+                                        </IconButton>
+                                    </InputAdornment>
+                                ),
+                            },
+                        }}
+                    />
 
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2.5 }}>
                         <Link

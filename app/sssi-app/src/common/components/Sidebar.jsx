@@ -19,7 +19,6 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import MenuIcon from '@mui/icons-material/Menu';
-import BuildIcon from '@mui/icons-material/Build';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
@@ -30,22 +29,12 @@ import { SidebarContext } from '../context/SidebarContext';
 import { useAuth } from '../../features/auth/hooks/useAuth';
 import { PERMISSIONS } from '../constants/permissions';
 import '../css/Sidebar.css';
+import { panelSurfaceSx } from '../theme/sxStyles';
 import {usePermissions} from "../hooks/index.js";
 import BusinessIcon from '@mui/icons-material/Business';
 import ConstructionIcon from '@mui/icons-material/Construction';
+import BuildIcon from '@mui/icons-material/Build';
 
-const panelSurfaceSx = (t) => ({
-    background: `
-        radial-gradient(ellipse 80% 40% at 50% 0%, hsla(0, 70%, 55%, 0.05) 0%, transparent 70%),
-        linear-gradient(180deg, hsl(220, 30%, 99%) 0%, hsl(220, 28%, 97%) 100%)
-    `,
-    ...t.applyStyles('dark', {
-        background: `
-            radial-gradient(ellipse 80% 40% at 50% 0%, hsla(0, 65%, 45%, 0.1) 0%, transparent 70%),
-            linear-gradient(180deg, hsl(228, 16%, 10%) 0%, hsl(228, 16%, 7%) 100%)
-        `,
-    }),
-});
 
 const neutralHoverSx = (t) => ({
     bgcolor: 'hsla(220, 20%, 50%, 0.05)',
@@ -200,11 +189,21 @@ export function Sidebar() {
     const resolvedMode = mode === 'system' ? systemMode : mode;
 
     const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
+    const [showExpandedContent, setShowExpandedContent] = useState(!isMinimized);
 
     useEffect(() => {
         if (isMediumOrDown) setIsMinimized(true);
         else setIsMinimized(false);
     }, [isMediumOrDown, setIsMinimized]);
+
+    useEffect(() => {
+        if (isMinimized) {
+            setShowExpandedContent(false);
+            return;
+        }
+        const timer = setTimeout(() => setShowExpandedContent(true), 270);
+        return () => clearTimeout(timer);
+    }, [isMinimized]);
 
     const toggleMenu = (menu) => setExpandedMenu(expandedMenu === menu ? null : menu);
     const isActive = (path) => location.pathname === path;
@@ -264,7 +263,6 @@ export function Sidebar() {
         ? [{ key: 'assets', icon: AppsIcon, label: 'Activos', path: '/inventario/activos' }]
         : [];
 
-    // Split mantenimiento into submodules: Empresas and Solicitudes
     const maintenanceItems = canViewMaintenanceSection
         ? [
             { key: 'companies', icon: BusinessIcon, label: 'Empresas', path: '/mantenimiento/empresas' },
@@ -304,9 +302,8 @@ export function Sidebar() {
                 overflow: 'hidden',
                 color: 'text.primary',
                 transition: 'width 0.3s ease-in-out',
-                ...panelSurfaceSx(t),
                 borderRight: '1px solid',
-                borderColor: 'divider',
+                ...panelSurfaceSx(t),
             })}
         >
             <Box
@@ -356,7 +353,7 @@ export function Sidebar() {
                 </IconButton>
             </Box>
 
-            {!isMinimized && (
+            {showExpandedContent && (
                 <Box
                     className="sidebar-nav"
                     sx={{ position: 'relative', zIndex: 1, flex: 1, overflowY: 'auto', p: 0 }}
@@ -495,7 +492,7 @@ export function Sidebar() {
                     justifyContent: 'center',
                 }}
             >
-                {isMinimized ? (
+                {!showExpandedContent ? (
                     <Tooltip title="Cerrar Sesión" placement="right" arrow>
                         <IconButton
                             onClick={handleLogout}

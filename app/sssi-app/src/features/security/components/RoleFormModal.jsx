@@ -18,6 +18,7 @@ import DialogModal from '../../../common/components/DialogModal.jsx';
 import { useRoleFormData } from '../hooks/useRoleFormData';
 import { ValidatedTextField } from '../../../common/components/ValidatedTextField';
 import { getValidationRule, validateField } from '../../../common/utils/validationRegex';
+import { formatRoleName } from '../../../common/utils/index.js';
 
 const DOMAIN_META = {
     Usuarios: {
@@ -194,7 +195,7 @@ function PrivilegeRow({ privilege, checked, onChange, domainColor }) {
             />
             <Box>
                 <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: 'text.primary', lineHeight: 1.3, fontFamily: '"Roboto Mono", monospace', letterSpacing: '0.01em' }}>
-                    {privilege.name}
+                    {formatRoleName(privilege.name)}
                 </Typography>
                 {privilege.description && (
                     <Typography sx={{ fontSize: 11, color: 'text.secondary', mt: 0.25, lineHeight: 1.45 }}>
