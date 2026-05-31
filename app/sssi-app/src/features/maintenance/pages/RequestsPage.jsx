@@ -1,4 +1,4 @@
-import {usePermissions} from "../../../common/hooks/index.js";
+import { usePermissions } from '../../../common/hooks/index.js';
 
 import { useEffect, useMemo, useState } from 'react';
 import { Box, Container, Tab, Tabs, Typography, useMediaQuery, useTheme } from '@mui/material';
@@ -6,6 +6,7 @@ import AddIcon from '@mui/icons-material/Add';
 import ConstructionIcon from '@mui/icons-material/Construction';
 import MiscellaneousServicesIcon from '@mui/icons-material/MiscellaneousServices';
 import { Header } from '../../../common/components/Header';
+import { PageHeader } from '../../../common/components/index.js';
 import { NavDrawer } from '../../../common/components/NavDrawer';
 import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
 import { PrimaryButton } from '../../../common/components/PrimaryButton.jsx';
@@ -73,16 +74,15 @@ export default function RequestsPage() {
             <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
             <Container maxWidth="xl" sx={{ pb: 3, pt: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
-                    <Box>
-                        <Typography variant="h4" sx={{ fontWeight: 800, color: 'primary.icon', fontSize: { xs: '1.55rem', sm: '1.9rem' } }}>
-                            Solicitudes
-                        </Typography>
-                        <Typography sx={{ color: 'text.secondary', fontSize: 14 }}>
-                            Gestión de solicitudes y técnicos.
-                        </Typography>
-                    </Box>
-                </Box>
+                <PageHeader
+                    title="Solicitudes"
+                    description="Gestión de solicitudes y técnicos."
+                    action={currentTab?.key === 'requests' && hasPermission(PERMISSIONS.MAINTENANCE.REQUESTS.MANAGE) ? (
+                        <PrimaryButton startIcon={<AddIcon />} onClick={() => openCreateRequest('')} sx={{ px: '28px' }}>
+                            Crear
+                        </PrimaryButton>
+                    ) : null}
+                />
 
                 <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 1 }}>
                     <Tabs value={tabIndex} onChange={handleTabChange} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile>
@@ -104,16 +104,6 @@ export default function RequestsPage() {
                 <Box sx={{ pt: 3 }}>
                     {currentTab?.key === 'requests' && (
                         <Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
-                                <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.icon' }}>
-                                    Lista de solicitudes
-                                </Typography>
-                                {hasPermission(PERMISSIONS.MAINTENANCE.REQUESTS.MANAGE) ? (
-                                    <PrimaryButton startIcon={<AddIcon />} onClick={() => openCreateRequest('')} sx={{ px: '28px' }}>
-                                        Crear
-                                    </PrimaryButton>
-                                ) : null}
-                            </Box>
                             <MaintenanceRequestTable
                                 refreshKey={requestsRefresh}
                                 onRefresh={refreshRequests}
