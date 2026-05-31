@@ -1,4 +1,4 @@
-import {usePermissions} from "../../../common/hooks/index.js";
+import { usePermissions } from '../../../common/hooks/index.js';
 
 import { useState, useEffect } from 'react';
 import { Box, Container, Typography, useMediaQuery, useTheme, Tabs, Tab, Button, CircularProgress } from '@mui/material';
@@ -6,6 +6,7 @@ import AddIcon from '@mui/icons-material/Add';
 import DomainOutlinedIcon from '@mui/icons-material/DomainOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import { Header } from '../../../common/components/Header';
+import { PageHeader } from '../../../common/components/index.js';
 import { NavDrawer } from '../../../common/components/NavDrawer';
 import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
 import { PrimaryButton } from '../../../common/components/PrimaryButton.jsx';
@@ -136,16 +137,15 @@ export default function CompaniesPage() {
             <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
             <Container maxWidth="xl" sx={{ pb: 3, pt: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
-                    <Box>
-                        <Typography variant="h4" sx={{ fontWeight: 800, color: 'primary.icon', fontSize: { xs: '1.55rem', sm: '1.9rem' } }}>
-                            Empresas
-                        </Typography>
-                        <Typography sx={{ color: 'text.secondary', fontSize: 14 }}>
-                            Gestión de empresas y usuarios de empresas.
-                        </Typography>
-                    </Box>
-                </Box>
+                <PageHeader
+                    title="Empresas"
+                    description="Gestión de empresas y usuarios de empresas."
+                    action={tabIndex === 0 && hasPermission(PERMISSIONS.MAINTENANCE.COMPANIES.MANAGE) ? (
+                        <PrimaryButton startIcon={<AddIcon />} onClick={openCreateCompany} sx={{ px: '28px' }}>
+                            Crear
+                        </PrimaryButton>
+                    ) : null}
+                />
 
                 <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 1 }}>
                     <Tabs value={tabIndex} onChange={(e, v) => setTabIndex(v)} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile>
@@ -167,16 +167,6 @@ export default function CompaniesPage() {
                 <Box sx={{ pt: 3 }}>
                     {tabIndex === 0 && (
                         <>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
-                                <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.icon' }}>
-                                    Lista de empresas
-                                </Typography>
-                                {hasPermission(PERMISSIONS.MAINTENANCE.COMPANIES.MANAGE) ? (
-                                    <PrimaryButton startIcon={<AddIcon />} onClick={openCreateCompany} sx={{ px: '28px' }}>
-                                        Crear
-                                    </PrimaryButton>
-                                ) : null}
-                            </Box>
                             <CompanyTable
                                 refreshKey={companiesRefresh}
                                 onRefresh={refreshCompanies}
