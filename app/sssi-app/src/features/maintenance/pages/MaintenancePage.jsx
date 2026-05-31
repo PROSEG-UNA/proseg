@@ -9,7 +9,6 @@ import {
     useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import BuildIcon from '@mui/icons-material/Build';
 import BusinessIcon from '@mui/icons-material/Business';
 import ConstructionIcon from '@mui/icons-material/Construction';
 import MiscellaneousServicesIcon from '@mui/icons-material/MiscellaneousServices';
@@ -17,7 +16,7 @@ import { Header } from '../../../common/components/Header';
 import { NavDrawer } from '../../../common/components/NavDrawer';
 import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
 import { PrimaryButton } from '../../../common/components/PrimaryButton.jsx';
-import { usePermissions } from '../../../common/hooks/usePermissions';
+import { usePermissions } from '../../../common/hooks/index.js';
 import { PERMISSIONS } from '../../../common/constants/permissions';
 import CompanyTable from '../components/company/CompanyTable.jsx';
 import CompanyFormModal from '../components/company/CompanyFormModal.jsx';
@@ -113,8 +112,8 @@ export default function MaintenancePage() {
             <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
             <Container maxWidth="xl" sx={{ pb: 3, pt: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
-                    <Box>
+                <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', md: 'center' }, justifyContent: 'space-between', gap: 2, mb: 2, flexDirection: { xs: 'column', md: 'row' } }}>
+                    <Box sx={{ flex: 1 }}>
                         <Typography variant="h4" sx={{ fontWeight: 800, color: 'primary.icon', fontSize: { xs: '1.55rem', sm: '1.9rem' } }}>
                             Mantenimiento
                         </Typography>
@@ -122,6 +121,15 @@ export default function MaintenancePage() {
                             Gestión de empresas, solicitudes y técnicos desde un solo módulo.
                         </Typography>
                     </Box>
+                    {currentTab?.key === 'companies' && hasPermission(PERMISSIONS.MAINTENANCE.COMPANIES.MANAGE) ? (
+                        <PrimaryButton startIcon={<AddIcon />} onClick={openCreateCompany} sx={{ px: '28px' }}>
+                            Crear
+                        </PrimaryButton>
+                    ) : currentTab?.key === 'requests' && hasPermission(PERMISSIONS.MAINTENANCE.REQUESTS.MANAGE) ? (
+                        <PrimaryButton startIcon={<AddIcon />} onClick={() => openCreateRequest('')} sx={{ px: '28px' }}>
+                            Crear
+                        </PrimaryButton>
+                    ) : null}
                 </Box>
 
                 <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 1 }}>
@@ -144,16 +152,9 @@ export default function MaintenancePage() {
                 <Box sx={{ pt: 3 }}>
                     {currentTab?.key === 'companies' && (
                         <Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
-                                <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.icon' }}>
-                                    Lista de empresas
-                                </Typography>
-                                {hasPermission(PERMISSIONS.MAINTENANCE.COMPANIES.MANAGE) ? (
-                                    <PrimaryButton startIcon={<AddIcon />} onClick={openCreateCompany} sx={{ px: '28px' }}>
-                                        Crear
-                                    </PrimaryButton>
-                                ) : null}
-                            </Box>
+                            <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.icon', mb: 2 }}>
+                                Lista de empresas
+                            </Typography>
                             <CompanyTable
                                 refreshKey={companiesRefresh}
                                 onRefresh={refreshCompanies}
@@ -165,16 +166,9 @@ export default function MaintenancePage() {
 
                     {currentTab?.key === 'requests' && (
                         <Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
-                                <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.icon' }}>
-                                    Lista de solicitudes
-                                </Typography>
-                                {hasPermission(PERMISSIONS.MAINTENANCE.REQUESTS.MANAGE) ? (
-                                    <PrimaryButton startIcon={<AddIcon />} onClick={() => openCreateRequest('')} sx={{ px: '28px' }}>
-                                        Crear
-                                    </PrimaryButton>
-                                ) : null}
-                            </Box>
+                            <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.icon', mb: 2 }}>
+                                Lista de solicitudes
+                            </Typography>
                             <MaintenanceRequestTable
                                 refreshKey={requestsRefresh}
                                 onRefresh={refreshRequests}
