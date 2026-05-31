@@ -34,18 +34,6 @@ import {usePermissions} from "../hooks/index.js";
 import BusinessIcon from '@mui/icons-material/Business';
 import ConstructionIcon from '@mui/icons-material/Construction';
 
-const panelSurfaceSx = (t) => ({
-    background: `
-        radial-gradient(ellipse 80% 40% at 50% 0%, hsla(0, 70%, 55%, 0.05) 0%, transparent 70%),
-        linear-gradient(180deg, hsl(220, 30%, 99%) 0%, hsl(220, 28%, 97%) 100%)
-    `,
-    ...t.applyStyles('dark', {
-        background: `
-            radial-gradient(ellipse 80% 40% at 50% 0%, hsla(0, 65%, 45%, 0.1) 0%, transparent 70%),
-            linear-gradient(180deg, hsl(228, 16%, 10%) 0%, hsl(228, 16%, 7%) 100%)
-        `,
-    }),
-});
 
 const neutralHoverSx = (t) => ({
     bgcolor: 'hsla(220, 20%, 50%, 0.05)',
@@ -423,7 +411,7 @@ export function Sidebar() {
                         {showMaintenanceSection ? (
                             <ListItem disablePadding sx={{ display: 'block', borderBottom: '1px solid', borderColor: 'divider' }}>
                                 <NavSection
-                                    icon={BuildIcon}
+                                    icon={ConstructionIcon}
                                     label="Gestión Mantenimiento"
                                     expanded={expandedMenu === 'maintenance'}
                                     onToggle={() => toggleMenu('maintenance')}
@@ -474,7 +462,7 @@ export function Sidebar() {
                     ) : null}
                     {showMaintenanceSection ? (
                         <MiniNavButton
-                            icon={BuildIcon}
+                            icon={ConstructionIcon}
                             title="Gestión Mantenimiento"
                             active={maintenanceActive}
                             onClick={() => { setIsMinimized(false); toggleMenu('maintenance'); }}
