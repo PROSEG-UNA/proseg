@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import {
     MaterialReactTable,
     useMaterialReactTable,
-    MRT_GlobalFilterTextField,
     MRT_ToggleFiltersButton,
     MRT_ShowHideColumnsButton,
     MRT_ToggleDensePaddingButton,
@@ -43,6 +42,7 @@ export default function TableBase({
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+    const [isDesktopSearchOpen, setIsDesktopSearchOpen] = useState(false);
 
     const stableColumns = useMemo(() => columns, [columns]);
     const tableOptionsState = tableOptions.state ?? {};
@@ -213,8 +213,40 @@ export default function TableBase({
                 <Box sx={toolbarSx}>
                     <MRT_LinearProgressBar isTopToolbar table={table} />
                     <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 0.5 }}>
-                        {enableGlobalFilter && <MRT_GlobalFilterTextField table={table} />}
-                        <Box sx={{ ml: 'auto', display: 'flex' }}>
+                        <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center' }}>
+                            {enableGlobalFilter && (
+                                isDesktopSearchOpen ? (
+                                    <TextField
+                                        autoFocus
+                                        size="small"
+                                        variant="outlined"
+                                        placeholder="Buscar..."
+                                        value={table.getState().globalFilter ?? ''}
+                                        onChange={(e) => table.setGlobalFilter(e.target.value)}
+                                        sx={{ width: 250 }}
+                                        slotProps={{
+                                            input: {
+                                                endAdornment: (
+                                                    <IconButton
+                                                        size="small"
+                                                        edge="end"
+                                                        onClick={() => {
+                                                            table.setGlobalFilter('');
+                                                            setIsDesktopSearchOpen(false);
+                                                        }}
+                                                    >
+                                                        <CloseIcon fontSize="small" />
+                                                    </IconButton>
+                                                ),
+                                            },
+                                        }}
+                                    />
+                                ) : (
+                                    <IconButton size="small" onClick={() => setIsDesktopSearchOpen(true)}>
+                                        <SearchIcon fontSize="small" />
+                                    </IconButton>
+                                )
+                            )}
                             {actionIcons}
                         </Box>
                     </Box>

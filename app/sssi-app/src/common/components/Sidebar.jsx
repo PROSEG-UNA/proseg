@@ -33,6 +33,7 @@ import { panelSurfaceSx } from '../theme/sxStyles';
 import {usePermissions} from "../hooks/index.js";
 import BusinessIcon from '@mui/icons-material/Business';
 import ConstructionIcon from '@mui/icons-material/Construction';
+import BuildIcon from '@mui/icons-material/Build';
 
 
 const neutralHoverSx = (t) => ({
@@ -411,7 +412,7 @@ export function Sidebar() {
                         {showMaintenanceSection ? (
                             <ListItem disablePadding sx={{ display: 'block', borderBottom: '1px solid', borderColor: 'divider' }}>
                                 <NavSection
-                                    icon={ConstructionIcon}
+                                    icon={BuildIcon}
                                     label="Gestión Mantenimiento"
                                     expanded={expandedMenu === 'maintenance'}
                                     onToggle={() => toggleMenu('maintenance')}
@@ -462,7 +463,7 @@ export function Sidebar() {
                     ) : null}
                     {showMaintenanceSection ? (
                         <MiniNavButton
-                            icon={ConstructionIcon}
+                            icon={BuildIcon}
                             title="Gestión Mantenimiento"
                             active={maintenanceActive}
                             onClick={() => { setIsMinimized(false); toggleMenu('maintenance'); }}
