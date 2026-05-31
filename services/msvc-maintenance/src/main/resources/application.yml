@@ -1,0 +1,18 @@
+server:
+  port: 8099
+
+spring:
+  application:
+    name: msvc-maintenance
+  config:
+    import: ${SPRING_CONFIG_IMPORT:optional:configserver:http://localhost:8888}
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:76.13.124.126:9094}
+
+api:
+  prefix: /api/v1/maintenance
+
+routes:
+  companies: ${api.prefix}/companies
+  requests: ${api.prefix}/requests
+  technicians: ${api.prefix}/technicians

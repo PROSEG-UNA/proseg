@@ -20,6 +20,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import LogoutIcon from '@mui/icons-material/Logout';
 import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
+import BuildIcon from '@mui/icons-material/Build';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import ShieldIcon from '@mui/icons-material/Shield';
 import { useColorScheme } from '@mui/material/styles';
@@ -158,9 +159,27 @@ export function NavDrawer({ open, onClose }) {
   const canViewUsersSubmodule = hasAnyPermission(userPermissions);
   const canViewRolesSubmodule = hasAnyPermission(rolePermissions);
   const canViewSecuritySection = canViewUsersSubmodule || canViewRolesSubmodule;
+  const canViewMaintenanceSection = hasAnyPermission([
+    PERMISSIONS.MAINTENANCE.COMPANIES.READ,
+    PERMISSIONS.MAINTENANCE.COMPANIES.MANAGE,
+    PERMISSIONS.MAINTENANCE.COMPANIES.DELETE,
+    PERMISSIONS.MAINTENANCE.REQUESTS.READ,
+    PERMISSIONS.MAINTENANCE.REQUESTS.MANAGE,
+    PERMISSIONS.MAINTENANCE.REQUESTS.DELETE,
+    PERMISSIONS.MAINTENANCE.TECHNICIANS.READ,
+    PERMISSIONS.MAINTENANCE.TECHNICIANS.MANAGE,
+    PERMISSIONS.MAINTENANCE.TECHNICIANS.DELETE,
+    PERMISSIONS.MAINTENANCE.COMPANY_USERS.READ,
+    PERMISSIONS.MAINTENANCE.COMPANY_USERS.MANAGE,
+    PERMISSIONS.MAINTENANCE.COMPANY_USERS.DELETE,
+  ]);
 
   const inventoryItems = canViewInventorySection
     ? [{ key: 'assets', icon: AppsIcon, label: 'Activos', path: '/inventario/activos' }]
+    : [];
+
+  const maintenanceItems = canViewMaintenanceSection
+    ? [{ key: 'module', icon: BuildIcon, label: 'Mantenimiento', path: '/mantenimiento' }]
     : [];
 
   const securityItems = canViewSecuritySection
@@ -245,6 +264,26 @@ export function NavDrawer({ open, onClose }) {
                 onToggle={() => toggleMenu('inventory')}
               >
                 {inventoryItems.map((item) => (
+                  <NavLeaf
+                    key={item.key}
+                    icon={item.icon}
+                    label={item.label}
+                    onClick={() => handleNavigation(item.path)}
+                  />
+                ))}
+              </NavSection>
+            </ListItem>
+          ) : null}
+
+          {canViewMaintenanceSection ? (
+            <ListItem disablePadding sx={{ display: 'block' }}>
+              <NavSection
+                icon={BuildIcon}
+                label="Gestión Mantenimiento"
+                expanded={expandedMenu === 'maintenance'}
+                onToggle={() => toggleMenu('maintenance')}
+              >
+                {maintenanceItems.map((item) => (
                   <NavLeaf
                     key={item.key}
                     icon={item.icon}

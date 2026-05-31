@@ -31,6 +31,10 @@ public class MaintenanceTechnicianRequestDto {
 
     @Email(message = "El correo electrónico no es válido")
     @Size(max = 150, message = "El correo electrónico no puede superar los 150 caracteres")
+    @Pattern(
+            regexp = ValidationUtils.EMAIL_REGEX,
+            message = "El correo electrónico contiene caracteres inválidos"
+    )
     private String email;
 
     @Size(max = 50, message = "El teléfono no puede superar los 50 caracteres")
@@ -41,4 +45,8 @@ public class MaintenanceTechnicianRequestDto {
     private String phone;
 
     private boolean leader;
+
+    // Optional: link to an existing system user
+    @Pattern(regexp = "[a-zA-Z0-9-_.]{1,255}", message = "El id de usuario de Keycloak contiene caracteres inválidos")
+    private String keycloakUserId;
 }

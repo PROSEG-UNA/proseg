@@ -103,7 +103,14 @@ const ROLE_PRESETS = [
 ];
 
 const groupPrivilegesByDomain = (privileges) => {
-    const groups = { Usuarios: [], Roles: [], 'Roles de Usuario': [], Inventario: [], Archivos: [] };
+    const groups = {
+        Usuarios: [],
+        Roles: [],
+        'Roles de Usuario': [],
+        Inventario: [],
+        Archivos: [],
+        Mantenimiento: [],
+    };
     privileges.forEach(p => {
         const target = p.domain && groups[p.domain] !== undefined ? p.domain : 'Usuarios';
         groups[target].push(p);

@@ -2,6 +2,20 @@ server:
   port: 8099
 
 spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:https://auth.devbychris.com/realms/sssi-realm}
+      client:
+        registration:
+          keycloak:
+            client-id: msvc-maintenance
+            client-secret: kIaiPowoVB4hYy7MVJnQvdQW8wv4VDuz
+            authorization-grant-type: client_credentials
+        provider:
+          keycloak:
+            token-uri: https://auth.devbychris.com/realms/sssi-realm/protocol/openid-connect/token
   application:
     name: msvc-maintenance
   datasource:
@@ -32,4 +46,5 @@ eureka:
     hostname: ${EUREKA_INSTANCE_HOSTNAME:msvc-maintenance}
   client:
     service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://msvc-eureka:8761/eureka}
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka}
+  

@@ -45,4 +45,67 @@ public class KafkaTopicConfig {
                 .configs(TOPIC_CONFIG)
                 .build();
     }
+
+    @Bean
+    public NewTopic userInvitedTopic() {
+        return TopicBuilder.name(KafkaTopics.USER_INVITED_TOPIC)
+                .partitions(3)
+                .replicas(1)
+                .configs(TOPIC_CONFIG)
+                .build();
+    }
+
+    @Bean
+    public NewTopic managedUserCreatedTopic() {
+        return TopicBuilder.name(KafkaTopics.MANAGED_USER_CREATED_TOPIC)
+                .partitions(3)
+                .replicas(1)
+                .configs(TOPIC_CONFIG)
+                .build();
+    }
+
+    @Bean
+    public NewTopic userPasswordConfiguredTopic() {
+        return TopicBuilder.name(KafkaTopics.USER_PASSWORD_CONFIGURED_TOPIC)
+                .partitions(3)
+                .replicas(1)
+                .configs(TOPIC_CONFIG)
+                .build();
+    }
+
+    @Bean
+    public NewTopic passwordResetRequestedTopic() {
+        return TopicBuilder.name(KafkaTopics.PASSWORD_RESET_REQUESTED_TOPIC)
+                .partitions(3)
+                .replicas(1)
+                .configs(TOPIC_CONFIG)
+                .build();
+    }
+
+    @Bean
+    public NewTopic passwordChangedTopic() {
+        return TopicBuilder.name(KafkaTopics.PASSWORD_CHANGED_TOPIC)
+                .partitions(3)
+                .replicas(1)
+                .configs(TOPIC_CONFIG)
+                .build();
+    }
+
+    @Bean
+    public NewTopic passwordExpiringSoonTopic() {
+        return TopicBuilder.name(KafkaTopics.PASSWORD_EXPIRING_SOON_TOPIC)
+                .partitions(3)
+                .replicas(1)
+                .configs(TOPIC_CONFIG)
+                .build();
+    }
+
+    @Bean
+    public NewTopic passwordExpiredResetRequiredTopic() {
+        return TopicBuilder.name(KafkaTopics.PASSWORD_EXPIRED_RESET_REQUIRED_TOPIC)
+                .partitions(3)
+                .replicas(1)
+                .configs(TOPIC_CONFIG)
+                .build();
+    }
 }

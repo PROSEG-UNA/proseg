@@ -27,10 +27,25 @@ import AppsIcon from '@mui/icons-material/Apps';
 import { useColorScheme } from '@mui/material/styles';
 import { SidebarContext } from '../context/SidebarContext';
 import { useAuth } from '../../features/auth/hooks/useAuth';
-import { usePermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/permissions';
 import '../css/Sidebar.css';
 import { panelSurfaceSx } from '../theme/sxStyles';
+import {usePermissions} from "../hooks/index.js";
+import BusinessIcon from '@mui/icons-material/Business';
+import ConstructionIcon from '@mui/icons-material/Construction';
+
+const panelSurfaceSx = (t) => ({
+    background: `
+        radial-gradient(ellipse 80% 40% at 50% 0%, hsla(0, 70%, 55%, 0.05) 0%, transparent 70%),
+        linear-gradient(180deg, hsl(220, 30%, 99%) 0%, hsl(220, 28%, 97%) 100%)
+    `,
+    ...t.applyStyles('dark', {
+        background: `
+            radial-gradient(ellipse 80% 40% at 50% 0%, hsla(0, 65%, 45%, 0.1) 0%, transparent 70%),
+            linear-gradient(180deg, hsl(228, 16%, 10%) 0%, hsl(228, 16%, 7%) 100%)
+        `,
+    }),
+});
 
 const neutralHoverSx = (t) => ({
     bgcolor: 'hsla(220, 20%, 50%, 0.05)',
@@ -240,9 +255,30 @@ export function Sidebar() {
     const canViewRolesSubmodule = hasAnyPermission(rolePermissions);
 
     const canViewSecuritySection = canViewUsersSubmodule || canViewRolesSubmodule;
+    const canViewMaintenanceSection = hasAnyPermission([
+        PERMISSIONS.MAINTENANCE.COMPANIES.READ,
+        PERMISSIONS.MAINTENANCE.COMPANIES.MANAGE,
+        PERMISSIONS.MAINTENANCE.COMPANIES.DELETE,
+        PERMISSIONS.MAINTENANCE.REQUESTS.READ,
+        PERMISSIONS.MAINTENANCE.REQUESTS.MANAGE,
+        PERMISSIONS.MAINTENANCE.REQUESTS.DELETE,
+        PERMISSIONS.MAINTENANCE.TECHNICIANS.READ,
+        PERMISSIONS.MAINTENANCE.TECHNICIANS.MANAGE,
+        PERMISSIONS.MAINTENANCE.TECHNICIANS.DELETE,
+        PERMISSIONS.MAINTENANCE.COMPANY_USERS.READ,
+        PERMISSIONS.MAINTENANCE.COMPANY_USERS.MANAGE,
+        PERMISSIONS.MAINTENANCE.COMPANY_USERS.DELETE,
+    ]);
 
     const inventoryItems = canViewInventorySection
         ? [{ key: 'assets', icon: AppsIcon, label: 'Activos', path: '/inventario/activos' }]
+        : [];
+
+    const maintenanceItems = canViewMaintenanceSection
+        ? [
+            { key: 'companies', icon: BusinessIcon, label: 'Empresas', path: '/mantenimiento/empresas' },
+            { key: 'requests', icon: ConstructionIcon, label: 'Solicitudes', path: '/mantenimiento/solicitudes' },
+        ]
         : [];
 
     const securityItems = canViewSecuritySection
@@ -255,8 +291,10 @@ export function Sidebar() {
 
     const showInventorySection = canViewInventorySection;
     const showSecuritySection = canViewSecuritySection;
+    const showMaintenanceSection = canViewMaintenanceSection;
 
     const inventoryActive = showInventorySection && inventoryItems.some((item) => isActive(item.path));
+    const maintenanceActive = showMaintenanceSection && maintenanceItems.some((item) => isActive(item.path));
     const securityActive = showSecuritySection && securityItems.some((item) => isActive(item.path));
 
     return (
@@ -381,6 +419,32 @@ export function Sidebar() {
                                 </Collapse>
                             </ListItem>
                         ) : null}
+
+                        {showMaintenanceSection ? (
+                            <ListItem disablePadding sx={{ display: 'block', borderBottom: '1px solid', borderColor: 'divider' }}>
+                                <NavSection
+                                    icon={BuildIcon}
+                                    label="Gestión Mantenimiento"
+                                    expanded={expandedMenu === 'maintenance'}
+                                    onToggle={() => toggleMenu('maintenance')}
+                                    hasActive={maintenanceActive}
+                                />
+                                <Collapse in={expandedMenu === 'maintenance'} timeout={220} unmountOnExit>
+                                    <Box sx={{ py: 0.5 }}>
+                                        {maintenanceItems.map((item) => (
+                                            <NavLeaf
+                                                key={item.key}
+                                                icon={item.icon}
+                                                label={item.label}
+                                                onClick={() => navigate(item.path)}
+                                                active={isActive(item.path)}
+                                            />
+                                        ))}
+                                    </Box>
+                                </Collapse>
+                            </ListItem>
+                        ) : null}
+
                     </List>
                 </Box>
             )}
@@ -406,6 +470,14 @@ export function Sidebar() {
                             title="Gestión Inventarios"
                             active={inventoryActive}
                             onClick={() => { setIsMinimized(false); toggleMenu('inventory'); }}
+                        />
+                    ) : null}
+                    {showMaintenanceSection ? (
+                        <MiniNavButton
+                            icon={BuildIcon}
+                            title="Gestión Mantenimiento"
+                            active={maintenanceActive}
+                            onClick={() => { setIsMinimized(false); toggleMenu('maintenance'); }}
                         />
                     ) : null}
                     {showSecuritySection ? (

@@ -4,7 +4,9 @@ import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.kafka.events.*;
 import com.sssi.common.utils.DateUtils;
 import com.sssi.msvc_email.notificacion.client.AuthClient;
-import com.sssi.msvc_email.notificacion.dto.KeycloakUserDto;
+import com.sssi.msvc_email.notificacion.client.MaintenanceClient;
+import com.sssi.msvc_email.notificacion.dto.CompanyResponseDto;
+import com.sssi.msvc_email.notificacion.dto.KeycloakUserResponseDto;
 import com.sssi.msvc_email.notificacion.model.Email;
 import com.sssi.msvc_email.notificacion.template.impl.*;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,7 @@ public class EmailEventService {
 
     private final EmailService emailService;
     private final AuthClient authClient;
+    private final MaintenanceClient maintenanceClient;
 
     @Value("${app.urls.login:http://localhost:5173/login}")
     private String loginUrl;
@@ -35,8 +38,8 @@ public class EmailEventService {
     private String resetPasswordBaseUrl;
 
     public void sendLoginEmail(UserLoginEvent event) {
-        ApiResponse<KeycloakUserDto> apiResponse = authClient.getUserById(event.getKeycloakUserId());
-        KeycloakUserDto user = apiResponse.getData();
+        ApiResponse<KeycloakUserResponseDto> apiResponse = authClient.getUserById(event.getKeycloakUserId());
+        KeycloakUserResponseDto user = apiResponse.getData();
         String formattedDate = DateUtils.formatReadable(event.getTimestamp());
         GenericEmailTemplate template = GenericEmailTemplate.builder()
                 .userName(user.getFirstName())
@@ -77,8 +80,8 @@ public class EmailEventService {
     }
 
     public void sendApprovalEmails(UserRegisteredEvent event) {
-        ApiResponse<List<KeycloakUserDto>> response = authClient.getUsersByRole("SUPER_ADMINISTRADOR");
-        List<KeycloakUserDto> superAdmins = response.getData();
+        ApiResponse<List<KeycloakUserResponseDto>> response = authClient.getUsersByRole("SUPER_ADMINISTRADOR");
+        List<KeycloakUserResponseDto> superAdmins = response.getData();
         if (superAdmins == null || superAdmins.isEmpty()) {
             log.warn("No se encontraron administradores para notificar registro de: {}", event.getUsername());
             return;
@@ -135,9 +138,9 @@ public class EmailEventService {
     }
 
     public void sendManagedUserCreatedNotificationEmails(ManagedUserCreatedEvent event) {
-        ApiResponse<List<KeycloakUserDto>> response =
+        ApiResponse<List<KeycloakUserResponseDto>> response =
                 authClient.getUsersByRole("SUPER_ADMINISTRADOR");
-        List<KeycloakUserDto> superAdmins = response.getData();
+        List<KeycloakUserResponseDto> superAdmins = response.getData();
         if (superAdmins == null || superAdmins.isEmpty()) {
             log.warn(
                     "No se encontraron administradores para notificar creación del usuario [{}]",
@@ -191,9 +194,9 @@ public class EmailEventService {
     }
 
     public void sendPasswordConfiguredEmail(UserPasswordConfiguredEvent event) {
-        ApiResponse<KeycloakUserDto> apiResponse =
+        ApiResponse<KeycloakUserResponseDto> apiResponse =
                 authClient.getUserById(event.getKeycloakUserId());
-        KeycloakUserDto user = apiResponse.getData();
+        KeycloakUserResponseDto user = apiResponse.getData();
         if (user == null) {
             log.warn(
                     "No se encontró usuario para evento USER_PASSWORD_CONFIGURED [{}]",
@@ -243,9 +246,9 @@ public class EmailEventService {
 
     public void sendPasswordChangedEmail(PasswordChangedEvent event) {
         try {
-            ApiResponse<KeycloakUserDto> response =
+            ApiResponse<KeycloakUserResponseDto> response =
                     authClient.getUserById(event.getKeycloakUserId());
-            KeycloakUserDto user = response.getData();
+            KeycloakUserResponseDto user = response.getData();
             if (user == null) {
                 log.warn("Usuario no encontrado para password change event: {}",
                         event.getKeycloakUserId());
@@ -336,5 +339,62 @@ public class EmailEventService {
                     e
             );
         }
+    }
+
+    public void sendCompanyUsersAssignedEmails(CompanyUsersAssignedEvent event) {
+        if (event.getKeycloakUserIds() == null || event.getKeycloakUserIds().isEmpty()) {
+            log.warn("CompanyUsersAssignedEvent sin usuarios para companyId={}", event.getCompanyId());
+            return;
+        }
+
+        // Resolver datos de la empresa una sola vez
+        ApiResponse<CompanyResponseDto> apiResponse;
+        try {
+            apiResponse = maintenanceClient.getCompanyById(event.getCompanyId());
+        } catch (Exception e) {
+            log.error("No se pudo resolver la empresa companyId={}: {}", event.getCompanyId(), e.getMessage());
+            return;
+        }
+
+        CompanyResponseDto company = apiResponse.getData();
+
+        event.getKeycloakUserIds().forEach(keycloakUserId -> {
+            try {
+                ApiResponse<KeycloakUserResponseDto> response = authClient.getUserById(keycloakUserId);
+                KeycloakUserResponseDto user = response.getData();
+
+                if (user == null || user.getEmail() == null || user.getEmail().isBlank()) {
+                    log.warn("Usuario no encontrado o sin email para keycloakUserId={}", keycloakUserId);
+                    return;
+                }
+
+                CompanyUsersAssignedEmailTemplate template = CompanyUsersAssignedEmailTemplate.builder()
+                        .firstName(user.getFirstName())
+                        .email(user.getEmail())
+                        .companyName(company.getName())
+                        .legalId(company.getLegalId())
+                        .contactEmail(company.getContactEmail())
+                        .contactPhone(company.getContactPhone())
+                        .address(company.getAddress())
+                        .loginUrl(loginUrl)
+                        .timestamp(event.getTimestamp())
+                        .build();
+
+                emailService.sendEmail(
+                        Email.builder()
+                                .to(List.of(user.getEmail()))
+                                .subject("Acceso empresarial habilitado - PROSEG")
+                                .templateDefinition(template)
+                                .build()
+                );
+
+                log.info("Email de asignación empresarial enviado a: {} (companyId={})",
+                        user.getEmail(), event.getCompanyId());
+
+            } catch (Exception e) {
+                log.error("Error enviando email de asignación para keycloakUserId={}: {}",
+                        keycloakUserId, e.getMessage(), e);
+            }
+        });
     }
 }

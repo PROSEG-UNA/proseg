@@ -13,5 +13,6 @@ public class UserCompanyResponseDto {
 
     private UUID id;
     private String keycloakUserId;
+    private String userEmail;
     private CompanyResponseDto company;
 }

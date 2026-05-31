@@ -1,0 +1,28 @@
+info:
+  name: create
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{gatewayUrl}}/api/{{apiVersion}}/maintenance/requests"
+  body:
+    type: json
+    data: |-
+      {
+        "companyId": "6667da22-1e84-44f0-ac89-d590ea4e9945",
+        "assetId": "a2af3357-e900-4649-af1b-5ff671f6485b",
+        "title": "Mantenimiento preventivo de impresora",
+        "description": "La impresora requiere limpieza interna y revisión de rodillos.",
+        "status": "IN_PROGRESS",
+        "priority": "MEDIUM",
+        "scheduledDate": "2026-06-02",
+        "observations": "Coordinar visita con el encargado del área administrativa."
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

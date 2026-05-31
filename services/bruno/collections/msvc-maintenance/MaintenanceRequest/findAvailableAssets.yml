@@ -1,0 +1,15 @@
+info:
+  name: findAvailableAssets
+  type: http
+  seq: 6
+
+http:
+  method: GET
+  url: "{{gatewayUrl}}/api/{{apiVersion}}/maintenance/requests/assets"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

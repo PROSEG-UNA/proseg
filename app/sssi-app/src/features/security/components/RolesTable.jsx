@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useRolesData } from '../hooks/useRolesData';
 import { deleteRole } from '../services/rolesService';
 import { getRolesColumns, renderRolesActions } from './rolesColumns.jsx';
@@ -8,7 +8,17 @@ import DialogModal from '../../../common/components/DialogModal.jsx';
 import { usePermissions } from '../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../common/constants/permissions';
 
+const STORAGE_KEY = 'roles-table-column-visibility';
+const DEFAULT_COLUMN_VISIBILITY = {};
+
 export default function RolesTable({ refreshKey, onRefresh }) {
+    const [columnVisibility, setColumnVisibility] = useState(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            try { return JSON.parse(saved); } catch { return DEFAULT_COLUMN_VISIBILITY; }
+        }
+        return DEFAULT_COLUMN_VISIBILITY;
+    });
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
     const { rows, loading, error, totalElements } = useRolesData({
         pageIndex: pagination.pageIndex,
@@ -23,6 +33,12 @@ export default function RolesTable({ refreshKey, onRefresh }) {
     const canEditRole = hasPermission(PERMISSIONS.ROLES.UPDATE);
     const canDeleteRole = hasPermission(PERMISSIONS.ROLES.DELETE);
     const canUseActions = canEditRole || canDeleteRole;
+
+    const persistColumnVisibility = () => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(columnVisibility));
+    };
+
+    useEffect(persistColumnVisibility, [columnVisibility]);
 
     const handleEdit = (row) => setEditingRole(row);
     const handleDelete = (row) => setDeletingRole(row);
@@ -75,7 +91,8 @@ export default function RolesTable({ refreshKey, onRefresh }) {
                     manualPagination: true,
                     rowCount: totalElements,
                     onPaginationChange: setPagination,
-                    state: { pagination },
+                    onColumnVisibilityChange: setColumnVisibility,
+                    state: { pagination, columnVisibility },
                     displayColumnDefOptions: {
                         'mrt-row-actions': {
                             muiTableBodyCellProps: {
