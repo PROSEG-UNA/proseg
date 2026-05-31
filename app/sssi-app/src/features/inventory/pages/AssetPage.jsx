@@ -1,20 +1,20 @@
 import { useState, useCallback } from 'react';
 import {
   Box,
-  Typography,
   Container,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { PrimaryButton } from '../../../common/components/PrimaryButton.jsx';
+import { PageHeader } from '../../../common/components/index.js';
 import { Header } from '../../../common/components/Header';
 import { NavDrawer } from '../../../common/components/NavDrawer';
 import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
 import Catalog from '../components/catalog/Catalog';
 import AssetTable from '../components/asset/AssetTable.jsx';
 import AssetFormModal from '../components/asset/AssetFormModal.jsx';
-import { usePermissions } from '../../../common/hooks/usePermissions';
+import { usePermissions } from '../../../common/hooks/index.js';
 import { PERMISSIONS } from '../../../common/constants/permissions';
 
 export function AssetPage() {
@@ -43,24 +43,17 @@ export function AssetPage() {
           {canViewAssets ? (
             <>
               <Catalog />
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-                <Typography
-                  variant="h5"
-                  sx={{
-                    fontWeight: 700,
-                    color: 'primary.icon',
-                    fontSize: '1.65rem',
-                    letterSpacing: '0.3px',
-                  }}
-                >
-                  Lista de Activos
-                </Typography>
-                {canCreateAsset ? (
+              <PageHeader
+                title="Lista de Activos"
+                description="Administración y seguimiento de activos del inventario."
+                action={canCreateAsset ? (
                   <PrimaryButton startIcon={<AddIcon />} onClick={() => setCreateOpen(true)} sx={{ px: '28px' }}>
                     Crear
                   </PrimaryButton>
                 ) : null}
-              </Box>
+                sx={{ mb: 3 }}
+                titleSx={{ fontSize: '1.65rem', letterSpacing: '0.3px' }}
+              />
 
               <AssetTable refreshKey={refreshKey} onRefresh={handleRefresh} />
               <AssetFormModal open={createOpen} onClose={() => setCreateOpen(false)} onSaved={handleRefresh} />
