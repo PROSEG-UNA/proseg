@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Nueva solicitud de mantenimiento - PROSEG</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+       style="background:#f4f6f8;padding:24px 12px;">
+    <tr>
+        <td align="center">
+
+            <table role="presentation" width="620" cellspacing="0" cellpadding="0"
+                   style="max-width:620px;background:#ffffff;border-radius:10px;
+                          overflow:hidden;border:1px solid #e5e7eb;">
+
+                <!-- HEADER -->
+                <tr>
+                    <td style="background:#b91c1c;padding:22px 24px;color:#ffffff;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                            <tr>
+                                <td style="vertical-align:middle;">
+                                    <h1 style="margin:0;font-size:22px;line-height:1.25;font-weight:700;">
+                                        Nueva solicitud de mantenimiento
+                                    </h1>
+                                    <p style="margin:8px 0 0 0;font-size:14px;opacity:0.95;">
+                                        Se registró una solicitud en PROSEG.
+                                    </p>
+                                </td>
+                                <td align="right" style="vertical-align:middle;">
+                                    <img src="cid:flower.png" alt="PROSEG LOGO"
+                                         width="42" height="42"
+                                         style="display:block;border-radius:10px;
+                                                background:rgba(255,255,255,0.12);padding:4px;"/>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <!-- BODY -->
+                <tr>
+                    <td style="padding:28px 24px;">
+
+                        <p style="margin:0 0 20px 0;font-size:15px;line-height:1.6;color:#374151;">
+                            Se registró una nueva solicitud de mantenimiento para la empresa
+                            <strong th:text="${companyName}">Nombre Empresa</strong>
+                            en <strong>PROSEG</strong>. A continuación el detalle:
+                        </p>
+
+                        <!-- REQUEST INFO TABLE -->
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+                               style="border:1px solid #e5e7eb;border-radius:8px;
+                                      background:#f9fafb;margin-bottom:24px;">
+                            <tr>
+                                <td colspan="2"
+                                    style="padding:14px 16px;font-size:15px;font-weight:bold;
+                                           background:#fef2f2;border-bottom:1px solid #fee2e2;
+                                           color:#b91c1c;">
+                                    Detalle de la solicitud
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:12px 16px;font-size:14px;width:40%;
+                                           border-bottom:1px solid #e5e7eb;">
+                                    <strong>Empresa:</strong>
+                                </td>
+                                <td style="padding:12px 16px;font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;"
+                                    th:text="${companyName}">
+                                    Nombre Empresa
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:12px 16px;font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+                                    <strong>RUC / ID Legal:</strong>
+                                </td>
+                                <td style="padding:12px 16px;font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;"
+                                    th:text="${legalId} ?: '—'">
+                                    123456789
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:12px 16px;font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+                                    <strong>Estado:</strong>
+                                </td>
+                                <td style="padding:12px 16px;font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;"
+                                    th:text="${status}">
+                                    Pendiente
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:12px 16px;font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+                                    <strong>Descripción:</strong>
+                                </td>
+                                <td style="padding:12px 16px;font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;"
+                                    th:text="${description} ?: '—'">
+                                    Descripción de la solicitud
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:12px 16px;font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+                                    <strong>Fechas:</strong>
+                                </td>
+                                <td style="padding:12px 16px;font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+                                    <span th:text="${startDate}">01/01/2026</span>
+                                    &rarr;
+                                    <span th:text="${endDate}">02/01/2026</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:12px 16px;font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+                                    <strong>Horario:</strong>
+                                </td>
+                                <td style="padding:12px 16px;font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+                                    <span th:text="${startTime}">08:00</span>
+                                    &ndash;
+                                    <span th:text="${endTime}">17:00</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:12px 16px;font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+                                    <strong>Campus:</strong>
+                                </td>
+                                <td style="padding:12px 16px;font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;"
+                                    th:text="${campusName} ?: '—'">
+                                    Campus
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:12px 16px;font-size:14px;">
+                                    <strong>Edificio:</strong>
+                                </td>
+                                <td style="padding:12px 16px;font-size:14px;"
+                                    th:text="${buildingName} ?: '—'">
+                                    Edificio
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- TECHNICIANS BLOCK -->
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+                               style="border:1px solid #e5e7eb;border-radius:8px;
+                                      background:#f9fafb;margin-bottom:24px;">
+                            <tr>
+                                <td style="padding:14px 16px;font-size:15px;font-weight:bold;
+                                           background:#fef2f2;border-bottom:1px solid #fee2e2;
+                                           color:#b91c1c;">
+                                    Personal asignado
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;">
+                                    <strong>Líder:</strong>
+                                    <span th:text="${leaderName} ?: 'Sin asignar'">Líder</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:12px 16px;font-size:14px;">
+                                    <strong>Técnicos:</strong>
+                                    <ul style="margin:8px 0 0 0;padding-left:18px;color:#374151;"
+                                        th:if="${technicianNames != null and !technicianNames.isEmpty()}">
+                                        <li th:each="technician : ${technicianNames}"
+                                            th:text="${technician}"
+                                            style="margin:2px 0;">Técnico</li>
+                                    </ul>
+                                    <span th:if="${technicianNames == null or technicianNames.isEmpty()}"
+                                          style="color:#6b7280;"> Sin asignar</span>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- TIMESTAMP -->
+                        <p style="margin:0;font-size:12px;color:#6b7280;">
+                            Solicitud registrada el:
+                            <span th:text="${timestamp}">01/01/2026 00:00</span>
+                        </p>
+
+                    </td>
+                </tr>
+
+                <!-- FOOTER -->
+                <tr>
+                    <td style="background:#f9fafb;padding:14px 24px;
+                                border-top:1px solid #e5e7eb;font-size:12px;
+                                color:#9ca3af;text-align:center;">
+                        Mensaje automático · PROSEG
+                    </td>
+                </tr>
+
+            </table>
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>
