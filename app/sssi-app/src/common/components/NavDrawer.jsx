@@ -166,9 +166,6 @@ export function NavDrawer({ open, onClose }) {
     PERMISSIONS.MAINTENANCE.REQUESTS.READ,
     PERMISSIONS.MAINTENANCE.REQUESTS.MANAGE,
     PERMISSIONS.MAINTENANCE.REQUESTS.DELETE,
-    PERMISSIONS.MAINTENANCE.TECHNICIANS.READ,
-    PERMISSIONS.MAINTENANCE.TECHNICIANS.MANAGE,
-    PERMISSIONS.MAINTENANCE.TECHNICIANS.DELETE,
     PERMISSIONS.MAINTENANCE.COMPANY_USERS.READ,
     PERMISSIONS.MAINTENANCE.COMPANY_USERS.MANAGE,
     PERMISSIONS.MAINTENANCE.COMPANY_USERS.DELETE,
@@ -275,6 +272,26 @@ export function NavDrawer({ open, onClose }) {
             </ListItem>
           ) : null}
 
+        {showSecuritySection ? (
+            <ListItem disablePadding sx={{ display: 'block' }}>
+                <NavSection
+                    icon={ShieldIcon}
+                    label="Gestión Seguridad"
+                    expanded={expandedMenu === 'security'}
+                    onToggle={() => toggleMenu('security')}
+                >
+                    {securityItems.map((item) => (
+                        <NavLeaf
+                            key={item.key}
+                            icon={item.icon}
+                            label={item.label}
+                            onClick={() => handleNavigation(item.path)}
+                        />
+                    ))}
+                </NavSection>
+            </ListItem>
+        ) : null}
+
           {canViewMaintenanceSection ? (
             <ListItem disablePadding sx={{ display: 'block' }}>
               <NavSection
@@ -295,25 +312,7 @@ export function NavDrawer({ open, onClose }) {
             </ListItem>
           ) : null}
 
-          {showSecuritySection ? (
-            <ListItem disablePadding sx={{ display: 'block' }}>
-              <NavSection
-                icon={ShieldIcon}
-                label="Gestión Seguridad"
-                expanded={expandedMenu === 'security'}
-                onToggle={() => toggleMenu('security')}
-              >
-                {securityItems.map((item) => (
-                  <NavLeaf
-                    key={item.key}
-                    icon={item.icon}
-                    label={item.label}
-                    onClick={() => handleNavigation(item.path)}
-                  />
-                ))}
-              </NavSection>
-            </ListItem>
-          ) : null}
+
         </List>
 
         <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
