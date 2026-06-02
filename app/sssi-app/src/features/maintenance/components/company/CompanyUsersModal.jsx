@@ -225,7 +225,6 @@ export default function CompanyUsersModal({ open, companyId, companyName, onClos
                             )}
                         </Box>
 
-                        {/* Pagination removed from modal - handled by SearchableSelect dropdown */}
                     </Box>
 
                     <Divider />
