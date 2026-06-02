@@ -25,12 +25,9 @@ export default function SearchableSelect({
     fullWidth,
     size,
     sx,
-    // new props
-    // if provided, the component will use externalSearch as the search text
-    // and call onSearchChange when the user types in the search field
+    clearable = false,
     externalSearch,
     onSearchChange,
-    // when true, hide the internal search field (useful when parent supplies its own search input)
     hideSearch = false,
 }) {
     const theme = useTheme();
@@ -110,6 +107,12 @@ export default function SearchableSelect({
                     }}
                 />
             </ListSubheader>
+            )}
+
+            {clearable && (
+                <MenuItem value="" sx={{ fontSize: 13.5, color: 'text.secondary', fontStyle: 'italic' }}>
+                    — Ninguno —
+                </MenuItem>
             )}
 
             {pageItems.map(item => (
