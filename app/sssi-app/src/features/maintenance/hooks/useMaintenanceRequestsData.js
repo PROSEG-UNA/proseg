@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchMaintenanceRequests } from '../services/requestsService';
 import { getFriendlyApiErrorMessage } from '../../../common/utils';
-import { formatDate, priorityLabel, statusLabel } from '../maintenanceUtils';
+import { statusLabel } from '../maintenanceUtils';
 
 export function useMaintenanceRequestsData({ pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [], refreshKey = 0 } = {}) {
     const [rows, setRows] = useState([]);
@@ -23,29 +23,24 @@ export function useMaintenanceRequestsData({ pageIndex = 0, pageSize = 10, searc
                 const response = await fetchMaintenanceRequests({ page: pageIndex, size: pageSize, search, filters, sort });
                 if (ignore) return;
 
-                setRows((response.content ?? []).map((request) => {
-                    const technicians = Array.isArray(request.technicians) ? request.technicians : [];
-                    return {
-                        id: request.id,
-                        companyId: request.company?.id ?? '',
-                        companyName: request.company?.name ?? '—',
-                        companyLegalId: request.company?.legalId ?? '—',
-                        assetId: request.assetId ?? '—',
-                        title: request.title ?? '—',
-                        description: request.description ?? '—',
-                        status: statusLabel(request.status),
-                        statusRaw: request.status ?? '',
-                        priority: priorityLabel(request.priority),
-                        priorityRaw: request.priority ?? '',
-                        scheduledDate: request.scheduledDate ?? null,
-                        scheduledDateLabel: formatDate(request.scheduledDate),
-                        observations: request.observations ?? '—',
-                        techniciansCount: technicians.length,
-                        technicians,
-                        createdAt: request.createdAt ?? null,
-                        updatedAt: request.updatedAt ?? null,
-                    };
-                }));
+                setRows((response.content ?? []).map((request) => ({
+                    id: request.id,
+                    companyId: request.company?.id ?? '',
+                    companyName: request.company?.name ?? '—',
+                    companyLegalId: request.company?.legalId ?? '—',
+                    email: request.email ?? '—',
+                    description: request.description ?? '—',
+                    status: statusLabel(request.status),
+                    statusRaw: request.status ?? '',
+                    startDate: request.startDate ?? null,
+                    endDate: request.endDate ?? null,
+                    startTime: request.startTime ?? null,
+                    endTime: request.endTime ?? null,
+                    campusId: request.campusId ?? null,
+                    buildingId: request.buildingId ?? null,
+                    createdAt: request.createdAt ?? null,
+                    updatedAt: request.updatedAt ?? null,
+                })));
                 setTotalElements(response.totalElements ?? 0);
                 setTotalPages(response.totalPages ?? 0);
             } catch (error) {

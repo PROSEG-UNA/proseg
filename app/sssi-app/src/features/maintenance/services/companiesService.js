@@ -31,6 +31,11 @@ export async function fetchCompanyUsers(companyId) {
     return data?.data ?? [];
 }
 
+export async function fetchCompanyTechnicians(companyId) {
+    const { data } = await axios.get(`${MAINTENANCE_ENDPOINTS.companies}/${companyId}/technicians`, maintenanceConfig);
+    return data?.data ?? [];
+}
+
 export async function assignCompanyUser(companyId, keycloakUserId) {
     const { data } = await axios.post(
         `${MAINTENANCE_ENDPOINTS.companies}/${companyId}/users`,
