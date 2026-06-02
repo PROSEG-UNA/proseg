@@ -246,7 +246,7 @@ export default function CompanyDetailModal({
             contentSx={contentSx}
             showCloseButton
             primaryButton={canEdit ? {
-                label: 'Editar',
+                label: 'Cerrar',
                 icon: <EditIcon sx={{ fontSize: 16 }} />,
                 onClick: handleEdit,
             } : undefined}
@@ -272,7 +272,6 @@ export default function CompanyDetailModal({
             ) : undefined}
         >
             <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 3 }}>
-                {/* Tabs for sections */}
                 <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2.5 }}>
                     <Tabs
                         value={tabIndex}
@@ -308,11 +307,8 @@ export default function CompanyDetailModal({
                         />
                     </Tabs>
                 </Box>
-
-                {/* Tab Content: General Information */}
                 {tabIndex === 0 && (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                        {/* Empresa */}
                         <Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
                                 <BusinessIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
@@ -365,8 +361,6 @@ export default function CompanyDetailModal({
                         </Box>
 
                         <Divider />
-
-                        {/* Información de auditoría */}
                         <Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
                                 <CalendarTodayIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
@@ -396,7 +390,6 @@ export default function CompanyDetailModal({
                             </Grid>
                         </Box>
 
-                        {/* Estadísticas */}
                         <Divider />
                         <Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
@@ -423,7 +416,6 @@ export default function CompanyDetailModal({
                     </Box>
                 )}
 
-                {/* Tab Content: Users */}
                 {tabIndex === 1 && (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                         {users.length === 0 ? (
