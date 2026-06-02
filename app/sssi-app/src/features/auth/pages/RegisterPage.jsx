@@ -6,6 +6,7 @@ import {
     Typography,
     Link,
     IconButton,
+    InputAdornment,
     LinearProgress,
     useTheme,
     Divider,
@@ -103,6 +104,12 @@ export function RegisterPage() {
             },
         },
         '& .MuiInputLabel-root.Mui-focused': { color: accentColor },
+        '& .MuiInputBase-input': { color: 'text.primary' },
+        '[data-mui-color-scheme="dark"] &': {
+            '& .MuiFormHelperText-root.Mui-error': { color: 'hsl(220, 20%, 65%)' },
+            '& .MuiInputLabel-root.Mui-error':     { color: 'hsl(220, 20%, 65%)' },
+            '& .MuiFormLabel-asterisk.Mui-error':  { color: 'hsl(220, 20%, 65%)' },
+        },
     };
 
     const strength = getPasswordStrength(formData.password);
@@ -163,6 +170,7 @@ export function RegisterPage() {
 
     const handleSubmit = (e) => {
         e?.preventDefault();
+        if (!formData.captchaToken) return;
         if (validateForm()) handleRegister(formData);
     };
 
@@ -184,7 +192,9 @@ export function RegisterPage() {
                 loading={loading}
                 footerLeft={
                     <Typography variant="body2" sx={{ fontSize: 12, color: 'text.secondary' }}>
-                        ¿Ya tienes cuenta?{' '}
+                        ¿Ya tienes cuenta?
+                        <Box component="br" sx={{ display: { sm: 'none' } }} />
+                        <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{' '}</Box>
                         <Link
                             component={RouterLink}
                             to="/login"
@@ -208,6 +218,7 @@ export function RegisterPage() {
                 }}
             >
                 <Box component="form" onSubmit={handleSubmit} sx={{ px: 3, pt: 2.5, pb: 1 }}>
+                    <button type="submit" style={{ display: 'none' }} tabIndex={-1} />
                     <Typography sx={{
                         fontSize: 10.5, fontWeight: 800, color: 'text.disabled',
                         letterSpacing: '0.08em', textTransform: 'uppercase', mb: 1.25,
@@ -229,53 +240,49 @@ export function RegisterPage() {
                         required
                         disabled={loading}
                         error={touched.username && !!errors.username}
-                        helperText={touched.username && errors.username}
+                        helperText={(touched.username && errors.username) || ' '}
                         sx={{ ...fieldSx, mb: 1.25 }}
                     />
 
-                    <Box sx={{ position: 'relative', mb: 0 }}>
-                        <TextField
-                            fullWidth
-                            label="Contraseña"
-                            name="password"
-                            type={showPassword ? 'text' : 'password'}
-                            value={formData.password}
-                            onChange={handleChange}
-                            onBlur={handleBlur}
-                            size="small"
-                            variant="outlined"
-                            required
-                            disabled={loading}
-                            error={hasPasswordError}
-                            helperText={hasPasswordError ? errors.password : ''}
-                            sx={{
-                                ...fieldSx,
-                                '& .MuiOutlinedInput-input': { paddingRight: '40px' },
-                            }}
-                        />
-                        <IconButton
-                            onClick={() => setShowPassword((p) => !p)}
-                            tabIndex={-1}
-                            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                            size="small"
-                            sx={{
-                                position: 'absolute',
-                                right: 8,
-                                top: hasPasswordError ? 'calc(50% - 10px)' : '50%',
-                                transform: 'translateY(-50%)',
-                                color: 'text.secondary',
-                                p: 0.5,
-                                '&:hover': { color: accentColor, bgcolor: 'transparent' },
-                            }}
-                        >
-                            {showPassword
-                                ? <VisibilityOffIcon sx={{ fontSize: 18 }} />
-                                : <VisibilityIcon sx={{ fontSize: 18 }} />}
-                        </IconButton>
-                    </Box>
+                    <TextField
+                        fullWidth
+                        label="Contraseña"
+                        name="password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={formData.password}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        size="small"
+                        variant="outlined"
+                        required
+                        disabled={loading}
+                        error={hasPasswordError}
+                        helperText={hasPasswordError ? errors.password : ' '}
+                        sx={fieldSx}
+                        slotProps={{
+                            input: {
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <IconButton
+                                            onClick={() => setShowPassword((p) => !p)}
+                                            tabIndex={-1}
+                                            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                            edge="end"
+                                            size="small"
+                                            sx={{ color: 'text.secondary', '&:hover': { color: accentColor, bgcolor: 'transparent' } }}
+                                        >
+                                            {showPassword
+                                                ? <VisibilityOffIcon sx={{ fontSize: 18 }} />
+                                                : <VisibilityIcon sx={{ fontSize: 18 }} />}
+                                        </IconButton>
+                                    </InputAdornment>
+                                ),
+                            },
+                        }}
+                    />
 
                     {formData.password && (
-                        <Box sx={{ mt: 1.25, mb: 1.5 }}>
+                        <Box sx={{ mt: 0.25, mb: 1.5 }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                                 <Typography sx={{
                                     fontSize: 10.5, fontWeight: 800, color: 'text.disabled',
@@ -319,7 +326,7 @@ export function RegisterPage() {
                         </Box>
                     )}
 
-                    <Divider sx={{ borderColor: 'divider', mb: 1.75, mt: formData.password ? 0 : 1.5 }} />
+                    <Divider sx={{ borderColor: 'divider', mb: 1.75, mt: formData.password ? 0 : 0.5 }} />
 
                     <Typography sx={{
                         fontSize: 10.5, fontWeight: 800, color: 'text.disabled',
@@ -328,7 +335,7 @@ export function RegisterPage() {
                         Datos personales
                     </Typography>
 
-                    <Box sx={{ display: 'flex', gap: 1.25, mb: 1.25 }}>
+                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 1.25, mb: { xs: 1.25, sm: 1.5 } }}>
                         <ValidatedTextField
                             fieldName="firstName"
                             fullWidth
@@ -343,7 +350,7 @@ export function RegisterPage() {
                             required
                             disabled={loading}
                             error={touched.firstName && !!errors.firstName}
-                            helperText={touched.firstName && errors.firstName}
+                            helperText={(touched.firstName && errors.firstName) || ' '}
                             sx={fieldSx}
                         />
                         <ValidatedTextField
@@ -360,7 +367,7 @@ export function RegisterPage() {
                             required
                             disabled={loading}
                             error={touched.lastName && !!errors.lastName}
-                            helperText={touched.lastName && errors.lastName}
+                            helperText={(touched.lastName && errors.lastName) || ' '}
                             sx={fieldSx}
                         />
                     </Box>
@@ -379,8 +386,8 @@ export function RegisterPage() {
                         required
                         disabled={loading}
                         error={touched.email && !!errors.email}
-                        helperText={touched.email && errors.email}
-                        sx={{ ...fieldSx, mb: 1.5 }}
+                        helperText={(touched.email && errors.email) || ' '}
+                        sx={{ ...fieldSx, mb: 1.25 }}
                     />
 
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 1 }}>

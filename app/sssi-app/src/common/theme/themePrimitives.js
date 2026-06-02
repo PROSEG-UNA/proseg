@@ -208,7 +208,7 @@ export const colorSchemes = {
         rose: {
           fg: '#FBE9E9', soft: 'rgba(127,29,29,0.35)', softSubtle: 'rgba(248,113,113,0.10)',
           headerBg: '#7f1d1d', headerBgEnd: '#991b1b', hoverBg: '#dc2626',
-          footerBg: '#1F2937', secondaryHoverBg: '#2D3748',
+          footerBg: 'rgb(6, 5, 6)', secondaryHoverBg: '#2D3748',
           ring: 'rgba(248,113,113,0.28)', glow: 'rgba(248,113,113,0.18)',
           shadowResting: '0 4px 16px rgba(0,0,0,0.35)',
           shadowHover: '0 10px 28px rgba(0,0,0,0.45), 0 0 0 1px rgba(248,113,113,0.28)',

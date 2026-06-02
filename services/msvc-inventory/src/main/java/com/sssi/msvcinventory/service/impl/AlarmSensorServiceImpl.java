@@ -2,10 +2,13 @@ package com.sssi.msvcinventory.service.impl;
 
 import com.sssi.msvcinventory.dto.request.AlarmSensorRequestDto;
 import com.sssi.msvcinventory.dto.response.AlarmSensorResponseDto;
+import com.sssi.msvcinventory.dto.request.AssetRequestDto;
 import com.sssi.msvcinventory.entity.AlarmSensor;
 import com.sssi.msvcinventory.entity.Model;
 import com.sssi.msvcinventory.entity.Location;
+import com.sssi.msvcinventory.entity.enums.AssetStatus;
 import com.sssi.msvcinventory.exception.AlarmSensorException;
+import com.sssi.msvcinventory.exception.AssetException;
 import com.sssi.msvcinventory.exception.ModelException;
 import com.sssi.msvcinventory.exception.LocationException;
 import com.sssi.msvcinventory.mapper.AlarmSensorMapper;
@@ -31,6 +34,8 @@ public class AlarmSensorServiceImpl implements AlarmSensorService {
     @Override
     @Transactional
     public AlarmSensorResponseDto create(AlarmSensorRequestDto request) {
+        validateDecommissionDate(request);
+
         Model model = modelRepository.findById(request.getModelId())
                 .orElseThrow(() -> ModelException.notFound(request.getModelId().toString()));
 
@@ -64,10 +69,18 @@ public class AlarmSensorServiceImpl implements AlarmSensorService {
         Location location = locationRepository.findById(request.getLocationId())
                 .orElseThrow(() -> LocationException.notFound(request.getLocationId().toString()));
 
+        validateDecommissionDate(request);
+
         alarmSensorMapper.updateEntityFromRequest(request, alarmSensor);
         alarmSensor.setModel(model);
         alarmSensor.setLocation(location);
 
         return alarmSensorMapper.toResponse(alarmSensorRepository.save(alarmSensor));
+    }
+
+    private void validateDecommissionDate(AssetRequestDto request) {
+        if (request.getStatus() == AssetStatus.APROBADO && request.getDecommissionDate() != null) {
+            throw AssetException.decommissionDateNotAllowed();
+        }
     }
 }

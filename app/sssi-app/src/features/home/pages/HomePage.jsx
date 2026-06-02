@@ -15,7 +15,7 @@ export function HomePage() {
     const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
 
     return (
-        <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
             <Header
                 title="Sistema Programa Servicios Generales"
                 onMenuClick={isMediumOrDown ? () => setDrawerOpen(true) : undefined}

@@ -14,6 +14,29 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
+@NamedEntityGraph(
+        name = "Asset.withRelations",
+        attributeNodes = {
+                @NamedAttributeNode(value = "model", subgraph = "model-subgraph"),
+                @NamedAttributeNode(value = "location", subgraph = "location-subgraph"),
+                @NamedAttributeNode("networkInterface")
+        },
+        subgraphs = {
+                @NamedSubgraph(name = "model-subgraph", attributeNodes = {
+                        @NamedAttributeNode("brand"),
+                        @NamedAttributeNode("type")
+                }),
+                @NamedSubgraph(name = "location-subgraph", attributeNodes = {
+                        @NamedAttributeNode(value = "floor", subgraph = "floor-subgraph")
+                }),
+                @NamedSubgraph(name = "floor-subgraph", attributeNodes = {
+                        @NamedAttributeNode(value = "building", subgraph = "building-subgraph")
+                }),
+                @NamedSubgraph(name = "building-subgraph", attributeNodes = {
+                        @NamedAttributeNode("campus")
+                })
+        }
+)
 @Entity
 @Table(name = "asset_table")
 @Inheritance(strategy = InheritanceType.JOINED)
@@ -33,19 +56,12 @@ public class Asset extends BaseEntity {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Filterable(type = FilterType.TEXT)
-    @Column(nullable = false)
-    private String name;
-
-    @Filterable(type = FilterType.TEXT)
-    private String description;
-
     @Filterable(type = FilterType.TEXT, nestedPaths = {"name", "brand.name", "type.name"})
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "asset_model_id", nullable = false)
     private Model model;
 
-    @Filterable(type = FilterType.TEXT, nestedPaths = {"name"})
+    @Filterable(type = FilterType.TEXT, nestedPaths = {"description"})
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "location_id", nullable = false)
     private Location location;
@@ -56,8 +72,16 @@ public class Asset extends BaseEntity {
     private AssetStatus status;
 
     @Filterable(type = FilterType.TEXT)
-    @Column(name = "status_description")
-    private String statusDescription;
+    @Column(name = "executing_unit")
+    private String executingUnit;
+
+    @Filterable(type = FilterType.TEXT)
+    @Column(name = "responsible_employee")
+    private String responsibleEmployee;
+
+    @Filterable(type = FilterType.TEXT)
+    @Column(name = "responsible_employee_id")
+    private String responsibleEmployeeId;
 
     @Filterable(type = FilterType.DATE)
     @Column(name = "acquisition_date")
@@ -70,6 +94,10 @@ public class Asset extends BaseEntity {
     @Filterable(type = FilterType.DATE)
     @Column(name = "firmware_support_end_date")
     private LocalDate firmwareSupportEndDate;
+
+    @Filterable(type = FilterType.DATE)
+    @Column(name = "decommission_date")
+    private LocalDate decommissionDate;
 
     @OneToOne(mappedBy = "asset", cascade = CascadeType.ALL)
     private NetworkInterface networkInterface;

@@ -1,0 +1,6 @@
+name: dev
+variables:
+  - name: gatewayUrl
+    value: http://localhost:8081
+  - name: apiVersion
+    value: v1

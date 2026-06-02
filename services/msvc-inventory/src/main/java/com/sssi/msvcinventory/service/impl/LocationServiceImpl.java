@@ -2,14 +2,18 @@ package com.sssi.msvcinventory.service.impl;
 
 import com.sssi.msvcinventory.dto.request.LocationRequestDto;
 import com.sssi.msvcinventory.dto.response.LocationResponseDto;
+import com.sssi.msvcinventory.entity.Building;
+import com.sssi.msvcinventory.entity.Floor;
 import com.sssi.msvcinventory.entity.Location;
-import com.sssi.msvcinventory.entity.Site;
+import com.sssi.msvcinventory.exception.BuildingException;
+import com.sssi.msvcinventory.exception.CampusException;
 import com.sssi.msvcinventory.exception.LocationException;
-import com.sssi.msvcinventory.exception.SiteException;
 import com.sssi.msvcinventory.mapper.LocationMapper;
 import com.sssi.msvcinventory.repository.AssetRepository;
+import com.sssi.msvcinventory.repository.BuildingRepository;
+import com.sssi.msvcinventory.repository.FloorRepository;
 import com.sssi.msvcinventory.repository.LocationRepository;
-import com.sssi.msvcinventory.repository.SiteRepository;
+import com.sssi.msvcinventory.repository.CampusRepository;
 import com.sssi.msvcinventory.service.LocationService;
 import com.sssi.msvcinventory.specification.GenericSpecifications;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +32,9 @@ import java.util.UUID;
 public class LocationServiceImpl implements LocationService {
 
     private final LocationRepository locationRepository;
-    private final SiteRepository siteRepository;
+    private final CampusRepository campusRepository;
+    private final BuildingRepository buildingRepository;
+    private final FloorRepository floorRepository;
     private final AssetRepository assetRepository;
     private final LocationMapper locationMapper;
 
@@ -36,17 +42,16 @@ public class LocationServiceImpl implements LocationService {
     @Transactional
     public LocationResponseDto create(LocationRequestDto request) {
 
-        Site site = siteRepository.findById(request.getSiteId())
-                .orElseThrow(() -> SiteException.notFound(request.getSiteId().toString()));
+        Floor floor = resolveFloor(request);
 
-        if (locationRepository.existsByNameIgnoreCaseAndSiteId(
-                request.getName(), request.getSiteId())) {
+        if (locationRepository.existsByDescriptionIgnoreCaseAndFloorId(
+                request.getDescription(), floor.getId())) {
 
-            throw LocationException.duplicateName(request.getName());
+            throw LocationException.duplicateDescription(request.getDescription());
         }
 
         Location location = locationMapper.toEntity(request);
-        location.setSite(site);
+        location.setFloor(floor);
 
         return locationMapper.toResponse(locationRepository.save(location));
     }
@@ -77,13 +82,25 @@ public class LocationServiceImpl implements LocationService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<LocationResponseDto> findBySiteId(UUID siteId, Pageable pageable) {
+    public Page<LocationResponseDto> findByCampusId(UUID campusId, Pageable pageable) {
 
-        if (!siteRepository.existsById(siteId)) {
-            throw SiteException.notFound(siteId.toString());
+        if (!campusRepository.existsById(campusId)) {
+            throw CampusException.notFound(campusId.toString());
         }
 
-        return locationRepository.findBySiteId(siteId, pageable)
+        return locationRepository.findByFloorBuildingCampusId(campusId, pageable)
+                .map(locationMapper::toResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<LocationResponseDto> findByBuildingId(UUID buildingId, Pageable pageable) {
+
+        if (!buildingRepository.existsById(buildingId)) {
+            throw BuildingException.notFound(buildingId.toString());
+        }
+
+        return locationRepository.findByFloorBuildingId(buildingId, pageable)
                 .map(locationMapper::toResponse);
     }
 
@@ -94,17 +111,16 @@ public class LocationServiceImpl implements LocationService {
         Location location = locationRepository.findById(id)
                 .orElseThrow(() -> LocationException.notFound(id.toString()));
 
-        Site site = siteRepository.findById(request.getSiteId())
-                .orElseThrow(() -> SiteException.notFound(request.getSiteId().toString()));
+        Floor floor = resolveFloor(request);
 
-        if (locationRepository.existsByNameIgnoreCaseAndSiteIdAndIdNot(
-                request.getName(), request.getSiteId(), id)) {
+        if (locationRepository.existsByDescriptionIgnoreCaseAndFloorIdAndIdNot(
+                request.getDescription(), floor.getId(), id)) {
 
-            throw LocationException.duplicateName(request.getName());
+            throw LocationException.duplicateDescription(request.getDescription());
         }
 
         locationMapper.updateEntityFromRequest(request, location);
-        location.setSite(site);
+        location.setFloor(floor);
 
         return locationMapper.toResponse(locationRepository.save(location));
     }
@@ -117,9 +133,34 @@ public class LocationServiceImpl implements LocationService {
                 .orElseThrow(() -> LocationException.notFound(id.toString()));
 
         if (assetRepository.existsByLocationId(id)) {
-            throw LocationException.inUse(location.getName());
+            throw LocationException.inUse(location.getDescription());
         }
 
         locationRepository.delete(location);
+    }
+
+    private Floor resolveFloor(LocationRequestDto request) {
+
+        if (!campusRepository.existsById(request.getCampusId())) {
+            throw CampusException.notFound(request.getCampusId().toString());
+        }
+
+        Building building = buildingRepository.findById(request.getBuildingId())
+                .orElseThrow(() -> BuildingException.notFound(request.getBuildingId().toString()));
+
+        if (!building.getCampus().getId().equals(request.getCampusId())) {
+            throw BuildingException.campusDoesNotMatch(request.getBuildingId(), request.getCampusId());
+        }
+
+        String floorName = String.valueOf(request.getFloorNumber());
+
+        return floorRepository.findByNameAndBuildingId(floorName, building.getId())
+                .orElseGet(() -> {
+                    Floor newFloor = Floor.builder()
+                            .name(floorName)
+                            .building(building)
+                            .build();
+                    return floorRepository.save(newFloor);
+                });
     }
 }

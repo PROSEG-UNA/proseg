@@ -1,6 +1,7 @@
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RowActionsMenu from '../../../common/components/RowActionsMenu.jsx';
+import { formatRoleName } from '../../../common/utils/index.js';
 
 export function getRolesColumns() {
     return [
@@ -9,6 +10,7 @@ export function getRolesColumns() {
             header: 'Nombre',
             size: 140,
             grow: true,
+            Cell: ({ cell }) => formatRoleName(cell.getValue()),
         },
         {
             accessorKey: 'description',

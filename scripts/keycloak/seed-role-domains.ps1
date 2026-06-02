@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$KeycloakUrl      = $env:KEYCLOAK_SERVER_URL,
     [string]$Realm            = $env:KEYCLOAK_REALM,
     [string]$AdminUser        = $env:KEYCLOAK_ADMIN_USERNAME,
@@ -139,6 +139,21 @@ Write-Host ""
 Write-Host "--- Archivos ---"
 Set-RoleDomain "LEER_ARCHIVOS"  "Archivos"
 Set-RoleDomain "SUBIR_ARCHIVOS" "Archivos"
+
+Write-Host ""
+Write-Host "--- Mantenimiento ---"
+Set-RoleDomain "GESTIONAR_EMPRESAS"                  "Mantenimiento"
+Set-RoleDomain "ELIMINAR_EMPRESAS"                   "Mantenimiento"
+Set-RoleDomain "LEER_EMPRESAS"                       "Mantenimiento"
+Set-RoleDomain "LEER_SOLICITUDES_MANTENIMIENTO"      "Mantenimiento"
+Set-RoleDomain "GESTIONAR_SOLICITUDES_MANTENIMIENTO" "Mantenimiento"
+Set-RoleDomain "ELIMINAR_SOLICITUDES_MANTENIMIENTO"  "Mantenimiento"
+Set-RoleDomain "LEER_TECNICOS_MANTENIMIENTO"         "Mantenimiento"
+Set-RoleDomain "GESTIONAR_TECNICOS_MANTENIMIENTO"    "Mantenimiento"
+Set-RoleDomain "ELIMINAR_TECNICOS_MANTENIMIENTO"     "Mantenimiento"
+Set-RoleDomain "LEER_USUARIOS_EMPRESAS"              "Mantenimiento"
+Set-RoleDomain "GESTIONAR_USUARIOS_EMPRESAS"         "Mantenimiento"
+Set-RoleDomain "ELIMINAR_USUARIOS_EMPRESAS"          "Mantenimiento"
 
 Write-Host ""
 Write-Host "Completado."

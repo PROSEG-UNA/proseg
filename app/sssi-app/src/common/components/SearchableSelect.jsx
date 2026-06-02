@@ -25,12 +25,17 @@ export default function SearchableSelect({
     fullWidth,
     size,
     sx,
+    clearable = false,
+    externalSearch,
+    onSearchChange,
+    hideSearch = false,
 }) {
     const theme = useTheme();
     const accentColor = theme.vars.palette.tones.rose.fg;
 
-    const [search, setSearch] = useState('');
+    const [internalSearch, setInternalSearch] = useState('');
     const [page, setPage] = useState(0);
+    const search = typeof externalSearch === 'string' ? externalSearch : internalSearch;
     const searchInputRef = useRef(null);
 
     const normalize = str => str.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -78,14 +83,19 @@ export default function SearchableSelect({
                 },
             }}
         >
-            <ListSubheader sx={{ px: 1.5, pt: 1, pb: 1.5, bgcolor: 'background.paper', lineHeight: 'normal' }}>
+            {!hideSearch && (
+                <ListSubheader sx={{ px: 1.5, pt: 1, pb: 1.5, bgcolor: 'background.paper', lineHeight: 'normal' }}>
                 <TextField
                     inputRef={searchInputRef}
                     size="small"
                     fullWidth
                     placeholder="Buscar..."
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => {
+                        const v = e.target.value;
+                        if (typeof onSearchChange === 'function') onSearchChange(v);
+                        else setInternalSearch(v);
+                    }}
                     onKeyDown={(e) => e.stopPropagation()}
                     sx={{
                         '& .MuiOutlinedInput-root': {
@@ -97,6 +107,13 @@ export default function SearchableSelect({
                     }}
                 />
             </ListSubheader>
+            )}
+
+            {clearable && (
+                <MenuItem value="" sx={{ fontSize: 13.5, color: 'text.secondary', fontStyle: 'italic' }}>
+                    — Ninguno —
+                </MenuItem>
+            )}
 
             {pageItems.map(item => (
                 <MenuItem key={getItemValue(item)} value={getItemValue(item)} sx={{ fontSize: 13.5 }}>

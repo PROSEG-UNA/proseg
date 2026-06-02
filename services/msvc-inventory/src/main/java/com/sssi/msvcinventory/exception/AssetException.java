@@ -32,4 +32,12 @@ public class AssetException extends BaseException {
                 "Ya existe un activo con el número de serie: " + serialNumber
         );
     }
+
+    public static AssetException decommissionDateNotAllowed() {
+        return new AssetException(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "DECOMMISSION_DATE_NOT_ALLOWED",
+                "La fecha de baja debe ser nula cuando el estado es APROBADO"
+        );
+    }
 }

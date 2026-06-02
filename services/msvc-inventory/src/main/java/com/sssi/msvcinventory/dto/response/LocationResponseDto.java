@@ -13,8 +13,7 @@ import java.util.UUID;
 public class LocationResponseDto {
 
     private UUID id;
-    private String name;
-    private SiteResponseDto site;
+    private FloorResponseDto floor;
     private String description;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

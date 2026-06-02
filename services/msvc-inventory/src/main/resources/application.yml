@@ -49,8 +49,9 @@ archive:
 
 routes:
   brands: ${api.prefix}/brands
+  buildings: ${api.prefix}/buildings
   locations: ${api.prefix}/locations
-  sites: ${api.prefix}/sites
+  campuses: ${api.prefix}/campuses
   types: ${api.prefix}/types
   models: ${api.prefix}/models
   assets: ${api.prefix}/assets

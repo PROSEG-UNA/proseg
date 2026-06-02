@@ -119,6 +119,16 @@ export function AuthProvider({ children }) {
           return Promise.reject(error);
         }
 
+        const noRetryPaths = ['/auth/login', '/auth/register'];
+        if (noRetryPaths.some(path => originalRequest.url?.includes(path))) {
+          return Promise.reject(error);
+        }
+
+        if (originalRequest._retry) {
+          return Promise.reject(error);
+        }
+        originalRequest._retry = true;
+
         if (originalRequest.url?.includes('/auth/refresh')) {
           setIsAuthenticated(false);
           setUser(null);

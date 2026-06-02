@@ -1,0 +1,15 @@
+info:
+  name: assignRoleToUser
+  type: http
+  seq: 3
+
+http:
+  method: PUT
+  url: "{{gatewayUrl}}/api/user/........id.user......./roles/b02f99fe-a9a8-4e88-a6b8-41cf93141f64"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

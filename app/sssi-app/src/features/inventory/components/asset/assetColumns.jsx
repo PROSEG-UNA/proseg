@@ -4,18 +4,13 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import RowActionsMenu from '../../../../common/components/RowActionsMenu.jsx';
 
 const STATUS_FILTER_OPTIONS = [
-    { value: 'BUENO', label: 'Bueno' },
-    { value: 'REGULAR', label: 'Regular' },
-    { value: 'MALO', label: 'Malo' },
-    { value: 'EN_REPARACION', label: 'En reparación' },
-    { value: 'BAJA', label: 'Baja' },
+    { value: 'APROBADO', label: 'Aprobado' },
+    { value: 'DE_BAJA', label: 'De baja' },
 ];
 
 function statusChipColor(statusRaw) {
-    if (statusRaw === 'BUENO') return 'success';
-    if (statusRaw === 'REGULAR') return 'warning';
-    if (statusRaw === 'MALO') return 'error';
-    if (statusRaw === 'EN_REPARACION') return 'info';
+    if (statusRaw === 'APROBADO') return 'success';
+    if (statusRaw === 'DE_BAJA') return 'error';
     return 'default';
 }
 
@@ -40,18 +35,6 @@ export function getAssetsColumns() {
             grow: false,
         },
         {
-            accessorKey: 'name',
-            header: 'Nombre',
-            size: 200,
-            grow: true,
-        },
-        {
-            accessorKey: 'description',
-            header: 'Descripción',
-            size: 220,
-            grow: true,
-        },
-        {
             accessorKey: 'type',
             header: 'Tipo',
             size: 140,
@@ -70,8 +53,8 @@ export function getAssetsColumns() {
             grow: true,
         },
         {
-            accessorKey: 'site',
-            header: 'Sede',
+            accessorKey: 'campus',
+            header: 'Campus',
             size: 160,
             grow: true,
         },
@@ -80,6 +63,24 @@ export function getAssetsColumns() {
             header: 'Ubicación',
             size: 180,
             grow: true,
+        },
+        {
+            accessorKey: 'executingUnit',
+            header: 'Unidad Ejecutora',
+            size: 180,
+            grow: true,
+        },
+        {
+            accessorKey: 'responsibleEmployee',
+            header: 'Funcionario',
+            size: 200,
+            grow: true,
+        },
+        {
+            accessorKey: 'responsibleEmployeeId',
+            header: 'ID Funcionario',
+            size: 160,
+            grow: false,
         },
         {
             accessorKey: 'status',
@@ -118,6 +119,14 @@ export function getAssetsColumns() {
         {
             accessorKey: 'firmwareSupportEndDate',
             header: 'Fecha de fin Firmware',
+            size: 180,
+            grow: false,
+            enableColumnFilter: false,
+            Cell: ({ cell }) => formatDate(cell.getValue()),
+        },
+        {
+            accessorKey: 'decommissionDate',
+            header: 'Fecha de Baja',
             size: 180,
             grow: false,
             enableColumnFilter: false,

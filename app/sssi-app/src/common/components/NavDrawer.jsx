@@ -20,24 +20,13 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import LogoutIcon from '@mui/icons-material/Logout';
 import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
+import BuildIcon from '@mui/icons-material/Build';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import ShieldIcon from '@mui/icons-material/Shield';
 import { useColorScheme } from '@mui/material/styles';
 import { usePermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/permissions';
-
-const panelSurfaceSx = (t) => ({
-  background: `
-    radial-gradient(ellipse 80% 40% at 50% 0%, hsla(0, 70%, 55%, 0.05) 0%, transparent 70%),
-    linear-gradient(180deg, hsl(220, 30%, 99%) 0%, hsl(220, 28%, 97%) 100%)
-  `,
-  ...t.applyStyles('dark', {
-    background: `
-      radial-gradient(ellipse 80% 40% at 50% 0%, hsla(0, 65%, 45%, 0.1) 0%, transparent 70%),
-      linear-gradient(180deg, hsl(228, 16%, 10%) 0%, hsl(228, 16%, 7%) 100%)
-    `,
-  }),
-});
+import { panelSurfaceSx } from '../theme/sxStyles';
 
 const iconBoxSx = (t, { active = false } = {}) => ({
   width: 34, height: 34, mr: 1.5,
@@ -170,9 +159,24 @@ export function NavDrawer({ open, onClose }) {
   const canViewUsersSubmodule = hasAnyPermission(userPermissions);
   const canViewRolesSubmodule = hasAnyPermission(rolePermissions);
   const canViewSecuritySection = canViewUsersSubmodule || canViewRolesSubmodule;
+  const canViewMaintenanceSection = hasAnyPermission([
+    PERMISSIONS.MAINTENANCE.COMPANIES.READ,
+    PERMISSIONS.MAINTENANCE.COMPANIES.MANAGE,
+    PERMISSIONS.MAINTENANCE.COMPANIES.DELETE,
+    PERMISSIONS.MAINTENANCE.REQUESTS.READ,
+    PERMISSIONS.MAINTENANCE.REQUESTS.MANAGE,
+    PERMISSIONS.MAINTENANCE.REQUESTS.DELETE,
+    PERMISSIONS.MAINTENANCE.COMPANY_USERS.READ,
+    PERMISSIONS.MAINTENANCE.COMPANY_USERS.MANAGE,
+    PERMISSIONS.MAINTENANCE.COMPANY_USERS.DELETE,
+  ]);
 
   const inventoryItems = canViewInventorySection
     ? [{ key: 'assets', icon: AppsIcon, label: 'Activos', path: '/inventario/activos' }]
+    : [];
+
+  const maintenanceItems = canViewMaintenanceSection
+    ? [{ key: 'module', icon: BuildIcon, label: 'Mantenimiento', path: '/mantenimiento' }]
     : [];
 
   const securityItems = canViewSecuritySection
@@ -198,7 +202,6 @@ export function NavDrawer({ open, onClose }) {
             width: 280,
             border: 'none',
             borderRight: '1px solid',
-            borderColor: 'divider',
             position: 'relative',
             overflow: 'hidden',
             color: 'text.primary',
@@ -269,15 +272,35 @@ export function NavDrawer({ open, onClose }) {
             </ListItem>
           ) : null}
 
-          {showSecuritySection ? (
+        {showSecuritySection ? (
+            <ListItem disablePadding sx={{ display: 'block' }}>
+                <NavSection
+                    icon={ShieldIcon}
+                    label="Gestión Seguridad"
+                    expanded={expandedMenu === 'security'}
+                    onToggle={() => toggleMenu('security')}
+                >
+                    {securityItems.map((item) => (
+                        <NavLeaf
+                            key={item.key}
+                            icon={item.icon}
+                            label={item.label}
+                            onClick={() => handleNavigation(item.path)}
+                        />
+                    ))}
+                </NavSection>
+            </ListItem>
+        ) : null}
+
+          {canViewMaintenanceSection ? (
             <ListItem disablePadding sx={{ display: 'block' }}>
               <NavSection
-                icon={ShieldIcon}
-                label="Gestión Seguridad"
-                expanded={expandedMenu === 'security'}
-                onToggle={() => toggleMenu('security')}
+                icon={BuildIcon}
+                label="Gestión Mantenimiento"
+                expanded={expandedMenu === 'maintenance'}
+                onToggle={() => toggleMenu('maintenance')}
               >
-                {securityItems.map((item) => (
+                {maintenanceItems.map((item) => (
                   <NavLeaf
                     key={item.key}
                     icon={item.icon}
@@ -288,6 +311,8 @@ export function NavDrawer({ open, onClose }) {
               </NavSection>
             </ListItem>
           ) : null}
+
+
         </List>
 
         <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>

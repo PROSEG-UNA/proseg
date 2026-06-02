@@ -96,7 +96,7 @@ function PageShell({children}) {
     return (
         <Box
             sx={{
-                minHeight: '100vh',
+                minHeight: '100dvh',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -345,7 +345,7 @@ export function SetPasswordPage() {
     if (tokenValid === null) {
         return (
             <Box sx={{
-                minHeight: '100vh',
+                minHeight: '100dvh',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -372,7 +372,6 @@ export function SetPasswordPage() {
                 }}/>
             )}
 
-            {/* Invitation info */}
             {info && (
                 <Box sx={{px: 3, pt: 2.5}}>
                     <Typography sx={{
@@ -454,7 +453,6 @@ export function SetPasswordPage() {
                 </Box>
             )}
 
-            {/* Form */}
             <Box sx={{px: 3, pt: 2.5, pb: 1}}>
                 <Typography sx={{
                     fontSize: 10.5,
@@ -566,7 +564,6 @@ export function SetPasswordPage() {
                 </Box>
             </Box>
 
-            {/* Footer */}
             <Box sx={{
                 px: 3, py: 1.75,
                 borderTop: '1px solid', borderColor: 'divider',

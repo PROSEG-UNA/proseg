@@ -5,6 +5,7 @@ import com.sssi.msvcinventory.dto.request.NetworkInterfaceEmbeddedRequestDto;
 import com.sssi.msvcinventory.dto.response.AssetResponseDto;
 import com.sssi.msvcinventory.dto.response.NetworkInterfaceResponseDto;
 import com.sssi.msvcinventory.entity.*;
+import com.sssi.msvcinventory.entity.enums.AssetStatus;
 import com.sssi.msvcinventory.exception.AssetException;
 import com.sssi.msvcinventory.exception.ModelException;
 import com.sssi.msvcinventory.exception.TypeException;
@@ -50,6 +51,8 @@ public class AssetServiceImpl implements AssetService {
                 && assetRepository.existsBySerialNumber(request.getSerialNumber())) {
             throw AssetException.duplicateSerialNumber(request.getSerialNumber());
         }
+
+        validateDecommissionDate(request);
 
         Model model = modelRepository.findById(request.getModelId())
                 .orElseThrow(() -> ModelException.notFound(request.getModelId().toString()));
@@ -105,8 +108,8 @@ public class AssetServiceImpl implements AssetService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<AssetResponseDto> findBySiteId(UUID siteId, Pageable pageable) {
-        return assetRepository.findByLocationSiteId(siteId, pageable)
+    public Page<AssetResponseDto> findByCampusId(UUID campusId, Pageable pageable) {
+        return assetRepository.findByLocationFloorBuildingCampusId(campusId, pageable)
                 .map(this::toPolymorphicResponse);
     }
 
@@ -130,6 +133,8 @@ public class AssetServiceImpl implements AssetService {
                 && assetRepository.existsBySerialNumberAndIdNot(request.getSerialNumber(), id)) {
             throw AssetException.duplicateSerialNumber(request.getSerialNumber());
         }
+
+        validateDecommissionDate(request);
 
         Model model = modelRepository.findById(request.getModelId())
                 .orElseThrow(() -> ModelException.notFound(request.getModelId().toString()));
@@ -230,6 +235,12 @@ public class AssetServiceImpl implements AssetService {
     public boolean existsByAssetNumber(String assetNumber, UUID excludeId) {
         if (excludeId == null) return assetRepository.existsByAssetNumber(assetNumber);
         return assetRepository.existsByAssetNumberAndIdNot(assetNumber, excludeId);
+    }
+
+    private void validateDecommissionDate(AssetRequestDto request) {
+        if (request.getStatus() == AssetStatus.APROBADO && request.getDecommissionDate() != null) {
+            throw AssetException.decommissionDateNotAllowed();
+        }
     }
 
     private AssetResponseDto toPolymorphicResponse(Asset asset) {

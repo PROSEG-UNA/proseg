@@ -28,15 +28,12 @@ public class Location extends BaseEntity {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
+    @Filterable(type = FilterType.TEXT, nestedPaths = {"name", "building.name", "building.campus.name"})
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "floor_id", nullable = false)
+    private Floor floor;
+
     @Filterable(type = FilterType.TEXT)
     @Column(nullable = false)
-    private String name;
-
-    @Filterable(type = FilterType.TEXT, nestedPaths = {"name"})
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "site_id", nullable = false)
-    private Site site;
-
-    @Filterable(type = FilterType.TEXT)
     private String description;
 }

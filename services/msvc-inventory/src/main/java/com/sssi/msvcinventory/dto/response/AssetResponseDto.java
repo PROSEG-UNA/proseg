@@ -27,15 +27,16 @@ public class AssetResponseDto {
 
     private UUID id;
     private String kind;
-    private String name;
-    private String description;
     private ModelResponseDto model;
     private LocationResponseDto location;
     private AssetStatus status;
-    private String statusDescription;
+    private String executingUnit;
+    private String responsibleEmployee;
+    private String responsibleEmployeeId;
     private LocalDate acquisitionDate;
     private LocalDate warrantyEndDate;
     private LocalDate firmwareSupportEndDate;
+    private LocalDate decommissionDate;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<String> archiveUrls;

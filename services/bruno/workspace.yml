@@ -1,0 +1,14 @@
+opencollection: 1.0.0
+info:
+  name: "PROSEG"
+  type: workspace
+
+collections:
+  - name: "msvc-auth"
+    path: "collections/msvc-auth"
+  - name: "msvc-maintenance"
+    path: "collections/msvc-maintenance"
+
+specs:
+
+docs: ''

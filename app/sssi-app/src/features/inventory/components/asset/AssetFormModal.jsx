@@ -15,24 +15,21 @@ import DialogModal from '../../../../common/components/DialogModal.jsx';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
 import CatalogFormModal from '../catalog/CatalogFormModal.jsx';
 import { CATALOG_CONFIG } from '../catalog/catalogConfig.js';
-import { fetchCatalogOptions } from '../../services/catalogService.js';
+import { fetchCatalogOptions, createCatalogItem } from '../../services/catalogService.js';
 import { createAsset, updateAsset, fetchAssetById, fetchLastKnownNetworkInterface, checkAssetNumber } from '../../services/assetsService.js';
 import { uploadPhoto, registerArchive, fetchAssetArchives, deleteArchive } from '../../services/assetArchiveService.js';
 import { INVENTORY_ENDPOINTS } from '../../services/endpoints.js';
 
 const STATUS_OPTIONS = [
-    { value: 'BUENO',           label: 'Bueno' },
-    { value: 'REGULAR',         label: 'Regular' },
-    { value: 'MALO',            label: 'Malo' },
-    { value: 'EN_REPARACION',   label: 'En reparación' },
-    { value: 'BAJA',            label: 'Baja' },
+    { value: 'APROBADO', label: 'Aprobado' },
+    { value: 'DE_BAJA',  label: 'De baja' },
 ];
 
 const INIT = {
-    name: '', description: '',
+    executingUnit: '', responsibleEmployee: '', responsibleEmployeeId: '',
     brandId: '', typeId: '', modelId: '',
-    locationId: '',
-    status: '', statusDescription: '',
+    campusId: '', buildingId: '', floorNumber: '', locationId: '',
+    status: '', decommissionDate: '',
     acquisitionDate: '', warrantyEndDate: '', firmwareSupportEndDate: '',
     ipAddress: '', macAddress: '',
     assetNumber: '', serialNumber: '',
@@ -57,6 +54,8 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
     const [brands, setBrands]       = useState([]);
     const [types, setTypes]         = useState([]);
     const [models, setModels]       = useState([]);
+    const [campuses, setCampuses]   = useState([]);
+    const [buildings, setBuildings] = useState([]);
     const [locations, setLocations] = useState([]);
     const [loadingOptions, setLoadingOptions] = useState(false);
 
@@ -79,6 +78,17 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         return matchBrand && matchType;
     });
 
+    const filteredBuildings = buildings.filter(b => {
+        if (b.name === '-') return false;
+        return !formValues.campusId || b.campus?.id === formValues.campusId;
+    });
+
+    const filteredLocations = locations.filter(l => {
+        if (l.description === '-') return false;
+        if (!formValues.buildingId) return false;
+        return l.floor?.building?.id === formValues.buildingId;
+    });
+
     useEffect(() => {
         if (!open) return;
         setPhotos(prev => { prev.forEach(p => URL.revokeObjectURL(p.preview)); return []; });
@@ -95,7 +105,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         setShowAssetNumberConfirm(false);
     }, [open]);
 
-    useEffect(() => {
+    const loadOptions = () => {
         if (!open) return;
         let cancelled = false;
         setLoadingOptions(true);
@@ -103,8 +113,10 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
             fetchCatalogOptions(INVENTORY_ENDPOINTS.brands),
             fetchCatalogOptions(INVENTORY_ENDPOINTS.types),
             fetchCatalogOptions(INVENTORY_ENDPOINTS.models),
+            fetchCatalogOptions(INVENTORY_ENDPOINTS.campuses),
+            fetchCatalogOptions(INVENTORY_ENDPOINTS.buildings),
             fetchCatalogOptions(INVENTORY_ENDPOINTS.locations),
-        ]).then(([b, t, m, l]) => {
+        ]).then(([b, t, m, s, bd, l]) => {
             if (cancelled) return;
             setBrands(prev => {
                 const ids = new Set(b.map(x => x.id));
@@ -118,13 +130,23 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 const ids = new Set(m.map(x => x.id));
                 return [...m, ...prev.filter(x => !ids.has(x.id))];
             });
+            setCampuses(prev => {
+                const ids = new Set(s.map(x => x.id));
+                return [...s, ...prev.filter(x => !ids.has(x.id))];
+            });
+            setBuildings(prev => {
+                const ids = new Set(bd.map(x => x.id));
+                return [...bd, ...prev.filter(x => !ids.has(x.id))];
+            });
             setLocations(prev => {
                 const ids = new Set(l.map(x => x.id));
                 return [...l, ...prev.filter(x => !ids.has(x.id))];
             });
         }).catch(() => {}).finally(() => { if (!cancelled) setLoadingOptions(false); });
         return () => { cancelled = true; };
-    }, [open]);
+    };
+
+    useEffect(loadOptions, [open]);
 
     const loadAssetData = () => {
         if (!open || !assetId) return;
@@ -136,17 +158,21 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 if (cancelled) return;
                 if (asset) {
                     setFormValues({
-                        name:                   asset.name ?? '',
-                        description:            asset.description ?? '',
+                        executingUnit:          asset.executingUnit ?? '',
+                        responsibleEmployee:    asset.responsibleEmployee ?? '',
+                        responsibleEmployeeId:  asset.responsibleEmployeeId ?? '',
                         brandId:                asset.model?.brand?.id ?? '',
                         typeId:                 asset.model?.type?.id ?? '',
                         modelId:                asset.model?.id ?? '',
+                        campusId:               asset.location?.floor?.building?.campus?.id ?? '',
+                        buildingId:             asset.location?.floor?.building?.id ?? '',
+                        floorNumber:            asset.location?.floor?.name ? parseInt(asset.location.floor.name) : '',
                         locationId:             asset.location?.id ?? '',
                         status:                 asset.status ?? '',
-                        statusDescription:      asset.statusDescription ?? '',
                         acquisitionDate:        asset.acquisitionDate ?? '',
                         warrantyEndDate:        asset.warrantyEndDate ?? '',
                         firmwareSupportEndDate: asset.firmwareSupportEndDate ?? '',
+                        decommissionDate:       asset.decommissionDate ?? '',
                         ipAddress:              asset.networkInterface?.ipAddress ?? '',
                         macAddress:             asset.networkInterface?.macAddress ?? '',
                         assetNumber:            asset.assetNumber ?? '',
@@ -162,6 +188,14 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     }
                     if (asset.model) {
                         setModels(prev => prev.some(m => m.id === asset.model.id) ? prev : [...prev, asset.model]);
+                    }
+                    const campus = asset.location?.floor?.building?.campus;
+                    if (campus) {
+                        setCampuses(prev => prev.some(s => s.id === campus.id) ? prev : [...prev, campus]);
+                    }
+                    const building = asset.location?.floor?.building;
+                    if (building) {
+                        setBuildings(prev => prev.some(b => b.id === building.id) ? prev : [...prev, building]);
                     }
                     if (asset.location) {
                         setLocations(prev => prev.some(l => l.id === asset.location.id) ? prev : [...prev, asset.location]);
@@ -186,16 +220,11 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
     useEffect(loadAssetData, [open, assetId]);
 
     const validateField = (key, value) => {
-        const required = ['name', 'brandId', 'typeId', 'modelId', 'locationId', 'status', 'assetNumber', 'serialNumber'];
+        const required = ['brandId', 'typeId', 'modelId', 'campusId', 'status', 'assetNumber', 'serialNumber'];
         let error = '';
 
         if (required.includes(key) && (!value || (typeof value === 'string' && !value.trim()))) {
             error = 'Este campo es requerido';
-        }
-
-        if (!error && key === 'name' && value?.trim()) {
-            if (value.trim().length < 2)   error = 'Mínimo 2 caracteres';
-            if (value.trim().length > 150) error = 'Máximo 150 caracteres';
         }
 
         if (!error && key === 'ipAddress' && value?.trim()) {
@@ -224,8 +253,29 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
     };
 
     const handleChange = (key, value) => {
+        if (key === 'status' && value === 'APROBADO') {
+            setFormValues(prev => ({ ...prev, status: value, decommissionDate: '' }));
+            setErrors(prev => ({ ...prev, decommissionDate: '' }));
+            if (touched[key]) validateField(key, value);
+            return;
+        }
         setFormValues(prev => ({ ...prev, [key]: value }));
         if (touched[key]) validateField(key, value);
+    };
+
+    const handleCampusChange = (value) => {
+        setFormValues(prev => ({ ...prev, campusId: value, buildingId: '', floorNumber: '', locationId: '' }));
+        if (touched.campusId) validateField('campusId', value);
+    };
+
+    const handleBuildingChange = (value) => {
+        const building = buildings.find(b => b.id === value);
+        if (building && building.campus?.id && building.campus.id !== formValues.campusId) {
+            setFormValues(prev => ({ ...prev, campusId: building.campus.id, buildingId: value, floorNumber: '', locationId: '' }));
+        } else {
+            setFormValues(prev => ({ ...prev, buildingId: value, floorNumber: '', locationId: '' }));
+        }
+        if (touched.buildingId) validateField('buildingId', value);
     };
 
     const handleCoordinatesChange = (lat, lng) => {
@@ -318,14 +368,18 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         if (key === 'brandId')    return brands;
         if (key === 'typeId')     return types;
         if (key === 'modelId')    return models;
+        if (key === 'campusId')   return campuses;
+        if (key === 'buildingId') return buildings;
         if (key === 'locationId') return locations;
         return [];
     };
 
     const setOptionsByKey = (key, opts) => {
-        if (key === 'brandId')    setBrands(opts);
+        if (key === 'brandId')         setBrands(opts);
         else if (key === 'typeId')     setTypes(opts);
         else if (key === 'modelId')    setModels(opts);
+        else if (key === 'campusId')   setCampuses(opts);
+        else if (key === 'buildingId') setBuildings(opts);
         else if (key === 'locationId') setLocations(opts);
     };
 
@@ -334,9 +388,21 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
             brandId:    CATALOG_CONFIG.brand,
             typeId:     CATALOG_CONFIG.type,
             modelId:    CATALOG_CONFIG.model,
+            campusId:   CATALOG_CONFIG.campus,
+            buildingId: CATALOG_CONFIG.building,
             locationId: CATALOG_CONFIG.location,
         };
-        setCatalogModal({ config: configMap[fieldKey], fieldKey, prevOptions: getOptionsByKey(fieldKey) });
+        let initialValues;
+        if (fieldKey === 'buildingId') {
+            initialValues = { campusId: formValues.campusId };
+        } else if (fieldKey === 'locationId') {
+            initialValues = {
+                campusId: formValues.campusId,
+                buildingId: formValues.buildingId,
+                floorNumber: formValues.floorNumber || 1,
+            };
+        }
+        setCatalogModal({ config: configMap[fieldKey], fieldKey, prevOptions: getOptionsByKey(fieldKey), initialValues });
     };
 
     const handleCatalogSaved = async () => {
@@ -349,6 +415,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
             const prevIds = new Set(prevOptions.map(x => x.id));
             const newItem = fresh.find(x => !prevIds.has(x.id));
             if (!newItem) return;
+
             if (fieldKey === 'brandId') {
                 setFormValues(prev => ({ ...prev, brandId: newItem.id, modelId: '' }));
             } else if (fieldKey === 'typeId') {
@@ -358,25 +425,73 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     modelId: '',
                     ...(!newItem.requiresNetworkInterface && { ipAddress: '', macAddress: '' }),
                 }));
+            } else if (fieldKey === 'campusId') {
+                const freshBuildings = await fetchCatalogOptions(INVENTORY_ENDPOINTS.buildings);
+                setBuildings(freshBuildings);
+                setFormValues(prev => ({ ...prev, campusId: newItem.id, buildingId: '', floorNumber: '', locationId: '' }));
+            } else if (fieldKey === 'buildingId') {
+                const freshBuildings = await fetchCatalogOptions(INVENTORY_ENDPOINTS.buildings);
+                setBuildings(freshBuildings);
+                const created = freshBuildings.find(x => !prevIds.has(x.id)) ?? newItem;
+                setFormValues(prev => ({
+                    ...prev,
+                    buildingId: created.id,
+                    campusId: created.campus?.id ?? prev.campusId,
+                    floorNumber: '',
+                    locationId: '',
+                }));
+            } else if (fieldKey === 'locationId') {
+                const freshLocations = await fetchCatalogOptions(INVENTORY_ENDPOINTS.locations);
+                setLocations(freshLocations);
+                const created = freshLocations.find(x => !prevIds.has(x.id)) ?? newItem;
+                setFormValues(prev => ({
+                    ...prev,
+                    locationId: created.id,
+                    campusId: created.floor?.building?.campus?.id ?? prev.campusId,
+                    buildingId: created.floor?.building?.id ?? prev.buildingId,
+                    floorNumber: created.floor?.name ? parseInt(created.floor.name) : prev.floorNumber,
+                }));
             } else {
                 setFormValues(prev => ({ ...prev, [fieldKey]: newItem.id }));
             }
         } catch (_) {}
     };
 
+    const resolveLocationId = async () => {
+        const { campusId, buildingId, floorNumber, locationId } = formValues;
+        if (locationId) return locationId;
+
+        let resolvedBuildingId = buildingId;
+        if (!resolvedBuildingId) {
+            const created = await createCatalogItem(INVENTORY_ENDPOINTS.buildings, { name: '-', campusId });
+            resolvedBuildingId = created.id;
+        }
+
+        const created = await createCatalogItem(INVENTORY_ENDPOINTS.locations, {
+            description: '-',
+            campusId,
+            buildingId: resolvedBuildingId,
+            floorNumber: floorNumber || 1,
+        });
+        return created.id;
+    };
+
     const doSave = async () => {
         setSaving(true);
         try {
+            const finalLocationId = await resolveLocationId();
+
             const payload = {
-                name:                    formValues.name.trim(),
-                description:             formValues.description?.trim()           || null,
+                executingUnit:           formValues.executingUnit?.trim()         || null,
+                responsibleEmployee:     formValues.responsibleEmployee?.trim()   || null,
+                responsibleEmployeeId:   formValues.responsibleEmployeeId?.trim() || null,
                 modelId:                 formValues.modelId,
-                locationId:              formValues.locationId,
+                locationId:              finalLocationId,
                 status:                  formValues.status,
-                statusDescription:       formValues.statusDescription?.trim()     || null,
                 acquisitionDate:         formValues.acquisitionDate               || null,
                 warrantyEndDate:         formValues.warrantyEndDate               || null,
                 firmwareSupportEndDate:  formValues.firmwareSupportEndDate        || null,
+                decommissionDate:        formValues.decommissionDate             || null,
                 assetNumber:             formValues.assetNumber?.trim()           || null,
                 serialNumber:            formValues.serialNumber?.trim()          || null,
                 latitude:                formValues.latitude !== '' ? parseFloat(formValues.latitude) : null,
@@ -433,7 +548,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
     };
 
     const handleSave = async () => {
-        const requiredFields = ['name', 'brandId', 'typeId', 'modelId', 'locationId', 'status', 'assetNumber', 'serialNumber'];
+        const requiredFields = ['brandId', 'typeId', 'modelId', 'campusId', 'status', 'assetNumber', 'serialNumber'];
 
         const newTouched = {};
         const newErrors  = {};
@@ -445,11 +560,6 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 newErrors[key] = 'Este campo es requerido';
             }
         });
-
-        if (!newErrors.name && formValues.name.trim().length < 2) {
-            newErrors.name    = 'Mínimo 2 caracteres';
-            newTouched.name   = true;
-        }
         if (!newErrors.ipAddress && formValues.ipAddress?.trim()) {
             if (!/^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/.test(formValues.ipAddress.trim())) {
                 newErrors.ipAddress  = 'La dirección IP no tiene un formato válido';
@@ -477,7 +587,6 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 newTouched.longitude = true;
             }
         }
-
         setTouched(prev => ({ ...prev, ...newTouched }));
         setErrors(prev  => ({ ...prev, ...newErrors  }));
 
@@ -582,29 +691,6 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
 
                     <Box>
-                        {sectionLabel('Información básica')}
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            <TextField
-                                label="Nombre" value={formValues.name} required
-                                onChange={e => handleChange('name', e.target.value)}
-                                onBlur={() => handleBlur('name')}
-                                fullWidth size="small" disabled={saving}
-                                error={touched.name && !!errors.name}
-                                helperText={touched.name ? (errors.name || ' ') : ' '}
-                                sx={fieldSx}
-                            />
-                            <TextField
-                                label="Descripción" value={formValues.description}
-                                onChange={e => handleChange('description', e.target.value)}
-                                fullWidth size="small" multiline rows={2} disabled={saving}
-                                sx={fieldSx}
-                            />
-                        </Box>
-                    </Box>
-
-                    <Divider />
-
-                    <Box>
                         {sectionLabel('Identificación')}
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                             <Box>
@@ -702,21 +788,103 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     <Divider />
 
                     <Box>
+                        {sectionLabel('Responsable')}
+                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2 }}>
+                            <TextField
+                                label="Unidad Ejecutora" value={formValues.executingUnit}
+                                onChange={e => handleChange('executingUnit', e.target.value)}
+                                fullWidth size="small" disabled={saving}
+                                sx={fieldSx}
+                            />
+                            <TextField
+                                label="Nombre Funcionario" value={formValues.responsibleEmployee}
+                                onChange={e => handleChange('responsibleEmployee', e.target.value)}
+                                fullWidth size="small" disabled={saving}
+                                sx={fieldSx}
+                            />
+                            <TextField
+                                label="Identificación Funcionario" value={formValues.responsibleEmployeeId}
+                                onChange={e => handleChange('responsibleEmployeeId', e.target.value)}
+                                fullWidth size="small" disabled={saving}
+                                sx={fieldSx}
+                            />
+                        </Box>
+                    </Box>
+
+                    <Divider />
+
+                    <Box>
                         {sectionLabel('Ubicación')}
-                        <SearchableSelect
-                            label="Locación" value={formValues.locationId} required
-                            onChange={v => handleChange('locationId', v)}
-                            onBlur={() => handleBlur('locationId')}
-                            fullWidth size="small" disabled={saving || loadingOptions}
-                            error={touched.locationId && !!errors.locationId}
-                            helperText={touched.locationId ? (errors.locationId || ' ') : ' '}
-                            sx={fieldSx}
-                            items={locations}
-                            getItemLabel={l => l.name + (l.site?.name ? ` — ${l.site.name}` : '')}
-                            getItemValue={l => l.id}
-                            onCreate={() => openCatalogModal('locationId')}
-                            createLabel="Crear nueva Locación"
-                        />
+                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                            <SearchableSelect
+                                label="Campus" value={formValues.campusId} required
+                                onChange={handleCampusChange}
+                                onBlur={() => handleBlur('campusId')}
+                                fullWidth size="small" disabled={saving || loadingOptions}
+                                error={touched.campusId && !!errors.campusId}
+                                helperText={touched.campusId ? (errors.campusId || ' ') : ' '}
+                                sx={fieldSx}
+                                items={campuses}
+                                getItemLabel={s => s.name}
+                                getItemValue={s => s.id}
+                                onCreate={() => openCatalogModal('campusId')}
+                                createLabel="Crear nuevo Campus"
+                            />
+
+                            <SearchableSelect
+                                label="Edificio" value={formValues.buildingId}
+                                onChange={handleBuildingChange}
+                                onBlur={() => handleBlur('buildingId')}
+                                fullWidth size="small"
+                                disabled={saving || loadingOptions || !formValues.campusId}
+                                error={touched.buildingId && !!errors.buildingId}
+                                helperText={
+                                    !formValues.campusId
+                                        ? 'Selecciona un campus primero'
+                                        : (touched.buildingId ? (errors.buildingId || ' ') : ' ')
+                                }
+                                sx={fieldSx}
+                                items={filteredBuildings}
+                                getItemLabel={b => b.name}
+                                getItemValue={b => b.id}
+                                onCreate={() => openCatalogModal('buildingId')}
+                                createLabel="Crear nuevo Edificio"
+                            />
+
+                            <TextField
+                                label="Número de piso"
+                                value={formValues.floorNumber}
+                                onChange={e => handleChange('floorNumber', e.target.value === '' ? '' : Number(e.target.value))}
+                                onBlur={() => handleBlur('floorNumber')}
+                                fullWidth size="small"
+                                type="number"
+                                inputProps={{ min: 0 }}
+                                disabled={saving || !formValues.campusId || !formValues.buildingId}
+                                error={touched.floorNumber && !!errors.floorNumber}
+                                helperText={touched.floorNumber ? (errors.floorNumber || ' ') : ' '}
+                                sx={fieldSx}
+                            />
+
+                            <SearchableSelect
+                                label="Locación" value={formValues.locationId}
+                                onChange={v => handleChange('locationId', v)}
+                                onBlur={() => handleBlur('locationId')}
+                                fullWidth size="small"
+                                disabled={saving || loadingOptions || !formValues.campusId || !formValues.buildingId}
+                                error={touched.locationId && !!errors.locationId}
+                                helperText={
+                                    (!formValues.campusId || !formValues.buildingId)
+                                        ? 'Selecciona campus y edificio primero'
+                                        : (touched.locationId ? (errors.locationId || ' ') : ' ')
+                                }
+                                sx={fieldSx}
+                                items={filteredLocations}
+                                getItemLabel={l => l.description + (l.floor?.name ? ` (Piso ${l.floor.name})` : '')}
+                                getItemValue={l => l.id}
+                                onCreate={() => openCatalogModal('locationId')}
+                                createLabel="Crear nueva Locación"
+                            />
+                        </Box>
                     </Box>
 
                     <Divider />
@@ -740,7 +908,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
 
                     <Box>
                         {sectionLabel('Estado')}
-                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 2fr' }, gap: 2 }}>
+                        <Box sx={{ display: 'grid', gridTemplateColumns: formValues.status === 'DE_BAJA' ? { xs: '1fr', sm: '1fr 1fr' } : '1fr', gap: 2 }}>
                             <TextField
                                 select label="Estado" value={formValues.status} required
                                 onChange={e => handleChange('status', e.target.value)}
@@ -752,12 +920,24 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                             >
                                 {STATUS_OPTIONS.map(o => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
                             </TextField>
-                            <TextField
-                                label="Descripción del estado" value={formValues.statusDescription}
-                                onChange={e => handleChange('statusDescription', e.target.value)}
-                                fullWidth size="small" disabled={saving}
-                                sx={fieldSx}
-                            />
+                            {formValues.status === 'DE_BAJA' && (
+                                <DatePicker
+                                    label="Fecha de baja"
+                                    value={formValues.decommissionDate ? dayjs(formValues.decommissionDate) : null}
+                                    onChange={v => handleChange('decommissionDate', v ? v.format('YYYY-MM-DD') : '')}
+                                    disabled={saving}
+                                    slotProps={{
+                                        textField: {
+                                            size: 'small',
+                                            fullWidth: true,
+                                            error: touched.decommissionDate && !!errors.decommissionDate,
+                                            helperText: touched.decommissionDate ? (errors.decommissionDate || ' ') : ' ',
+                                            sx: fieldSx,
+                                            onBlur: () => handleBlur('decommissionDate'),
+                                        },
+                                    }}
+                                />
+                            )}
                         </Box>
                     </Box>
 
@@ -975,6 +1155,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     onClose={() => setCatalogModal(null)}
                     onSaved={handleCatalogSaved}
                     config={catalogModal.config}
+                    initialValues={catalogModal.initialValues}
                 />
             )}
 

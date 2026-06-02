@@ -65,13 +65,13 @@ public class AssetController {
         );
     }
 
-    @GetMapping("/site/{siteId}")
-    public ResponseEntity<ApiResponse<PageResponse<AssetResponseDto>>> findBySiteId(
-            @PathVariable UUID siteId,
+    @GetMapping("/campus/{campusId}")
+    public ResponseEntity<ApiResponse<PageResponse<AssetResponseDto>>> findByCampusId(
+            @PathVariable UUID campusId,
             @PageableDefault(size = 10, page = 0) Pageable pageable) {
         return ApiResponseBuilder.ok(
-                PageMapper.from(assetService.findBySiteId(siteId, pageable)),
-                "Activos por sitio"
+                PageMapper.from(assetService.findByCampusId(campusId, pageable)),
+                "Activos por campus"
         );
     }
 

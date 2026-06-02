@@ -17,13 +17,6 @@ import java.util.UUID;
 @SuperBuilder
 public class AssetRequestDto {
 
-    @NotBlank(message = "El nombre del activo es obligatorio")
-    @Size(min = 2, max = 150, message = "El nombre debe tener entre 2 y 150 caracteres")
-    private String name;
-
-    @Size(max = 255, message = "La descripción no puede superar los 255 caracteres")
-    private String description;
-
     @NotNull(message = "El modelo del activo es obligatorio")
     private UUID modelId;
 
@@ -33,14 +26,22 @@ public class AssetRequestDto {
     @NotNull(message = "El estado es obligatorio")
     private AssetStatus status;
 
-    @Size(max = 255, message = "La descripción del estado no puede superar los 255 caracteres")
-    private String statusDescription;
+    @Size(max = 255, message = "La unidad ejecutora no puede superar los 255 caracteres")
+    private String executingUnit;
+
+    @Size(max = 255, message = "El empleado responsable no puede superar los 255 caracteres")
+    private String responsibleEmployee;
+
+    @Size(max = 100, message = "El ID del empleado responsable no puede superar los 100 caracteres")
+    private String responsibleEmployeeId;
 
     private LocalDate acquisitionDate;
 
     private LocalDate warrantyEndDate;
 
     private LocalDate firmwareSupportEndDate;
+
+    private LocalDate decommissionDate;
 
     @Valid
     private NetworkInterfaceEmbeddedRequestDto networkInterface;
