@@ -24,6 +24,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import ShieldIcon from '@mui/icons-material/Shield';
 import AppsIcon from '@mui/icons-material/Apps';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import { useColorScheme } from '@mui/material/styles';
 import { SidebarContext } from '../context/SidebarContext';
 import { useAuth } from '../../features/auth/hooks/useAuth';
@@ -257,6 +258,10 @@ export function Sidebar() {
         PERMISSIONS.MAINTENANCE.COMPANY_USERS.READ,
         PERMISSIONS.MAINTENANCE.COMPANY_USERS.MANAGE,
         PERMISSIONS.MAINTENANCE.COMPANY_USERS.DELETE,
+        PERMISSIONS.MAINTENANCE.TICKETS.READ,
+        PERMISSIONS.MAINTENANCE.TICKETS.CREATE,
+        PERMISSIONS.MAINTENANCE.TICKETS.EDIT,
+        PERMISSIONS.MAINTENANCE.TICKETS.DELETE,
     ]);
 
     const inventoryItems = canViewInventorySection
@@ -267,6 +272,8 @@ export function Sidebar() {
         ? [
             { key: 'companies', icon: BusinessIcon, label: 'Empresas', path: '/mantenimiento/empresas' },
             { key: 'requests', icon: ConstructionIcon, label: 'Solicitudes', path: '/mantenimiento/solicitudes' },
+            { key: 'technicians', icon: BuildIcon, label: 'Técnicos', path: '/mantenimiento/tecnicos' },
+            { key: 'tickets', icon: ConfirmationNumberIcon, label: 'Tickets', path: '/mantenimiento/tickets' },
         ]
         : [];
 

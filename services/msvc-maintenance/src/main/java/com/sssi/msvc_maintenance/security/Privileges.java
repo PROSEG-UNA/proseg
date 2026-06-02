@@ -27,4 +27,14 @@ public final class Privileges {
         public static final String GESTIONAR  = "GESTIONAR_USUARIOS_EMPRESAS";
         public static final String ELIMINAR   = "ELIMINAR_USUARIOS_EMPRESAS";
     }
+
+    public static final class Tickets {
+        public static final String LEER       = "LEER_TICKET_MANTENIMIENTO";
+        public static final String CREAR      = "CREAR_TICKETS_MANTENIMIENTO";
+        public static final String EDITAR     = "EDITAR_TICKETS_MANTENIMIENTO";
+        public static final String COMENTAR   = "COMENTAR_TICKETS_MANTENIMIENTO";
+        public static final String VER_TODOS  = "LEER_TODOS_TICKETS_MANTENIMIENTO";
+        public static final String ASIGNAR_PRIORIDAD = "ASIGNAR_PRIORIDAD_TICKETS_MANTENIMIENTO";
+        public static final String ELIMINAR   = "ELIMINAR_TICKETS_MANTENIMIENTO";
+    }
 }

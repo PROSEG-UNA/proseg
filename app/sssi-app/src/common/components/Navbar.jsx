@@ -8,6 +8,7 @@ export function Navbar() {
         <li><a href="/">Home</a></li>
         <li><a href="/auth">Auth</a></li>
         <li><a href="/home">Inventario</a></li>
+        <li><a href="/mantenimiento/tickets">Tickets</a></li>
         <li><a href="/seguridad/usuarios">Seguridad</a></li>
       </ul>
     </nav>

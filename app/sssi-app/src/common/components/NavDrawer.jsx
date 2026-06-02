@@ -21,8 +21,10 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import BuildIcon from '@mui/icons-material/Build';
+import ConstructionIcon from '@mui/icons-material/Construction';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import ShieldIcon from '@mui/icons-material/Shield';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import { useColorScheme } from '@mui/material/styles';
 import { usePermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/permissions';
@@ -172,6 +174,10 @@ export function NavDrawer({ open, onClose }) {
     PERMISSIONS.MAINTENANCE.COMPANY_USERS.READ,
     PERMISSIONS.MAINTENANCE.COMPANY_USERS.MANAGE,
     PERMISSIONS.MAINTENANCE.COMPANY_USERS.DELETE,
+    PERMISSIONS.MAINTENANCE.TICKETS.READ,
+    PERMISSIONS.MAINTENANCE.TICKETS.CREATE,
+    PERMISSIONS.MAINTENANCE.TICKETS.EDIT,
+    PERMISSIONS.MAINTENANCE.TICKETS.DELETE,
   ]);
 
   const inventoryItems = canViewInventorySection
@@ -179,7 +185,13 @@ export function NavDrawer({ open, onClose }) {
     : [];
 
   const maintenanceItems = canViewMaintenanceSection
-    ? [{ key: 'module', icon: BuildIcon, label: 'Mantenimiento', path: '/mantenimiento' }]
+    ? [
+        { key: 'module', icon: BuildIcon, label: 'Mantenimiento', path: '/mantenimiento' },
+        { key: 'companies', icon: BuildIcon, label: 'Empresas', path: '/mantenimiento/empresas' },
+        { key: 'requests', icon: ConstructionIcon, label: 'Solicitudes', path: '/mantenimiento/solicitudes' },
+        { key: 'technicians', icon: BuildIcon, label: 'Técnicos', path: '/mantenimiento/tecnicos' },
+        { key: 'tickets', icon: ConfirmationNumberIcon, label: 'Tickets', path: '/mantenimiento/tickets' },
+      ]
     : [];
 
   const securityItems = canViewSecuritySection

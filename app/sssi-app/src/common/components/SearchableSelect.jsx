@@ -80,7 +80,11 @@ export default function SearchableSelect({
                     return item ? getItemLabel(item) : '';
                 },
                 onOpen: () => setTimeout(() => searchInputRef.current?.focus(), 50),
-                onClose: () => { setSearch(''); setPage(0); },
+                onClose: () => {
+                    if (typeof onSearchChange === 'function') onSearchChange('');
+                    else setInternalSearch('');
+                    setPage(0);
+                },
                 MenuProps: {
                     PaperProps: { sx: { maxHeight: 'none' } },
                 },

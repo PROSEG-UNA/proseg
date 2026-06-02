@@ -102,6 +102,32 @@ public class SecurityConfig {
                                 "/api/v1/maintenance/user-companies/**"
                         ).hasAuthority(Privileges.UsuariosEmpresas.ELIMINAR)
 
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/maintenance/tickets",
+                                "/api/v1/maintenance/tickets/**"
+                        ).hasAuthority(Privileges.Tickets.LEER)
+
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/maintenance/tickets"
+                        ).hasAuthority(Privileges.Tickets.CREAR)
+
+                        .requestMatchers(HttpMethod.PATCH,
+                                "/api/v1/maintenance/tickets/*/priority"
+                        ).hasAnyAuthority(Privileges.Tickets.EDITAR, Privileges.Tickets.ASIGNAR_PRIORIDAD)
+
+                        .requestMatchers(HttpMethod.PATCH,
+                                "/api/v1/maintenance/tickets/*/assigned-role",
+                                "/api/v1/maintenance/tickets/*/resolve"
+                        ).hasAuthority(Privileges.Tickets.EDITAR)
+
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/maintenance/tickets/*/comments"
+                        ).hasAuthority(Privileges.Tickets.COMENTAR)
+
+                        .requestMatchers(
+                                "/api/v1/maintenance/ws/**"
+                        ).authenticated()
+
                         .anyRequest().authenticated()
                 )
 
