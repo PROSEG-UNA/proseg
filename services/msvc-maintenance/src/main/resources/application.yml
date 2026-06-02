@@ -16,3 +16,4 @@ routes:
   companies: ${api.prefix}/companies
   requests: ${api.prefix}/requests
   technicians: ${api.prefix}/technicians
+  maintenance-locations: ${api.prefix}/locations
