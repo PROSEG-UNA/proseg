@@ -20,6 +20,7 @@ jobs:
           script_stop: true
           script: |
             cd ${{ secrets.VPS_APP_DIR }}
+            git reset --hard HEAD
             git pull origin main
 
             cd app/sssi-app
