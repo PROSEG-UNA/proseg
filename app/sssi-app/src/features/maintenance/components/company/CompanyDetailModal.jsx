@@ -246,7 +246,7 @@ export default function CompanyDetailModal({
             contentSx={contentSx}
             showCloseButton
             primaryButton={canEdit ? {
-                label: 'Cerrar',
+                label: 'Editar',
                 icon: <EditIcon sx={{ fontSize: 16 }} />,
                 onClick: handleEdit,
             } : undefined}
