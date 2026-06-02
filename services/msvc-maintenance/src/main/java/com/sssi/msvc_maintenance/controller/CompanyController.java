@@ -69,6 +69,18 @@ public class CompanyController {
         );
     }
 
+    @GetMapping("/{id}/technicians")
+    public ResponseEntity<ApiResponse<List<UserCompanyResponseDto>>> findTechnicians(
+            @PathVariable UUID id
+    ) {
+        return ApiResponseBuilder.ok(
+                companyUserManagementService.findByCompanyId(id).stream()
+                        .map(userCompanyMapper::toResponse)
+                        .toList(),
+                "Técnicos de la empresa"
+        );
+    }
+
     @PostMapping("/{id}/users")
     public ResponseEntity<ApiResponse<UserCompanyResponseDto>> assignUser(
             @PathVariable UUID id,

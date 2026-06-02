@@ -9,15 +9,19 @@ import com.sssi.msvc_maintenance.dto.response.MaintenanceAssetOptionDto;
 import com.sssi.msvc_maintenance.dto.response.MaintenanceRequestResponseDto;
 import com.sssi.msvc_maintenance.entity.Company;
 import com.sssi.msvc_maintenance.entity.MaintenanceRequest;
+import com.sssi.msvc_maintenance.entity.UserCompany;
+import com.sssi.msvc_maintenance.entity.enums.MaintenanceStatus;
+import com.sssi.msvc_maintenance.event.MaintenanceRequestCreatedDomainEvent;
 import com.sssi.msvc_maintenance.exception.CompanyException;
 import com.sssi.msvc_maintenance.exception.MaintenanceRequestException;
 import com.sssi.msvc_maintenance.mapper.MaintenanceRequestMapper;
 import com.sssi.msvc_maintenance.repository.CompanyRepository;
 import com.sssi.msvc_maintenance.repository.MaintenanceRequestRepository;
-import com.sssi.msvc_maintenance.repository.MaintenanceTechnicianRepository;
+import com.sssi.msvc_maintenance.repository.UserCompanyRepository;
 import com.sssi.msvc_maintenance.service.MaintenanceRequestService;
 import com.sssi.msvc_maintenance.specification.GenericSpecifications;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -36,26 +40,63 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
 
     private final MaintenanceRequestRepository maintenanceRequestRepository;
     private final CompanyRepository companyRepository;
-    private final MaintenanceTechnicianRepository maintenanceTechnicianRepository;
+    private final UserCompanyRepository userCompanyRepository;
     private final MaintenanceRequestMapper maintenanceRequestMapper;
     private final InventoryClient inventoryClient;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
     public MaintenanceRequestResponseDto create(MaintenanceRequestRequestDto request) {
 
         UUID companyId = parseUuid(request.getCompanyId(), "companyId");
-        UUID assetId = parseUuid(request.getAssetId(), "assetId");
 
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(CompanyException::notFound);
-        validateAssetExists(assetId);
+
+        List<UserCompany> technicians = resolveAssignedTechnicians(request.getAssignedTechnicianIds(), company);
 
         MaintenanceRequest maintenanceRequest = maintenanceRequestMapper.toEntity(request);
         maintenanceRequest.setCompany(company);
-        maintenanceRequest.setAssetId(assetId);
+        maintenanceRequest.setStatus(MaintenanceStatus.PENDING);
+        maintenanceRequest.setCampusId(parseUuid(request.getCampusId(), "campusId"));
+        maintenanceRequest.setBuildingId(request.getBuildingId());
+        maintenanceRequest.setAssignedTechnicians(technicians);
+        maintenanceRequest.setLeaderUserCompany(resolveLeader(request.getLeaderUserCompanyId(), technicians));
 
-        return maintenanceRequestMapper.toResponse(maintenanceRequestRepository.save(maintenanceRequest));
+        MaintenanceRequest saved = maintenanceRequestRepository.save(maintenanceRequest);
+
+        publishCreatedEvent(saved);
+
+        return maintenanceRequestMapper.toResponse(saved);
+    }
+
+    private void publishCreatedEvent(MaintenanceRequest saved) {
+        List<String> technicianKeycloakIds = saved.getAssignedTechnicians() == null
+                ? List.of()
+                : saved.getAssignedTechnicians().stream()
+                        .map(UserCompany::getKeycloakUserId)
+                        .toList();
+
+        String leaderKeycloakId = saved.getLeaderUserCompany() != null
+                ? saved.getLeaderUserCompany().getKeycloakUserId()
+                : null;
+
+        eventPublisher.publishEvent(new MaintenanceRequestCreatedDomainEvent(
+                saved.getEmail(),
+                saved.getCompany().getName(),
+                saved.getCompany().getLegalId(),
+                saved.getDescription(),
+                saved.getStatus(),
+                saved.getStartDate(),
+                saved.getEndDate(),
+                saved.getStartTime(),
+                saved.getEndTime(),
+                saved.getCampusId(),
+                saved.getBuildingId(),
+                technicianKeycloakIds,
+                leaderKeycloakId
+        ));
     }
 
     @Override
@@ -102,15 +143,18 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                 .orElseThrow(MaintenanceRequestException::notFound);
 
         UUID companyId = parseUuid(request.getCompanyId(), "companyId");
-        UUID assetId = parseUuid(request.getAssetId(), "assetId");
 
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(CompanyException::notFound);
-        validateAssetExists(assetId);
+
+        List<UserCompany> technicians = resolveAssignedTechnicians(request.getAssignedTechnicianIds(), company);
 
         maintenanceRequestMapper.updateEntityFromRequest(request, maintenanceRequest);
         maintenanceRequest.setCompany(company);
-        maintenanceRequest.setAssetId(assetId);
+        maintenanceRequest.setCampusId(parseUuid(request.getCampusId(), "campusId"));
+        maintenanceRequest.setBuildingId(request.getBuildingId());
+        maintenanceRequest.setAssignedTechnicians(technicians);
+        maintenanceRequest.setLeaderUserCompany(resolveLeader(request.getLeaderUserCompanyId(), technicians));
 
         return maintenanceRequestMapper.toResponse(maintenanceRequestRepository.save(maintenanceRequest));
     }
@@ -149,11 +193,30 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         MaintenanceRequest maintenanceRequest = maintenanceRequestRepository.findById(id)
                 .orElseThrow(MaintenanceRequestException::notFound);
 
-        if (maintenanceTechnicianRepository.existsByMaintenanceRequestId(id)) {
-            throw MaintenanceRequestException.inUse();
-        }
-
         maintenanceRequestRepository.delete(maintenanceRequest);
+    }
+
+    private List<UserCompany> resolveAssignedTechnicians(List<UUID> ids, Company company) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        List<UserCompany> found = userCompanyRepository.findAllById(ids);
+        boolean allBelongToCompany = found.stream()
+                .allMatch(uc -> uc.getCompany().getId().equals(company.getId()));
+        if (!allBelongToCompany) {
+            throw new IllegalArgumentException("Todos los técnicos asignados deben pertenecer a la empresa de la solicitud");
+        }
+        return found;
+    }
+
+    private UserCompany resolveLeader(UUID leaderId, List<UserCompany> technicians) {
+        if (leaderId == null) {
+            return null;
+        }
+        return technicians.stream()
+                .filter(uc -> uc.getId().equals(leaderId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("El técnico líder debe estar en la lista de técnicos asignados"));
     }
 
     private UUID parseUuid(String value, String fieldName) {
@@ -161,19 +224,6 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
             return UUID.fromString(value);
         } catch (IllegalArgumentException | NullPointerException ex) {
             throw new IllegalArgumentException("El campo '" + fieldName + "' debe ser un UUID válido", ex);
-        }
-    }
-
-    private void validateAssetExists(UUID assetId) {
-        try {
-            ApiResponse<InventoryAssetResponseDto> response = inventoryClient.findAssetById(assetId);
-            if (response == null || response.getData() == null) {
-                throw MaintenanceRequestException.invalidAsset();
-            }
-        } catch (MaintenanceRequestException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            throw MaintenanceRequestException.invalidAsset();
         }
     }
 

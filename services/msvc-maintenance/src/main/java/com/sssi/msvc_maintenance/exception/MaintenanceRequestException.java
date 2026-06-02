@@ -17,20 +17,5 @@ public class MaintenanceRequestException extends BaseException {
         );
     }
 
-    public static MaintenanceRequestException inUse() {
-        return new MaintenanceRequestException(
-                HttpStatus.BAD_REQUEST,
-                "MAINTENANCE_REQUEST_IN_USE",
-                "No se puede eliminar esta solicitud porque tiene tecnicos asignados."
-        );
-    }
-
-    public static MaintenanceRequestException invalidAsset() {
-        return new MaintenanceRequestException(
-                HttpStatus.BAD_REQUEST,
-                "MAINTENANCE_REQUEST_INVALID_ASSET",
-                "El activo seleccionado no existe en inventario."
-        );
-    }
 }
 
