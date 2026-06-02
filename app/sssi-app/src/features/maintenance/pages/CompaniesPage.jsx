@@ -323,7 +323,6 @@ export default function CompaniesPage() {
                 cancelLabel="Cerrar"
             />
 
-            {/* Reassign feature removed - only desasignar and vincular desde el selector */}
         </Box>
     );
 }

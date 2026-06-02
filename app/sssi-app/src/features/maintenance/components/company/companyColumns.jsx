@@ -2,6 +2,7 @@ import Chip from '@mui/material/Chip';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PeopleIcon from '@mui/icons-material/People';
+import LaunchIcon from '@mui/icons-material/Launch';
 import RowActionsMenu from '../../../../common/components/RowActionsMenu.jsx';
 import { formatDateTime } from '../../maintenanceUtils';
 
@@ -49,9 +50,15 @@ export function getCompanyColumns() {
     ];
 }
 
-export function renderCompanyActions({ onEdit, onDelete, onManageUsers, canEdit, canDelete, canManageUsers }) {
+export function renderCompanyActions({ onEdit, onDelete, onManageUsers, onViewDetail, canEdit, canDelete, canManageUsers }) {
     return ({ row }) => {
         const actions = [
+            {
+                key: 'detail',
+                label: 'Ver detalle',
+                icon: <LaunchIcon fontSize="small" />,
+                onClick: () => onViewDetail?.(row.original),
+            },
             {
                 key: 'users',
                 label: 'Gestionar usuarios',
