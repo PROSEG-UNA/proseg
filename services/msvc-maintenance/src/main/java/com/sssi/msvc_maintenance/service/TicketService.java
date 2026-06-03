@@ -18,8 +18,7 @@ import java.util.UUID;
 public interface TicketService {
     TicketResponseDto create(TicketCreateRequestDto request, List<MultipartFile> photos, Authentication authentication);
     TicketResponseDto update(UUID id, TicketCreateRequestDto request, List<MultipartFile> photos, Authentication authentication);
-    Page<TicketResponseDto> findAll(Pageable pageable, Authentication authentication);
-    Page<TicketListResponseDto> findAllLight(Pageable pageable, Authentication authentication);
+    Page<TicketListResponseDto> findAll(Pageable pageable, Authentication authentication);
     TicketResponseDto findById(UUID id, Authentication authentication);
     TicketResponseDto updatePriority(UUID id, TicketPriorityUpdateRequestDto request, Authentication authentication);
     TicketResponseDto updateAssignedRole(UUID id, TicketAssignedRoleUpdateRequestDto request, Authentication authentication);

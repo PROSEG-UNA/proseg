@@ -60,7 +60,7 @@ public class TicketController {
             @PageableDefault(size = 10, page = 0) Pageable pageable,
             Authentication authentication) {
         return ApiResponseBuilder.ok(
-                PageMapper.from(ticketService.findAllLight(pageable, authentication)),
+                PageMapper.from(ticketService.findAll(pageable, authentication)),
                 "Lista de tickets"
         );
     }

@@ -15,6 +15,7 @@ import java.util.UUID;
 public class TicketCommentResponseDto {
     private UUID id;
     private String authorId;
+    private String authorName;
     private String content;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;

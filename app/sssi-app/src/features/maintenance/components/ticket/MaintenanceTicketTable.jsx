@@ -16,11 +16,6 @@ const COLUMN_TO_BACKEND_KEY = {
     description: 'description',
     statusRaw: 'status',
     priorityRaw: 'priority',
-    siteName: 'siteName',
-    buildingName: 'buildingName',
-    floorName: 'floorName',
-    locationDescription: 'locationDescription',
-    assignedRole: 'assignedRole',
     createdBy: 'createdBy',
 };
 

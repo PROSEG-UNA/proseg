@@ -11,6 +11,7 @@ import {
     Tabs,
     TextField,
     Typography,
+    useTheme,
 } from '@mui/material';
 import ConstructionIcon from '@mui/icons-material/Construction';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
@@ -29,6 +30,9 @@ import {
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { MAINTENANCE_PRIORITY_OPTIONS } from '../../maintenanceUtils';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import AddCommentOutlinedIcon from '@mui/icons-material/AddCommentOutlined';
+import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 
 const INITIAL_VALUES = {
     title: '',
@@ -62,7 +66,10 @@ const formatCommentDate = (value) => {
     });
 };
 
-export default function MaintenanceTicketFormModal({ open, onClose, onCreated, ticket = null, readOnly = false }) {
+export default function MaintenanceTicketFormModal({ open, onClose, onCreated, ticket = null, readOnly = false, loadingDetail = false }) {
+    const theme = useTheme();
+    const accentColor = theme.vars.palette.tones.rose.fg;
+
     const { hasPermission } = usePermissions();
     const canSetPriority = hasPermission(PERMISSIONS.MAINTENANCE.TICKETS.SET_PRIORITY);
     const isEditing = !!ticket?.id;
@@ -311,6 +318,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             onClose?.();
             return;
         }
+
         const requiredFields = ['title', 'description', 'siteId', 'buildingId', ...(canSetPriority ? ['priority'] : [])];
         const nextTouched = {};
         const nextErrors = {};
@@ -386,15 +394,24 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
 
     const fieldSx = {
         '& .MuiOutlinedInput-root': {
-            borderRadius: 0,
-            backgroundColor: 'background.paper',
+            borderRadius: '10px',
             '& fieldset': { borderColor: 'divider' },
+            '&:hover fieldset': { borderColor: `color-mix(in srgb, ${accentColor} 50%, transparent)` },
+            '&.Mui-focused fieldset': { borderColor: accentColor },
         },
+        '& .MuiInputLabel-root.Mui-focused': { color: accentColor },
+    };
+
+    const contentSx = {
+        overflowY: 'auto',
+        '&::-webkit-scrollbar': { width: '5px' },
+        '&::-webkit-scrollbar-track': { background: 'transparent' },
+        '&::-webkit-scrollbar-thumb': { background: `color-mix(in srgb, ${accentColor} 25%, transparent)`, borderRadius: '4px' },
     };
 
     const sectionTitleSx = {
         fontWeight: 700,
-        fontSize: 16,
+        fontSize: 15,
         mb: 1.5,
     };
 
@@ -402,6 +419,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         height: 'auto',
         maxWidth: '100%',
         alignItems: 'flex-start',
+        borderRadius: '10px',
         '& .MuiChip-label': {
             display: 'block',
             whiteSpace: 'normal',
@@ -409,6 +427,21 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             textOverflow: 'clip',
             py: 0.5,
         },
+    };
+
+    const buildTabLabel = (Icon, label) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            <Icon sx={{ fontSize: 16 }} />
+            <span>{label}</span>
+        </Box>
+    );
+
+    const cardSx = {
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: '10px',
+        backgroundColor: 'background.paper',
+        p: 1.5,
     };
 
     return (
@@ -420,55 +453,74 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                 icon={ConstructionIcon}
                 title={isReadOnly ? 'Detalle de ticket de mantenimiento' : isEditing ? 'Editar ticket de mantenimiento' : 'Nuevo ticket de mantenimiento'}
                 subtitle={isReadOnly ? 'Visualiza los datos del ticket sin posibilidad de modificar' : isEditing ? 'Actualiza la información del ticket seleccionado' : 'Registra una incidencia con ubicación, activos, fotos y comentario inicial'}
-                loading={saving || loadingOptions}
+                loading={saving || loadingOptions || loadingDetail}
                 secondaryButton={isReadOnly ? undefined : { label: 'Cancelar', onClick: onClose, disabled: saving }}
                 primaryButton={isReadOnly
                     ? { label: 'Cerrar', onClick: onClose, disabled: false }
-                    : { label: saving ? 'Guardando...' : 'Guardar y cerrar', onClick: handleSave, disabled: saving || loadingOptions || savingComment }
+                    : { label: saving ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear ticket', onClick: handleSave, disabled: saving || loadingOptions || loadingDetail || savingComment }
                 }
-                contentSx={{ overflowY: 'auto', p: 0 }}
+                contentSx={contentSx}
             >
                 <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
-                    <Box sx={{ px: { xs: 2, sm: 3 }, py: 2 }}>
+                    <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 2 }}>
                         <TextField
+                            label="Título"
                             value={formValues.title}
                             onChange={(event) => handleChange('title', event.target.value)}
                             onBlur={() => handleBlur('title')}
-                            placeholder="Título"
                             required
                             fullWidth
                             size="small"
                             disabled={saving || loadingOptions || isReadOnly}
                             error={touched.title && !!errors.title}
                             helperText={touched.title ? (errors.title || ' ') : ' '}
-                            sx={{
-                                ...fieldSx,
-                                '& .MuiInputBase-input': {
-                                    fontSize: { xs: 18, sm: 22 },
-                                    fontWeight: 500,
-                                    lineHeight: 1.25,
-                                    py: 0.8,
-                                },
-                            }}
+                            sx={fieldSx}
                         />
                     </Box>
 
-                    <Box sx={{ px: { xs: 2, sm: 3 }, borderTop: '1px solid', borderBottom: '1px solid', borderColor: 'divider' }}>
-                        <Tabs value={activeTab} onChange={(_, value) => setActiveTab(value)}>
-                            <Tab value="details" label="Detalles" />
-                            <Tab value="comments" label={`Comentarios (${commentsToShow.length})`} />
-                            <Tab value="attachments" label={`Adjuntos (${(ticket?.photos?.length ?? 0) + photos.length})`} />
+                    <Box sx={{ px: { xs: 2.5, sm: 3 }, borderTop: '1px solid', borderBottom: '1px solid', borderColor: 'divider' }}>
+                        <Tabs
+                            value={activeTab}
+                            onChange={(_, value) => setActiveTab(value)}
+                            TabIndicatorProps={{ sx: { backgroundColor: accentColor } }}
+                            sx={{
+                                minHeight: 44,
+                                '& .MuiTab-root': {
+                                    minHeight: 44,
+                                    textTransform: 'none',
+                                    fontWeight: 700,
+                                    fontSize: 13.5,
+                                    color: 'text.secondary',
+                                },
+                                '& .MuiTab-root.Mui-selected': {
+                                    color: accentColor,
+                                },
+                            }}
+                        >
+                            <Tab
+                                value="details"
+                                label={buildTabLabel(DescriptionOutlinedIcon, 'Detalles')}
+                            />
+                            <Tab
+                                value="comments"
+                                label={buildTabLabel(AddCommentOutlinedIcon, `Comentarios (${commentsToShow.length})`)}
+                            />
+                            <Tab
+                                value="attachments"
+                                label={buildTabLabel(ImageOutlinedIcon, `Adjuntos (${(ticket?.photos?.length ?? 0) + photos.length})`)}
+                            />
                         </Tabs>
                     </Box>
 
                     {activeTab === 'details' ? (
                         <Box
                             sx={{
-                                px: { xs: 2, sm: 3 },
-                                py: 3,
+                                px: { xs: 2.5, sm: 3 },
+                                pt: 2.5,
+                                pb: 3,
                                 display: 'grid',
                                 gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 320px' },
-                                gap: 3,
+                                gap: 2,
                             }}
                         >
                             <Box>
@@ -490,7 +542,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                     sx={fieldSx}
                                 />
 
-                                <Typography sx={{ ...sectionTitleSx, mt: 3 }}>
+                                <Typography sx={{ ...sectionTitleSx, mt: 2.5 }}>
                                     Activos vinculados
                                 </Typography>
 
@@ -548,7 +600,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                         <Typography sx={{ color: 'text.secondary', fontSize: 12, mb: 0.5 }}>
                                             Estado
                                         </Typography>
-                                        <Typography sx={{ fontWeight: 600 }}>
+                                        <Typography sx={{ fontWeight: 600, fontSize: 13.5 }}>
                                             {ticket?.status ?? 'Nuevo'}
                                         </Typography>
                                     </Box>
@@ -577,7 +629,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                     ) : null}
                                 </Stack>
 
-                                <Divider sx={{ my: 3 }} />
+                                <Divider sx={{ my: 2.5 }} />
 
                                 <Typography sx={sectionTitleSx}>
                                     Ubicación
@@ -653,36 +705,41 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                     ) : null}
 
                     {activeTab === 'comments' ? (
-                        <Box sx={{ px: { xs: 2, sm: 3 }, py: 3 }}>
-                            <Typography sx={sectionTitleSx}>
-                                Nuevo comentario
-                            </Typography>
+                        <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 3 }}>
+                            {!isReadOnly ? (
+                                <>
+                                    <Typography sx={sectionTitleSx}>
+                                        Nuevo comentario
+                                    </Typography>
 
-                            <TextField
-                                value={formValues.comment}
-                                onChange={(event) => handleChange('comment', event.target.value)}
-                                onBlur={() => handleBlur('comment')}
-                                placeholder={isEditing ? 'Agrega un nuevo comentario al ticket' : 'Agrega comentarios antes de crear el ticket'}
-                                fullWidth
-                                multiline
-                                minRows={5}
-                                disabled={saving || loadingOptions || savingComment || isReadOnly}
-                                error={touched.comment && !!errors.comment}
-                                helperText={touched.comment ? (errors.comment || ' ') : 'Máximo 1000 caracteres'}
-                                sx={fieldSx}
-                            />
+                                    <TextField
+                                        value={formValues.comment}
+                                        onChange={(event) => handleChange('comment', event.target.value)}
+                                        onBlur={() => handleBlur('comment')}
+                                        placeholder={isEditing ? 'Agrega un nuevo comentario al ticket' : 'Agrega comentarios antes de crear el ticket'}
+                                        fullWidth
+                                        multiline
+                                        minRows={5}
+                                        disabled={saving || loadingOptions || savingComment}
+                                        error={touched.comment && !!errors.comment}
+                                        helperText={touched.comment ? (errors.comment || ' ') : 'Máximo 1000 caracteres'}
+                                        sx={fieldSx}
+                                    />
 
-                            <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'flex-end' }}>
-                                <Button
-                                    variant="contained"
-                                    onClick={handleAddComment}
-                                    disabled={saving || loadingOptions || savingComment || isReadOnly}
-                                >
-                                    {savingComment ? 'Guardando...' : 'Agregar comentario'}
-                                </Button>
-                            </Box>
+                                    <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'flex-end' }}>
+                                        <Button
+                                            variant="contained"
+                                            onClick={handleAddComment}
+                                            disabled={saving || loadingOptions || savingComment}
+                                            sx={{ textTransform: 'none', borderRadius: '10px' }}
+                                        >
+                                            {savingComment ? 'Guardando...' : 'Agregar comentario'}
+                                        </Button>
+                                    </Box>
 
-                            <Divider sx={{ my: 3 }} />
+                                    <Divider sx={{ my: 2.5 }} />
+                                </>
+                            ) : null}
 
                             <Typography sx={sectionTitleSx}>
                                 Historial de comentarios
@@ -691,15 +748,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                             {commentsToShow.length > 0 ? (
                                 <Stack spacing={1.5}>
                                     {commentsToShow.map((comment) => (
-                                        <Box
-                                            key={comment.id}
-                                            sx={{
-                                                border: '1px solid',
-                                                borderColor: 'divider',
-                                                backgroundColor: 'background.paper',
-                                                p: 1.5,
-                                            }}
-                                        >
+                                        <Box key={comment.id} sx={cardSx}>
                                             <Stack direction="row" spacing={1} sx={{ mb: 0.5, flexWrap: 'wrap' }}>
                                                 <Typography sx={{ fontWeight: 700, fontSize: 13 }}>
                                                     {comment.authorName ?? comment.authorId ?? 'Usuario'}
@@ -708,14 +757,14 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                     {comment.pending ? 'Pendiente de guardar' : formatCommentDate(comment.createdAt)}
                                                 </Typography>
                                             </Stack>
-                                            <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                                            <Typography sx={{ whiteSpace: 'pre-wrap', fontSize: 13.5 }}>
                                                 {comment.content}
                                             </Typography>
                                         </Box>
                                     ))}
                                 </Stack>
                             ) : (
-                                <Typography sx={{ color: 'text.secondary' }}>
+                                <Typography sx={{ color: 'text.secondary', fontSize: 13.5 }}>
                                     No hay comentarios registrados.
                                 </Typography>
                             )}
@@ -723,23 +772,27 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                     ) : null}
 
                     {activeTab === 'attachments' ? (
-                        <Box sx={{ px: { xs: 2, sm: 3 }, py: 3 }}>
-                            <Typography sx={sectionTitleSx}>
-                                Agregar fotos
-                            </Typography>
+                        <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 3 }}>
+                            {!isReadOnly ? (
+                                <>
+                                    <Typography sx={sectionTitleSx}>
+                                        Agregar fotos
+                                    </Typography>
 
-                            <TextField
-                                type="file"
-                                inputProps={{ multiple: true, accept: 'image/*' }}
-                                onChange={(event) => setPhotos(Array.from(event.target.files || []))}
-                                fullWidth
-                                size="small"
-                                disabled={saving || loadingOptions || isReadOnly}
-                                helperText={photos.length > 0 ? `${photos.length} archivo(s) seleccionado(s)` : 'Opcional'}
-                                sx={fieldSx}
-                            />
+                                    <TextField
+                                        type="file"
+                                        inputProps={{ multiple: true, accept: 'image/*' }}
+                                        onChange={(event) => setPhotos(Array.from(event.target.files || []))}
+                                        fullWidth
+                                        size="small"
+                                        disabled={saving || loadingOptions}
+                                        helperText={photos.length > 0 ? `${photos.length} archivo(s) seleccionado(s)` : 'Opcional'}
+                                        sx={fieldSx}
+                                    />
 
-                            <Divider sx={{ my: 3 }} />
+                                    <Divider sx={{ my: 2.5 }} />
+                                </>
+                            ) : null}
 
                             <Typography sx={sectionTitleSx}>
                                 Adjuntos actuales
@@ -748,16 +801,8 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                             {(ticket?.photos?.length ?? 0) > 0 ? (
                                 <Stack spacing={1.5}>
                                     {ticket.photos.map((photo) => (
-                                        <Box
-                                            key={photo.id}
-                                            sx={{
-                                                border: '1px solid',
-                                                borderColor: 'divider',
-                                                backgroundColor: 'background.paper',
-                                                p: 1.5,
-                                            }}
-                                        >
-                                            <Typography sx={{ fontWeight: 700 }}>
+                                        <Box key={photo.id} sx={cardSx}>
+                                            <Typography sx={{ fontWeight: 700, fontSize: 13.5 }}>
                                                 {photo.fileName ?? photo.objectName}
                                             </Typography>
                                             <Typography sx={{ color: 'text.secondary', fontSize: 13 }}>
@@ -775,6 +820,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                         objectFit: 'cover',
                                                         border: '1px solid',
                                                         borderColor: 'divider',
+                                                        borderRadius: '10px',
                                                     }}
                                                 />
                                             ) : null}
@@ -782,14 +828,14 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                     ))}
                                 </Stack>
                             ) : (
-                                <Typography sx={{ color: 'text.secondary' }}>
+                                <Typography sx={{ color: 'text.secondary', fontSize: 13.5 }}>
                                     No hay adjuntos registrados.
                                 </Typography>
                             )}
 
-                            {photos.length > 0 ? (
+                            {!isReadOnly && photos.length > 0 ? (
                                 <>
-                                    <Divider sx={{ my: 3 }} />
+                                    <Divider sx={{ my: 2.5 }} />
 
                                     <Typography sx={sectionTitleSx}>
                                         Adjuntos por guardar
@@ -797,7 +843,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
 
                                     <Stack spacing={1}>
                                         {photos.map((photo) => (
-                                            <Typography key={`${photo.name}-${photo.size}`} sx={{ color: 'text.secondary' }}>
+                                            <Typography key={`${photo.name}-${photo.size}`} sx={{ color: 'text.secondary', fontSize: 13.5 }}>
                                                 {photo.name}
                                             </Typography>
                                         ))}

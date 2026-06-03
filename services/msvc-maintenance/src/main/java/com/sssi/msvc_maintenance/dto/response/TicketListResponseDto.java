@@ -21,17 +21,6 @@ public class TicketListResponseDto {
     private TicketStatus status;
     private TicketPriority priority;
     private String createdBy;
-    private String assignedRole;
-    private UUID siteId;
-    private String siteName;
-    private UUID buildingId;
-    private String buildingName;
-    private UUID floorId;
-    private String floorName;
-    private UUID locationId;
-    private String locationDescription;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
-    private Integer assetsCount;
-    private Integer photosCount;
 }

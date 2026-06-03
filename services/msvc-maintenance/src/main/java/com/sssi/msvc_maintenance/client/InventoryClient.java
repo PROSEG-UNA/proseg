@@ -3,8 +3,6 @@ package com.sssi.msvc_maintenance.client;
 import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.api.response.PageResponse;
 import com.sssi.msvc_maintenance.config.FeignConfig;
-import com.sssi.msvcinventory.dto.response.BuildingResponseDto;
-import com.sssi.msvcinventory.dto.response.CampusResponseDto;
 import com.sssi.msvcinventory.dto.response.FloorResponseDto;
 import com.sssi.msvcinventory.dto.response.LocationResponseDto;
 import com.sssi.msvc_maintenance.dto.response.InventoryAssetResponseDto;
@@ -52,19 +50,14 @@ public interface InventoryClient {
 
     @GetMapping("/v1/inventory/buildings/{id}")
     ApiResponse<InventoryBuildingResponseDto> findBuildingById(@PathVariable UUID id);
+
     @GetMapping("/v1/inventory/assets/{id}")
     ApiResponse<InventoryAssetResponseDto> findAssetById(@PathVariable UUID id);
 
-        @GetMapping("/v1/inventory/campuses/{id}")
-        ApiResponse<CampusResponseDto> findCampusById(@PathVariable UUID id);
+    @GetMapping("/v1/inventory/floors/{id}")
+    ApiResponse<FloorResponseDto> findFloorById(@PathVariable UUID id);
 
-        @GetMapping("/v1/inventory/buildings/{id}")
-        ApiResponse<BuildingResponseDto> findBuildingById(@PathVariable UUID id);
-
-        @GetMapping("/v1/inventory/floors/{id}")
-        ApiResponse<FloorResponseDto> findFloorById(@PathVariable UUID id);
-
-        @GetMapping("/v1/inventory/locations/{id}")
-        ApiResponse<LocationResponseDto> findLocationById(@PathVariable UUID id);
+    @GetMapping("/v1/inventory/locations/{id}")
+    ApiResponse<LocationResponseDto> findLocationById(@PathVariable UUID id);
 }
 

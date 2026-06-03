@@ -9,6 +9,7 @@ import { usePermissions } from '../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../common/constants/permissions';
 import MaintenanceTicketFormModal from '../components/ticket/MaintenanceTicketFormModal.jsx';
 import MaintenanceTicketTable from '../components/ticket/MaintenanceTicketTable.jsx';
+import { fetchMaintenanceTicketById } from '../services/ticketsService';
 
 export default function TicketsPage() {
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -16,6 +17,7 @@ export default function TicketsPage() {
     const [selectedTicket, setSelectedTicket] = useState(null);
     const [viewMode, setViewMode] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
+    const [loadingTicketDetail, setLoadingTicketDetail] = useState(false);
 
     const { hasPermission } = usePermissions();
     const theme = useTheme();
@@ -35,28 +37,44 @@ export default function TicketsPage() {
         setFormOpen(true);
     };
 
-    const handleOpenEdit = (ticket) => {
-        setSelectedTicket(ticket);
+    const handleOpenEdit = async (ticket) => {
         setViewMode(false);
         setFormOpen(true);
+        setLoadingTicketDetail(true);
+
+        try {
+            const detail = await fetchMaintenanceTicketById(ticket.id);
+            setSelectedTicket(detail);
+        } finally {
+            setLoadingTicketDetail(false);
+        }
     };
 
-    const handleOpenView = (ticket) => {
-        setSelectedTicket(ticket);
+    const handleOpenView = async (ticket) => {
         setViewMode(true);
         setFormOpen(true);
+        setLoadingTicketDetail(true);
+
+        try {
+            const detail = await fetchMaintenanceTicketById(ticket.id);
+            setSelectedTicket(detail);
+        } finally {
+            setLoadingTicketDetail(false);
+        }
     };
 
     const handleCloseForm = () => {
         setSelectedTicket(null);
         setViewMode(false);
         setFormOpen(false);
+        setLoadingTicketDetail(false);
     };
 
     const handleSaved = () => {
         setSelectedTicket(null);
         setViewMode(false);
         setFormOpen(false);
+        setLoadingTicketDetail(false);
         handleRefresh();
     };
 
@@ -103,6 +121,7 @@ export default function TicketsPage() {
                 readOnly={viewMode}
                 onClose={handleCloseForm}
                 onCreated={handleSaved}
+                loadingDetail={loadingTicketDetail}
             />
         </Box>
     );

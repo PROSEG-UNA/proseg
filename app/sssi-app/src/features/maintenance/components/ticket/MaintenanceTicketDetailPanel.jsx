@@ -151,10 +151,10 @@ export default function MaintenanceTicketDetailPanel({ ticket }) {
                                 >
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.75 }}>
                                         <Avatar sx={{ width: 26, height: 26, fontSize: 11, bgcolor: 'primary.main' }}>
-                                            {(comment.authorId || '?').charAt(0).toUpperCase()}
+                                            {(comment.authorName ?? comment.authorId ?? '?').charAt(0).toUpperCase()}
                                         </Avatar>
                                         <Typography sx={{ fontSize: 12.5, fontWeight: 700 }}>
-                                            {comment.authorId || 'Usuario'}
+                                            {comment.authorName ?? comment.authorId ?? 'Usuario'}
                                         </Typography>
                                         <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>
                                             {formatDateTime(comment.createdAt)}
