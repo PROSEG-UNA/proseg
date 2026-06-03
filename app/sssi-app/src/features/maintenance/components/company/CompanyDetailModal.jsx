@@ -245,17 +245,17 @@ export default function CompanyDetailModal({
             footerLeft={canManageUsers ? (
                 <Button
                     size="small"
-                    variant="outlined"
+                    variant="contained"
                     startIcon={<PeopleIcon sx={{ fontSize: 16 }} />}
                     onClick={handleManageUsers}
                     sx={{
                         textTransform: 'none',
-                        fontWeight: 600,
-                        borderColor: 'divider',
-                        color: 'text.secondary',
+                        fontWeight: 700,
+                        background: `linear-gradient(135deg, ${theme.vars.palette.tones.rose.headerBg} 0%, ${theme.vars.palette.tones.rose.headerBgEnd} 100%)`,
+                        boxShadow: theme.vars.palette.tones.rose.buttonShadow,
                         '&:hover': {
-                            borderColor: theme.vars.palette.tones.rose.fg,
-                            color: theme.vars.palette.tones.rose.fg,
+                            background: `linear-gradient(135deg, ${theme.vars.palette.tones.rose.hoverBg}, ${theme.vars.palette.tones.rose.hoverBg})`,
+                            boxShadow: theme.vars.palette.tones.rose.buttonShadowHover,
                         },
                     }}
                 >
