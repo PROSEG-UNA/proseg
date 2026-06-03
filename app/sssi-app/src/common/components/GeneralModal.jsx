@@ -147,22 +147,17 @@ export default function GeneralModal({
                     {primaryButton && (
                         <Button
                             onClick={primaryButton.onClick}
-                            variant="contained"
+                            variant={primaryButton.variant ?? "outlined"}
                             size="small"
                             startIcon={primaryButton.startIcon}
                             disabled={primaryButton.disabled}
                             loading={primaryButton.loading}
                             sx={{
-                                background: headerGradient,
-                                textTransform: 'none', fontWeight: 700, fontSize: { xs: 10.5, sm: 12.5 }, borderRadius: '8px',
-                                whiteSpace: 'nowrap',
-                                boxShadow: buttonShadow,
-                                px: 2, letterSpacing: '0.01em',
-                                '&:hover': {
-                                    background: `linear-gradient(135deg, ${hoverBg}, ${hoverBg})`,
-                                    boxShadow: buttonShadowHover,
-                                },
+                                borderColor: 'divider', color: 'text.secondary',
+                                textTransform: 'none', fontWeight: 600, fontSize: 12.5, borderRadius: '8px',
+                                '&:hover': { borderColor: 'text.disabled', color: 'text.primary', bgcolor: 'hsla(220, 20%, 50%, 0.08)' },
                                 '&:disabled': { opacity: 0.55 },
+                                ...primaryButton.sx,
                             }}
                         >
                             {primaryButton.label}
