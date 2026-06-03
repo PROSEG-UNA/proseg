@@ -11,7 +11,6 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import BusinessIcon from '@mui/icons-material/Business';
 import ConstructionIcon from '@mui/icons-material/Construction';
-import MiscellaneousServicesIcon from '@mui/icons-material/MiscellaneousServices';
 import { Header } from '../../../common/components/Header';
 import { NavDrawer } from '../../../common/components/NavDrawer';
 import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
@@ -23,8 +22,6 @@ import CompanyFormModal from '../components/company/CompanyFormModal.jsx';
 import CompanyUsersModal from '../components/company/CompanyUsersModal.jsx';
 import MaintenanceRequestTable from '../components/request/MaintenanceRequestTable.jsx';
 import MaintenanceRequestFormModal from '../components/request/MaintenanceRequestFormModal.jsx';
-import MaintenanceTechnicianTable from '../components/technician/MaintenanceTechnicianTable.jsx';
-import MaintenanceTechnicianFormModal from '../components/technician/MaintenanceTechnicianFormModal.jsx';
 
 export default function MaintenancePage() {
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -34,11 +31,9 @@ export default function MaintenancePage() {
     const [companyFormId, setCompanyFormId] = useState(null);
     const [companyUsersTarget, setCompanyUsersTarget] = useState(null);
     const [requestFormState, setRequestFormState] = useState({ open: false, requestId: null, initialCompanyId: '' });
-    const [technicianFormState, setTechnicianFormState] = useState({ open: false, technicianId: null, maintenanceRequestId: '' });
 
     const [companiesRefresh, setCompaniesRefresh] = useState(0);
     const [requestsRefresh, setRequestsRefresh] = useState(0);
-    const [techniciansRefresh, setTechniciansRefresh] = useState(0);
 
     const { hasPermission, hasAnyPermission } = usePermissions();
     const theme = useTheme();
@@ -59,17 +54,10 @@ export default function MaintenancePage() {
         PERMISSIONS.MAINTENANCE.REQUESTS.DELETE,
     ]);
 
-    const canViewTechnicians = hasAnyPermission([
-        PERMISSIONS.MAINTENANCE.TECHNICIANS.READ,
-        PERMISSIONS.MAINTENANCE.TECHNICIANS.MANAGE,
-        PERMISSIONS.MAINTENANCE.TECHNICIANS.DELETE,
-    ]);
-
     const tabs = useMemo(() => [
         canViewCompanies ? { key: 'companies', label: 'Empresas', icon: BusinessIcon } : null,
         canViewRequests ? { key: 'requests', label: 'Solicitudes', icon: ConstructionIcon } : null,
-        canViewTechnicians ? { key: 'technicians', label: 'Técnicos', icon: MiscellaneousServicesIcon } : null,
-    ].filter(Boolean), [canViewCompanies, canViewRequests, canViewTechnicians]);
+    ].filter(Boolean), [canViewCompanies, canViewRequests]);
 
     const currentTab = tabs[tabIndex] ?? tabs[0] ?? null;
 
@@ -92,14 +80,11 @@ export default function MaintenancePage() {
     const openCompanyUsers = (company) => setCompanyUsersTarget(company);
     const openCreateRequest = (initialCompanyId = '') => setRequestFormState({ open: true, requestId: null, initialCompanyId });
     const openEditRequest = (request) => setRequestFormState({ open: true, requestId: request.id, initialCompanyId: request.companyId ?? '' });
-    const openCreateTechnician = (maintenanceRequestId = '') => setTechnicianFormState({ open: true, technicianId: null, maintenanceRequestId });
-    const openEditTechnician = (technician) => setTechnicianFormState({ open: true, technicianId: technician.id, maintenanceRequestId: '' });
 
     const refreshCompanies = () => setCompaniesRefresh((value) => value + 1);
     const refreshRequests = () => setRequestsRefresh((value) => value + 1);
-    const refreshTechnicians = () => setTechniciansRefresh((value) => value + 1);
 
-    if (!canViewCompanies && !canViewRequests && !canViewTechnicians) {
+    if (!canViewCompanies && !canViewRequests) {
         return <AccessDeniedState />;
     }
 
@@ -118,7 +103,7 @@ export default function MaintenancePage() {
                             Mantenimiento
                         </Typography>
                         <Typography sx={{ color: 'text.secondary', fontSize: 14 }}>
-                            Gestión de empresas, solicitudes y técnicos desde un solo módulo.
+                            Gestión de empresas y solicitudes desde un solo módulo.
                         </Typography>
                     </Box>
                     {currentTab?.key === 'companies' && hasPermission(PERMISSIONS.MAINTENANCE.COMPANIES.MANAGE) ? (
@@ -173,27 +158,6 @@ export default function MaintenancePage() {
                                 refreshKey={requestsRefresh}
                                 onRefresh={refreshRequests}
                                 onEditRequest={openEditRequest}
-                                onCreateTechnicianForRequest={openCreateTechnician}
-                            />
-                        </Box>
-                    )}
-
-                    {currentTab?.key === 'technicians' && (
-                        <Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
-                                <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.icon' }}>
-                                    Lista de técnicos
-                                </Typography>
-                                {hasPermission(PERMISSIONS.MAINTENANCE.TECHNICIANS.MANAGE) ? (
-                                    <PrimaryButton startIcon={<AddIcon />} onClick={() => openCreateTechnician('')} sx={{ px: '28px' }}>
-                                        Crear
-                                    </PrimaryButton>
-                                ) : null}
-                            </Box>
-                            <MaintenanceTechnicianTable
-                                refreshKey={techniciansRefresh}
-                                onRefresh={refreshTechnicians}
-                                onEditTechnician={openEditTechnician}
                             />
                         </Box>
                     )}
@@ -222,15 +186,6 @@ export default function MaintenancePage() {
                 onClose={() => setRequestFormState({ open: false, requestId: null, initialCompanyId: '' })}
                 onSaved={refreshRequests}
             />
-
-            <MaintenanceTechnicianFormModal
-                open={technicianFormState.open}
-                technicianId={technicianFormState.technicianId}
-                maintenanceRequestId={technicianFormState.maintenanceRequestId}
-                onClose={() => setTechnicianFormState({ open: false, technicianId: null, maintenanceRequestId: '' })}
-                onSaved={refreshTechnicians}
-            />
         </Box>
     );
 }
-

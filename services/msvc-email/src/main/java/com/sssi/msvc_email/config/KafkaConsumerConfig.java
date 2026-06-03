@@ -106,4 +106,10 @@ public class KafkaConsumerConfig {
     companyUsersAssignedListenerFactory() {
         return listenerFactory(CompanyUsersAssignedEvent.class);
     }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, MaintenanceRequestCreatedEvent>
+    maintenanceRequestCreatedListenerFactory() {
+        return listenerFactory(MaintenanceRequestCreatedEvent.class);
+    }
 }

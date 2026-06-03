@@ -38,14 +38,16 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     @Transactional
     public CompanyResponseDto create(CompanyRequestDto request) {
-        if (companyRepository.existsByLegalIdIgnoreCase(request.getLegalId())) {
-            throw CompanyException.duplicateLegalId(request.getLegalId());
+        String normalizedLegalId = normalizeOptionalValue(request.getLegalId());
+        if (normalizedLegalId != null && companyRepository.existsByLegalIdIgnoreCase(normalizedLegalId)) {
+            throw CompanyException.duplicateLegalId(normalizedLegalId);
         }
         if (companyRepository.existsByNameIgnoreCase(request.getName())) {
             throw CompanyException.duplicateName(request.getName());
         }
         validateKeycloakUsers(request);
         Company company = companyMapper.toEntity(request);
+        company.setLegalId(normalizedLegalId);
         Company savedCompany = companyRepository.save(company);
         savedCompany.setUserCompanies(
                 companyUserManagementService.syncUsers(
@@ -83,13 +85,15 @@ public class CompanyServiceImpl implements CompanyService {
     public CompanyResponseDto update(UUID id, CompanyRequestDto request) {
         Company company = companyRepository.findById(id)
                 .orElseThrow(CompanyException::notFound);
+        String normalizedLegalId = normalizeOptionalValue(request.getLegalId());
         if (companyRepository.existsByNameIgnoreCaseAndIdNot(request.getName(), id)) {
             throw CompanyException.duplicateName(request.getName());
         }
-        if (companyRepository.existsByLegalIdIgnoreCaseAndIdNot(request.getLegalId(), id)) {
-            throw CompanyException.duplicateLegalId(request.getLegalId());
+        if (normalizedLegalId != null && companyRepository.existsByLegalIdIgnoreCaseAndIdNot(normalizedLegalId, id)) {
+            throw CompanyException.duplicateLegalId(normalizedLegalId);
         }
         companyMapper.updateEntityFromRequest(request, company);
+        company.setLegalId(normalizedLegalId);
         Company savedCompany = companyRepository.save(company);
         savedCompany.setUserCompanies(companyUserManagementService.syncUsers(savedCompany, request.getKeycloakUserIds()));
         return companyMapper.toResponse(savedCompany);
@@ -121,6 +125,14 @@ public class CompanyServiceImpl implements CompanyService {
                 throw CompanyException.invalidKeycloakUser(userId);
             }
         }
+    }
+
+    private String normalizeOptionalValue(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }
 

@@ -20,14 +20,8 @@ export function useFormValidation(initialFormData, fieldNames = []) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-
-    // Validar en tiempo real si el campo fue tocado
-    if (touched[name]) {
-      const rule = getValidationRule(name);
-      if (rule) {
-        const { isValid, error } = validateField(value, rule);
-        setErrors((prev) => ({ ...prev, [name]: error }));
-      }
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: '' }));
     }
   };
 

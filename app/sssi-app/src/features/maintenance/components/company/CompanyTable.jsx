@@ -8,6 +8,7 @@ import { deleteCompany } from '../../services/companiesService';
 import { useMaintenanceCompaniesData } from '../../hooks/useMaintenanceCompaniesData';
 import { getCompanyColumns, renderCompanyActions } from './companyColumns.jsx';
 import CompanyDetailPanel from './CompanyDetailPanel.jsx';
+import CompanyDetailModal from './CompanyDetailModal.jsx';
 
 const COLUMN_TO_BACKEND_KEY = {
     name: 'name',
@@ -25,6 +26,8 @@ export default function CompanyTable({ refreshKey = 0, onRefresh, onEditCompany,
     const [alert, setAlert] = useState(null);
     const [companyToDelete, setCompanyToDelete] = useState(null);
     const [deleting, setDeleting] = useState(false);
+    const [detailModalOpen, setDetailModalOpen] = useState(false);
+    const [detailCompanyId, setDetailCompanyId] = useState(null);
     const { hasPermission } = usePermissions();
 
     const canEdit = hasPermission(PERMISSIONS.MAINTENANCE.COMPANIES.MANAGE);
@@ -77,6 +80,16 @@ export default function CompanyTable({ refreshKey = 0, onRefresh, onEditCompany,
         setCompanyToDelete(null);
     }, [deleting]);
 
+    const handleViewDetail = useCallback((company) => {
+        setDetailCompanyId(company.id);
+        setDetailModalOpen(true);
+    }, []);
+
+    const handleCloseDetailModal = useCallback(() => {
+        setDetailModalOpen(false);
+        setDetailCompanyId(null);
+    }, []);
+
     const handleDeleteConfirm = useCallback(async () => {
         if (!companyToDelete) return;
         setDeleting(true);
@@ -104,6 +117,7 @@ export default function CompanyTable({ refreshKey = 0, onRefresh, onEditCompany,
                     onEdit: onEditCompany,
                     onDelete: handleDelete,
                     onManageUsers,
+                    onViewDetail: handleViewDetail,
                     canEdit,
                     canDelete,
                     canManageUsers,
@@ -153,6 +167,16 @@ export default function CompanyTable({ refreshKey = 0, onRefresh, onEditCompany,
                 type={alert?.type}
                 message={alert?.message}
                 onClose={() => setAlert(null)}
+            />
+
+            <CompanyDetailModal
+                open={detailModalOpen}
+                onClose={handleCloseDetailModal}
+                companyId={detailCompanyId}
+                onEdit={onEditCompany}
+                onManageUsers={onManageUsers}
+                canEdit={canEdit}
+                canManageUsers={canManageUsers}
             />
         </>
     );

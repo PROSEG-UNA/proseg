@@ -397,4 +397,37 @@ public class EmailEventService {
             }
         });
     }
+
+    public void sendMaintenanceRequestCreatedEmail(MaintenanceRequestCreatedEvent event) {
+        if (event.getEmail() == null || event.getEmail().isBlank()) {
+            log.warn("MaintenanceRequestCreatedEvent sin email destinatario, se omite envío");
+            return;
+        }
+
+        MaintenanceRequestCreatedEmailTemplate template = MaintenanceRequestCreatedEmailTemplate.builder()
+                .companyName(event.getCompanyName())
+                .legalId(event.getLegalId())
+                .description(event.getDescription())
+                .status(event.getStatus())
+                .startDate(event.getStartDate())
+                .endDate(event.getEndDate())
+                .startTime(event.getStartTime())
+                .endTime(event.getEndTime())
+                .campusName(event.getCampusName())
+                .buildingName(event.getBuildingName())
+                .technicianNames(event.getTechnicianNames())
+                .leaderName(event.getLeaderName())
+                .timestamp(event.getTimestamp() != null ? event.getTimestamp() : System.currentTimeMillis())
+                .build();
+
+        emailService.sendEmail(
+                Email.builder()
+                        .to(List.of(event.getEmail()))
+                        .subject("Nueva solicitud de mantenimiento registrada - PROSEG")
+                        .templateDefinition(template)
+                        .build()
+        );
+
+        log.info("Email de solicitud de mantenimiento enviado a: {}", event.getEmail());
+    }
 }

@@ -115,4 +115,14 @@ public class KafkaConsumerListener {
         log.info("COMPANY USERS ASSIGNED EVENT: {}", event);
         emailEventService.sendCompanyUsersAssignedEmails(event);
     }
+
+    @KafkaListener(
+            topics = KafkaTopics.MAINTENANCE_REQUEST_CREATED_TOPIC,
+            groupId = "msvc-email-group",
+            containerFactory = "maintenanceRequestCreatedListenerFactory"
+    )
+    public void onMaintenanceRequestCreated(MaintenanceRequestCreatedEvent event) {
+        log.info("MAINTENANCE REQUEST CREATED EVENT: {}", event);
+        emailEventService.sendMaintenanceRequestCreatedEmail(event);
+    }
 }

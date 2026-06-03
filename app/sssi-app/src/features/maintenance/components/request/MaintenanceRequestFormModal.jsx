@@ -1,29 +1,36 @@
 import { useEffect, useState } from 'react';
-import { Box, IconButton, InputAdornment, MenuItem, TextField, Typography, useTheme } from '@mui/material';
+import { Box, Button, Chip, Divider, MenuItem, TextField, Typography, useTheme } from '@mui/material';
 import ConstructionIcon from '@mui/icons-material/Construction';
-import SearchIcon from '@mui/icons-material/Search';
-import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
-import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import dayjs from 'dayjs';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
-import { createMaintenanceRequest, fetchMaintenanceAssets, fetchMaintenanceRequestById, updateMaintenanceRequest } from '../../services/requestsService';
-import { fetchCompanies } from '../../services/companiesService';
-import { MAINTENANCE_PRIORITY_OPTIONS, MAINTENANCE_STATUS_OPTIONS } from '../../maintenanceUtils';
-import { useDebounce } from '../../../../common/hooks/useDebounce.js';
+import { createMaintenanceRequest, fetchMaintenanceRequestById, updateMaintenanceRequest } from '../../services/requestsService';
+import { fetchCompanies, fetchCompanyTechnicians } from '../../services/companiesService';
+import { fetchCampuses, fetchBuildingsByCampus } from '../../services/locationsService';
+import { MAINTENANCE_STATUS_OPTIONS } from '../../maintenanceUtils';
 
 const INITIAL_VALUES = {
     companyId: '',
-    assetId: '',
-    title: '',
-    description: '',
+    email: '',
     status: 'PENDING',
-    priority: 'LOW',
-    scheduledDate: '',
-    observations: '',
+    description: '',
+    startDate: null,
+    endDate: null,
+    startTime: null,
+    endTime: null,
+    campusId: '',
+    buildingId: '',
 };
+
+const EMAIL_REGEX = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+
+function technicianLabel(technician) {
+    return technician?.userEmail || technician?.keycloakUserId || 'Técnico';
+}
 
 export default function MaintenanceRequestFormModal({ open, onClose, onSaved, requestId = null, initialCompanyId = '' }) {
     const theme = useTheme();
@@ -36,14 +43,17 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
     const [saving, setSaving] = useState(false);
     const [loadingRequest, setLoadingRequest] = useState(false);
     const [loadingOptions, setLoadingOptions] = useState(false);
-    const [loadingAssets, setLoadingAssets] = useState(false);
     const [companies, setCompanies] = useState([]);
-    const [assets, setAssets] = useState([]);
-    const [assetSearch, setAssetSearch] = useState('');
-    const [assetPage, setAssetPage] = useState(0);
-    const [assetTotalPages, setAssetTotalPages] = useState(0);
+    const [campuses, setCampuses] = useState([]);
+    const [buildings, setBuildings] = useState([]);
+    const [loadingCampuses, setLoadingCampuses] = useState(false);
+    const [loadingBuildings, setLoadingBuildings] = useState(false);
+    const [technicianOptions, setTechnicianOptions] = useState([]);
+    const [loadingTechnicians, setLoadingTechnicians] = useState(false);
+    const [selectedTechnicians, setSelectedTechnicians] = useState({});
+    const [technicianToAdd, setTechnicianToAdd] = useState('');
+    const [leaderId, setLeaderId] = useState('');
     const [alert, setAlert] = useState(null);
-    const debouncedAssetSearch = useDebounce(assetSearch, 350);
 
     useEffect(() => {
         if (!open) {
@@ -53,12 +63,13 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
             setSaving(false);
             setLoadingRequest(false);
             setLoadingOptions(false);
-            setLoadingAssets(false);
             setCompanies([]);
-            setAssets([]);
-            setAssetSearch('');
-            setAssetPage(0);
-            setAssetTotalPages(0);
+            setCampuses([]);
+            setBuildings([]);
+            setTechnicianOptions([]);
+            setSelectedTechnicians({});
+            setTechnicianToAdd('');
+            setLeaderId('');
             setAlert(null);
             return;
         }
@@ -66,7 +77,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
         setFormValues((prev) => ({ ...INITIAL_VALUES, companyId: initialCompanyId || prev.companyId || '' }));
     }, [open, initialCompanyId]);
 
-    useEffect(() => {
+    const loadCompanies = () => {
         if (!open) return;
         let cancelled = false;
         setLoadingOptions(true);
@@ -83,34 +94,80 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
         return () => {
             cancelled = true;
         };
-    }, [open]);
+    };
 
-    useEffect(() => {
+    useEffect(loadCompanies, [open]);
+
+    const loadCampuses = () => {
         if (!open) return;
         let cancelled = false;
-        setLoadingAssets(true);
+        setLoadingCampuses(true);
 
-        fetchMaintenanceAssets({ page: assetPage, size: 8, search: debouncedAssetSearch })
+        fetchCampuses({ page: 0, size: 200 })
             .then((page) => {
-                if (cancelled) return;
-                setAssets(page.content ?? []);
-                setAssetTotalPages(page.totalPages ?? 0);
+                if (!cancelled) setCampuses(page.content ?? []);
             })
             .catch(() => {})
             .finally(() => {
-                if (!cancelled) setLoadingAssets(false);
+                if (!cancelled) setLoadingCampuses(false);
             });
 
         return () => {
             cancelled = true;
         };
-    }, [open, assetPage, debouncedAssetSearch]);
+    };
 
-    useEffect(() => {
-        setAssetPage(0);
-    }, [assetSearch]);
+    useEffect(loadCampuses, [open]);
 
-    useEffect(() => {
+    const loadBuildings = () => {
+        if (!open || !formValues.campusId) {
+            setBuildings([]);
+            return;
+        }
+        let cancelled = false;
+        setLoadingBuildings(true);
+
+        fetchBuildingsByCampus(formValues.campusId, { page: 0, size: 200 })
+            .then((page) => {
+                if (!cancelled) setBuildings(page.content ?? []);
+            })
+            .catch(() => {})
+            .finally(() => {
+                if (!cancelled) setLoadingBuildings(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    };
+
+    useEffect(loadBuildings, [open, formValues.campusId]);
+
+    const loadTechnicians = () => {
+        if (!open || !formValues.companyId) {
+            setTechnicianOptions([]);
+            return;
+        }
+        let cancelled = false;
+        setLoadingTechnicians(true);
+
+        fetchCompanyTechnicians(formValues.companyId)
+            .then((data) => {
+                if (!cancelled) setTechnicianOptions(Array.isArray(data) ? data : []);
+            })
+            .catch(() => {})
+            .finally(() => {
+                if (!cancelled) setLoadingTechnicians(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    };
+
+    useEffect(loadTechnicians, [open, formValues.companyId]);
+
+    const loadRequest = () => {
         if (!open || !requestId) return;
         let cancelled = false;
         setLoadingRequest(true);
@@ -120,14 +177,22 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                 if (cancelled || !request) return;
                 setFormValues({
                     companyId: request.company?.id ?? initialCompanyId ?? '',
-                    assetId: request.assetId ?? '',
-                    title: request.title ?? '',
-                    description: request.description ?? '',
+                    email: request.email ?? '',
                     status: request.status ?? 'PENDING',
-                    priority: request.priority ?? 'LOW',
-                    scheduledDate: request.scheduledDate ?? '',
-                    observations: request.observations ?? '',
+                    description: request.description ?? '',
+                    startDate: request.startDate ? dayjs(request.startDate) : null,
+                    endDate: request.endDate ? dayjs(request.endDate) : null,
+                    startTime: request.startTime ? dayjs(`2000-01-01T${request.startTime}`) : null,
+                    endTime: request.endTime ? dayjs(`2000-01-01T${request.endTime}`) : null,
+                    campusId: request.campusId ?? '',
+                    buildingId: request.buildingId ?? '',
                 });
+                const assigned = Array.isArray(request.assignedTechnicians) ? request.assignedTechnicians : [];
+                setSelectedTechnicians(assigned.reduce((acc, technician) => {
+                    acc[technician.id] = technician;
+                    return acc;
+                }, {}));
+                setLeaderId(request.leaderUserCompany?.id ?? '');
             })
             .catch((error) => {
                 if (!cancelled) {
@@ -141,49 +206,110 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
         return () => {
             cancelled = true;
         };
-    }, [open, requestId, initialCompanyId]);
+    };
+
+    useEffect(loadRequest, [open, requestId, initialCompanyId]);
 
     const validateField = (key, value) => {
         let error = '';
         const trimmed = typeof value === 'string' ? value.trim() : value;
 
-        if (['companyId', 'assetId', 'title', 'status', 'priority'].includes(key) && !trimmed) {
+        if (['companyId', 'campusId', 'email'].includes(key) && !trimmed) {
             error = 'Este campo es requerido';
         }
 
-        if (!error && key === 'title' && trimmed && trimmed.length > 150) {
-            error = 'El título no puede superar los 150 caracteres';
+        if (key === 'email' && trimmed && !EMAIL_REGEX.test(trimmed)) {
+            error = 'El correo electrónico tiene un formato inválido';
+        }
+
+        if (['startDate', 'endDate', 'startTime', 'endTime'].includes(key) && !value) {
+            error = 'Este campo es requerido';
         }
 
         setErrors((prev) => ({ ...prev, [key]: error }));
         return !error;
     };
 
+    const PICKER_FIELDS = ['startDate', 'endDate', 'startTime', 'endTime'];
+
     const handleChange = (key, value) => {
-        setFormValues((prev) => ({ ...prev, [key]: value }));
-        if (touched[key]) validateField(key, value);
+        if (key === 'companyId') {
+            setFormValues((prev) => ({ ...prev, companyId: value }));
+            setSelectedTechnicians({});
+            setTechnicianToAdd('');
+            setLeaderId('');
+        } else if (key === 'campusId') {
+            setFormValues((prev) => ({ ...prev, campusId: value, buildingId: '' }));
+        } else {
+            setFormValues((prev) => ({ ...prev, [key]: value }));
+        }
+        if (touched[key] || PICKER_FIELDS.includes(key)) validateField(key, value);
     };
 
     const handleBlur = (key) => {
         setTouched((prev) => ({ ...prev, [key]: true }));
-        validateField(key, formValues[key]);
+        setFormValues((current) => {
+            validateField(key, current[key]);
+            return current;
+        });
+    };
+
+    const handleAddTechnician = () => {
+        if (!technicianToAdd) return;
+        const technician = technicianOptions.find((item) => item.id === technicianToAdd);
+        if (!technician) return;
+        setSelectedTechnicians((prev) => ({ ...prev, [technician.id]: technician }));
+        setTechnicianToAdd('');
+        setErrors((prev) => ({ ...prev, technicians: '' }));
+    };
+
+    const handleRemoveTechnician = (technicianId) => {
+        if (technicianId === leaderId) setLeaderId('');
+        setSelectedTechnicians((prev) => {
+            const copy = { ...prev };
+            delete copy[technicianId];
+            return copy;
+        });
+    };
+
+    const handleLeaderChange = (value) => {
+        setLeaderId(value);
+        setErrors((prev) => ({ ...prev, leader: '' }));
+        if (value && !selectedTechnicians[value]) {
+            const technician = technicianOptions.find((item) => item.id === value);
+            if (technician) {
+                setSelectedTechnicians((prev) => ({ ...prev, [technician.id]: technician }));
+                setErrors((prev) => ({ ...prev, technicians: '', leader: '' }));
+            }
+        }
     };
 
     const handleSave = async () => {
-        const requiredFields = ['companyId', 'assetId', 'title', 'status', 'priority'];
+        const requiredFields = ['companyId', 'email', 'startDate', 'endDate', 'startTime', 'endTime', 'campusId'];
         const nextTouched = {};
         const nextErrors = {};
 
         requiredFields.forEach((key) => {
             nextTouched[key] = true;
-            if (!formValues[key]?.trim()) {
+            const value = formValues[key];
+            const isString = typeof value === 'string';
+            if (isString ? !value.trim() : !value) {
                 nextErrors[key] = 'Este campo es requerido';
             }
         });
 
-        if (formValues.title?.trim()?.length > 150) {
-            nextErrors.title = 'El título no puede superar los 150 caracteres';
-            nextTouched.title = true;
+        const emailTrimmed = formValues.email.trim();
+        if (!nextErrors.email && emailTrimmed && !EMAIL_REGEX.test(emailTrimmed)) {
+            nextErrors.email = 'El correo electrónico tiene un formato inválido';
+        }
+
+        const technicianIds = Object.keys(selectedTechnicians);
+        if (technicianIds.length === 0) {
+            nextErrors.technicians = 'Selecciona al menos un técnico';
+        }
+
+        if (!leaderId) {
+            nextErrors.leader = 'Selecciona un líder';
         }
 
         setTouched((prev) => ({ ...prev, ...nextTouched }));
@@ -198,16 +324,20 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
         try {
             const payload = {
                 companyId: formValues.companyId,
-                assetId: formValues.assetId,
-                title: formValues.title.trim(),
+                email: emailTrimmed,
                 description: formValues.description.trim() || null,
-                status: formValues.status,
-                priority: formValues.priority,
-                scheduledDate: formValues.scheduledDate || null,
-                observations: formValues.observations.trim() || null,
+                startDate: formValues.startDate ? dayjs(formValues.startDate).format('YYYY-MM-DD') : null,
+                endDate: formValues.endDate ? dayjs(formValues.endDate).format('YYYY-MM-DD') : null,
+                startTime: formValues.startTime ? dayjs(formValues.startTime).format('HH:mm:ss') : null,
+                endTime: formValues.endTime ? dayjs(formValues.endTime).format('HH:mm:ss') : null,
+                campusId: formValues.campusId,
+                buildingId: formValues.buildingId || null,
+                assignedTechnicianIds: technicianIds,
+                leaderUserCompanyId: leaderId || null,
             };
 
             if (isEdit) {
+                payload.status = formValues.status;
                 await updateMaintenanceRequest(requestId, payload);
             } else {
                 await createMaintenanceRequest(payload);
@@ -237,7 +367,22 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
         '&::-webkit-scrollbar': { width: '5px' },
         '&::-webkit-scrollbar-track': { background: 'transparent' },
         '&::-webkit-scrollbar-thumb': { background: `color-mix(in srgb, ${accentColor} 25%, transparent)`, borderRadius: '4px' },
+        '&::-webkit-scrollbar-thumb:hover': { background: `color-mix(in srgb, ${accentColor} 45%, transparent)` },
     };
+
+    const sectionLabel = (text) => (
+        <Typography sx={{
+            fontSize: 11.5, fontWeight: 700, letterSpacing: '0.08em',
+            textTransform: 'uppercase', color: accentColor, mb: 1.5,
+        }}>
+            {text}
+        </Typography>
+    );
+
+    const anyLoading = saving || loadingRequest || loadingOptions || loadingCampuses;
+    const noCompany = !formValues.companyId;
+    const availableToAdd = technicianOptions.filter((technician) => !selectedTechnicians[technician.id]);
+    const selectedList = Object.values(selectedTechnicians);
 
     return (
         <>
@@ -250,156 +395,289 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                 subtitle={isEdit ? 'Actualiza los datos de la solicitud' : 'Registra una nueva solicitud de mantenimiento'}
                 loading={saving || loadingRequest}
                 secondaryButton={{ label: 'Cancelar', onClick: onClose, disabled: saving }}
-                primaryButton={{ label: saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear solicitud', onClick: handleSave, disabled: saving || loadingRequest || loadingOptions || loadingAssets }}
+                primaryButton={{
+                    label: saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear solicitud',
+                    onClick: handleSave,
+                    disabled: anyLoading,
+                    startIcon: <AddCircleOutlinedIcon />,
+                }}
                 contentSx={contentSx}
             >
-                <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 3, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-                    <SearchableSelect
-                        label="Empresa"
-                        value={formValues.companyId}
-                        onChange={(value) => handleChange('companyId', value)}
-                        onBlur={() => handleBlur('companyId')}
-                        required
-                        fullWidth
-                        size="small"
-                        disabled={saving || loadingOptions || loadingAssets}
-                        error={touched.companyId && !!errors.companyId}
-                        helperText={touched.companyId ? (errors.companyId || ' ') : ' '}
-                        sx={fieldSx}
-                        items={companies}
-                        getItemLabel={(company) => `${company.name} — ${company.legalId}`}
-                        getItemValue={(company) => company.id}
-                    />
-                    <TextField
-                        label="Buscar activo"
-                        value={assetSearch}
-                        onChange={(e) => setAssetSearch(e.target.value)}
-                        fullWidth
-                        size="small"
-                        disabled={saving || loadingOptions || loadingAssets}
-                        placeholder="Busca por numero de activo, serie o modelo"
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <SearchIcon fontSize="small" />
-                                </InputAdornment>
-                            ),
-                        }}
-                        sx={fieldSx}
-                    />
-                    <SearchableSelect
-                        label="Activo"
-                        value={formValues.assetId}
-                        onChange={(value) => handleChange('assetId', value)}
-                        onBlur={() => handleBlur('assetId')}
-                        required
-                        fullWidth
-                        size="small"
-                        disabled={saving || loadingOptions}
-                        error={touched.assetId && !!errors.assetId}
-                        helperText={touched.assetId ? (errors.assetId || ' ') : 'Selecciona un activo del inventario'}
-                        sx={fieldSx}
-                        items={assets}
-                        getItemLabel={(asset) => `${asset.assetNumber || asset.id} · ${asset.modelName || 'Sin modelo'} · ${asset.locationName || 'Sin ubicacion'}`}
-                        getItemValue={(asset) => asset.id}
-                        hideSearch
-                    />
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mt: -0.5, mb: 0.5 }}>
-                        <IconButton size="small" disabled={assetPage === 0 || saving || loadingOptions || loadingAssets} onClick={() => setAssetPage((p) => Math.max(0, p - 1))}>
-                            <NavigateBeforeIcon fontSize="small" />
-                        </IconButton>
-                        <Typography sx={{ fontSize: 12, color: 'text.secondary', minWidth: 60, textAlign: 'center' }}>
-                            {assetTotalPages === 0 ? '0 / 0' : `${assetPage + 1} / ${assetTotalPages}`}
-                        </Typography>
-                        <IconButton size="small" disabled={assetTotalPages === 0 || assetPage >= assetTotalPages - 1 || saving || loadingOptions || loadingAssets} onClick={() => setAssetPage((p) => p + 1)}>
-                            <NavigateNextIcon fontSize="small" />
-                        </IconButton>
+                <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
+
+                    <Box>
+                        {sectionLabel('Empresa')}
+                        <SearchableSelect
+                            label="Empresa"
+                            value={formValues.companyId}
+                            onChange={(value) => handleChange('companyId', value)}
+                            onBlur={() => handleBlur('companyId')}
+                            required
+                            fullWidth
+                            size="small"
+                            disabled={anyLoading}
+                            error={touched.companyId && !!errors.companyId}
+                            helperText={touched.companyId ? (errors.companyId || ' ') : ' '}
+                            sx={fieldSx}
+                            items={companies}
+                            getItemLabel={(company) => `${company.name} — ${company.legalId}`}
+                            getItemValue={(company) => company.id}
+                        />
                     </Box>
-                    <TextField
-                        label="Título"
-                        value={formValues.title}
-                        onChange={(e) => handleChange('title', e.target.value)}
-                        onBlur={() => handleBlur('title')}
-                        required
-                        fullWidth
-                        size="small"
-                        disabled={saving}
-                        error={touched.title && !!errors.title}
-                        helperText={touched.title ? (errors.title || ' ') : ' '}
-                        sx={{ ...fieldSx, gridColumn: '1 / -1' }}
-                    />
-                    <TextField
-                        label="Descripción"
-                        value={formValues.description}
-                        onChange={(e) => handleChange('description', e.target.value)}
-                        fullWidth
-                        size="small"
-                        disabled={saving}
-                        multiline
-                        minRows={3}
-                        sx={{ ...fieldSx, gridColumn: '1 / -1' }}
-                    />
-                    <TextField
-                        select
-                        label="Estado"
-                        value={formValues.status}
-                        onChange={(e) => handleChange('status', e.target.value)}
-                        onBlur={() => handleBlur('status')}
-                        required
-                        fullWidth
-                        size="small"
-                        disabled={saving}
-                        error={touched.status && !!errors.status}
-                        helperText={touched.status ? (errors.status || ' ') : ' '}
-                        sx={fieldSx}
-                    >
-                        {MAINTENANCE_STATUS_OPTIONS.map((option) => (
-                            <MenuItem key={option.value} value={option.value}>
-                                {option.label}
-                            </MenuItem>
-                        ))}
-                    </TextField>
-                    <TextField
-                        select
-                        label="Prioridad"
-                        value={formValues.priority}
-                        onChange={(e) => handleChange('priority', e.target.value)}
-                        onBlur={() => handleBlur('priority')}
-                        required
-                        fullWidth
-                        size="small"
-                        disabled={saving}
-                        error={touched.priority && !!errors.priority}
-                        helperText={touched.priority ? (errors.priority || ' ') : ' '}
-                        sx={fieldSx}
-                    >
-                        {MAINTENANCE_PRIORITY_OPTIONS.map((option) => (
-                            <MenuItem key={option.value} value={option.value}>
-                                {option.label}
-                            </MenuItem>
-                        ))}
-                    </TextField>
-                    <DatePicker
-                        label="Fecha programada"
-                        value={formValues.scheduledDate ? dayjs(formValues.scheduledDate) : null}
-                        onChange={(value) => handleChange('scheduledDate', value ? value.format('YYYY-MM-DD') : '')}
-                        disabled={saving}
-                        slotProps={{ textField: { size: 'small', fullWidth: true, sx: fieldSx } }}
-                    />
-                    <TextField
-                        label="Observaciones"
-                        value={formValues.observations}
-                        onChange={(e) => handleChange('observations', e.target.value)}
-                        fullWidth
-                        size="small"
-                        disabled={saving}
-                        multiline
-                        minRows={3}
-                        sx={{ ...fieldSx, gridColumn: '1 / -1' }}
-                    />
-                    <Typography sx={{ gridColumn: '1 / -1', color: 'text.secondary', fontSize: 12.5 }}>
-                        Si abres esta ventana desde la empresa, el campo Empresa se cargará automáticamente.
-                    </Typography>
+
+                    {isEdit && (
+                        <>
+                            <Divider />
+                            <Box>
+                                {sectionLabel('Estado')}
+                                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                                    <TextField
+                                        select
+                                        label="Estado"
+                                        value={formValues.status}
+                                        onChange={(e) => handleChange('status', e.target.value)}
+                                        fullWidth
+                                        size="small"
+                                        disabled={anyLoading}
+                                        sx={fieldSx}
+                                        helperText=" "
+                                    >
+                                        {MAINTENANCE_STATUS_OPTIONS.map((option) => (
+                                            <MenuItem key={option.value} value={option.value}>
+                                                {option.label}
+                                            </MenuItem>
+                                        ))}
+                                    </TextField>
+                                </Box>
+                            </Box>
+                        </>
+                    )}
+
+                    <Divider />
+
+                    <Box>
+                        {sectionLabel('Programación')}
+                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                            <DatePicker
+                                label="Fecha de inicio *"
+                                value={formValues.startDate}
+                                onChange={(value) => handleChange('startDate', value)}
+                                onClose={() => handleBlur('startDate')}
+                                disabled={anyLoading}
+                                slotProps={{
+                                    textField: {
+                                        size: 'small',
+                                        fullWidth: true,
+                                        sx: fieldSx,
+                                        error: touched.startDate && !!errors.startDate,
+                                        helperText: touched.startDate ? (errors.startDate || ' ') : ' ',
+                                    },
+                                }}
+                            />
+                            <DatePicker
+                                label="Fecha de fin *"
+                                value={formValues.endDate}
+                                onChange={(value) => handleChange('endDate', value)}
+                                onClose={() => handleBlur('endDate')}
+                                disabled={anyLoading}
+                                slotProps={{
+                                    textField: {
+                                        size: 'small',
+                                        fullWidth: true,
+                                        sx: fieldSx,
+                                        error: touched.endDate && !!errors.endDate,
+                                        helperText: touched.endDate ? (errors.endDate || ' ') : ' ',
+                                    },
+                                }}
+                            />
+                            <TimePicker
+                                label="Hora de llegada *"
+                                value={formValues.startTime}
+                                onChange={(value) => handleChange('startTime', value)}
+                                onClose={() => handleBlur('startTime')}
+                                disabled={anyLoading}
+                                slotProps={{
+                                    textField: {
+                                        size: 'small',
+                                        fullWidth: true,
+                                        sx: fieldSx,
+                                        error: touched.startTime && !!errors.startTime,
+                                        helperText: touched.startTime ? (errors.startTime || ' ') : ' ',
+                                    },
+                                }}
+                            />
+                            <TimePicker
+                                label="Hora de salida *"
+                                value={formValues.endTime}
+                                onChange={(value) => handleChange('endTime', value)}
+                                onClose={() => handleBlur('endTime')}
+                                disabled={anyLoading}
+                                slotProps={{
+                                    textField: {
+                                        size: 'small',
+                                        fullWidth: true,
+                                        sx: fieldSx,
+                                        error: touched.endTime && !!errors.endTime,
+                                        helperText: touched.endTime ? (errors.endTime || ' ') : ' ',
+                                    },
+                                }}
+                            />
+                        </Box>
+                    </Box>
+
+                    <Divider />
+
+                    <Box>
+                        {sectionLabel('Ubicación')}
+                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                            <SearchableSelect
+                                label="Campus"
+                                value={formValues.campusId}
+                                onChange={(value) => handleChange('campusId', value)}
+                                onBlur={() => handleBlur('campusId')}
+                                required
+                                clearable
+                                fullWidth
+                                size="small"
+                                disabled={anyLoading || loadingCampuses}
+                                error={touched.campusId && !!errors.campusId}
+                                helperText={touched.campusId ? (errors.campusId || ' ') : ' '}
+                                sx={fieldSx}
+                                items={campuses}
+                                getItemLabel={(campus) => campus.name}
+                                getItemValue={(campus) => campus.id}
+                            />
+                            <SearchableSelect
+                                label="Edificio (opcional)"
+                                value={formValues.buildingId}
+                                onChange={(value) => handleChange('buildingId', value)}
+                                clearable
+                                fullWidth
+                                size="small"
+                                disabled={anyLoading || !formValues.campusId || loadingBuildings}
+                                helperText={!formValues.campusId ? 'Selecciona un campus primero' : ' '}
+                                sx={fieldSx}
+                                items={buildings}
+                                getItemLabel={(building) => building.name}
+                                getItemValue={(building) => building.id}
+                            />
+                        </Box>
+                    </Box>
+
+                    <Divider />
+
+                    <Box>
+                        {sectionLabel('Técnicos')}
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                                    <SearchableSelect
+                                        label="Agregar técnico"
+                                        value={technicianToAdd}
+                                        onChange={setTechnicianToAdd}
+                                        fullWidth
+                                        size="small"
+                                        disabled={anyLoading || noCompany || loadingTechnicians}
+                                        error={!!errors.technicians}
+                                        helperText={
+                                            noCompany
+                                                ? 'Selecciona una empresa primero'
+                                                : (errors.technicians || ' ')
+                                        }
+                                        sx={fieldSx}
+                                        items={availableToAdd}
+                                        getItemLabel={technicianLabel}
+                                        getItemValue={(technician) => technician.id}
+                                    />
+                                    <Button
+                                        variant="outlined"
+                                        onClick={handleAddTechnician}
+                                        disabled={anyLoading || noCompany || !technicianToAdd}
+                                        sx={{ textTransform: 'none', mt: 0.25, whiteSpace: 'nowrap' }}
+                                    >
+                                        Agregar
+                                    </Button>
+                                </Box>
+                                <SearchableSelect
+                                    label="Líder *"
+                                    value={leaderId}
+                                    onChange={handleLeaderChange}
+                                    fullWidth
+                                    size="small"
+                                    disabled={anyLoading || noCompany || loadingTechnicians}
+                                    error={!!errors.leader}
+                                    helperText={
+                                        noCompany
+                                            ? 'Selecciona una empresa primero'
+                                            : (errors.leader || 'El líder se agrega a la lista de técnicos')
+                                    }
+                                    sx={fieldSx}
+                                    items={technicianOptions}
+                                    getItemLabel={technicianLabel}
+                                    getItemValue={(technician) => technician.id}
+                                />
+                            </Box>
+
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                {selectedList.length === 0 ? (
+                                    <Typography sx={{ color: 'text.secondary', fontSize: 13.5 }}>
+                                        No hay técnicos seleccionados.
+                                    </Typography>
+                                ) : (
+                                    selectedList.map((technician) => {
+                                        const isLeader = technician.id === leaderId;
+                                        return (
+                                            <Chip
+                                                key={technician.id}
+                                                label={isLeader ? `${technicianLabel(technician)} · Líder` : technicianLabel(technician)}
+                                                color={isLeader ? 'primary' : 'default'}
+                                                variant={isLeader ? 'filled' : 'outlined'}
+                                                onDelete={() => handleRemoveTechnician(technician.id)}
+                                            />
+                                        );
+                                    })
+                                )}
+                            </Box>
+                        </Box>
+                    </Box>
+
+                    <Divider />
+
+                    <Box>
+                        {sectionLabel('Descripción')}
+                        <TextField
+                            label="Descripción"
+                            value={formValues.description}
+                            onChange={(e) => handleChange('description', e.target.value)}
+                            fullWidth
+                            size="small"
+                            disabled={anyLoading}
+                            multiline
+                            minRows={3}
+                            sx={fieldSx}
+                        />
+                    </Box>
+
+                    <Divider />
+
+                    <Box>
+                        {sectionLabel('Contacto')}
+                        <TextField
+                            label="Correo electrónico"
+                            value={formValues.email}
+                            onChange={(e) => handleChange('email', e.target.value)}
+                            onBlur={() => handleBlur('email')}
+                            required
+                            fullWidth
+                            size="small"
+                            disabled={anyLoading}
+                            type="email"
+                            error={touched.email && !!errors.email}
+                            helperText={touched.email ? (errors.email || ' ') : ' '}
+                            sx={fieldSx}
+                        />
+                    </Box>
+
                 </Box>
             </GeneralModal>
 
@@ -407,4 +685,3 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
         </>
     );
 }
-

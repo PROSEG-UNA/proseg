@@ -8,6 +8,8 @@ import com.sssi.msvcinventory.dto.response.CampusResponseDto;
 import com.sssi.msvcinventory.dto.response.FloorResponseDto;
 import com.sssi.msvcinventory.dto.response.LocationResponseDto;
 import com.sssi.msvc_maintenance.dto.response.InventoryAssetResponseDto;
+import com.sssi.msvc_maintenance.dto.response.InventoryBuildingResponseDto;
+import com.sssi.msvc_maintenance.dto.response.InventoryCampusResponseDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,6 +33,25 @@ public interface InventoryClient {
             @RequestParam(required = false) List<String> sort
     );
 
+    @GetMapping("/v1/inventory/campuses")
+    ApiResponse<PageResponse<InventoryCampusResponseDto>> findCampuses(
+            @RequestParam(required = false) String search,
+            @RequestParam int page,
+            @RequestParam int size
+    );
+
+    @GetMapping("/v1/inventory/buildings/campus/{campusId}")
+    ApiResponse<PageResponse<InventoryBuildingResponseDto>> findBuildingsByCampus(
+            @PathVariable UUID campusId,
+            @RequestParam int page,
+            @RequestParam int size
+    );
+
+    @GetMapping("/v1/inventory/campuses/{id}")
+    ApiResponse<InventoryCampusResponseDto> findCampusById(@PathVariable UUID id);
+
+    @GetMapping("/v1/inventory/buildings/{id}")
+    ApiResponse<InventoryBuildingResponseDto> findBuildingById(@PathVariable UUID id);
     @GetMapping("/v1/inventory/assets/{id}")
     ApiResponse<InventoryAssetResponseDto> findAssetById(@PathVariable UUID id);
 

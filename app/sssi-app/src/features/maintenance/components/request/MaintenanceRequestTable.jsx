@@ -12,14 +12,11 @@ import MaintenanceRequestDetailPanel from './MaintenanceRequestDetailPanel.jsx';
 const COLUMN_TO_BACKEND_KEY = {
     companyName: 'company.name',
     companyLegalId: 'company.legalId',
-    assetId: 'assetId',
-    title: 'title',
     statusRaw: 'status',
-    priorityRaw: 'priority',
-    scheduledDate: 'scheduledDate',
+    startDate: 'startDate',
 };
 
-export default function MaintenanceRequestTable({ refreshKey = 0, onRefresh, onEditRequest, onCreateTechnicianForRequest }) {
+export default function MaintenanceRequestTable({ refreshKey = 0, onRefresh, onEditRequest }) {
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
@@ -31,7 +28,6 @@ export default function MaintenanceRequestTable({ refreshKey = 0, onRefresh, onE
 
     const canEdit = hasPermission(PERMISSIONS.MAINTENANCE.REQUESTS.MANAGE);
     const canDelete = hasPermission(PERMISSIONS.MAINTENANCE.REQUESTS.DELETE);
-    const canAddTechnician = hasPermission(PERMISSIONS.MAINTENANCE.TECHNICIANS.MANAGE);
 
     const debouncedGlobalFilter = useDebounce(globalFilter, 350);
     const debouncedColumnFilters = useDebounce(columnFilters, 350);
@@ -101,20 +97,16 @@ export default function MaintenanceRequestTable({ refreshKey = 0, onRefresh, onE
                 data={rows}
                 loading={loading}
                 error={error}
-                enableRowActions={canEdit || canDelete || canAddTechnician}
+                enableRowActions={canEdit || canDelete}
                 renderRowActions={renderMaintenanceRequestActions({
                     onEdit: onEditRequest,
                     onDelete: handleDelete,
-                    onAddTechnician: onCreateTechnicianForRequest,
                     canEdit,
                     canDelete,
-                    canAddTechnician,
                 })}
                 renderDetailPanel={({ row }) => (
                     <MaintenanceRequestDetailPanel
                         requestId={row.original.id}
-                        onCreateTechnician={onCreateTechnicianForRequest}
-                        canAddTechnician={canAddTechnician}
                     />
                 )}
                 tableOptions={{
@@ -131,10 +123,7 @@ export default function MaintenanceRequestTable({ refreshKey = 0, onRefresh, onE
                     initialState: {
                         columnVisibility: {
                             companyLegalId: false,
-                            description: false,
-                            observations: false,
                             createdAt: false,
-                            assetId: false,
                         },
                     },
                 }}
@@ -145,7 +134,7 @@ export default function MaintenanceRequestTable({ refreshKey = 0, onRefresh, onE
                 type="delete"
                 open={!!requestToDelete}
                 title="Eliminar solicitud"
-                message={`¿Seguro que deseas eliminar la solicitud "${requestToDelete?.title}"?\nEsta acción no se puede deshacer.`}
+                message={`¿Seguro que deseas eliminar esta solicitud de ${requestToDelete?.companyName ?? 'la empresa'}?\nEsta acción no se puede deshacer.`}
                 onClose={handleDeleteCancel}
                 onConfirm={handleDeleteConfirm}
                 confirmLabel="Eliminar"

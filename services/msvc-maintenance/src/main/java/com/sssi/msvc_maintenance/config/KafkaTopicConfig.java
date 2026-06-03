@@ -28,4 +28,13 @@ public class KafkaTopicConfig {
                 .configs(TOPIC_CONFIG)
                 .build();
     }
+
+    @Bean
+    public NewTopic maintenanceRequestCreatedTopic() {
+        return TopicBuilder.name(KafkaTopics.MAINTENANCE_REQUEST_CREATED_TOPIC)
+                .partitions(3)
+                .replicas(1)
+                .configs(TOPIC_CONFIG)
+                .build();
+    }
 }

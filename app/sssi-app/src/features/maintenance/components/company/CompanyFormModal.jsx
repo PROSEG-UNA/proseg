@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Box, TextField, Typography, Button, useTheme } from '@mui/material';
-import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
-import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import BusinessIcon from '@mui/icons-material/Business';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
@@ -30,9 +28,7 @@ export default function CompanyFormModal({ open, onClose, onSaved, companyId = n
     const [saving, setSaving] = useState(false);
     const [loadingCompany, setLoadingCompany] = useState(false);
     const [availableUsers, setAvailableUsers] = useState([]);
-    const [usersTotalPages, setUsersTotalPages] = useState(0);
     const [userSearch, setUserSearch] = useState('');
-    const [userPage, setUserPage] = useState(0);
     const debouncedUserSearch = useDebounce(userSearch, 350);
     const [selectedUsers, setSelectedUsers] = useState({});
     const [loadingUsers, setLoadingUsers] = useState(false);
@@ -93,23 +89,23 @@ export default function CompanyFormModal({ open, onClose, onSaved, companyId = n
         let cancelled = false;
         setLoadingUsers(true);
 
-        searchUsers({ page: userPage, size: 8, search: debouncedUserSearch })
+        // Fetch a wider page and let SearchableSelect handle in-menu pagination.
+        searchUsers({ page: 0, size: 200, search: debouncedUserSearch })
             .then((page) => {
                 if (cancelled) return;
                 setAvailableUsers(page.content ?? []);
-                setUsersTotalPages(page.totalPages ?? 0);
             })
             .catch(() => {})
             .finally(() => { if (!cancelled) setLoadingUsers(false); });
 
         return () => { cancelled = true; };
-    }, [open, userPage, debouncedUserSearch]);
+    }, [open, debouncedUserSearch]);
 
     const validateField = (key, value) => {
         let error = '';
         const trimmed = typeof value === 'string' ? value.trim() : value;
 
-        if ((key === 'name' || key === 'legalId') && !trimmed) {
+        if (key === 'name' && !trimmed) {
             error = 'Este campo es requerido';
         }
 
@@ -137,7 +133,7 @@ export default function CompanyFormModal({ open, onClose, onSaved, companyId = n
     };
 
     const handleSave = async () => {
-        const requiredFields = ['name', 'legalId'];
+        const requiredFields = ['name'];
         const nextTouched = {};
         const nextErrors = {};
 
@@ -173,7 +169,7 @@ export default function CompanyFormModal({ open, onClose, onSaved, companyId = n
         try {
             const payload = {
                 name: formValues.name.trim(),
-                legalId: formValues.legalId.trim(),
+                legalId: formValues.legalId.trim() || null,
                 contactEmail: formValues.contactEmail.trim() || null,
                 contactPhone: formValues.contactPhone.trim() || null,
                 address: formValues.address.trim() || null,
@@ -228,6 +224,18 @@ export default function CompanyFormModal({ open, onClose, onSaved, companyId = n
             >
                 <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 3, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
                     <TextField
+                        label="Cédula jurídica (opcional)"
+                        value={formValues.legalId}
+                        onChange={(e) => handleChange('legalId', e.target.value)}
+                        onBlur={() => handleBlur('legalId')}
+                        fullWidth
+                        size="small"
+                        disabled={saving}
+                        error={touched.legalId && !!errors.legalId}
+                        helperText={touched.legalId ? (errors.legalId || ' ') : ' '}
+                        sx={fieldSx}
+                    />
+                    <TextField
                         label="Nombre"
                         value={formValues.name}
                         onChange={(e) => handleChange('name', e.target.value)}
@@ -238,19 +246,6 @@ export default function CompanyFormModal({ open, onClose, onSaved, companyId = n
                         disabled={saving}
                         error={touched.name && !!errors.name}
                         helperText={touched.name ? (errors.name || ' ') : ' '}
-                        sx={fieldSx}
-                    />
-                    <TextField
-                        label="Cédula jurídica"
-                        value={formValues.legalId}
-                        onChange={(e) => handleChange('legalId', e.target.value)}
-                        onBlur={() => handleBlur('legalId')}
-                        required
-                        fullWidth
-                        size="small"
-                        disabled={saving}
-                        error={touched.legalId && !!errors.legalId}
-                        helperText={touched.legalId ? (errors.legalId || ' ') : ' '}
                         sx={fieldSx}
                     />
                     <TextField
@@ -318,7 +313,6 @@ export default function CompanyFormModal({ open, onClose, onSaved, companyId = n
                             externalSearch={userSearch}
                             onSearchChange={(value) => {
                                 setUserSearch(value);
-                                setUserPage(0);
                             }}
                             pageSize={8}
                         />
@@ -333,15 +327,6 @@ export default function CompanyFormModal({ open, onClose, onSaved, companyId = n
                             )}
                         </Box>
 
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                            <Button size="small" variant="text" disabled={userPage === 0 || loadingUsers} onClick={() => setUserPage((p) => Math.max(0, p - 1))} sx={{ minWidth: 0, textTransform: 'none' }}>
-                                <NavigateBeforeIcon fontSize="small" />
-                            </Button>
-                            <Typography sx={{ fontSize: 12, color: 'text.secondary', minWidth: 60, textAlign: 'center' }}>{usersTotalPages === 0 ? '0 / 0' : `${userPage + 1} / ${usersTotalPages}`}</Typography>
-                            <Button size="small" variant="text" disabled={usersTotalPages === 0 || userPage >= usersTotalPages - 1 || loadingUsers} onClick={() => setUserPage((p) => p + 1)} sx={{ minWidth: 0, textTransform: 'none' }}>
-                                <NavigateNextIcon fontSize="small" />
-                            </Button>
-                        </Box>
                     </Box>
                     <Typography sx={{ gridColumn: '1 / -1', color: 'text.secondary', fontSize: 12.5 }}>
                         Los usuarios vinculados pueden administrarse luego desde el panel de detalle de la empresa.
