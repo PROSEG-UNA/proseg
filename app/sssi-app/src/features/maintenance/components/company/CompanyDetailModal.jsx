@@ -5,8 +5,6 @@ import {
 } from '@mui/material';
 import BusinessIcon from '@mui/icons-material/Business';
 import PeopleIcon from '@mui/icons-material/People';
-import EditIcon from '@mui/icons-material/Edit';
-import LaunchIcon from '@mui/icons-material/Launch';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AlternateEmailIcon from '@mui/icons-material/AlternateEmail';
 import PhoneIcon from '@mui/icons-material/Phone';
@@ -176,11 +174,6 @@ export default function CompanyDetailModal({
         };
     }, [open, companyId]);
 
-    const handleEdit = () => {
-        onEdit?.(company);
-        onClose?.();
-    };
-
     const handleManageUsers = () => {
         onManageUsers?.(company);
         onClose?.();
@@ -245,11 +238,10 @@ export default function CompanyDetailModal({
             loading={false}
             contentSx={contentSx}
             showCloseButton
-            primaryButton={canEdit ? {
-                label: 'Editar',
-                icon: <EditIcon sx={{ fontSize: 16 }} />,
-                onClick: handleEdit,
-            } : undefined}
+            primaryButton={{
+                label: 'Cerrar',
+                onClick: onClose,
+            }}
             footerLeft={canManageUsers ? (
                 <Button
                     size="small"
