@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Box, TextField, Typography, Button, useTheme } from '@mui/material';
 import BusinessIcon from '@mui/icons-material/Business';
+import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
-import { createCompany, fetchCompanyById, updateCompany } from '../../services/companiesService';
+import { createCompany, fetchCompanyById, inviteCompanyUser, updateCompany } from '../../services/companiesService';
 import { searchUsers } from '../../../security/services/usersService';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
 import { useDebounce } from '../../../../common/hooks/useDebounce.js';
+import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
 
 const INITIAL_VALUES = {
     name: '',
@@ -15,6 +17,13 @@ const INITIAL_VALUES = {
     contactPhone: '',
     address: '',
     // selected users will be stored in selectedUsers map
+};
+
+const INITIAL_INVITE_VALUES = {
+    username: '',
+    firstName: '',
+    lastName: '',
+    email: '',
 };
 
 export default function CompanyFormModal({ open, onClose, onSaved, companyId = null }) {
@@ -33,6 +42,11 @@ export default function CompanyFormModal({ open, onClose, onSaved, companyId = n
     const [selectedUsers, setSelectedUsers] = useState({});
     const [loadingUsers, setLoadingUsers] = useState(false);
     const [alert, setAlert] = useState(null);
+    const [inviteOpen, setInviteOpen] = useState(false);
+    const [inviteSaving, setInviteSaving] = useState(false);
+    const [inviteValues, setInviteValues] = useState(INITIAL_INVITE_VALUES);
+    const [inviteErrors, setInviteErrors] = useState({});
+    const [inviteTouched, setInviteTouched] = useState({});
 
     useEffect(() => {
         if (!open) {
@@ -42,6 +56,11 @@ export default function CompanyFormModal({ open, onClose, onSaved, companyId = n
             setSaving(false);
             setLoadingCompany(false);
             setAlert(null);
+            setInviteOpen(false);
+            setInviteSaving(false);
+            setInviteValues(INITIAL_INVITE_VALUES);
+            setInviteErrors({});
+            setInviteTouched({});
             return;
         }
 
@@ -191,6 +210,104 @@ export default function CompanyFormModal({ open, onClose, onSaved, companyId = n
         }
     };
 
+    const validateInviteField = (key, rawValue) => {
+        const value = rawValue?.trim?.() ?? '';
+        let error = '';
+
+        if (!value) {
+            error = 'Este campo es requerido';
+        } else if (key === 'username' && !/^[a-zA-Z0-9_-]{3,64}$/.test(value)) {
+            error = 'Debe tener entre 3 y 64 caracteres y solo usar letras, números, guiones y guiones bajos';
+        } else if (key === 'firstName' && (value.length < 2 || value.length > 24)) {
+            error = 'Debe tener entre 2 y 24 caracteres';
+        } else if (key === 'lastName' && (value.length < 2 || value.length > 24)) {
+            error = 'Debe tener entre 2 y 24 caracteres';
+        } else if (key === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+            error = 'El correo electrónico no es válido';
+        }
+
+        setInviteErrors((prev) => ({ ...prev, [key]: error }));
+        return !error;
+    };
+
+    const handleInviteChange = (key, value) => {
+        setInviteValues((prev) => ({ ...prev, [key]: value }));
+        if (inviteTouched[key]) validateInviteField(key, value);
+    };
+
+    const handleInviteBlur = (key) => {
+        setInviteTouched((prev) => ({ ...prev, [key]: true }));
+        validateInviteField(key, inviteValues[key]);
+    };
+
+    const openInviteModal = () => {
+        setInviteOpen(true);
+        setInviteValues((prev) => ({
+            ...INITIAL_INVITE_VALUES,
+            email: userSearch.includes('@') ? userSearch.trim() : prev.email,
+        }));
+        setInviteErrors({});
+        setInviteTouched({});
+    };
+
+    const closeInviteModal = (force = false) => {
+        if (inviteSaving && !force) return;
+        setInviteOpen(false);
+        setInviteValues(INITIAL_INVITE_VALUES);
+        setInviteErrors({});
+        setInviteTouched({});
+    };
+
+    const handleInviteUser = async () => {
+        const requiredFields = ['username', 'firstName', 'lastName', 'email'];
+        const nextTouched = {};
+        let hasErrors = false;
+
+        requiredFields.forEach((key) => {
+            nextTouched[key] = true;
+            if (!validateInviteField(key, inviteValues[key])) hasErrors = true;
+        });
+
+        setInviteTouched((prev) => ({ ...prev, ...nextTouched }));
+        if (hasErrors) return;
+
+        setInviteSaving(true);
+        try {
+            const payload = {
+                username: inviteValues.username.trim(),
+                firstName: inviteValues.firstName.trim(),
+                lastName: inviteValues.lastName.trim(),
+                email: inviteValues.email.trim(),
+            };
+            const created = await inviteCompanyUser(payload);
+            const invitedUser = {
+                id: created?.userId,
+                username: created?.username ?? payload.username,
+                email: created?.email ?? payload.email,
+                firstName: payload.firstName,
+                lastName: payload.lastName,
+                status: created?.status,
+            };
+
+            if (!invitedUser.id) {
+                throw new Error('No se recibió el identificador del usuario creado');
+            }
+
+            setAvailableUsers((prev) => {
+                const withoutNew = prev.filter((u) => u.id !== invitedUser.id);
+                return [invitedUser, ...withoutNew];
+            });
+            setSelectedUsers((prev) => ({ ...prev, [invitedUser.id]: invitedUser }));
+            setUserSearch('');
+            setAlert({ type: 'success', message: 'Usuario invitado correctamente y agregado a la empresa.' });
+            closeInviteModal(true);
+        } catch (error) {
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo invitar al usuario') });
+        } finally {
+            setInviteSaving(false);
+        }
+    };
+
     const fieldSx = {
         '& .MuiOutlinedInput-root': {
             borderRadius: '10px',
@@ -315,6 +432,8 @@ export default function CompanyFormModal({ open, onClose, onSaved, companyId = n
                                 setUserSearch(value);
                             }}
                             pageSize={8}
+                            onCreate={openInviteModal}
+                            createLabel="Invitar nuevo usuario"
                         />
 
                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -331,6 +450,73 @@ export default function CompanyFormModal({ open, onClose, onSaved, companyId = n
                     <Typography sx={{ gridColumn: '1 / -1', color: 'text.secondary', fontSize: 12.5 }}>
                         Los usuarios vinculados pueden administrarse luego desde el panel de detalle de la empresa.
                     </Typography>
+                </Box>
+            </GeneralModal>
+
+            <GeneralModal
+                open={inviteOpen}
+                onClose={closeInviteModal}
+                maxWidth="sm"
+                icon={PersonAddAlt1Icon}
+                title="Invitar usuario"
+                subtitle="Crea una cuenta nueva sin salir del registro de empresa"
+                loading={inviteSaving}
+                secondaryButton={{ label: 'Cancelar', onClick: closeInviteModal, disabled: inviteSaving }}
+                primaryButton={{ label: inviteSaving ? 'Invitando…' : 'Invitar usuario', onClick: handleInviteUser, disabled: inviteSaving }}
+            >
+                <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 3, display: 'grid', gridTemplateColumns: '1fr', gap: 2 }}>
+                    <TextField
+                        label="Nombre de usuario"
+                        value={inviteValues.username}
+                        onChange={(e) => handleInviteChange('username', e.target.value)}
+                        onBlur={() => handleInviteBlur('username')}
+                        required
+                        fullWidth
+                        size="small"
+                        disabled={inviteSaving}
+                        error={inviteTouched.username && !!inviteErrors.username}
+                        helperText={inviteTouched.username ? (inviteErrors.username || ' ') : ' '}
+                        sx={fieldSx}
+                    />
+                    <TextField
+                        label="Nombre"
+                        value={inviteValues.firstName}
+                        onChange={(e) => handleInviteChange('firstName', e.target.value)}
+                        onBlur={() => handleInviteBlur('firstName')}
+                        required
+                        fullWidth
+                        size="small"
+                        disabled={inviteSaving}
+                        error={inviteTouched.firstName && !!inviteErrors.firstName}
+                        helperText={inviteTouched.firstName ? (inviteErrors.firstName || ' ') : ' '}
+                        sx={fieldSx}
+                    />
+                    <TextField
+                        label="Apellido"
+                        value={inviteValues.lastName}
+                        onChange={(e) => handleInviteChange('lastName', e.target.value)}
+                        onBlur={() => handleInviteBlur('lastName')}
+                        required
+                        fullWidth
+                        size="small"
+                        disabled={inviteSaving}
+                        error={inviteTouched.lastName && !!inviteErrors.lastName}
+                        helperText={inviteTouched.lastName ? (inviteErrors.lastName || ' ') : ' '}
+                        sx={fieldSx}
+                    />
+                    <TextField
+                        label="Correo electrónico"
+                        value={inviteValues.email}
+                        onChange={(e) => handleInviteChange('email', e.target.value)}
+                        onBlur={() => handleInviteBlur('email')}
+                        required
+                        fullWidth
+                        size="small"
+                        disabled={inviteSaving}
+                        error={inviteTouched.email && !!inviteErrors.email}
+                        helperText={inviteTouched.email ? (inviteErrors.email || ' ') : ' '}
+                        sx={fieldSx}
+                    />
                 </Box>
             </GeneralModal>
 
