@@ -5,8 +5,6 @@ import {
 } from '@mui/material';
 import BusinessIcon from '@mui/icons-material/Business';
 import PeopleIcon from '@mui/icons-material/People';
-import EditIcon from '@mui/icons-material/Edit';
-import LaunchIcon from '@mui/icons-material/Launch';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AlternateEmailIcon from '@mui/icons-material/AlternateEmail';
 import PhoneIcon from '@mui/icons-material/Phone';
@@ -176,11 +174,6 @@ export default function CompanyDetailModal({
         };
     }, [open, companyId]);
 
-    const handleEdit = () => {
-        onEdit?.(company);
-        onClose?.();
-    };
-
     const handleManageUsers = () => {
         onManageUsers?.(company);
         onClose?.();
@@ -245,25 +238,24 @@ export default function CompanyDetailModal({
             loading={false}
             contentSx={contentSx}
             showCloseButton
-            primaryButton={canEdit ? {
-                label: 'Editar',
-                icon: <EditIcon sx={{ fontSize: 16 }} />,
-                onClick: handleEdit,
-            } : undefined}
+            primaryButton={{
+                label: 'Cerrar',
+                onClick: onClose,
+            }}
             footerLeft={canManageUsers ? (
                 <Button
                     size="small"
-                    variant="outlined"
+                    variant="contained"
                     startIcon={<PeopleIcon sx={{ fontSize: 16 }} />}
                     onClick={handleManageUsers}
                     sx={{
                         textTransform: 'none',
-                        fontWeight: 600,
-                        borderColor: 'divider',
-                        color: 'text.secondary',
+                        fontWeight: 700,
+                        background: `linear-gradient(135deg, ${theme.vars.palette.tones.rose.headerBg} 0%, ${theme.vars.palette.tones.rose.headerBgEnd} 100%)`,
+                        boxShadow: theme.vars.palette.tones.rose.buttonShadow,
                         '&:hover': {
-                            borderColor: theme.vars.palette.tones.rose.fg,
-                            color: theme.vars.palette.tones.rose.fg,
+                            background: `linear-gradient(135deg, ${theme.vars.palette.tones.rose.hoverBg}, ${theme.vars.palette.tones.rose.hoverBg})`,
+                            boxShadow: theme.vars.palette.tones.rose.buttonShadowHover,
                         },
                     }}
                 >
