@@ -48,5 +48,15 @@ public class CompanyException extends BaseException {
                 "No existe un usuario en Keycloak con el id: " + userId
         );
     }
+
+    public static CompanyException inviteUserFailed(String detail) {
+        return new CompanyException(
+                HttpStatus.BAD_REQUEST,
+                "COMPANY_USER_INVITATION_FAILED",
+                detail != null && !detail.isBlank()
+                        ? detail
+                        : "No se pudo invitar el usuario para esta empresa"
+        );
+    }
 }
 

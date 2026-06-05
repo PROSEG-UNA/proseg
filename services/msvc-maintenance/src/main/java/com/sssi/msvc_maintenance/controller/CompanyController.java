@@ -7,7 +7,9 @@ import com.sssi.common.api.util.PageMapper;
 import com.sssi.common.specification.FilterConstants;
 import com.sssi.msvc_maintenance.dto.request.CompanyRequestDto;
 import com.sssi.msvc_maintenance.dto.request.CompanyUserRequestDto;
+import com.sssi.msvc_maintenance.dto.request.CreateManagedUserRequestDto;
 import com.sssi.msvc_maintenance.dto.response.CompanyResponseDto;
+import com.sssi.msvc_maintenance.dto.response.CreateManagedUserResponseDto;
 import com.sssi.msvc_maintenance.dto.response.KeycloakUserResponse;
 import com.sssi.msvc_maintenance.dto.response.UserCompanyResponseDto;
 import com.sssi.msvc_maintenance.mapper.UserCompanyMapper;
@@ -48,6 +50,16 @@ public class CompanyController {
         return ApiResponseBuilder.created(
                 companyService.create(request),
                 "Empresa creada correctamente"
+        );
+    }
+
+    @PostMapping("/users")
+    public ResponseEntity<ApiResponse<CreateManagedUserResponseDto>> createManagedUser(
+            @Valid @RequestBody CreateManagedUserRequestDto request
+    ) {
+        return ApiResponseBuilder.created(
+                companyService.createManagedUser(request),
+                "Usuario invitado correctamente"
         );
     }
 

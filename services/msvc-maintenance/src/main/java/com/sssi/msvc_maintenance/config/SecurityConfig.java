@@ -39,6 +39,7 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/maintenance/companies",
+                                "/api/v1/maintenance/companies/users",
                                 "/api/v1/maintenance/companies/*/users"
                         ).hasAuthority(Privileges.Empresas.GESTIONAR)
 
