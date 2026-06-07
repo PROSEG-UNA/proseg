@@ -4,6 +4,7 @@ import { Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EmailIcon from '@mui/icons-material/Email';
 import TableBase from '../../../../common/components/TablaBase.jsx';
 import AccessDeniedState from '../../../../common/components/AccessDeniedState.jsx';
 import RowActionsMenu from '../../../../common/components/RowActionsMenu.jsx';
@@ -14,15 +15,19 @@ import { deleteCatalogItem } from '../../services/catalogService';
 import CatalogFormModal from './CatalogFormModal.jsx';
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
-import {getFriendlyApiErrorMessage} from "../../../../common/utils/index.js";
+import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
+import BuildingEmailsModal from "../asset/BuildingEmailModal.jsx";
+import CampusEmailsModal from "../asset/CampusEmailModal.jsx";
 
 const getInventoryPermissionGroup = (baseUrl = '') => {
     if (baseUrl.includes('/campuses') || baseUrl.includes('/locations')) {
         return PERMISSIONS.INVENTORY.LOCATIONS;
     }
-
     return PERMISSIONS.INVENTORY.CATALOG ?? PERMISSIONS.INVENTORY;
 };
+
+const isBuilding = (baseUrl = '') => baseUrl.includes('/buildings');
+const isCampus   = (baseUrl = '') => baseUrl.includes('/campuses');
 
 export default function CatalogTableModal({ open, onClose, config }) {
     const { title = '', pluralTitle = '', baseUrl = '', icon: Icon = null, columns: configColumns = [] } = config ?? {};
@@ -37,6 +42,11 @@ export default function CatalogTableModal({ open, onClose, config }) {
     const [deletingRow, setDeletingRow] = useState(null);
     const [deleting, setDeleting] = useState(false);
     const [alert, setAlert] = useState(null);
+
+    // BuildingEmail modal state
+    const [buildingEmailsRow, setBuildingEmailsRow] = useState(null);
+    const [campusEmailsRow, setCampusEmailsRow] = useState(null);
+
     const { hasPermission } = usePermissions();
     const inventoryPermissions = useMemo(() => getInventoryPermissionGroup(baseUrl), [baseUrl]);
     const canViewCatalog = hasPermission(inventoryPermissions.READ)
@@ -44,18 +54,24 @@ export default function CatalogTableModal({ open, onClose, config }) {
         || hasPermission(inventoryPermissions.DELETE);
     const canManageCatalog = hasPermission(inventoryPermissions.MANAGE);
     const canDeleteCatalog = hasPermission(inventoryPermissions.DELETE);
+
+    // Email permissions (ubicaciones)
+    const canReadEmails   = hasPermission(PERMISSIONS.INVENTORY.LOCATIONS?.READ)
+        || hasPermission(PERMISSIONS.INVENTORY.LOCATIONS?.MANAGE)
+        || hasPermission(PERMISSIONS.INVENTORY.LOCATIONS?.DELETE);
+
     const hasCatalogAction = useCallback((action) => {
         if (!Array.isArray(config?.actions)) return true;
         return config.actions.includes(action);
     }, [config]);
 
     const canCreateCatalog = canManageCatalog && hasCatalogAction('create');
-    const canEditCatalog = canManageCatalog && hasCatalogAction('edit');
+    const canEditCatalog   = canManageCatalog && hasCatalogAction('edit');
     const canRemoveCatalog = canDeleteCatalog && hasCatalogAction('delete');
 
     const columnToBackendKey = config?.columnToBackendKey ?? {};
 
-    const debouncedGlobalFilter = useDebounce(globalFilter, 350);
+    const debouncedGlobalFilter  = useDebounce(globalFilter, 350);
     const debouncedColumnFilters = useDebounce(columnFilters, 350);
 
     const backendFilters = useMemo(() => {
@@ -69,11 +85,10 @@ export default function CatalogTableModal({ open, onClose, config }) {
     }, [debouncedColumnFilters, columnToBackendKey]);
 
     const backendSort = useMemo(
-        () => sorting
-            .map(({ id, desc }) => {
-                const key = columnToBackendKey[id] ?? id;
-                return `${key},${desc ? 'desc' : 'asc'}`;
-            }),
+        () => sorting.map(({ id, desc }) => {
+            const key = columnToBackendKey[id] ?? id;
+            return `${key},${desc ? 'desc' : 'asc'}`;
+        }),
         [sorting, columnToBackendKey]
     );
 
@@ -105,7 +120,7 @@ export default function CatalogTableModal({ open, onClose, config }) {
     });
 
     const handleCreate = () => { setFormRow(null); setFormOpen(true); };
-    const handleEdit = useCallback((row) => { setFormRow(row); setFormOpen(true); }, []);
+    const handleEdit   = useCallback((row) => { setFormRow(row); setFormOpen(true); }, []);
     const handleDelete = useCallback((row) => setDeletingRow(row), []);
 
     const handleConfirmDelete = async () => {
@@ -134,8 +149,25 @@ export default function CatalogTableModal({ open, onClose, config }) {
         });
     };
 
+    const showBuildingEmailAction = isBuilding(baseUrl) && canReadEmails;
+    const showCampusEmailAction   = isCampus(baseUrl)   && canReadEmails;
+
     const renderRowActions = useCallback(({ row }) => {
         const actions = [
+            {
+                key: 'emails-building',
+                label: 'Ver correos',
+                icon: <EmailIcon fontSize="small" />,
+                hidden: !showBuildingEmailAction,
+                onClick: () => setBuildingEmailsRow(row.original),
+            },
+            {
+                key: 'emails-campus',
+                label: 'Ver correos del campus',
+                icon: <EmailIcon fontSize="small" />,
+                hidden: !showCampusEmailAction,
+                onClick: () => setCampusEmailsRow(row.original),
+            },
             {
                 key: 'edit',
                 label: 'Editar',
@@ -148,12 +180,12 @@ export default function CatalogTableModal({ open, onClose, config }) {
                 label: 'Eliminar',
                 icon: <DeleteIcon fontSize="small" />,
                 color: 'error',
-                    hidden: !canRemoveCatalog,
+                hidden: !canRemoveCatalog,
                 onClick: () => handleDelete(row.original),
             },
         ];
         return <RowActionsMenu actions={actions} tooltip="Ver acción" />;
-    }, [handleEdit, handleDelete, canEditCatalog, canRemoveCatalog]);
+    }, [handleEdit, handleDelete, canEditCatalog, canRemoveCatalog, showBuildingEmailAction, showCampusEmailAction]);
 
     const columns = useMemo(
         () => configColumns.map((col) => ({
@@ -175,6 +207,8 @@ export default function CatalogTableModal({ open, onClose, config }) {
     );
 
     const isAccessDeniedError = error && (error.includes('permisos') || error.includes('403') || error.includes('Acceso denegado'));
+
+    const hasRowActions = canEditCatalog || canRemoveCatalog || showBuildingEmailAction || showCampusEmailAction;
 
     return (
         <>
@@ -199,8 +233,8 @@ export default function CatalogTableModal({ open, onClose, config }) {
                         data={rows}
                         loading={loading}
                         error={error}
-                        enableRowActions={canEditCatalog || canRemoveCatalog}
-                        renderRowActions={canEditCatalog || canRemoveCatalog ? renderRowActions : undefined}
+                        enableRowActions={hasRowActions}
+                        renderRowActions={hasRowActions ? renderRowActions : undefined}
                         tableOptions={{
                             positionActionsColumn: 'last',
                             manualPagination: true,
@@ -229,6 +263,18 @@ export default function CatalogTableModal({ open, onClose, config }) {
                 onSaved={handleFormSaved}
                 config={config}
                 row={formRow}
+            />
+
+            <BuildingEmailsModal
+                open={!!buildingEmailsRow}
+                onClose={() => setBuildingEmailsRow(null)}
+                building={buildingEmailsRow}
+            />
+
+            <CampusEmailsModal
+                open={!!campusEmailsRow}
+                onClose={() => setCampusEmailsRow(null)}
+                campus={campusEmailsRow}
             />
 
             <DialogModal
