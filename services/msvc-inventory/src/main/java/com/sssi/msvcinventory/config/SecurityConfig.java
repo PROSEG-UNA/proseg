@@ -81,7 +81,6 @@ public class SecurityConfig {
                                 "/api/v1/inventory/locations/**"
                         ).hasAuthority(Privileges.Ubicaciones.ELIMINAR)
 
-                        // --- BuildingEmail ---
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/inventory/buildings/*/emails",
                                 "/api/v1/inventory/campuses/*/emails"
