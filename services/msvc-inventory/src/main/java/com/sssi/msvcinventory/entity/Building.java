@@ -40,4 +40,7 @@ public class Building extends BaseEntity {
 
     @OneToMany(mappedBy = "building")
     private List<Floor> floors;
+
+    @OneToMany(mappedBy = "building", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<BuildingEmail> emails;
 }
