@@ -8,6 +8,8 @@ collections:
     path: "collections/msvc-auth"
   - name: "msvc-maintenance"
     path: "collections/msvc-maintenance"
+  - name: "msvc-inventory"
+    path: "collections/msvc-inventory"
 
 specs:
 

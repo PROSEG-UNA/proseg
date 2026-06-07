@@ -1,0 +1,21 @@
+info:
+  name: findByCampus
+  type: http
+  seq: 3
+
+http:
+  method: GET
+  url: "{{gatewayUrl}}/api/{{apiVersion}}/inventory/campuses/c0da221f-f87c-48ba-b4b4-c70004f958da/emails"
+  body:
+    type: json
+    data: |-
+      {
+        "email": "isaacfelibrenes1904@gmail.com"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

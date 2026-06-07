@@ -5,7 +5,7 @@ info:
 
 http:
   method: DELETE
-  url: "{{gatewayUrl}}/api/{{apiVersion}}/maintenance/companies/f96c39b1-e7ff-4379-bf33-704a877e1c0a"
+  url: "{{gatewayUrl}}/api/{{apiVersion}}/inventory/buildings/6c642cc3-c937-40f5-b950-dcc4d6566589"
   auth: inherit
 
 settings:
