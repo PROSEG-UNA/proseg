@@ -1,11 +1,11 @@
 info:
   name: delete
   type: http
-  seq: 6
+  seq: 5
 
 http:
   method: DELETE
-  url: "{{gatewayUrl}}/api/{{apiVersion}}/maintenance/companies/f96c39b1-e7ff-4379-bf33-704a877e1c0a"
+  url: "{{gatewayUrl}}/api/{{apiVersion}}/inventory/campuses/62ed2715-f9aa-4f11-9640-193d2fb7b7c4"
   auth: inherit
 
 settings:
