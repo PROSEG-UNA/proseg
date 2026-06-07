@@ -328,6 +328,7 @@ export default function CompanyUsersModal({ open, companyId, companyName, onClos
             />
 
             <DialogModal
+                type="info"
                 open={!!confirmAssign}
                 title="Vincular usuarios"
                 message={`¿Deseas vincular ${Object.keys(selectedUsers).length} usuario(s) a la empresa?`}
