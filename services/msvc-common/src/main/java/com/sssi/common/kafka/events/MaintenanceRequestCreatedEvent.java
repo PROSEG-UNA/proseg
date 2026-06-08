@@ -15,7 +15,7 @@ import java.util.List;
 @AllArgsConstructor
 public class MaintenanceRequestCreatedEvent {
 
-    private String email;
+    private List<String> emails;
     private String companyName;
     private String legalId;
     private String description;

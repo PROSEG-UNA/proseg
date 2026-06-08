@@ -19,3 +19,13 @@ export async function fetchBuildingById(id) {
     const { data } = await axios.get(`${MAINTENANCE_ENDPOINTS.locations}/buildings/${id}`, maintenanceConfig);
     return data?.data ?? null;
 }
+
+export async function fetchBuildingEmails(buildingId) {
+    const { data } = await axios.get(`${MAINTENANCE_ENDPOINTS.locations}/buildings/${buildingId}/emails`, maintenanceConfig);
+    return data?.data ?? [];
+}
+
+export async function fetchCampusEmails(campusId) {
+    const { data } = await axios.get(`${MAINTENANCE_ENDPOINTS.locations}/campuses/${campusId}/emails`, maintenanceConfig);
+    return data?.data ?? [];
+}

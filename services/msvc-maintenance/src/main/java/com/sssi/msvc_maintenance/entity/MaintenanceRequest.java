@@ -44,9 +44,13 @@ public class MaintenanceRequest extends BaseEntity {
     @Pattern(regexp = ValidationUtils.SAFE_TEXT_REGEX, message = "La descripción contiene caracteres inválidos")
     private String description;
 
-    @Column(name = "email", length = 254)
-    @Pattern(regexp = ValidationUtils.EMAIL_REGEX, message = "El correo electrónico tiene un formato inválido")
-    private String email;
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "maintenance_request_email",
+            joinColumns = @JoinColumn(name = "maintenance_request_id"),
+            inverseJoinColumns = @JoinColumn(name = "maintenance_email_id")
+    )
+    private List<MaintenanceEmail> emails;
 
     @Filterable(type = FilterType.ENUM)
     @Enumerated(EnumType.ORDINAL)

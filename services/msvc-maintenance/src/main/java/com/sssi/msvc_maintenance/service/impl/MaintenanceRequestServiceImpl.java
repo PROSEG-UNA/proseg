@@ -8,6 +8,7 @@ import com.sssi.msvc_maintenance.dto.response.InventoryAssetResponseDto;
 import com.sssi.msvc_maintenance.dto.response.MaintenanceAssetOptionDto;
 import com.sssi.msvc_maintenance.dto.response.MaintenanceRequestResponseDto;
 import com.sssi.msvc_maintenance.entity.Company;
+import com.sssi.msvc_maintenance.entity.MaintenanceEmail;
 import com.sssi.msvc_maintenance.entity.MaintenanceRequest;
 import com.sssi.msvc_maintenance.entity.UserCompany;
 import com.sssi.msvc_maintenance.entity.enums.MaintenanceStatus;
@@ -17,6 +18,7 @@ import com.sssi.msvc_maintenance.exception.MaintenanceRequestException;
 import com.sssi.msvc_maintenance.mapper.MaintenanceAssetOptionMapper;
 import com.sssi.msvc_maintenance.mapper.MaintenanceRequestMapper;
 import com.sssi.msvc_maintenance.repository.CompanyRepository;
+import com.sssi.msvc_maintenance.repository.MaintenanceEmailRepository;
 import com.sssi.msvc_maintenance.repository.MaintenanceRequestRepository;
 import com.sssi.msvc_maintenance.repository.UserCompanyRepository;
 import com.sssi.msvc_maintenance.service.MaintenanceRequestService;
@@ -42,6 +44,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
     private final MaintenanceRequestRepository maintenanceRequestRepository;
     private final CompanyRepository companyRepository;
     private final UserCompanyRepository userCompanyRepository;
+    private final MaintenanceEmailRepository maintenanceEmailRepository;
     private final MaintenanceRequestMapper maintenanceRequestMapper;
     private final InventoryClient inventoryClient;
     private final ApplicationEventPublisher eventPublisher;
@@ -64,6 +67,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         maintenanceRequest.setBuildingId(request.getBuildingId());
         maintenanceRequest.setAssignedTechnicians(technicians);
         maintenanceRequest.setLeaderUserCompany(resolveLeader(request.getLeaderUserCompanyId(), technicians));
+        maintenanceRequest.setEmails(resolveEmails(request.getEmails()));
 
         MaintenanceRequest saved = maintenanceRequestRepository.save(maintenanceRequest);
 
@@ -83,8 +87,14 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                 ? saved.getLeaderUserCompany().getKeycloakUserId()
                 : null;
 
+        List<String> emails = saved.getEmails() == null
+                ? List.of()
+                : saved.getEmails().stream()
+                        .map(MaintenanceEmail::getEmail)
+                        .toList();
+
         eventPublisher.publishEvent(new MaintenanceRequestCreatedDomainEvent(
-                saved.getEmail(),
+                emails,
                 saved.getCompany().getName(),
                 saved.getCompany().getLegalId(),
                 saved.getDescription(),
@@ -156,6 +166,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         maintenanceRequest.setBuildingId(request.getBuildingId());
         maintenanceRequest.setAssignedTechnicians(technicians);
         maintenanceRequest.setLeaderUserCompany(resolveLeader(request.getLeaderUserCompanyId(), technicians));
+        maintenanceRequest.setEmails(resolveEmails(request.getEmails()));
 
         return maintenanceRequestMapper.toResponse(maintenanceRequestRepository.save(maintenanceRequest));
     }
@@ -208,6 +219,20 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
             throw new IllegalArgumentException("Todos los técnicos asignados deben pertenecer a la empresa de la solicitud");
         }
         return found;
+    }
+
+    private List<MaintenanceEmail> resolveEmails(List<String> rawEmails) {
+        if (rawEmails == null || rawEmails.isEmpty()) {
+            return List.of();
+        }
+        return rawEmails.stream()
+                .filter(email -> email != null && !email.isBlank())
+                .map(String::trim)
+                .distinct()
+                .map(email -> maintenanceEmailRepository.findByEmail(email)
+                        .orElseGet(() -> maintenanceEmailRepository.save(
+                                MaintenanceEmail.builder().email(email).build())))
+                .toList();
     }
 
     private UserCompany resolveLeader(UUID leaderId, List<UserCompany> technicians) {

@@ -29,6 +29,7 @@ export default function SearchableSelect({
     externalSearch,
     onSearchChange,
     hideSearch = false,
+    multiple = false,
 }) {
     const theme = useTheme();
     const accentColor = theme.vars.palette.tones.rose.fg;
@@ -56,10 +57,15 @@ export default function SearchableSelect({
         <TextField
             select
             label={label}
-            value={value ?? ''}
+            value={multiple ? (Array.isArray(value) ? value : []) : (value ?? '')}
             onChange={(e) => {
                 const v = e.target.value;
-                if (v === '__CREATE__') { onCreate?.(); return; }
+                if (multiple) {
+                    if (Array.isArray(v) && v.includes('__CREATE__')) { onCreate?.(search); return; }
+                    onChange((Array.isArray(v) ? v : []).filter(x => x !== '__CREATE__' && x !== ''));
+                    return;
+                }
+                if (v === '__CREATE__') { onCreate?.(search); return; }
                 onChange(v);
             }}
             onBlur={onBlur}
@@ -70,16 +76,29 @@ export default function SearchableSelect({
             fullWidth={fullWidth}
             size={size}
             sx={sx}
-            SelectProps={{
-                renderValue: (val) => {
-                    if (!val) return '';
-                    const item = items.find(i => getItemValue(i) === val);
-                    return item ? getItemLabel(item) : '';
-                },
-                onOpen: () => setTimeout(() => searchInputRef.current?.focus(), 50),
-                onClose: () => { setSearch(''); setPage(0); },
-                MenuProps: {
-                    PaperProps: { sx: { maxHeight: 'none' } },
+            slotProps={{
+                select: {
+                    multiple,
+                    renderValue: (val) => {
+                        if (multiple) {
+                            const arr = Array.isArray(val) ? val : [];
+                            if (arr.length === 0) return '';
+                            return arr
+                                .map(v => {
+                                    const item = items.find(i => getItemValue(i) === v);
+                                    return item ? getItemLabel(item) : v;
+                                })
+                                .join(', ');
+                        }
+                        if (!val) return '';
+                        const item = items.find(i => getItemValue(i) === val);
+                        return item ? getItemLabel(item) : '';
+                    },
+                    onOpen: () => setTimeout(() => searchInputRef.current?.focus(), 50),
+                    onClose: () => { setInternalSearch(''); setPage(0); },
+                    MenuProps: {
+                        PaperProps: { sx: { maxHeight: 'none' } },
+                    },
                 },
             }}
         >
@@ -109,14 +128,19 @@ export default function SearchableSelect({
             </ListSubheader>
             )}
 
-            {clearable && (
+            {!multiple && clearable && (
                 <MenuItem value="" sx={{ fontSize: 13.5, color: 'text.secondary', fontStyle: 'italic' }}>
                     — Ninguno —
                 </MenuItem>
             )}
 
             {pageItems.map(item => (
-                <MenuItem key={getItemValue(item)} value={getItemValue(item)} sx={{ fontSize: 13.5 }}>
+                <MenuItem
+                    key={getItemValue(item)}
+                    value={getItemValue(item)}
+                    selected={multiple && (Array.isArray(value) ? value : []).includes(getItemValue(item))}
+                    sx={{ fontSize: 13.5 }}
+                >
                     {getItemLabel(item)}
                 </MenuItem>
             ))}
@@ -127,11 +151,19 @@ export default function SearchableSelect({
                 </MenuItem>
             )}
 
-            {selectedItem && !selectedOnPage && (
+            {!multiple && selectedItem && !selectedOnPage && (
                 <MenuItem key={`__sel__${getItemValue(selectedItem)}`} value={getItemValue(selectedItem)} sx={{ display: 'none' }}>
                     {getItemLabel(selectedItem)}
                 </MenuItem>
             )}
+
+            {multiple && (Array.isArray(value) ? value : [])
+                .filter(v => !pageItems.some(i => getItemValue(i) === v))
+                .map(v => (
+                    <MenuItem key={`__sel__${v}`} value={v} sx={{ display: 'none' }}>
+                        {v}
+                    </MenuItem>
+                ))}
 
             {Array.from({ length: placeholderCount }, (_, i) => (
                 <MenuItem key={`__ph_${i}`} sx={{ visibility: 'hidden', pointerEvents: 'none', fontSize: 13.5 }}>
@@ -173,7 +205,7 @@ export default function SearchableSelect({
                     sx={{ color: accentColor, fontWeight: 600, fontSize: 13.5, gap: 1 }}
                 >
                     <AddCircleOutlinedIcon sx={{ fontSize: 16 }} />
-                    {createLabel}
+                    {typeof createLabel === 'function' ? createLabel(search) : createLabel}
                 </MenuItem>
             )}
         </TextField>

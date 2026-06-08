@@ -3,6 +3,7 @@ package com.sssi.msvc_maintenance.service.impl;
 import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.api.response.PageResponse;
 import com.sssi.msvc_maintenance.client.InventoryClient;
+import com.sssi.msvc_maintenance.dto.response.InventoryBuildingEmailResponseDto;
 import com.sssi.msvc_maintenance.dto.response.InventoryBuildingResponseDto;
 import com.sssi.msvc_maintenance.dto.response.InventoryCampusResponseDto;
 import com.sssi.msvc_maintenance.service.MaintenanceLocationService;
@@ -53,5 +54,27 @@ public class MaintenanceLocationServiceImpl implements MaintenanceLocationServic
     public InventoryBuildingResponseDto findBuildingById(UUID id) {
         ApiResponse<InventoryBuildingResponseDto> response = inventoryClient.findBuildingById(id);
         return response != null ? response.getData() : null;
+    }
+
+    @Override
+    public List<String> findBuildingEmails(UUID buildingId) {
+        return extractEmails(inventoryClient.findBuildingEmails(buildingId));
+    }
+
+    @Override
+    public List<String> findCampusEmails(UUID campusId) {
+        return extractEmails(inventoryClient.findCampusEmails(campusId));
+    }
+
+    private List<String> extractEmails(ApiResponse<List<InventoryBuildingEmailResponseDto>> response) {
+        List<InventoryBuildingEmailResponseDto> data = response != null ? response.getData() : null;
+        if (data == null) {
+            return List.of();
+        }
+        return data.stream()
+                .map(InventoryBuildingEmailResponseDto::getEmail)
+                .filter(email -> email != null && !email.isBlank())
+                .distinct()
+                .toList();
     }
 }
