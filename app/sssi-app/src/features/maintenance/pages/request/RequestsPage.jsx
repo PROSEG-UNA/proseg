@@ -1,14 +1,14 @@
-import { usePermissions } from '../../../common/hooks/index.js';
+import { usePermissions } from '../../../../common/hooks/index.js';
 
 import { useState } from 'react';
 import { Box, Container } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import { PageHeader } from '../../../common/components/index.js';
-import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
-import { PrimaryButton } from '../../../common/components/PrimaryButton.jsx';
-import { PERMISSIONS } from '../../../common/constants/permissions';
-import MaintenanceRequestTable from '../components/request/MaintenanceRequestTable.jsx';
-import MaintenanceRequestFormModal from '../components/request/MaintenanceRequestFormModal.jsx';
+import { PageHeader } from '../../../../common/components/index.js';
+import AccessDeniedState from '../../../../common/components/AccessDeniedState.jsx';
+import { PrimaryButton } from '../../../../common/components/PrimaryButton.jsx';
+import { PERMISSIONS } from '../../../../common/constants/permissions';
+import MaintenanceRequestTable from '../../components/request/MaintenanceRequestTable.jsx';
+import MaintenanceRequestFormModal from '../../components/request/MaintenanceRequestFormModal.jsx';
 
 export default function RequestsPage() {
     const [requestFormState, setRequestFormState] = useState({ open: false, requestId: null, initialCompanyId: '' });

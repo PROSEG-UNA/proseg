@@ -10,7 +10,7 @@ import AlternateEmailIcon from '@mui/icons-material/AlternateEmail';
 import PhoneIcon from '@mui/icons-material/Phone';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
-import { fetchCompanyById, fetchCompanyUsers } from '../../services/companiesService';
+import { fetchCompanyById, fetchCompanyUsers } from '../../services/company/companiesService';
 import { formatDateTime } from '../../maintenanceUtils';
 
 function InfoCard({ icon: Icon, label, value, variant = 'text' }) {

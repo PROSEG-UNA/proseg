@@ -4,7 +4,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { useDebounce } from '../../../../common/hooks/useDebounce.js';
-import { fetchCompanyUsers, unassignCompanyUser, assignCompanyUsersBulk } from '../../services/companiesService';
+import { fetchCompanyUsers, unassignCompanyUser, assignCompanyUsersBulk } from '../../services/company/companiesService';
 import { searchUsers } from '../../../security/services/usersService';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
 

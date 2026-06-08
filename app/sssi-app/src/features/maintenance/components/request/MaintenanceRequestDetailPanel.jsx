@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Box, Skeleton, Typography } from '@mui/material';
 import ConstructionIcon from '@mui/icons-material/Construction';
-import { fetchMaintenanceRequestById } from '../../services/requestsService';
+import { fetchMaintenanceRequestById } from '../../services/request/requestsService';
 import { fetchCampusById, fetchBuildingById } from '../../services/locationsService';
 import { formatDate, statusLabel } from '../../maintenanceUtils';
 

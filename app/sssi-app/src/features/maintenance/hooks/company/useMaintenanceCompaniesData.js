@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { fetchCompanies } from '../services/companiesService';
-import { getFriendlyApiErrorMessage } from '../../../common/utils';
+import { fetchCompanies } from '../../services/company/companiesService';
+import { getFriendlyApiErrorMessage } from '../../../../common/utils';
 
 export function useMaintenanceCompaniesData({ pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [], refreshKey = 0 } = {}) {
     const [rows, setRows] = useState([]);
@@ -51,4 +51,3 @@ export function useMaintenanceCompaniesData({ pageIndex = 0, pageSize = 10, sear
 
     return { rows, loading, error, totalElements, totalPages };
 }
-
