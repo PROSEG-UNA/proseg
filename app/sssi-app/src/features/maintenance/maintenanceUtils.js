@@ -44,6 +44,19 @@ export function joinTextList(values) {
     return Array.isArray(values) ? values.filter(Boolean).join('\n') : '';
 }
 
+export function checkScheduleConsistency({ startDate, endDate, startTime, endTime }) {
+    let endDateInvalid = false;
+    let endTimeInvalid = false;
+    if (startDate && endDate) {
+        if (endDate.isBefore(startDate, 'day')) {
+            endDateInvalid = true;
+        } else if (endDate.isSame(startDate, 'day') && startTime && endTime && !endTime.isAfter(startTime)) {
+            endTimeInvalid = true;
+        }
+    }
+    return { endDateInvalid, endTimeInvalid };
+}
+
 export function statusLabel(value) {
     return MAINTENANCE_STATUS_OPTIONS.find((option) => option.value === value)?.label ?? value ?? '—';
 }
