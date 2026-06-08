@@ -19,21 +19,12 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import MenuIcon from '@mui/icons-material/Menu';
-import WarehouseIcon from '@mui/icons-material/Warehouse';
-import PeopleIcon from '@mui/icons-material/People';
-import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
-import ShieldIcon from '@mui/icons-material/Shield';
-import AppsIcon from '@mui/icons-material/Apps';
 import { useColorScheme } from '@mui/material/styles';
-import { SidebarContext } from '../context/SidebarContext';
-import { useAuth } from '../../features/auth/hooks/useAuth';
-import { PERMISSIONS } from '../constants/permissions';
-import '../css/Sidebar.css';
-import { panelSurfaceSx } from '../theme/sxStyles';
-import {usePermissions} from "../hooks/index.js";
-import BusinessIcon from '@mui/icons-material/Business';
-import ConstructionIcon from '@mui/icons-material/Construction';
-import BuildIcon from '@mui/icons-material/Build';
+import { SidebarContext } from '../../context/SidebarContext';
+import { useAuth } from '../../../features/auth/hooks/useAuth';
+import '../../css/Sidebar.css';
+import { panelSurfaceSx } from '../../theme/sxStyles';
+import { useNavSections } from './useNavSections';
 
 
 const neutralHoverSx = (t) => ({
@@ -185,103 +176,32 @@ export function Sidebar() {
     const { isMinimized, setIsMinimized } = useContext(SidebarContext);
     const theme = useTheme();
     const { mode, systemMode } = useColorScheme();
-    const { hasAnyPermission } = usePermissions();
+    const { sections } = useNavSections();
     const resolvedMode = mode === 'system' ? systemMode : mode;
 
     const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
     const [showExpandedContent, setShowExpandedContent] = useState(!isMinimized);
 
-    useEffect(() => {
-        if (isMediumOrDown) setIsMinimized(true);
-        else setIsMinimized(false);
-    }, [isMediumOrDown, setIsMinimized]);
+    const syncMinimizedToBreakpoint = () => {
+        setIsMinimized(isMediumOrDown);
+    };
+    useEffect(syncMinimizedToBreakpoint, [isMediumOrDown, setIsMinimized]);
 
-    useEffect(() => {
+    const scheduleExpandedContent = () => {
         if (isMinimized) {
             setShowExpandedContent(false);
             return;
         }
         const timer = setTimeout(() => setShowExpandedContent(true), 270);
         return () => clearTimeout(timer);
-    }, [isMinimized]);
+    };
+    useEffect(scheduleExpandedContent, [isMinimized]);
 
     const toggleMenu = (menu) => setExpandedMenu(expandedMenu === menu ? null : menu);
     const isActive = (path) => location.pathname === path;
     const sidebarWidth = isMinimized ? 80 : 280;
 
-    const userPermissions = [
-        PERMISSIONS.USERS.CREATE,
-        PERMISSIONS.USERS.READ,
-        PERMISSIONS.USERS.READ_ALL,
-        PERMISSIONS.USERS.READ_ROLES,
-        PERMISSIONS.USERS.APPROVE,
-        PERMISSIONS.USERS.ASSIGN_ROLE,
-        PERMISSIONS.USERS.REMOVE_ROLE,
-        PERMISSIONS.USERS.READ_INVITATIONS,
-        PERMISSIONS.ROLES.READ_USERS_BY_ROLE,
-    ];
-
-    const rolePermissions = [
-        PERMISSIONS.ROLES.READ_BASE,
-        PERMISSIONS.ROLES.READ_COMPOSITE,
-        PERMISSIONS.ROLES.READ_ROLE_COMPOSITES,
-        PERMISSIONS.ROLES.CREATE,
-        PERMISSIONS.ROLES.UPDATE,
-        PERMISSIONS.ROLES.DELETE,
-        PERMISSIONS.ROLES.READ_USERS_BY_ROLE,
-    ];
-
-    const canViewInventorySection = hasAnyPermission([
-        PERMISSIONS.INVENTORY.READ,
-        PERMISSIONS.INVENTORY.MANAGE,
-        PERMISSIONS.INVENTORY.DELETE,
-        PERMISSIONS.INVENTORY.LOCATIONS.READ,
-        PERMISSIONS.INVENTORY.LOCATIONS.MANAGE,
-        PERMISSIONS.INVENTORY.LOCATIONS.DELETE,
-    ]);
-
-    const canViewUsersSubmodule = hasAnyPermission(userPermissions);
-    const canViewRolesSubmodule = hasAnyPermission(rolePermissions);
-
-    const canViewSecuritySection = canViewUsersSubmodule || canViewRolesSubmodule;
-    const canViewMaintenanceSection = hasAnyPermission([
-        PERMISSIONS.MAINTENANCE.COMPANIES.READ,
-        PERMISSIONS.MAINTENANCE.COMPANIES.MANAGE,
-        PERMISSIONS.MAINTENANCE.COMPANIES.DELETE,
-        PERMISSIONS.MAINTENANCE.REQUESTS.READ,
-        PERMISSIONS.MAINTENANCE.REQUESTS.MANAGE,
-        PERMISSIONS.MAINTENANCE.REQUESTS.DELETE,
-        PERMISSIONS.MAINTENANCE.COMPANY_USERS.READ,
-        PERMISSIONS.MAINTENANCE.COMPANY_USERS.MANAGE,
-        PERMISSIONS.MAINTENANCE.COMPANY_USERS.DELETE,
-    ]);
-
-    const inventoryItems = canViewInventorySection
-        ? [{ key: 'assets', icon: AppsIcon, label: 'Activos', path: '/inventario/activos' }]
-        : [];
-
-    const maintenanceItems = canViewMaintenanceSection
-        ? [
-            { key: 'companies', icon: BusinessIcon, label: 'Empresas', path: '/mantenimiento/empresas' },
-            { key: 'requests', icon: ConstructionIcon, label: 'Solicitudes', path: '/mantenimiento/solicitudes' },
-        ]
-        : [];
-
-    const securityItems = canViewSecuritySection
-        ? [
-            canViewUsersSubmodule ? { key: 'users', icon: PeopleIcon, label: 'Usuarios', path: '/seguridad/usuarios' } : null,
-            canViewRolesSubmodule ? { key: 'roles', icon: VerifiedUserIcon, label: 'Roles', path: '/seguridad/roles' } : null,
-        ]
-            .filter(Boolean)
-        : [];
-
-    const showInventorySection = canViewInventorySection;
-    const showSecuritySection = canViewSecuritySection;
-    const showMaintenanceSection = canViewMaintenanceSection;
-
-    const inventoryActive = showInventorySection && inventoryItems.some((item) => isActive(item.path));
-    const maintenanceActive = showMaintenanceSection && maintenanceItems.some((item) => isActive(item.path));
-    const securityActive = showSecuritySection && securityItems.some((item) => isActive(item.path));
+    const isSectionActive = (section) => section.items.some((item) => isActive(item.path));
 
     return (
         <Box
@@ -356,18 +276,18 @@ export function Sidebar() {
                     sx={{ position: 'relative', zIndex: 1, flex: 1, overflowY: 'auto', p: 0 }}
                 >
                     <List sx={{ p: 0 }}>
-                        {showInventorySection ? (
-                            <ListItem disablePadding sx={{ display: 'block', borderBottom: '1px solid', borderColor: 'divider' }}>
+                        {sections.map((section) => (
+                            <ListItem key={section.key} disablePadding sx={{ display: 'block', borderBottom: '1px solid', borderColor: 'divider' }}>
                                 <NavSection
-                                    icon={WarehouseIcon}
-                                    label="Gestión Inventarios"
-                                    expanded={expandedMenu === 'inventory'}
-                                    onToggle={() => toggleMenu('inventory')}
-                                    hasActive={inventoryActive}
+                                    icon={section.icon}
+                                    label={section.label}
+                                    expanded={expandedMenu === section.key}
+                                    onToggle={() => toggleMenu(section.key)}
+                                    hasActive={isSectionActive(section)}
                                 />
-                                <Collapse in={expandedMenu === 'inventory'} timeout={220} unmountOnExit>
+                                <Collapse in={expandedMenu === section.key} timeout={220} unmountOnExit>
                                     <Box sx={{ py: 0.5 }}>
-                                        {inventoryItems.map((item) => (
+                                        {section.items.map((item) => (
                                             <NavLeaf
                                                 key={item.key}
                                                 icon={item.icon}
@@ -379,58 +299,7 @@ export function Sidebar() {
                                     </Box>
                                 </Collapse>
                             </ListItem>
-                        ) : null}
-
-                        {showSecuritySection ? (
-                            <ListItem disablePadding sx={{ display: 'block', borderBottom: '1px solid', borderColor: 'divider' }}>
-                                <NavSection
-                                    icon={ShieldIcon}
-                                    label="Gestión Seguridad"
-                                    expanded={expandedMenu === 'security'}
-                                    onToggle={() => toggleMenu('security')}
-                                    hasActive={securityActive}
-                                />
-                                <Collapse in={expandedMenu === 'security'} timeout={220} unmountOnExit>
-                                    <Box sx={{ py: 0.5 }}>
-                                        {securityItems.map((item) => (
-                                            <NavLeaf
-                                                key={item.key}
-                                                icon={item.icon}
-                                                label={item.label}
-                                                onClick={() => navigate(item.path)}
-                                                active={isActive(item.path)}
-                                            />
-                                        ))}
-                                    </Box>
-                                </Collapse>
-                            </ListItem>
-                        ) : null}
-
-                        {showMaintenanceSection ? (
-                            <ListItem disablePadding sx={{ display: 'block', borderBottom: '1px solid', borderColor: 'divider' }}>
-                                <NavSection
-                                    icon={BuildIcon}
-                                    label="Gestión Mantenimiento"
-                                    expanded={expandedMenu === 'maintenance'}
-                                    onToggle={() => toggleMenu('maintenance')}
-                                    hasActive={maintenanceActive}
-                                />
-                                <Collapse in={expandedMenu === 'maintenance'} timeout={220} unmountOnExit>
-                                    <Box sx={{ py: 0.5 }}>
-                                        {maintenanceItems.map((item) => (
-                                            <NavLeaf
-                                                key={item.key}
-                                                icon={item.icon}
-                                                label={item.label}
-                                                onClick={() => navigate(item.path)}
-                                                active={isActive(item.path)}
-                                            />
-                                        ))}
-                                    </Box>
-                                </Collapse>
-                            </ListItem>
-                        ) : null}
-
+                        ))}
                     </List>
                 </Box>
             )}
@@ -450,30 +319,15 @@ export function Sidebar() {
                         alignItems: 'center',
                     }}
                 >
-                    {showInventorySection ? (
+                    {sections.map((section) => (
                         <MiniNavButton
-                            icon={WarehouseIcon}
-                            title="Gestión Inventarios"
-                            active={inventoryActive}
-                            onClick={() => { setIsMinimized(false); toggleMenu('inventory'); }}
+                            key={section.key}
+                            icon={section.icon}
+                            title={section.label}
+                            active={isSectionActive(section)}
+                            onClick={() => { setIsMinimized(false); toggleMenu(section.key); }}
                         />
-                    ) : null}
-                    {showMaintenanceSection ? (
-                        <MiniNavButton
-                            icon={BuildIcon}
-                            title="Gestión Mantenimiento"
-                            active={maintenanceActive}
-                            onClick={() => { setIsMinimized(false); toggleMenu('maintenance'); }}
-                        />
-                    ) : null}
-                    {showSecuritySection ? (
-                        <MiniNavButton
-                            icon={ShieldIcon}
-                            title="Gestión Seguridad"
-                            active={securityActive}
-                            onClick={() => { setIsMinimized(false); toggleMenu('security'); }}
-                        />
-                    ) : null}
+                    ))}
                 </Box>
             )}
 
