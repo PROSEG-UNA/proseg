@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { MAINTENANCE_ENDPOINTS } from './endpoints';
-import { fetchPage, maintenanceConfig } from './api';
+import { MAINTENANCE_ENDPOINTS } from '../endpoints';
+import { fetchPage, maintenanceConfig } from '../api';
 
 export async function fetchCompanies(options = {}) {
     return fetchPage(MAINTENANCE_ENDPOINTS.companies, options);
@@ -51,7 +51,6 @@ export async function assignCompanyUser(companyId, keycloakUserId) {
 }
 
 export async function assignCompanyUsersBulk(companyId, keycloakUserIds = []) {
-    // backend expects a single DTO { keycloakUserIds: [...] }
     const { data } = await axios.post(
         `${MAINTENANCE_ENDPOINTS.companies}/${companyId}/users/batch`,
         { keycloakUserIds },
@@ -67,4 +66,3 @@ export async function unassignCompanyUser(companyId, userId) {
     );
     return data?.data;
 }
-

@@ -7,6 +7,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import BusinessIcon from '@mui/icons-material/Business';
 import ConstructionIcon from '@mui/icons-material/Construction';
+import AssignmentIcon from '@mui/icons-material/Assignment';
 import { PERMISSIONS } from '../../constants/permissions';
 import { usePermissions } from '../../hooks';
 
@@ -53,6 +54,12 @@ const maintenancePermissions = [
     PERMISSIONS.MAINTENANCE.COMPANY_USERS.DELETE,
 ];
 
+const registerPermissions = [
+    PERMISSIONS.MAINTENANCE.REGISTERS.READ,
+    PERMISSIONS.MAINTENANCE.REGISTERS.MANAGE,
+    PERMISSIONS.MAINTENANCE.REGISTERS.HISTORY,
+];
+
 export function useNavSections() {
     const { hasAnyPermission } = usePermissions();
 
@@ -61,6 +68,7 @@ export function useNavSections() {
     const canViewRolesSubmodule = hasAnyPermission(rolePermissions);
     const canViewSecuritySection = canViewUsersSubmodule || canViewRolesSubmodule;
     const canViewMaintenanceSection = hasAnyPermission(maintenancePermissions);
+    const canViewRegistersSubmodule = hasAnyPermission(registerPermissions);
 
     const sections = useMemo(() => {
         const result = [];
@@ -96,12 +104,13 @@ export function useNavSections() {
                 items: [
                     { key: 'companies', icon: BusinessIcon, label: 'Empresas', path: '/mantenimiento/empresas' },
                     { key: 'requests', icon: ConstructionIcon, label: 'Solicitudes', path: '/mantenimiento/solicitudes' },
-                ],
+                    canViewRegistersSubmodule ? { key: 'registers', icon: AssignmentIcon, label: 'Registros', path: '/mantenimiento/registros' } : null,
+                ].filter(Boolean),
             });
         }
 
         return result;
-    }, [canViewInventorySection, canViewSecuritySection, canViewUsersSubmodule, canViewRolesSubmodule, canViewMaintenanceSection]);
+    }, [canViewInventorySection, canViewSecuritySection, canViewUsersSubmodule, canViewRolesSubmodule, canViewMaintenanceSection, canViewRegistersSubmodule]);
 
     return { sections };
 }

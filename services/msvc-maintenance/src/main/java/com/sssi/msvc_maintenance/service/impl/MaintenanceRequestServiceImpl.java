@@ -14,6 +14,7 @@ import com.sssi.msvc_maintenance.entity.enums.MaintenanceStatus;
 import com.sssi.msvc_maintenance.event.MaintenanceRequestCreatedDomainEvent;
 import com.sssi.msvc_maintenance.exception.CompanyException;
 import com.sssi.msvc_maintenance.exception.MaintenanceRequestException;
+import com.sssi.msvc_maintenance.mapper.MaintenanceAssetOptionMapper;
 import com.sssi.msvc_maintenance.mapper.MaintenanceRequestMapper;
 import com.sssi.msvc_maintenance.repository.CompanyRepository;
 import com.sssi.msvc_maintenance.repository.MaintenanceRequestRepository;
@@ -180,7 +181,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
 
         List<MaintenanceAssetOptionDto> content = (data.getContent() == null ? List.<InventoryAssetResponseDto>of() : data.getContent())
                 .stream()
-                .map(this::toAssetOption)
+                .map(MaintenanceAssetOptionMapper::toOption)
                 .toList();
 
         return new PageImpl<>(content, pageable, data.getTotalElements());
@@ -216,7 +217,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         return technicians.stream()
                 .filter(uc -> uc.getId().equals(leaderId))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("El técnico líder debe estar en la lista de técnicos asignados"));
+                .orElseThrow(() -> new IllegalArgumentException("El técnico encargado debe estar en la lista de técnicos asignados"));
     }
 
     private UUID parseUuid(String value, String fieldName) {
@@ -225,18 +226,6 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         } catch (IllegalArgumentException | NullPointerException ex) {
             throw new IllegalArgumentException("El campo '" + fieldName + "' debe ser un UUID válido", ex);
         }
-    }
-
-    private MaintenanceAssetOptionDto toAssetOption(InventoryAssetResponseDto asset) {
-        return MaintenanceAssetOptionDto.builder()
-                .id(asset.getId())
-                .assetNumber(asset.getAssetNumber())
-                .serialNumber(asset.getSerialNumber())
-                .kind(asset.getKind())
-                .status(asset.getStatus())
-                .modelName(asset.getModel() != null ? asset.getModel().getName() : null)
-                .locationName(asset.getLocation() != null ? asset.getLocation().getName() : null)
-                .build();
     }
 }
 

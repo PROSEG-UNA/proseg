@@ -5,6 +5,7 @@ import { useAssetsData } from '../../hooks/useAssetsData';
 import { getAssetsColumns, renderAssetActions } from './assetColumns.jsx';
 import AssetDetailPanel from './AssetDetailPanel.jsx';
 import AssetFormModal from './AssetFormModal.jsx';
+import AssetMaintenanceHistoryModal from './AssetMaintenanceHistoryModal.jsx';
 import { deleteAsset } from '../../services/assetsService.js';
 import { useDebounce } from '../../../../common/hooks/useDebounce.js';
 import { usePermissions } from '../../../../common/hooks/usePermissions';
@@ -58,11 +59,13 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
     const [alert, setAlert] = useState(null);
     const [editAssetId, setEditAssetId] = useState(null);
     const [assetToDelete, setAssetToDelete] = useState(null);
+    const [historyTarget, setHistoryTarget] = useState(null);
     const [deleting, setDeleting] = useState(false);
     const { hasPermission } = usePermissions();
     const canManageAssets = hasPermission(PERMISSIONS.INVENTORY.MANAGE);
     const canDeleteAssets = hasPermission(PERMISSIONS.INVENTORY.DELETE);
-    const canUseActions = canManageAssets || canDeleteAssets;
+    const canViewMaintenanceHistory = hasPermission(PERMISSIONS.MAINTENANCE.REGISTERS.HISTORY);
+    const canUseActions = canManageAssets || canDeleteAssets || canViewMaintenanceHistory;
 
     const debouncedGlobalFilter = useDebounce(globalFilter, 350);
     const debouncedColumnFilters = useDebounce(columnFilters, 350);
@@ -135,6 +138,10 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
         setAssetToDelete(row);
     }, []);
 
+    const handleHistory = useCallback((row) => {
+        setHistoryTarget(row);
+    }, []);
+
     const handleEditClose = useCallback(() => setEditAssetId(null), []);
 
     const handleEditSaved = useCallback(() => {
@@ -179,8 +186,10 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
                 renderRowActions={canUseActions ? renderAssetActions({
                     onEdit: handleEdit,
                     onDelete: handleDelete,
+                    onHistory: handleHistory,
                     canEdit: canManageAssets,
                     canDelete: canDeleteAssets,
+                    canViewHistory: canViewMaintenanceHistory,
                 }) : undefined}
                 tableOptions={{
                     positionActionsColumn: 'last',
@@ -216,6 +225,12 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
                 assetId={editAssetId}
                 onClose={handleEditClose}
                 onSaved={handleEditSaved}
+            />
+
+            <AssetMaintenanceHistoryModal
+                open={!!historyTarget}
+                asset={historyTarget}
+                onClose={() => setHistoryTarget(null)}
             />
 
             <DialogModal

@@ -4,8 +4,8 @@ import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { useDebounce } from '../../../../common/hooks/useDebounce.js';
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
-import { deleteMaintenanceRequest } from '../../services/requestsService';
-import { useMaintenanceRequestsData } from '../../hooks/useMaintenanceRequestsData';
+import { deleteMaintenanceRequest } from '../../services/request/requestsService';
+import { useMaintenanceRequestsData } from '../../hooks/request/useMaintenanceRequestsData';
 import { getMaintenanceRequestColumns, renderMaintenanceRequestActions } from './requestColumns.jsx';
 import MaintenanceRequestDetailPanel from './MaintenanceRequestDetailPanel.jsx';
 

@@ -68,10 +68,32 @@ public class AssetController {
     @GetMapping("/campus/{campusId}")
     public ResponseEntity<ApiResponse<PageResponse<AssetResponseDto>>> findByCampusId(
             @PathVariable UUID campusId,
+            @RequestParam(required = false) String search,
+            @RequestParam Map<String, String> allParams,
             @PageableDefault(size = 10, page = 0) Pageable pageable) {
+
+        Map<String, String> filters = new HashMap<>(allParams);
+        FilterConstants.RESERVED_PARAMS.forEach(filters::remove);
+
         return ApiResponseBuilder.ok(
-                PageMapper.from(assetService.findByCampusId(campusId, pageable)),
+                PageMapper.from(assetService.findByCampusId(campusId, search, filters, pageable)),
                 "Activos por campus"
+        );
+    }
+
+    @GetMapping("/building/{buildingId}")
+    public ResponseEntity<ApiResponse<PageResponse<AssetResponseDto>>> findByBuildingId(
+            @PathVariable UUID buildingId,
+            @RequestParam(required = false) String search,
+            @RequestParam Map<String, String> allParams,
+            @PageableDefault(size = 10, page = 0) Pageable pageable) {
+
+        Map<String, String> filters = new HashMap<>(allParams);
+        FilterConstants.RESERVED_PARAMS.forEach(filters::remove);
+
+        return ApiResponseBuilder.ok(
+                PageMapper.from(assetService.findByBuildingId(buildingId, search, filters, pageable)),
+                "Activos por edificio"
         );
     }
 

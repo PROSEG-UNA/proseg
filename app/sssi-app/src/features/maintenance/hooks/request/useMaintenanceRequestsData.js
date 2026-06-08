@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { fetchMaintenanceRequests } from '../services/requestsService';
-import { getFriendlyApiErrorMessage } from '../../../common/utils';
-import { statusLabel } from '../maintenanceUtils';
+import { fetchMaintenanceRequests } from '../../services/request/requestsService';
+import { getFriendlyApiErrorMessage } from '../../../../common/utils';
+import { statusLabel } from '../../maintenanceUtils';
 
 export function useMaintenanceRequestsData({ pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [], refreshKey = 0 } = {}) {
     const [rows, setRows] = useState([]);
@@ -58,4 +58,3 @@ export function useMaintenanceRequestsData({ pageIndex = 0, pageSize = 10, searc
 
     return { rows, loading, error, totalElements, totalPages };
 }
-

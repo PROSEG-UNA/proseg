@@ -16,4 +16,6 @@ import java.util.UUID;
 public class InventoryAssetModelResponseDto {
     private UUID id;
     private String name;
+    private InventoryNamedRefDto brand;
+    private InventoryNamedRefDto type;
 }

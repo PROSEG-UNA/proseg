@@ -1,21 +1,21 @@
-import { usePermissions } from '../../../common/hooks/index.js';
+import { usePermissions } from '../../../../common/hooks/index.js';
 
 import { useState, useEffect } from 'react';
 import { Box, Container, Typography, Tabs, Tab, Button, CircularProgress } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DomainOutlinedIcon from '@mui/icons-material/DomainOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
-import { PageHeader } from '../../../common/components/index.js';
-import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
-import { PrimaryButton } from '../../../common/components/PrimaryButton.jsx';
-import { PERMISSIONS } from '../../../common/constants/permissions';
-import CompanyTable from '../components/company/CompanyTable.jsx';
-import CompanyFormModal from '../components/company/CompanyFormModal.jsx';
-import CompanyUsersModal from '../components/company/CompanyUsersModal.jsx';
-import SearchableSelect from '../../../common/components/SearchableSelect.jsx';
-import DialogModal from '../../../common/components/DialogModal.jsx';
-import { fetchCompanies, fetchCompanyUsers, assignCompanyUser, unassignCompanyUser } from '../services/companiesService';
-import { searchUsers } from '../../security/services/usersService';
+import { PageHeader } from '../../../../common/components/index.js';
+import AccessDeniedState from '../../../../common/components/AccessDeniedState.jsx';
+import { PrimaryButton } from '../../../../common/components/PrimaryButton.jsx';
+import { PERMISSIONS } from '../../../../common/constants/permissions';
+import CompanyTable from '../../components/company/CompanyTable.jsx';
+import CompanyFormModal from '../../components/company/CompanyFormModal.jsx';
+import CompanyUsersModal from '../../components/company/CompanyUsersModal.jsx';
+import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
+import DialogModal from '../../../../common/components/DialogModal.jsx';
+import { fetchCompanies, fetchCompanyUsers, assignCompanyUser, unassignCompanyUser } from '../../services/company/companiesService';
+import { searchUsers } from '../../../security/services/usersService';
 
 export default function CompaniesPage() {
     const [companyFormOpen, setCompanyFormOpen] = useState(false);
@@ -46,16 +46,13 @@ export default function CompaniesPage() {
     const refreshCompanies = () => setCompaniesRefresh((v) => v + 1);
     const [tabIndex, setTabIndex] = useState(0);
 
-    // users-tab state
     const [inspectCompanyId, setInspectCompanyId] = useState(null);
     const [inspectCompanyName, setInspectCompanyName] = useState('');
     const [inspectUsers, setInspectUsers] = useState([]);
     const [loadingInspectUsers, setLoadingInspectUsers] = useState(false);
     const [companiesOptions, setCompaniesOptions] = useState([]);
     const [loadingCompaniesOptions, setLoadingCompaniesOptions] = useState(false);
-    // reassign removed: only allow unassign and linking via the search below
     const [processingAction, setProcessingAction] = useState(false);
-    // user-search & assign in users tab
     const [userSearch, setUserSearch] = useState('');
     const [availableUsersTab, setAvailableUsersTab] = useState([]);
     const [userLoading, setUserLoading] = useState(false);
@@ -65,7 +62,6 @@ export default function CompaniesPage() {
     const [confirmUnassignUser, setConfirmUnassignUser] = useState(null);
     const [duplicateWarning, setDuplicateWarning] = useState(null);
 
-    // load companies options when opening users tab
     useEffect(() => {
         let cancelled = false;
         if (tabIndex !== 1) return;
@@ -80,7 +76,6 @@ export default function CompaniesPage() {
         return () => { cancelled = true; };
     }, [tabIndex]);
 
-    // load users for selected company
     useEffect(() => {
         let cancelled = false;
         if (!inspectCompanyId) {
@@ -102,7 +97,6 @@ export default function CompaniesPage() {
         }
     }, [inspectCompanyId]);
 
-    // load available users for assign in tab when search changes
     useEffect(() => {
         let cancelled = false;
         if (tabIndex !== 1) return;
@@ -315,4 +309,3 @@ export default function CompaniesPage() {
         </Box>
     );
 }
-

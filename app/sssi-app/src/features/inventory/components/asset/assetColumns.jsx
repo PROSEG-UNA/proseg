@@ -1,6 +1,7 @@
 import Chip from '@mui/material/Chip';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import HistoryIcon from '@mui/icons-material/History';
 import RowActionsMenu from '../../../../common/components/RowActionsMenu.jsx';
 
 const STATUS_FILTER_OPTIONS = [
@@ -153,7 +154,7 @@ export function getAssetsColumns() {
     ];
 }
 
-export function renderAssetActions({ onEdit, onDelete, canEdit, canDelete }) {
+export function renderAssetActions({ onEdit, onDelete, onHistory, canEdit, canDelete, canViewHistory }) {
     return ({ row }) => {
         const actions = [
             {
@@ -162,6 +163,13 @@ export function renderAssetActions({ onEdit, onDelete, canEdit, canDelete }) {
                 icon: <EditIcon fontSize="small" />,
                 hidden: !canEdit,
                 onClick: () => onEdit(row.original),
+            },
+            {
+                key: 'history',
+                label: 'Ver historial de mantenimiento',
+                icon: <HistoryIcon fontSize="small" />,
+                hidden: !canViewHistory,
+                onClick: () => onHistory(row.original),
             },
             {
                 key: 'delete',

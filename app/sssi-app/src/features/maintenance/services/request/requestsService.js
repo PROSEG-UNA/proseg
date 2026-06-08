@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { MAINTENANCE_ENDPOINTS } from './endpoints';
-import { fetchPage, maintenanceConfig } from './api';
+import { MAINTENANCE_ENDPOINTS } from '../endpoints';
+import { fetchPage, maintenanceConfig } from '../api';
 
 export async function fetchMaintenanceRequests(options = {}) {
     return fetchPage(MAINTENANCE_ENDPOINTS.requests, options);
@@ -33,4 +33,3 @@ export async function deleteMaintenanceRequest(requestId) {
     const { data } = await axios.delete(`${MAINTENANCE_ENDPOINTS.requests}/${requestId}`, maintenanceConfig);
     return data?.data;
 }
-

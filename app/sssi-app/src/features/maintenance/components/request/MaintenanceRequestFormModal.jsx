@@ -3,15 +3,26 @@ import { Box, Button, Chip, Divider, MenuItem, TextField, Typography, useTheme }
 import ConstructionIcon from '@mui/icons-material/Construction';
 import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import dayjs from 'dayjs';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
-import { createMaintenanceRequest, fetchMaintenanceRequestById, updateMaintenanceRequest } from '../../services/requestsService';
-import { fetchCompanies, fetchCompanyTechnicians } from '../../services/companiesService';
+import TimeSelect from '../../../../common/components/TimeSelect.jsx';
+import { createMaintenanceRequest, fetchMaintenanceRequestById, updateMaintenanceRequest } from '../../services/request/requestsService';
+import { fetchCompanies, fetchCompanyTechnicians } from '../../services/company/companiesService';
 import { fetchCampuses, fetchBuildingsByCampus } from '../../services/locationsService';
-import { MAINTENANCE_STATUS_OPTIONS } from '../../maintenanceUtils';
+import { MAINTENANCE_STATUS_OPTIONS, checkScheduleConsistency } from '../../maintenanceUtils';
+
+const SCHEDULE_DATE_ERROR = 'La fecha de fin no puede ser anterior a la fecha de inicio';
+const SCHEDULE_TIME_ERROR = 'La hora de salida no puede ser anterior a la hora de llegada';
+
+function scheduleErrorsFor(values) {
+    const { endDateInvalid, endTimeInvalid } = checkScheduleConsistency(values);
+    return {
+        endDate: endDateInvalid ? SCHEDULE_DATE_ERROR : '',
+        endTime: endTimeInvalid ? SCHEDULE_TIME_ERROR : '',
+    };
+}
 
 const INITIAL_VALUES = {
     companyId: '',
@@ -232,18 +243,37 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
 
     const PICKER_FIELDS = ['startDate', 'endDate', 'startTime', 'endTime'];
 
+    const applyScheduleErrors = (values) => {
+        const schedule = scheduleErrorsFor(values);
+        setErrors((prev) => ({
+            ...prev,
+            endDate: values.endDate ? schedule.endDate : prev.endDate,
+            endTime: values.endTime ? schedule.endTime : prev.endTime,
+        }));
+        setTouched((prev) => ({
+            ...prev,
+            ...(schedule.endDate ? { endDate: true } : {}),
+            ...(schedule.endTime ? { endTime: true } : {}),
+        }));
+    };
+
     const handleChange = (key, value) => {
+        let merged;
         if (key === 'companyId') {
+            merged = { ...formValues, companyId: value };
             setFormValues((prev) => ({ ...prev, companyId: value }));
             setSelectedTechnicians({});
             setTechnicianToAdd('');
             setLeaderId('');
         } else if (key === 'campusId') {
+            merged = { ...formValues, campusId: value, buildingId: '' };
             setFormValues((prev) => ({ ...prev, campusId: value, buildingId: '' }));
         } else {
+            merged = { ...formValues, [key]: value };
             setFormValues((prev) => ({ ...prev, [key]: value }));
         }
         if (touched[key] || PICKER_FIELDS.includes(key)) validateField(key, value);
+        if (PICKER_FIELDS.includes(key)) applyScheduleErrors(merged);
     };
 
     const handleBlur = (key) => {
@@ -303,13 +333,17 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
             nextErrors.email = 'El correo electrónico tiene un formato inválido';
         }
 
+        const schedule = scheduleErrorsFor(formValues);
+        if (!nextErrors.endDate && schedule.endDate) nextErrors.endDate = schedule.endDate;
+        if (!nextErrors.endTime && schedule.endTime) nextErrors.endTime = schedule.endTime;
+
         const technicianIds = Object.keys(selectedTechnicians);
         if (technicianIds.length === 0) {
             nextErrors.technicians = 'Selecciona al menos un técnico';
         }
 
         if (!leaderId) {
-            nextErrors.leader = 'Selecciona un líder';
+            nextErrors.leader = 'Selecciona un encargado';
         }
 
         setTouched((prev) => ({ ...prev, ...nextTouched }));
@@ -464,6 +498,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                                 onChange={(value) => handleChange('startDate', value)}
                                 onClose={() => handleBlur('startDate')}
                                 disabled={anyLoading}
+                                maxDate={formValues.endDate || undefined}
                                 slotProps={{
                                     textField: {
                                         size: 'small',
@@ -480,6 +515,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                                 onChange={(value) => handleChange('endDate', value)}
                                 onClose={() => handleBlur('endDate')}
                                 disabled={anyLoading}
+                                minDate={formValues.startDate || undefined}
                                 slotProps={{
                                     textField: {
                                         size: 'small',
@@ -490,37 +526,29 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                                     },
                                 }}
                             />
-                            <TimePicker
+                            <TimeSelect
                                 label="Hora de llegada *"
                                 value={formValues.startTime}
                                 onChange={(value) => handleChange('startTime', value)}
                                 onClose={() => handleBlur('startTime')}
                                 disabled={anyLoading}
-                                slotProps={{
-                                    textField: {
-                                        size: 'small',
-                                        fullWidth: true,
-                                        sx: fieldSx,
-                                        error: touched.startTime && !!errors.startTime,
-                                        helperText: touched.startTime ? (errors.startTime || ' ') : ' ',
-                                    },
-                                }}
+                                size="small"
+                                fullWidth
+                                sx={fieldSx}
+                                error={touched.startTime && !!errors.startTime}
+                                helperText={touched.startTime ? (errors.startTime || ' ') : ' '}
                             />
-                            <TimePicker
+                            <TimeSelect
                                 label="Hora de salida *"
                                 value={formValues.endTime}
                                 onChange={(value) => handleChange('endTime', value)}
                                 onClose={() => handleBlur('endTime')}
                                 disabled={anyLoading}
-                                slotProps={{
-                                    textField: {
-                                        size: 'small',
-                                        fullWidth: true,
-                                        sx: fieldSx,
-                                        error: touched.endTime && !!errors.endTime,
-                                        helperText: touched.endTime ? (errors.endTime || ' ') : ' ',
-                                    },
-                                }}
+                                size="small"
+                                fullWidth
+                                sx={fieldSx}
+                                error={touched.endTime && !!errors.endTime}
+                                helperText={touched.endTime ? (errors.endTime || ' ') : ' '}
                             />
                         </Box>
                     </Box>
@@ -599,7 +627,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                                     </Button>
                                 </Box>
                                 <SearchableSelect
-                                    label="Líder *"
+                                    label="Encargado *"
                                     value={leaderId}
                                     onChange={handleLeaderChange}
                                     fullWidth
@@ -609,7 +637,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                                     helperText={
                                         noCompany
                                             ? 'Selecciona una empresa primero'
-                                            : (errors.leader || 'El líder se agrega a la lista de técnicos')
+                                            : (errors.leader || 'El encargado se agrega a la lista de técnicos')
                                     }
                                     sx={fieldSx}
                                     items={technicianOptions}
@@ -629,7 +657,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                                         return (
                                             <Chip
                                                 key={technician.id}
-                                                label={isLeader ? `${technicianLabel(technician)} · Líder` : technicianLabel(technician)}
+                                                label={isLeader ? `${technicianLabel(technician)} · Encargado` : technicianLabel(technician)}
                                                 color={isLeader ? 'primary' : 'default'}
                                                 variant={isLeader ? 'filled' : 'outlined'}
                                                 onDelete={() => handleRemoveTechnician(technician.id)}

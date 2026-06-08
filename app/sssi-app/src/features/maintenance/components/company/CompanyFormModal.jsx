@@ -4,7 +4,7 @@ import BusinessIcon from '@mui/icons-material/Business';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
-import { createCompany, fetchCompanyById, inviteCompanyUser, updateCompany } from '../../services/companiesService';
+import { createCompany, fetchCompanyById, inviteCompanyUser, updateCompany } from '../../services/company/companiesService';
 import { searchUsers } from '../../../security/services/usersService';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
 import { useDebounce } from '../../../../common/hooks/useDebounce.js';
