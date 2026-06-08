@@ -1,5 +1,5 @@
 import { useState, useContext } from 'react';
-import { Sidebar, NavDrawer } from '../common/components/Sidebar';
+import { Sidebar, NavDrawer } from '../common/components/Sidebar/Sidebar';
 import { Header } from '../common/components/Header';
 import { SidebarContext } from '../common/context/SidebarContext';
 import { Box, useMediaQuery, useTheme } from '@mui/material';
