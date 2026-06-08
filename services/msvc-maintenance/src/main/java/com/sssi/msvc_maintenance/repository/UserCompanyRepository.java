@@ -28,6 +28,8 @@ public interface UserCompanyRepository extends JpaRepository<UserCompany, UUID>,
 
     List<UserCompany> findAllByCompanyId(UUID companyId);
 
+    List<UserCompany> findAllByKeycloakUserId(String keycloakUserId);
+
     Page<UserCompany> findByCompanyId(UUID companyId, Pageable pageable);
 
     @Query(value = "SELECT * FROM user_company_table WHERE company_id = :companyId AND keycloak_user_id = :keycloakUserId LIMIT 1",

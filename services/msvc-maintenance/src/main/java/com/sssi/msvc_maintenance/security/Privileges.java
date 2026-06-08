@@ -27,4 +27,10 @@ public final class Privileges {
         public static final String GESTIONAR  = "GESTIONAR_USUARIOS_EMPRESAS";
         public static final String ELIMINAR   = "ELIMINAR_USUARIOS_EMPRESAS";
     }
+
+    public static final class RegistrosMantenimiento {
+        public static final String LEER       = "LEER_REGISTROS_MANTENIMIENTO";
+        public static final String GESTIONAR  = "GESTIONAR_REGISTROS_MANTENIMIENTO";
+        public static final String HISTORIAL  = "LEER_HISTORIAL_REGISTROS_MANTENIMIENTO";
+    }
 }

@@ -70,6 +70,24 @@ public class SecurityConfig {
                         ).hasAuthority(Privileges.SolicitudesMantenimiento.ELIMINAR)
 
                         .requestMatchers(HttpMethod.GET,
+                                "/api/v1/maintenance/records",
+                                "/api/v1/maintenance/records/**"
+                        ).hasAuthority(Privileges.RegistrosMantenimiento.HISTORIAL)
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/maintenance/registers",
+                                "/api/v1/maintenance/registers/**"
+                        ).hasAuthority(Privileges.RegistrosMantenimiento.LEER)
+
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/maintenance/registers/**"
+                        ).hasAuthority(Privileges.RegistrosMantenimiento.GESTIONAR)
+
+                        .requestMatchers(HttpMethod.PUT,
+                                "/api/v1/maintenance/registers/**"
+                        ).hasAuthority(Privileges.RegistrosMantenimiento.GESTIONAR)
+
+                        .requestMatchers(HttpMethod.GET,
                                 "/api/v1/maintenance/technicians",
                                 "/api/v1/maintenance/technicians/**"
                         ).hasAuthority(Privileges.TecnicosMantenimiento.LEER)
