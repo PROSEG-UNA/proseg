@@ -2,14 +2,10 @@ import { useState } from 'react';
 import {
   Box,
   Container,
-  useMediaQuery,
-  useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { PrimaryButton } from '../../../common/components/PrimaryButton.jsx';
 import { PageHeader } from '../../../common/components/index.js';
-import { Header } from '../../../common/components/Header';
-import { NavDrawer } from '../../../common/components/NavDrawer';
 import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
 import UsersTable from '../components/UsersTable.jsx';
 import CreateUserModal from '../components/CreateUserModal.jsx';
@@ -18,12 +14,9 @@ import { usePermissions } from '../../../common/hooks/index.js';
 import { PERMISSIONS } from '../../../common/constants/permissions';
 
 export function UserPage() {
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const { hasPermission } = usePermissions();
-  const theme = useTheme();
-  const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
   const canViewUsers = hasPermission(PERMISSIONS.USERS.READ_ALL);
   const canCreateUser = hasPermission(PERMISSIONS.USERS.CREATE);
 
@@ -33,11 +26,6 @@ export function UserPage() {
 
   return (
     <Box className="user-page">
-        <Header
-          title="Gestión de Usuarios"
-          onMenuClick={isMediumOrDown ? () => setDrawerOpen(true) : undefined}
-        />
-        <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
         <Container maxWidth="xl" className="user-content">
           {canViewUsers ? (
