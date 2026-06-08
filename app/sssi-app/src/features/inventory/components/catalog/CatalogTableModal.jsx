@@ -43,7 +43,6 @@ export default function CatalogTableModal({ open, onClose, config }) {
     const [deleting, setDeleting] = useState(false);
     const [alert, setAlert] = useState(null);
 
-    // BuildingEmail modal state
     const [buildingEmailsRow, setBuildingEmailsRow] = useState(null);
     const [campusEmailsRow, setCampusEmailsRow] = useState(null);
 

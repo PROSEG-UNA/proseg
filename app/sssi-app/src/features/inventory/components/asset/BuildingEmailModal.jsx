@@ -223,7 +223,6 @@ export default function BuildingEmailsModal({ open, onClose, building }) {
             >
                 <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2, pb: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
 
-                    {/* Building badge */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <ApartmentIcon sx={{ fontSize: 15, color: 'text.disabled' }} />
                         <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', fontWeight: 500 }}>
@@ -250,8 +249,6 @@ export default function BuildingEmailsModal({ open, onClose, building }) {
                     </Box>
 
                     <Divider />
-
-                    {/* Add email input */}
                     {canManage && (
                         <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
                             <TextField
@@ -298,8 +295,6 @@ export default function BuildingEmailsModal({ open, onClose, building }) {
                             </Tooltip>
                         </Box>
                     )}
-
-                    {/* Email list */}
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
                         {loading ? (
                             <EmailSkeleton />

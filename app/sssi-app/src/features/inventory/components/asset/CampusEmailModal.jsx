@@ -129,7 +129,6 @@ export default function CampusEmailsModal({ open, onClose, campus }) {
         if (open) loadEmails();
     }, [open, loadEmails]);
 
-    // Group emails by building
     const grouped = emails.reduce((acc, email) => {
         const bid = email.building?.id ?? 'unknown';
         const bname = email.building?.name ?? 'Edificio desconocido';
@@ -153,8 +152,6 @@ export default function CampusEmailsModal({ open, onClose, campus }) {
             maxWidth="sm"
         >
             <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2, pb: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
-
-                {/* Campus header */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <BusinessIcon sx={{ fontSize: 15, color: 'text.disabled' }} />
                     <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', fontWeight: 500 }}>
@@ -179,7 +176,6 @@ export default function CampusEmailsModal({ open, onClose, campus }) {
 
                 <Divider />
 
-                {/* Content */}
                 {loading ? (
                     <EmailSkeleton />
                 ) : groups.length === 0 ? (
