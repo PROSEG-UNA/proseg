@@ -39,7 +39,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout>
+                                                <DashboardLayout title="Sistema Programa Servicios Generales">
                                                     <HomePage />
                                                 </DashboardLayout>
                                             }
@@ -52,7 +52,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout>
+                                                <DashboardLayout title="Gestión de Activos">
                                                     <AssetPage />
                                                 </DashboardLayout>
                                             }
@@ -64,7 +64,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout>
+                                                <DashboardLayout title="Gestión de Seguridad">
                                                     <SecurityPage />
                                                 </DashboardLayout>
                                             }
@@ -76,7 +76,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout>
+                                                <DashboardLayout title="Gestión de Usuarios">
                                                     <UserPage />
                                                 </DashboardLayout>
                                             }
@@ -88,7 +88,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout>
+                                                <DashboardLayout title="Gestión de Roles">
                                                     <RolePage />
                                                 </DashboardLayout>
                                             }
@@ -100,7 +100,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout>
+                                                <DashboardLayout title="Gestión de Mantenimiento">
                                                     <CompaniesPage />
                                                 </DashboardLayout>
                                             }
@@ -112,7 +112,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout>
+                                                <DashboardLayout title="Gestión de Mantenimiento">
                                                     <RequestsPage />
                                                 </DashboardLayout>
                                             }
