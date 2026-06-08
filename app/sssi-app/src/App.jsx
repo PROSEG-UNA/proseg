@@ -16,8 +16,9 @@ import SecurityPage from './features/security/pages/SecurityPage';
 import UserPage from './features/security/pages/UserPage';
 import RolePage from './features/security/pages/RolePage';
 import DashboardLayout from './layouts/DashboardLayout';
-import CompaniesPage from "./features/maintenance/pages/CompaniesPage.jsx";
-import RequestsPage from "./features/maintenance/pages/RequestsPage.jsx";
+import CompaniesPage from "./features/maintenance/pages/company/CompaniesPage.jsx";
+import RequestsPage from "./features/maintenance/pages/request/RequestsPage.jsx";
+import MaintenanceRegisterPage from "./features/maintenance/pages/register/RegisterPage.jsx";
 
 function App() {
     return (
@@ -114,6 +115,18 @@ function App() {
                                             element={
                                                 <DashboardLayout title="Gestión de Mantenimiento">
                                                     <RequestsPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/mantenimiento/registros"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout>
+                                                    <MaintenanceRegisterPage />
                                                 </DashboardLayout>
                                             }
                                         />
