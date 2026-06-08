@@ -127,14 +127,15 @@ export default function TableBase({
             sx: { backgroundColor: 'background.paperWarm' },
         },
 
-        muiTablePaperProps: {
+        muiTablePaperProps: ({ table }) => ({
             elevation: 0,
             sx: {
                 backgroundColor: 'background.paperWarm',
                 border: '1px solid',
                 borderColor: 'divider',
                 borderRadius: `${theme.shape.borderRadius}px`,
-                overflow: 'hidden',
+                overflow: table.getState().isFullScreen ? 'hidden' : 'clip',
+                marginBottom: table.getState().isFullScreen ? 0 : '2rem',
                 '& .Mui-TableHeadCell-Content-Actions': {
                     transition: 'opacity 150ms ease',
                     marginLeft: '4px',
@@ -143,7 +144,7 @@ export default function TableBase({
                     opacity: 1,
                 },
             },
-        },
+        }),
 
         renderTopToolbar: ({ table }) => {
             const toolbarSx = (t) => ({ ...headerSurfaceSx(t), position: 'relative' });
@@ -256,7 +257,12 @@ export default function TableBase({
         },
 
         muiBottomToolbarProps: {
-            sx: (t) => ({ ...headerSurfaceSx(t) }),
+            sx: (t) => ({
+                ...headerSurfaceSx(t),
+                position: 'sticky',
+                bottom: 0,
+                zIndex: 3,
+            }),
         },
 
         muiTableHeadCellProps: {

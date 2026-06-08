@@ -5,14 +5,10 @@ import {
     Tab,
     Tabs,
     Typography,
-    useMediaQuery,
-    useTheme,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import BusinessIcon from '@mui/icons-material/Business';
 import ConstructionIcon from '@mui/icons-material/Construction';
-import { Header } from '../../../common/components/Header';
-import { NavDrawer } from '../../../common/components/NavDrawer';
 import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
 import { PrimaryButton } from '../../../common/components/PrimaryButton.jsx';
 import { usePermissions } from '../../../common/hooks/index.js';
@@ -24,7 +20,6 @@ import MaintenanceRequestTable from '../components/request/MaintenanceRequestTab
 import MaintenanceRequestFormModal from '../components/request/MaintenanceRequestFormModal.jsx';
 
 export default function MaintenancePage() {
-    const [drawerOpen, setDrawerOpen] = useState(false);
     const [tabIndex, setTabIndex] = useState(0);
 
     const [companyFormOpen, setCompanyFormOpen] = useState(false);
@@ -36,8 +31,6 @@ export default function MaintenancePage() {
     const [requestsRefresh, setRequestsRefresh] = useState(0);
 
     const { hasPermission, hasAnyPermission } = usePermissions();
-    const theme = useTheme();
-    const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
 
     const canViewCompanies = hasAnyPermission([
         PERMISSIONS.MAINTENANCE.COMPANIES.READ,
@@ -90,13 +83,7 @@ export default function MaintenancePage() {
 
     return (
         <Box className="maintenance-page">
-            <Header
-                title="Gestión de Mantenimiento"
-                onMenuClick={isMediumOrDown ? () => setDrawerOpen(true) : undefined}
-            />
-            <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-
-            <Container maxWidth="xl" sx={{ pb: 3, pt: 3 }}>
+            <Container maxWidth="xl" sx={{ pt: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', md: 'center' }, justifyContent: 'space-between', gap: 2, mb: 2, flexDirection: { xs: 'column', md: 'row' } }}>
                     <Box sx={{ flex: 1 }}>
                         <Typography variant="h4" sx={{ fontWeight: 800, color: 'primary.icon', fontSize: { xs: '1.55rem', sm: '1.9rem' } }}>

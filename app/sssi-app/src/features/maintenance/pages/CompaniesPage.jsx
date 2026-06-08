@@ -1,13 +1,11 @@
 import { usePermissions } from '../../../common/hooks/index.js';
 
 import { useState, useEffect } from 'react';
-import { Box, Container, Typography, useMediaQuery, useTheme, Tabs, Tab, Button, CircularProgress } from '@mui/material';
+import { Box, Container, Typography, Tabs, Tab, Button, CircularProgress } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DomainOutlinedIcon from '@mui/icons-material/DomainOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
-import { Header } from '../../../common/components/Header';
 import { PageHeader } from '../../../common/components/index.js';
-import { NavDrawer } from '../../../common/components/NavDrawer';
 import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
 import { PrimaryButton } from '../../../common/components/PrimaryButton.jsx';
 import { PERMISSIONS } from '../../../common/constants/permissions';
@@ -20,15 +18,12 @@ import { fetchCompanies, fetchCompanyUsers, assignCompanyUser, unassignCompanyUs
 import { searchUsers } from '../../security/services/usersService';
 
 export default function CompaniesPage() {
-    const [drawerOpen, setDrawerOpen] = useState(false);
     const [companyFormOpen, setCompanyFormOpen] = useState(false);
     const [companyFormId, setCompanyFormId] = useState(null);
     const [companyUsersTarget, setCompanyUsersTarget] = useState(null);
     const [companiesRefresh, setCompaniesRefresh] = useState(0);
 
     const { hasPermission, hasAnyPermission } = usePermissions();
-    const theme = useTheme();
-    const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
 
     const canViewCompanies = hasAnyPermission([
         PERMISSIONS.MAINTENANCE.COMPANIES.READ,
@@ -130,13 +125,7 @@ export default function CompaniesPage() {
 
     return (
         <Box className="maintenance-companies-page">
-            <Header
-                title="Gestión de Mantenimiento"
-                onMenuClick={isMediumOrDown ? () => setDrawerOpen(true) : undefined}
-            />
-            <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-
-            <Container maxWidth="xl" sx={{ pb: 3, pt: 3 }}>
+            <Container maxWidth="xl" sx={{ pt: 3 }}>
                 <PageHeader
                     title="Empresas"
                     description="Gestión de empresas y usuarios de empresas."

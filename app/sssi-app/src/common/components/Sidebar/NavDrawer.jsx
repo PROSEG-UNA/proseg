@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../features/auth/hooks/useAuth';
+import { useAuth } from '../../../features/auth/hooks/useAuth';
 import {
   Box,
   Collapse,
@@ -12,21 +12,14 @@ import {
   ListItemText,
   Typography,
 } from '@mui/material';
-import { PrimaryButton } from './PrimaryButton.jsx';
-import AppsIcon from '@mui/icons-material/Apps';
+import { PrimaryButton } from '../PrimaryButton.jsx';
 import CloseIcon from '@mui/icons-material/Close';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import LogoutIcon from '@mui/icons-material/Logout';
-import PeopleIcon from '@mui/icons-material/People';
-import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
-import BuildIcon from '@mui/icons-material/Build';
-import WarehouseIcon from '@mui/icons-material/Warehouse';
-import ShieldIcon from '@mui/icons-material/Shield';
 import { useColorScheme } from '@mui/material/styles';
-import { usePermissions } from '../hooks/usePermissions';
-import { PERMISSIONS } from '../constants/permissions';
-import { panelSurfaceSx } from '../theme/sxStyles';
+import { panelSurfaceSx } from '../../theme/sxStyles';
+import { useNavSections } from './useNavSections';
 
 const iconBoxSx = (t, { active = false } = {}) => ({
   width: 34, height: 34, mr: 1.5,
@@ -120,75 +113,11 @@ export function NavDrawer({ open, onClose }) {
   const navigate = useNavigate();
   const [expandedMenu, setExpandedMenu] = useState(null);
   const { mode, systemMode } = useColorScheme();
-  const { hasAnyPermission } = usePermissions();
+  const { sections } = useNavSections();
   const resolvedMode = mode === 'system' ? systemMode : mode;
 
   const toggleMenu = (menu) => setExpandedMenu(expandedMenu === menu ? null : menu);
   const handleNavigation = (path) => { navigate(path); onClose(); };
-  const userPermissions = [
-    PERMISSIONS.USERS.CREATE,
-    PERMISSIONS.USERS.READ,
-    PERMISSIONS.USERS.READ_ALL,
-    PERMISSIONS.USERS.READ_ROLES,
-    PERMISSIONS.USERS.APPROVE,
-    PERMISSIONS.USERS.ASSIGN_ROLE,
-    PERMISSIONS.USERS.REMOVE_ROLE,
-    PERMISSIONS.USERS.READ_INVITATIONS,
-    PERMISSIONS.ROLES.READ_USERS_BY_ROLE,
-  ];
-
-  const rolePermissions = [
-    PERMISSIONS.ROLES.READ_BASE,
-    PERMISSIONS.ROLES.READ_COMPOSITE,
-    PERMISSIONS.ROLES.READ_ROLE_COMPOSITES,
-    PERMISSIONS.ROLES.CREATE,
-    PERMISSIONS.ROLES.UPDATE,
-    PERMISSIONS.ROLES.DELETE,
-    PERMISSIONS.ROLES.READ_USERS_BY_ROLE,
-  ];
-
-  const canViewInventorySection = hasAnyPermission([
-    PERMISSIONS.INVENTORY.READ,
-    PERMISSIONS.INVENTORY.MANAGE,
-    PERMISSIONS.INVENTORY.DELETE,
-    PERMISSIONS.INVENTORY.LOCATIONS.READ,
-    PERMISSIONS.INVENTORY.LOCATIONS.MANAGE,
-    PERMISSIONS.INVENTORY.LOCATIONS.DELETE,
-  ]);
-
-  const canViewUsersSubmodule = hasAnyPermission(userPermissions);
-  const canViewRolesSubmodule = hasAnyPermission(rolePermissions);
-  const canViewSecuritySection = canViewUsersSubmodule || canViewRolesSubmodule;
-  const canViewMaintenanceSection = hasAnyPermission([
-    PERMISSIONS.MAINTENANCE.COMPANIES.READ,
-    PERMISSIONS.MAINTENANCE.COMPANIES.MANAGE,
-    PERMISSIONS.MAINTENANCE.COMPANIES.DELETE,
-    PERMISSIONS.MAINTENANCE.REQUESTS.READ,
-    PERMISSIONS.MAINTENANCE.REQUESTS.MANAGE,
-    PERMISSIONS.MAINTENANCE.REQUESTS.DELETE,
-    PERMISSIONS.MAINTENANCE.COMPANY_USERS.READ,
-    PERMISSIONS.MAINTENANCE.COMPANY_USERS.MANAGE,
-    PERMISSIONS.MAINTENANCE.COMPANY_USERS.DELETE,
-  ]);
-
-  const inventoryItems = canViewInventorySection
-    ? [{ key: 'assets', icon: AppsIcon, label: 'Activos', path: '/inventario/activos' }]
-    : [];
-
-  const maintenanceItems = canViewMaintenanceSection
-    ? [{ key: 'module', icon: BuildIcon, label: 'Mantenimiento', path: '/mantenimiento' }]
-    : [];
-
-  const securityItems = canViewSecuritySection
-    ? [
-        canViewUsersSubmodule ? { key: 'users', icon: PeopleIcon, label: 'Usuarios', path: '/seguridad/usuarios' } : null,
-        canViewRolesSubmodule ? { key: 'roles', icon: VerifiedUserIcon, label: 'Roles', path: '/seguridad/roles' } : null,
-      ]
-      .filter(Boolean)
-    : [];
-
-  const showInventorySection = canViewInventorySection;
-  const showSecuritySection = canViewSecuritySection;
 
   return (
     <Drawer
@@ -252,15 +181,15 @@ export function NavDrawer({ open, onClose }) {
         </Box>
 
         <List sx={{ flex: 1, overflowY: 'auto', p: 0 }}>
-          {showInventorySection ? (
-            <ListItem disablePadding sx={{ display: 'block' }}>
+          {sections.map((section) => (
+            <ListItem key={section.key} disablePadding sx={{ display: 'block' }}>
               <NavSection
-                icon={WarehouseIcon}
-                label="Gestión Inventarios"
-                expanded={expandedMenu === 'inventory'}
-                onToggle={() => toggleMenu('inventory')}
+                icon={section.icon}
+                label={section.label}
+                expanded={expandedMenu === section.key}
+                onToggle={() => toggleMenu(section.key)}
               >
-                {inventoryItems.map((item) => (
+                {section.items.map((item) => (
                   <NavLeaf
                     key={item.key}
                     icon={item.icon}
@@ -270,49 +199,7 @@ export function NavDrawer({ open, onClose }) {
                 ))}
               </NavSection>
             </ListItem>
-          ) : null}
-
-        {showSecuritySection ? (
-            <ListItem disablePadding sx={{ display: 'block' }}>
-                <NavSection
-                    icon={ShieldIcon}
-                    label="Gestión Seguridad"
-                    expanded={expandedMenu === 'security'}
-                    onToggle={() => toggleMenu('security')}
-                >
-                    {securityItems.map((item) => (
-                        <NavLeaf
-                            key={item.key}
-                            icon={item.icon}
-                            label={item.label}
-                            onClick={() => handleNavigation(item.path)}
-                        />
-                    ))}
-                </NavSection>
-            </ListItem>
-        ) : null}
-
-          {canViewMaintenanceSection ? (
-            <ListItem disablePadding sx={{ display: 'block' }}>
-              <NavSection
-                icon={BuildIcon}
-                label="Gestión Mantenimiento"
-                expanded={expandedMenu === 'maintenance'}
-                onToggle={() => toggleMenu('maintenance')}
-              >
-                {maintenanceItems.map((item) => (
-                  <NavLeaf
-                    key={item.key}
-                    icon={item.icon}
-                    label={item.label}
-                    onClick={() => handleNavigation(item.path)}
-                  />
-                ))}
-              </NavSection>
-            </ListItem>
-          ) : null}
-
-
+          ))}
         </List>
 
         <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
