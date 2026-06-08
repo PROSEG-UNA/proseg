@@ -1,5 +1,5 @@
 export const headerSurfaceSx = (t, { gradient = false } = {}) => ({
-  background: 'hsla(220, 20%, 99%, 0.85)',
+  background: 'hsl(220, 20%, 99%)',
   boxShadow: '0 2px 8px rgba(100, 108, 130, 0.10)',
   ...t.applyStyles('dark', {
     background: gradient
