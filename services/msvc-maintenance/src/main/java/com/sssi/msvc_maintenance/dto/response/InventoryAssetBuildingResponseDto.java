@@ -13,8 +13,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class InventoryAssetLocationResponseDto {
+public class InventoryAssetBuildingResponseDto {
     private UUID id;
-    private String description;
-    private InventoryAssetFloorResponseDto floor;
+    private String name;
+    private InventoryNamedRefDto campus;
 }
