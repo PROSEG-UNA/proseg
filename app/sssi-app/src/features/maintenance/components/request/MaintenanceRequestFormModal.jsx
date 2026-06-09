@@ -747,10 +747,11 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                             <SearchableSelect
                                 label="Correos electrónicos *"
                                 multiple
+                                addMode
+                                validateCreate={(s) => EMAIL_REGEX.test((s || '').trim())}
                                 value={formValues.emails}
                                 onChange={handleEmailsChange}
                                 onCreate={handleAddManualEmail}
-                                createLabel={(s) => (s && s.trim() ? `Agregar «${s.trim()}»` : 'Escribe un correo para agregar')}
                                 fullWidth
                                 size="small"
                                 disabled={anyLoading || loadingEmails}

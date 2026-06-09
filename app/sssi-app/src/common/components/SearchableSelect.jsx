@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import {
     TextField, MenuItem, ListSubheader, IconButton,
-    Typography, Divider, useTheme,
+    Typography, Divider, Button, Box, useTheme,
 } from '@mui/material';
 import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
+import CheckBoxIcon from '@mui/icons-material/CheckBox';
 
 export default function SearchableSelect({
     value,
@@ -30,12 +32,15 @@ export default function SearchableSelect({
     onSearchChange,
     hideSearch = false,
     multiple = false,
+    addMode = false,
+    validateCreate,
 }) {
     const theme = useTheme();
     const accentColor = theme.vars.palette.tones.rose.fg;
 
     const [internalSearch, setInternalSearch] = useState('');
     const [page, setPage] = useState(0);
+    const [open, setOpen] = useState(false);
     const search = typeof externalSearch === 'string' ? externalSearch : internalSearch;
     const searchInputRef = useRef(null);
 
@@ -50,6 +55,14 @@ export default function SearchableSelect({
 
     const selectedItem = value ? items.find(i => getItemValue(i) === value) : null;
     const selectedOnPage = selectedItem ? pageItems.some(i => getItemValue(i) === value) : true;
+
+    const canCreate = addMode && typeof validateCreate === 'function' && validateCreate(search);
+    const handleInlineCreate = () => {
+        onCreate?.(search);
+        if (typeof onSearchChange === 'function') onSearchChange(''); else setInternalSearch('');
+        setPage(0);
+        searchInputRef.current?.focus();
+    };
 
     useEffect(() => { setPage(0); }, [search]);
 
@@ -94,8 +107,9 @@ export default function SearchableSelect({
                         const item = items.find(i => getItemValue(i) === val);
                         return item ? getItemLabel(item) : '';
                     },
-                    onOpen: () => setTimeout(() => searchInputRef.current?.focus(), 50),
-                    onClose: () => { setInternalSearch(''); setPage(0); },
+                    open,
+                    onOpen: () => { setOpen(true); setTimeout(() => searchInputRef.current?.focus(), 50); },
+                    onClose: () => { setOpen(false); setInternalSearch(''); setPage(0); },
                     MenuProps: {
                         PaperProps: { sx: { maxHeight: 'none' } },
                     },
@@ -104,27 +118,53 @@ export default function SearchableSelect({
         >
             {!hideSearch && (
                 <ListSubheader sx={{ px: 1.5, pt: 1, pb: 1.5, bgcolor: 'background.paper', lineHeight: 'normal' }}>
-                <TextField
-                    inputRef={searchInputRef}
-                    size="small"
-                    fullWidth
-                    placeholder="Buscar..."
-                    value={search}
-                    onChange={(e) => {
-                        const v = e.target.value;
-                        if (typeof onSearchChange === 'function') onSearchChange(v);
-                        else setInternalSearch(v);
-                    }}
-                    onKeyDown={(e) => e.stopPropagation()}
-                    sx={{
-                        '& .MuiOutlinedInput-root': {
-                            borderRadius: '8px',
-                            '& fieldset': { borderColor: 'divider'},
-                            '&.Mui-focused fieldset': { borderColor: accentColor },
-                        },
-                        '& .MuiInputBase-input': { fontSize: 13.5, py: '6px' },
-                    }}
-                />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <TextField
+                        inputRef={searchInputRef}
+                        size="small"
+                        fullWidth
+                        placeholder={addMode ? 'Buscar o agregar...' : 'Buscar...'}
+                        value={search}
+                        onChange={(e) => {
+                            const v = e.target.value;
+                            if (typeof onSearchChange === 'function') onSearchChange(v);
+                            else setInternalSearch(v);
+                        }}
+                        onKeyDown={(e) => {
+                            e.stopPropagation();
+                            if (addMode && e.key === 'Enter' && canCreate) {
+                                e.preventDefault();
+                                handleInlineCreate();
+                            }
+                        }}
+                        sx={{
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: '8px',
+                                '& fieldset': { borderColor: 'divider'},
+                                '&.Mui-focused fieldset': { borderColor: accentColor },
+                            },
+                            '& .MuiInputBase-input': { fontSize: 13.5, py: '6px' },
+                        }}
+                    />
+                    {addMode && (
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<AddCircleOutlinedIcon sx={{ fontSize: 16 }} />}
+                            disabled={!canCreate}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={(e) => { e.stopPropagation(); handleInlineCreate(); }}
+                            sx={{
+                                flexShrink: 0, whiteSpace: 'nowrap', textTransform: 'none',
+                                fontSize: 13, fontWeight: 600, color: accentColor,
+                                borderColor: accentColor,
+                                '&:hover': { borderColor: accentColor, bgcolor: 'transparent' },
+                            }}
+                        >
+                            Agregar
+                        </Button>
+                    )}
+                </Box>
             </ListSubheader>
             )}
 
@@ -134,16 +174,22 @@ export default function SearchableSelect({
                 </MenuItem>
             )}
 
-            {pageItems.map(item => (
-                <MenuItem
-                    key={getItemValue(item)}
-                    value={getItemValue(item)}
-                    selected={multiple && (Array.isArray(value) ? value : []).includes(getItemValue(item))}
-                    sx={{ fontSize: 13.5 }}
-                >
-                    {getItemLabel(item)}
-                </MenuItem>
-            ))}
+            {pageItems.map(item => {
+                const checked = multiple && (Array.isArray(value) ? value : []).includes(getItemValue(item));
+                return (
+                    <MenuItem
+                        key={getItemValue(item)}
+                        value={getItemValue(item)}
+                        selected={checked}
+                        sx={{ fontSize: 13.5, gap: 1 }}
+                    >
+                        {multiple && (checked
+                            ? <CheckBoxIcon sx={{ fontSize: 18, color: accentColor }} />
+                            : <CheckBoxOutlineBlankIcon sx={{ fontSize: 18, color: 'text.disabled' }} />)}
+                        {getItemLabel(item)}
+                    </MenuItem>
+                );
+            })}
 
             {filtered.length === 0 && (
                 <MenuItem disabled sx={{ fontSize: 13, color: 'text.disabled', justifyContent: 'center' }}>
@@ -198,15 +244,34 @@ export default function SearchableSelect({
                 </IconButton>
             </ListSubheader>
 
-            {onCreate && <Divider />}
-            {onCreate && (
+            {onCreate && !addMode && <Divider />}
+            {onCreate && !addMode && (
                 <MenuItem
                     value="__CREATE__"
-                    sx={{ color: accentColor, fontWeight: 600, fontSize: 13.5, gap: 1 }}
+                    sx={{ color: accentColor, fontWeight: 600, fontSize: 13.5, gap: 1, justifyContent: 'center' }}
                 >
                     <AddCircleOutlinedIcon sx={{ fontSize: 16 }} />
                     {typeof createLabel === 'function' ? createLabel(search) : createLabel}
                 </MenuItem>
+            )}
+
+            {addMode && <Divider />}
+            {addMode && (
+                <ListSubheader sx={{ display: 'flex', justifyContent: 'center', py: 0.75, bgcolor: 'background.paper', lineHeight: 'normal' }}>
+                    <Button
+                        size="small"
+                        variant="contained"
+                        fullWidth
+                        onClick={() => {
+                            setOpen(false);
+                            if (typeof onSearchChange === 'function') onSearchChange(''); else setInternalSearch('');
+                            setPage(0);
+                        }}
+                        sx={{ textTransform: 'none', fontSize: 13, fontWeight: 600 }}
+                    >
+                        Aceptar
+                    </Button>
+                </ListSubheader>
             )}
         </TextField>
     );
