@@ -42,8 +42,8 @@ export default function GeneralModal({
                 backdrop: { sx: { backdropFilter: 'blur(3px)' } },
                 paper: {
                     sx: {
-                        maxHeight: isSmall ? '100vh' : '92vh',
-                        height: isSmall ? '100vh' : 'auto',
+                        maxHeight: isSmall ? '100dvh' : '92dvh',
+                        height: isSmall ? '100dvh' : 'auto',
                         borderRadius: isSmall ? 0 : '16px',
                         overflow: 'hidden',
                         display: 'flex',
