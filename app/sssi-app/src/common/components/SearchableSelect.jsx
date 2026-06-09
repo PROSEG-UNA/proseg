@@ -205,11 +205,20 @@ export default function SearchableSelect({
 
             {multiple && (Array.isArray(value) ? value : [])
                 .filter(v => !pageItems.some(i => getItemValue(i) === v))
-                .map(v => (
-                    <MenuItem key={`__sel__${v}`} value={v} sx={{ display: 'none' }}>
-                        {v}
-                    </MenuItem>
-                ))}
+                .map(v => {
+                    const item = items.find(i => getItemValue(i) === v);
+                    const labelText = item ? getItemLabel(item) : v;
+                    return addMode && !item ? (
+                        <MenuItem key={`__sel__${v}`} value={v} selected sx={{ fontSize: 13.5, gap: 1 }}>
+                            <CheckBoxIcon sx={{ fontSize: 18, color: accentColor }} />
+                            {labelText}
+                        </MenuItem>
+                    ) : (
+                        <MenuItem key={`__sel__${v}`} value={v} sx={{ display: 'none' }}>
+                            {labelText}
+                        </MenuItem>
+                    );
+                })}
 
             {Array.from({ length: placeholderCount }, (_, i) => (
                 <MenuItem key={`__ph_${i}`} sx={{ visibility: 'hidden', pointerEvents: 'none', fontSize: 13.5 }}>
