@@ -788,32 +788,6 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     <Divider />
 
                     <Box>
-                        {sectionLabel('Responsable')}
-                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2 }}>
-                            <TextField
-                                label="Unidad Ejecutora" value={formValues.executingUnit}
-                                onChange={e => handleChange('executingUnit', e.target.value)}
-                                fullWidth size="small" disabled={saving}
-                                sx={fieldSx}
-                            />
-                            <TextField
-                                label="Nombre Funcionario" value={formValues.responsibleEmployee}
-                                onChange={e => handleChange('responsibleEmployee', e.target.value)}
-                                fullWidth size="small" disabled={saving}
-                                sx={fieldSx}
-                            />
-                            <TextField
-                                label="Identificación Funcionario" value={formValues.responsibleEmployeeId}
-                                onChange={e => handleChange('responsibleEmployeeId', e.target.value)}
-                                fullWidth size="small" disabled={saving}
-                                sx={fieldSx}
-                            />
-                        </Box>
-                    </Box>
-
-                    <Divider />
-
-                    <Box>
                         {sectionLabel('Ubicación')}
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                             <SearchableSelect
@@ -890,23 +864,6 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     <Divider />
 
                     <Box>
-                        {sectionLabel('Coordenadas')}
-                        <CoordinateMapPicker
-                            latitude={formValues.latitude}
-                            longitude={formValues.longitude}
-                            onCoordinatesChange={handleCoordinatesChange}
-                            onLatitudeChange={v => handleChange('latitude', v)}
-                            onLongitudeChange={v => handleChange('longitude', v)}
-                            onBlur={key => handleBlur(key)}
-                            disabled={saving}
-                            errors={errors}
-                            touched={touched}
-                        />
-                    </Box>
-
-                    <Divider />
-
-                    <Box>
                         {sectionLabel('Estado')}
                         <Box sx={{ display: 'grid', gridTemplateColumns: formValues.status === 'DE_BAJA' ? { xs: '1fr', sm: '1fr 1fr' } : '1fr', gap: 2 }}>
                             <TextField
@@ -943,36 +900,8 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
 
                     <Divider />
 
-                    <Box>
-                        {sectionLabel('Fechas')}
-                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
-                            <DatePicker
-                                label="Fecha de adquisición"
-                                value={formValues.acquisitionDate ? dayjs(formValues.acquisitionDate) : null}
-                                onChange={v => handleChange('acquisitionDate', v ? v.format('YYYY-MM-DD') : '')}
-                                disabled={saving}
-                                slotProps={{ textField: { size: 'small', fullWidth: true, sx: fieldSx } }}
-                            />
-                            <DatePicker
-                                label="Fin de garantía"
-                                value={formValues.warrantyEndDate ? dayjs(formValues.warrantyEndDate) : null}
-                                onChange={v => handleChange('warrantyEndDate', v ? v.format('YYYY-MM-DD') : '')}
-                                disabled={saving}
-                                slotProps={{ textField: { size: 'small', fullWidth: true, sx: fieldSx } }}
-                            />
-                            <DatePicker
-                                label="Fin de soporte firmware"
-                                value={formValues.firmwareSupportEndDate ? dayjs(formValues.firmwareSupportEndDate) : null}
-                                onChange={v => handleChange('firmwareSupportEndDate', v ? v.format('YYYY-MM-DD') : '')}
-                                disabled={saving}
-                                slotProps={{ textField: { size: 'small', fullWidth: true, sx: fieldSx } }}
-                            />
-                        </Box>
-                    </Box>
-
                     {requiresNetworkInterface && (
                         <>
-                            <Divider />
                             <Box>
                                 {sectionLabel('IP y MAC')}
                                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
@@ -1023,8 +952,79 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                                     />
                                 </Box>
                             </Box>
+                            <Divider />
                         </>
                     )}
+
+                    <Box>
+                        {sectionLabel('Fechas')}
+                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+                            <DatePicker
+                                label="Fecha de adquisición"
+                                value={formValues.acquisitionDate ? dayjs(formValues.acquisitionDate) : null}
+                                onChange={v => handleChange('acquisitionDate', v ? v.format('YYYY-MM-DD') : '')}
+                                disabled={saving}
+                                slotProps={{ textField: { size: 'small', fullWidth: true, sx: fieldSx } }}
+                            />
+                            <DatePicker
+                                label="Fin de garantía"
+                                value={formValues.warrantyEndDate ? dayjs(formValues.warrantyEndDate) : null}
+                                onChange={v => handleChange('warrantyEndDate', v ? v.format('YYYY-MM-DD') : '')}
+                                disabled={saving}
+                                slotProps={{ textField: { size: 'small', fullWidth: true, sx: fieldSx } }}
+                            />
+                            <DatePicker
+                                label="Fin de soporte firmware"
+                                value={formValues.firmwareSupportEndDate ? dayjs(formValues.firmwareSupportEndDate) : null}
+                                onChange={v => handleChange('firmwareSupportEndDate', v ? v.format('YYYY-MM-DD') : '')}
+                                disabled={saving}
+                                slotProps={{ textField: { size: 'small', fullWidth: true, sx: fieldSx } }}
+                            />
+                        </Box>
+                    </Box>
+
+                    <Divider />
+
+                    <Box>
+                        {sectionLabel('Coordenadas')}
+                        <CoordinateMapPicker
+                            latitude={formValues.latitude}
+                            longitude={formValues.longitude}
+                            onCoordinatesChange={handleCoordinatesChange}
+                            onLatitudeChange={v => handleChange('latitude', v)}
+                            onLongitudeChange={v => handleChange('longitude', v)}
+                            onBlur={key => handleBlur(key)}
+                            disabled={saving}
+                            errors={errors}
+                            touched={touched}
+                        />
+                    </Box>
+
+                    <Divider />
+
+                    <Box>
+                        {sectionLabel('Responsable')}
+                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2 }}>
+                            <TextField
+                                label="Unidad Ejecutora" value={formValues.executingUnit}
+                                onChange={e => handleChange('executingUnit', e.target.value)}
+                                fullWidth size="small" disabled={saving}
+                                sx={fieldSx}
+                            />
+                            <TextField
+                                label="Nombre Funcionario" value={formValues.responsibleEmployee}
+                                onChange={e => handleChange('responsibleEmployee', e.target.value)}
+                                fullWidth size="small" disabled={saving}
+                                sx={fieldSx}
+                            />
+                            <TextField
+                                label="Identificación Funcionario" value={formValues.responsibleEmployeeId}
+                                onChange={e => handleChange('responsibleEmployeeId', e.target.value)}
+                                fullWidth size="small" disabled={saving}
+                                sx={fieldSx}
+                            />
+                        </Box>
+                    </Box>
 
                     <Divider />
 

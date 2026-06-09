@@ -38,7 +38,7 @@ export default function CoordinateMapPicker({
     const center = hasCoords ? [lat, lng] : DEFAULT_CENTER;
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <Box aria-label="Selector de coordenadas" sx={{ height: 300, borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'divider', cursor: disabled ? 'default' : 'crosshair' }}>
                 <MapContainer
                     center={center}
