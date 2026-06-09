@@ -28,7 +28,7 @@ export function useMaintenanceRequestsData({ pageIndex = 0, pageSize = 10, searc
                     companyId: request.company?.id ?? '',
                     companyName: request.company?.name ?? '—',
                     companyLegalId: request.company?.legalId ?? '—',
-                    email: request.email ?? '—',
+                    email: Array.isArray(request.emails) && request.emails.length > 0 ? request.emails.join(', ') : '—',
                     description: request.description ?? '—',
                     status: statusLabel(request.status),
                     statusRaw: request.status ?? '',

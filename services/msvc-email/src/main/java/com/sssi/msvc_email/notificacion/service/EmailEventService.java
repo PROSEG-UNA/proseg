@@ -399,7 +399,15 @@ public class EmailEventService {
     }
 
     public void sendMaintenanceRequestCreatedEmail(MaintenanceRequestCreatedEvent event) {
-        if (event.getEmail() == null || event.getEmail().isBlank()) {
+        List<String> recipients = event.getEmails() == null
+                ? List.of()
+                : event.getEmails().stream()
+                        .filter(email -> email != null && !email.isBlank())
+                        .map(String::trim)
+                        .distinct()
+                        .toList();
+
+        if (recipients.isEmpty()) {
             log.warn("MaintenanceRequestCreatedEvent sin email destinatario, se omite envío");
             return;
         }
@@ -422,12 +430,12 @@ public class EmailEventService {
 
         emailService.sendEmail(
                 Email.builder()
-                        .to(List.of(event.getEmail()))
+                        .to(recipients)
                         .subject("Nueva solicitud de mantenimiento registrada - PROSEG")
                         .templateDefinition(template)
                         .build()
         );
 
-        log.info("Email de solicitud de mantenimiento enviado a: {}", event.getEmail());
+        log.info("Email de solicitud de mantenimiento enviado a: {}", recipients);
     }
 }

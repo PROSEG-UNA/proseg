@@ -63,10 +63,9 @@ public class MaintenanceRequestRequestDto {
 
     private UUID leaderUserCompanyId;
 
-    @NotBlank(message = "El correo electrónico es obligatorio")
-    @Pattern(
+    @NotEmpty(message = "Se requiere al menos un correo electrónico")
+    private List<@Pattern(
             regexp = ValidationUtils.EMAIL_REGEX,
             message = "El correo electrónico tiene un formato inválido"
-    )
-    private String email;
+    ) String> emails;
 }

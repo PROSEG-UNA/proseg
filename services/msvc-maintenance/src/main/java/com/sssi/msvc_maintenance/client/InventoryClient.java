@@ -4,6 +4,7 @@ import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.api.response.PageResponse;
 import com.sssi.msvc_maintenance.config.FeignConfig;
 import com.sssi.msvc_maintenance.dto.response.InventoryAssetResponseDto;
+import com.sssi.msvc_maintenance.dto.response.InventoryBuildingEmailResponseDto;
 import com.sssi.msvc_maintenance.dto.response.InventoryBuildingResponseDto;
 import com.sssi.msvc_maintenance.dto.response.InventoryCampusResponseDto;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -70,5 +71,11 @@ public interface InventoryClient {
 
     @GetMapping("/v1/inventory/buildings/{id}")
     ApiResponse<InventoryBuildingResponseDto> findBuildingById(@PathVariable UUID id);
+
+    @GetMapping("/v1/inventory/buildings/{id}/emails")
+    ApiResponse<List<InventoryBuildingEmailResponseDto>> findBuildingEmails(@PathVariable UUID id);
+
+    @GetMapping("/v1/inventory/campuses/{id}/emails")
+    ApiResponse<List<InventoryBuildingEmailResponseDto>> findCampusEmails(@PathVariable UUID id);
 }
 

@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -61,6 +62,22 @@ public class MaintenanceLocationController {
         return ApiResponseBuilder.ok(
                 maintenanceLocationService.findBuildingById(id),
                 "Edificio obtenido correctamente"
+        );
+    }
+
+    @GetMapping("/buildings/{id}/emails")
+    public ResponseEntity<ApiResponse<List<String>>> findBuildingEmails(@PathVariable UUID id) {
+        return ApiResponseBuilder.ok(
+                maintenanceLocationService.findBuildingEmails(id),
+                "Correos electrónicos del edificio obtenidos correctamente"
+        );
+    }
+
+    @GetMapping("/campuses/{id}/emails")
+    public ResponseEntity<ApiResponse<List<String>>> findCampusEmails(@PathVariable UUID id) {
+        return ApiResponseBuilder.ok(
+                maintenanceLocationService.findCampusEmails(id),
+                "Correos electrónicos del campus obtenidos correctamente"
         );
     }
 }
