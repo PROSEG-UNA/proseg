@@ -37,7 +37,7 @@ public class Company extends BaseEntity {
     private String name;
 
     @Filterable(type = FilterType.TEXT)
-    @Column(name = "legal_id", unique = true, length = 50)
+    @Column(name = "legal_id", length = 50)
     @Pattern(regexp = ValidationUtils.LEGAL_ID_REGEX, message = "La cédula jurídica contiene caracteres inválidos")
     private String legalId;
 

@@ -24,9 +24,8 @@ public class CompanyRequestDto {
     )
     private String name;
 
-    @Size(max = 50, message = "La cédula jurídica no puede superar los 50 caracteres")
     @Pattern(
-            regexp = ValidationUtils.LEGAL_ID_REGEX,
+            regexp = "^$|" + ValidationUtils.LEGAL_ID_REGEX,
             message = "La cédula jurídica contiene caracteres inválidos"
     )
     private String legalId;
