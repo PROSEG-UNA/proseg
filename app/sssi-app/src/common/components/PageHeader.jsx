@@ -44,7 +44,18 @@ export function PageHeader({
           </Typography>
         ) : null}
       </Box>
-      {action ? <Box sx={{ flexShrink: 0 }}>{action}</Box> : null}
+      {action ? (
+        <Box
+          sx={{
+            flexShrink: 0,
+            width: { xs: '100%', md: 'auto' },
+            display: 'flex',
+            justifyContent: 'flex-end',
+          }}
+        >
+          {action}
+        </Box>
+      ) : null}
     </Box>
   );
 }

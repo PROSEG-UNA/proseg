@@ -1012,14 +1012,14 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                                 sx={fieldSx}
                             />
                             <TextField
-                                label="Nombre Funcionario" value={formValues.responsibleEmployee}
-                                onChange={e => handleChange('responsibleEmployee', e.target.value)}
+                                label="Identificación Funcionario" value={formValues.responsibleEmployeeId}
+                                onChange={e => handleChange('responsibleEmployeeId', e.target.value)}
                                 fullWidth size="small" disabled={saving}
                                 sx={fieldSx}
                             />
                             <TextField
-                                label="Identificación Funcionario" value={formValues.responsibleEmployeeId}
-                                onChange={e => handleChange('responsibleEmployeeId', e.target.value)}
+                                label="Nombre Funcionario" value={formValues.responsibleEmployee}
+                                onChange={e => handleChange('responsibleEmployee', e.target.value)}
                                 fullWidth size="small" disabled={saving}
                                 sx={fieldSx}
                             />
