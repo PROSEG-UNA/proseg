@@ -17,6 +17,9 @@ import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { fetchCompanies, fetchCompanyUsers, assignCompanyUser, unassignCompanyUser } from '../../services/company/companiesService';
 import { searchUsers } from '../../../security/services/usersService';
 
+const getUserDisplayName = (u) =>
+    [u.firstName, u.lastName].filter(Boolean).join(' ').trim() || u.username || u.id;
+
 export default function CompaniesPage() {
     const [companyFormOpen, setCompanyFormOpen] = useState(false);
     const [companyFormId, setCompanyFormId] = useState(null);
@@ -34,43 +37,34 @@ export default function CompaniesPage() {
         PERMISSIONS.MAINTENANCE.COMPANY_USERS.DELETE,
     ]);
 
-    const openCreateCompany = () => {
-        setCompanyFormId(null);
-        setCompanyFormOpen(true);
-    };
-    const openEditCompany = (company) => {
-        setCompanyFormId(company.id);
-        setCompanyFormOpen(true);
-    };
-    const openCompanyUsers = (company) => setCompanyUsersTarget(company);
-    const refreshCompanies = () => setCompaniesRefresh((v) => v + 1);
+    const openCreateCompany = () => { setCompanyFormId(null); setCompanyFormOpen(true); };
+    const openEditCompany   = (company) => { setCompanyFormId(company.id); setCompanyFormOpen(true); };
+    const openCompanyUsers  = (company) => setCompanyUsersTarget(company);
+    const refreshCompanies  = () => setCompaniesRefresh((v) => v + 1);
     const [tabIndex, setTabIndex] = useState(0);
 
-    const [inspectCompanyId, setInspectCompanyId] = useState(null);
-    const [inspectCompanyName, setInspectCompanyName] = useState('');
-    const [inspectUsers, setInspectUsers] = useState([]);
+    const [inspectCompanyId, setInspectCompanyId]       = useState(null);
+    const [inspectCompanyName, setInspectCompanyName]   = useState('');
+    const [inspectUsers, setInspectUsers]               = useState([]);
     const [loadingInspectUsers, setLoadingInspectUsers] = useState(false);
-    const [companiesOptions, setCompaniesOptions] = useState([]);
+    const [companiesOptions, setCompaniesOptions]       = useState([]);
     const [loadingCompaniesOptions, setLoadingCompaniesOptions] = useState(false);
-    const [processingAction, setProcessingAction] = useState(false);
-    const [userSearch, setUserSearch] = useState('');
-    const [availableUsersTab, setAvailableUsersTab] = useState([]);
-    const [userLoading, setUserLoading] = useState(false);
-    const [selectedUserIdTab, setSelectedUserIdTab] = useState('');
-    const [selectedUserTab, setSelectedUserTab] = useState(null);
-    const [assigningUser, setAssigningUser] = useState(false);
+    const [processingAction, setProcessingAction]       = useState(false);
+    const [userSearch, setUserSearch]                   = useState('');
+    const [availableUsersTab, setAvailableUsersTab]     = useState([]);
+    const [userLoading, setUserLoading]                 = useState(false);
+    const [selectedUserIdTab, setSelectedUserIdTab]     = useState('');
+    const [selectedUserTab, setSelectedUserTab]         = useState(null);
+    const [assigningUser, setAssigningUser]             = useState(false);
     const [confirmUnassignUser, setConfirmUnassignUser] = useState(null);
-    const [duplicateWarning, setDuplicateWarning] = useState(null);
+    const [duplicateWarning, setDuplicateWarning]       = useState(null);
 
     useEffect(() => {
         let cancelled = false;
         if (tabIndex !== 1) return;
         setLoadingCompaniesOptions(true);
         fetchCompanies({ page: 0, size: 200 })
-            .then(page => {
-                if (cancelled) return;
-                setCompaniesOptions(page.content ?? []);
-            })
+            .then(page => { if (!cancelled) setCompaniesOptions(page.content ?? []); })
             .catch(() => {})
             .finally(() => { if (!cancelled) setLoadingCompaniesOptions(false); });
         return () => { cancelled = true; };
@@ -78,10 +72,7 @@ export default function CompaniesPage() {
 
     useEffect(() => {
         let cancelled = false;
-        if (!inspectCompanyId) {
-            setInspectUsers([]);
-            return;
-        }
+        if (!inspectCompanyId) { setInspectUsers([]); return; }
         setLoadingInspectUsers(true);
         fetchCompanyUsers(inspectCompanyId)
             .then(data => { if (!cancelled) setInspectUsers(Array.isArray(data) ? data : []); })
@@ -91,10 +82,7 @@ export default function CompaniesPage() {
     }, [inspectCompanyId]);
 
     useEffect(() => {
-        if (!inspectCompanyId) {
-            setConfirmUnassignUser(null);
-            setDuplicateWarning(null);
-        }
+        if (!inspectCompanyId) { setConfirmUnassignUser(null); setDuplicateWarning(null); }
     }, [inspectCompanyId]);
 
     useEffect(() => {
@@ -102,20 +90,13 @@ export default function CompaniesPage() {
         if (tabIndex !== 1) return;
         setUserLoading(true);
         searchUsers({ page: 0, size: 8, search: userSearch })
-            .then((resp) => {
-                if (cancelled) return;
-                setAvailableUsersTab(resp.content ?? []);
-            })
-            .catch(() => {
-                if (!cancelled) setAvailableUsersTab([]);
-            })
+            .then((resp) => { if (!cancelled) setAvailableUsersTab(resp.content ?? []); })
+            .catch(() => { if (!cancelled) setAvailableUsersTab([]); })
             .finally(() => { if (!cancelled) setUserLoading(false); });
         return () => { cancelled = true; };
     }, [userSearch, tabIndex]);
 
-    if (!canViewCompanies) {
-        return <AccessDeniedState />;
-    }
+    if (!canViewCompanies) return <AccessDeniedState />;
 
     return (
         <Box className="maintenance-companies-page">
@@ -132,31 +113,19 @@ export default function CompaniesPage() {
 
                 <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 1 }}>
                     <Tabs value={tabIndex} onChange={(e, v) => setTabIndex(v)} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile>
-                        <Tab
-                            label="Empresas"
-                            icon={<DomainOutlinedIcon sx={{ fontSize: 18 }} />}
-                            iconPosition="start"
-                            sx={{ textTransform: 'none', fontWeight: 700 }}
-                        />
-                        <Tab
-                            label="Usuarios vinculados"
-                            icon={<GroupsOutlinedIcon sx={{ fontSize: 18 }} />}
-                            iconPosition="start"
-                            sx={{ textTransform: 'none', fontWeight: 700 }}
-                        />
+                        <Tab label="Empresas" icon={<DomainOutlinedIcon sx={{ fontSize: 18 }} />} iconPosition="start" sx={{ textTransform: 'none', fontWeight: 700 }} />
+                        <Tab label="Usuarios vinculados" icon={<GroupsOutlinedIcon sx={{ fontSize: 18 }} />} iconPosition="start" sx={{ textTransform: 'none', fontWeight: 700 }} />
                     </Tabs>
                 </Box>
 
                 <Box sx={{ pt: 3 }}>
                     {tabIndex === 0 && (
-                        <>
-                            <CompanyTable
-                                refreshKey={companiesRefresh}
-                                onRefresh={refreshCompanies}
-                                onEditCompany={openEditCompany}
-                                onManageUsers={openCompanyUsers}
-                            />
-                        </>
+                        <CompanyTable
+                            refreshKey={companiesRefresh}
+                            onRefresh={refreshCompanies}
+                            onEditCompany={openEditCompany}
+                            onManageUsers={openCompanyUsers}
+                        />
                     )}
 
                     {tabIndex === 1 && (
@@ -197,37 +166,46 @@ export default function CompaniesPage() {
                                                     value={selectedUserIdTab}
                                                     onChange={(id) => {
                                                         setSelectedUserIdTab(id);
-                                                        const u = availableUsersTab.find(x => x.id === id) ?? null;
-                                                        setSelectedUserTab(u);
+                                                        setSelectedUserTab(availableUsersTab.find(x => x.id === id) ?? null);
                                                     }}
                                                     items={availableUsersTab}
-                                                    getItemLabel={u => `${(u.firstName || u.username || u.id)} - ${u.email || '—'}`}
+                                                    getItemLabel={(u) => {
+                                                        const name = getUserDisplayName(u);
+                                                        return u.email ? `${name} · ${u.email}` : name;
+                                                    }}
                                                     getItemValue={u => u.id}
                                                     fullWidth
                                                     size="small"
                                                     externalSearch={userSearch}
-                                                    onSearchChange={(v) => { setUserSearch(v); }}
+                                                    onSearchChange={(v) => setUserSearch(v)}
                                                     disabled={userLoading}
                                                 />
-                                                <Button size="small" variant="outlined" onClick={async () => {
-                                                    if (!inspectCompanyId || !selectedUserTab) return;
-                                                    if (inspectUsers.find(x => x.id === selectedUserTab.id)) {
-                                                        setDuplicateWarning(selectedUserTab);
-                                                        return;
-                                                    }
-                                                    setAssigningUser(true);
-                                                    try {
-                                                        await assignCompanyUser(inspectCompanyId, selectedUserTab.id);
-                                                        const updated = await fetchCompanyUsers(inspectCompanyId);
-                                                        setInspectUsers(Array.isArray(updated) ? updated : []);
-                                                        setSelectedUserIdTab('');
-                                                        setSelectedUserTab(null);
-                                                    } catch (err) {
-                                                        alert(err?.response?.data?.message ?? err?.message ?? 'No se pudo vincular el usuario');
-                                                    } finally {
-                                                        setAssigningUser(false);
-                                                    }
-                                                }} disabled={assigningUser || !selectedUserTab}>Vincular</Button>
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    disabled={assigningUser || !selectedUserTab}
+                                                    onClick={async () => {
+                                                        if (!inspectCompanyId || !selectedUserTab) return;
+                                                        if (inspectUsers.find(x => x.id === selectedUserTab.id)) {
+                                                            setDuplicateWarning(selectedUserTab);
+                                                            return;
+                                                        }
+                                                        setAssigningUser(true);
+                                                        try {
+                                                            await assignCompanyUser(inspectCompanyId, selectedUserTab.id);
+                                                            const updated = await fetchCompanyUsers(inspectCompanyId);
+                                                            setInspectUsers(Array.isArray(updated) ? updated : []);
+                                                            setSelectedUserIdTab('');
+                                                            setSelectedUserTab(null);
+                                                        } catch (err) {
+                                                            alert(err?.response?.data?.message ?? err?.message ?? 'No se pudo vincular el usuario');
+                                                        } finally {
+                                                            setAssigningUser(false);
+                                                        }
+                                                    }}
+                                                >
+                                                    Vincular
+                                                </Button>
                                             </Box>
 
                                             {inspectUsers.length === 0 ? (
@@ -236,12 +214,16 @@ export default function CompaniesPage() {
                                                 inspectUsers.map((u) => (
                                                     <Box key={u.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                                                         <Box sx={{ minWidth: 0 }}>
-                                                            <Typography sx={{ fontWeight: 800 }}>{[u.firstName, u.lastName].filter(Boolean).join(' ') || u.username || u.id}</Typography>
+                                                            <Typography sx={{ fontWeight: 800 }}>{getUserDisplayName(u)}</Typography>
                                                             <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>{u.email || '—'}</Typography>
-                                                            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>Usuario: {u.username || '—'} · ID: {u.id}</Typography>
+                                                            {u.username && (
+                                                                <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{u.username}</Typography>
+                                                            )}
                                                         </Box>
                                                         <Box sx={{ display: 'flex', gap: 1 }}>
-                                                            <Button size="small" color="error" variant="outlined" disabled={processingAction} onClick={() => setConfirmUnassignUser(u)}>Desasignar</Button>
+                                                            <Button size="small" color="error" variant="outlined" disabled={processingAction} onClick={() => setConfirmUnassignUser(u)}>
+                                                                Desasignar
+                                                            </Button>
                                                         </Box>
                                                     </Box>
                                                 ))
@@ -276,7 +258,7 @@ export default function CompaniesPage() {
                 open={!!confirmUnassignUser}
                 type="delete"
                 title="Desasignar usuario"
-                message={`¿Seguro que deseas desasignar el usuario "${confirmUnassignUser ? `${confirmUnassignUser.firstName || ''} ${confirmUnassignUser.lastName || ''}`.trim() || confirmUnassignUser.username || confirmUnassignUser.id : ''}" de ${inspectCompanyName}?`}
+                message={`¿Seguro que deseas desasignar a "${confirmUnassignUser ? getUserDisplayName(confirmUnassignUser) : ''}" de ${inspectCompanyName}?`}
                 onClose={() => setConfirmUnassignUser(null)}
                 onConfirm={async () => {
                     if (!inspectCompanyId || !confirmUnassignUser) return;
@@ -300,12 +282,11 @@ export default function CompaniesPage() {
                 open={!!duplicateWarning}
                 type="warning"
                 title="Usuario ya vinculado"
-                message={`No puedes vincular a "${duplicateWarning ? `${duplicateWarning.firstName || ''} ${duplicateWarning.lastName || ''}`.trim() || duplicateWarning.username || duplicateWarning.id : ''}" porque ya está en la empresa.`}
+                message={`"${duplicateWarning ? getUserDisplayName(duplicateWarning) : ''}" ya está vinculado a esta empresa.`}
                 onClose={() => setDuplicateWarning(null)}
                 confirmLabel="Entendido"
                 cancelLabel="Cerrar"
             />
-
         </Box>
     );
 }
