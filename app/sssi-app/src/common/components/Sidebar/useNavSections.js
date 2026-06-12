@@ -90,7 +90,7 @@ export function useNavSections() {
             result.push({
                 key: 'inventory',
                 icon: WarehouseIcon,
-                label: 'Inventarios',
+                label: 'Inventario',
                 items: [
                     { key: 'assets', icon: AppsIcon, label: 'Activos', path: '/inventario/activos' },
                 ],
@@ -111,6 +111,19 @@ export function useNavSections() {
             });
         }
 
+        if (canViewMaintenanceSection) {
+            result.push({
+                key: 'maintenance',
+                icon: BuildIcon,
+                label: 'Mantenimiento',
+                items: [
+                    { key: 'companies', icon: BusinessIcon, label: 'Empresas', path: '/mantenimiento/empresas' },
+                    { key: 'requests', icon: ConstructionIcon, label: 'Solicitud de mantenimiento', path: '/mantenimiento/solicitudes' },
+                    canViewRegistersSubmodule ? { key: 'registers', icon: AssignmentIcon, label: 'Registro de mantenimiento', path: '/mantenimiento/registros' } : null,
+                ].filter(Boolean),
+            });
+        }
+
         if (canViewSecuritySection) {
             result.push({
                 key: 'security',
@@ -119,19 +132,6 @@ export function useNavSections() {
                 items: [
                     canViewUsersSubmodule ? { key: 'users', icon: PeopleIcon, label: 'Usuarios', path: '/seguridad/usuarios' } : null,
                     canViewRolesSubmodule ? { key: 'roles', icon: VerifiedUserIcon, label: 'Roles', path: '/seguridad/roles' } : null,
-                ].filter(Boolean),
-            });
-        }
-
-        if (canViewMaintenanceSection) {
-            result.push({
-                key: 'maintenance',
-                icon: BuildIcon,
-                label: 'Mantenimiento',
-                items: [
-                    { key: 'companies', icon: BusinessIcon, label: 'Empresas', path: '/mantenimiento/empresas' },
-                    { key: 'requests', icon: ConstructionIcon, label: 'Solicitudes de mantenimiento', path: '/mantenimiento/solicitudes' },
-                    canViewRegistersSubmodule ? { key: 'registers', icon: AssignmentIcon, label: 'Registros de mantenimiento', path: '/mantenimiento/registros' } : null,
                 ].filter(Boolean),
             });
         }
