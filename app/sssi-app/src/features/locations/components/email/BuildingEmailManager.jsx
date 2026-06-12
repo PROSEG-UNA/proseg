@@ -120,31 +120,49 @@ function EmailRow({ email, canDelete, onDelete, accentColor }) {
     );
 }
 
-function CampusEmailGroup({ buildingName, emails, accentColor, canDelete, onDelete }) {
+function CampusEmailGroup({ buildingId, buildingName, emails, accentColor, canDelete, onDelete, onSelectBuilding }) {
     const [open, setOpen] = useState(true);
+    const selectable = buildingId !== 'unknown';
+
+    const handleHeaderClick = () => {
+        if (selectable) onSelectBuilding(buildingId);
+    };
+
+    const handleToggle = (e) => {
+        e.stopPropagation();
+        setOpen((v) => !v);
+    };
 
     return (
         <Box>
             <Box
-                onClick={() => setOpen((v) => !v)}
+                onClick={handleHeaderClick}
                 sx={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: 1,
-                    cursor: 'pointer',
+                    cursor: selectable ? 'pointer' : 'default',
                     py: 0.75,
                     borderRadius: '8px',
                     px: 1,
                     mx: -1,
                     transition: 'background 0.15s',
-                    '&:hover': { bgcolor: `color-mix(in srgb, ${accentColor} 5%, transparent)` },
+                    '&:hover': selectable ? { bgcolor: `color-mix(in srgb, ${accentColor} 5%, transparent)` } : undefined,
                     userSelect: 'none',
                 }}
             >
                 <ApartmentIcon sx={{ fontSize: 14, color: accentColor, flexShrink: 0 }} />
-                <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: 'text.primary', flex: 1 }}>
-                    {buildingName}
-                </Typography>
+                {selectable ? (
+                    <Tooltip title="Gestionar correos de este edificio" placement="right">
+                        <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: 'text.primary', flex: 1 }}>
+                            {buildingName}
+                        </Typography>
+                    </Tooltip>
+                ) : (
+                    <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: 'text.primary', flex: 1 }}>
+                        {buildingName}
+                    </Typography>
+                )}
                 <Chip
                     label={emails.length}
                     size="small"
@@ -157,7 +175,7 @@ function CampusEmailGroup({ buildingName, emails, accentColor, canDelete, onDele
                         border: 'none',
                     }}
                 />
-                <IconButton size="small" sx={{ p: 0.25, color: 'text.disabled' }}>
+                <IconButton size="small" onClick={handleToggle} sx={{ p: 0.25, color: 'text.disabled' }}>
                     {open ? <ExpandLessIcon sx={{ fontSize: 15 }} /> : <ExpandMoreIcon sx={{ fontSize: 15 }} />}
                 </IconButton>
             </Box>
@@ -295,7 +313,7 @@ export default function BuildingEmailManager() {
         visibleCampusEmails.reduce((acc, email) => {
             const bid = email.building?.id ?? 'unknown';
             const bname = email.building?.name ?? 'Edificio desconocido';
-            if (!acc[bid]) acc[bid] = { name: bname, emails: [] };
+            if (!acc[bid]) acc[bid] = { id: bid, name: bname, emails: [] };
             acc[bid].emails.push(email);
             return acc;
         }, {})
@@ -411,7 +429,7 @@ export default function BuildingEmailManager() {
                         value={selectedBuildingId}
                         onChange={handleBuildingChange}
                         items={filteredBuildings}
-                        getItemLabel={(b) => (b.campus?.name ? `${b.name} · ${b.campus.name}` : b.name)}
+                        getItemLabel={(b) => (b.name === '-' ? (b.campus?.name ?? b.name) : b.name)}
                         getItemValue={(b) => b.id}
                         fullWidth
                         size="small"
@@ -676,11 +694,13 @@ export default function BuildingEmailManager() {
                                 campusGroups.map((group, i) => (
                                     <Box key={group.name}>
                                         <CampusEmailGroup
+                                            buildingId={group.id}
                                             buildingName={group.name}
                                             emails={group.emails}
                                             accentColor={accentColor}
                                             canDelete={canDelete}
                                             onDelete={setDeletingEmail}
+                                            onSelectBuilding={handleBuildingChange}
                                         />
                                         {i < campusGroups.length - 1 && <Divider sx={{ my: 0.5, opacity: 0.5 }} />}
                                     </Box>
