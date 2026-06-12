@@ -15,6 +15,7 @@ import DialogModal from '../../../../common/components/DialogModal.jsx';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
 import CatalogFormModal from '../catalog/CatalogFormModal.jsx';
 import { CATALOG_CONFIG } from '../catalog/catalogConfig.js';
+import { CATALOG_CONFIG as LOCATION_CATALOG_CONFIG } from '../../../locations/components/catalog/catalogConfig.js';
 import { fetchCatalogOptions, createCatalogItem } from '../../services/catalogService.js';
 import { createAsset, updateAsset, fetchAssetById, fetchLastKnownNetworkInterface, checkAssetNumber } from '../../services/assetsService.js';
 import { uploadPhoto, registerArchive, fetchAssetArchives, deleteArchive } from '../../services/assetArchiveService.js';
@@ -388,9 +389,9 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
             brandId:    CATALOG_CONFIG.brand,
             typeId:     CATALOG_CONFIG.type,
             modelId:    CATALOG_CONFIG.model,
-            campusId:   CATALOG_CONFIG.campus,
-            buildingId: CATALOG_CONFIG.building,
-            locationId: CATALOG_CONFIG.location,
+            campusId:   LOCATION_CATALOG_CONFIG.campus,
+            buildingId: LOCATION_CATALOG_CONFIG.building,
+            locationId: LOCATION_CATALOG_CONFIG.location,
         };
         let initialValues;
         if (fieldKey === 'buildingId') {

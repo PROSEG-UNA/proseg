@@ -1,8 +1,5 @@
 import { useState } from 'react';
 import { Container } from '@mui/material';
-import BusinessIcon from '@mui/icons-material/Business';
-import ApartmentIcon from '@mui/icons-material/Apartment';
-import PlaceIcon from '@mui/icons-material/Place';
 import CategoryIcon from '@mui/icons-material/Category';
 import LabelIcon from '@mui/icons-material/Label';
 import DevicesIcon from '@mui/icons-material/Devices';
@@ -21,9 +18,6 @@ export default function Catalog() {
         PERMISSIONS.INVENTORY.READ,
         PERMISSIONS.INVENTORY.MANAGE,
         PERMISSIONS.INVENTORY.DELETE,
-        PERMISSIONS.INVENTORY.LOCATIONS.READ,
-        PERMISSIONS.INVENTORY.LOCATIONS.MANAGE,
-        PERMISSIONS.INVENTORY.LOCATIONS.DELETE,
     ]);
 
     if (!canViewCatalog) {
@@ -39,30 +33,6 @@ export default function Catalog() {
         <>
             <Container maxWidth="xl" sx={{ pt: 1, pb: 1,  mt: 2, mb: 1}}>
                 <CatalogGrid>
-                    <CatalogCard
-                        title="Campus"
-                        entityName="campus"
-                        onClick={handleCatalogClick}
-                        icon={BusinessIcon}
-                        tone="rose"
-                        description="Campus universitario"
-                    />
-                    <CatalogCard
-                        title="Edificios"
-                        entityName="building"
-                        onClick={handleCatalogClick}
-                        icon={ApartmentIcon}
-                        tone="rose"
-                        description="Edificio dentro de una sede"
-                    />
-                    <CatalogCard
-                        title="Locaciones"
-                        entityName="location"
-                        onClick={handleCatalogClick}
-                        icon={PlaceIcon}
-                        tone="rose"
-                        description="Espacio físico interno"
-                    />
                     <CatalogCard
                         title="Tipos"
                         entityName="type"
