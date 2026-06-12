@@ -22,6 +22,7 @@ import MaintenanceRegisterPage from "./features/maintenance/pages/register/Regis
 import CampusPage from './features/locations/pages/CampusPage';
 import BuildingPage from './features/locations/pages/BuildingPage';
 import LocationPage from './features/locations/pages/LocationPage';
+import EmailPage from './features/locations/pages/EmailPage';
 
 function App() {
     return (
@@ -95,6 +96,18 @@ function App() {
                                             element={
                                                 <DashboardLayout title="Gestión de Locaciones">
                                                     <LocationPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/ubicaciones/correos"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Gestión de Correos">
+                                                    <EmailPage />
                                                 </DashboardLayout>
                                             }
                                         />
