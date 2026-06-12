@@ -8,6 +8,10 @@ import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import BusinessIcon from '@mui/icons-material/Business';
 import ConstructionIcon from '@mui/icons-material/Construction';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import PushPinIcon from '@mui/icons-material/PushPin';
+import PlaceIcon from '@mui/icons-material/Place';
+import ApartmentIcon from '@mui/icons-material/Apartment';
+import EmailIcon from '@mui/icons-material/Email';
 import { PERMISSIONS } from '../../constants/permissions';
 import { usePermissions } from '../../hooks';
 
@@ -42,6 +46,15 @@ const inventoryPermissions = [
     PERMISSIONS.INVENTORY.LOCATIONS.DELETE,
 ];
 
+const locationsPermissions = [
+    PERMISSIONS.INVENTORY.LOCATIONS.READ,
+    PERMISSIONS.INVENTORY.LOCATIONS.MANAGE,
+    PERMISSIONS.INVENTORY.LOCATIONS.DELETE,
+    PERMISSIONS.INVENTORY.CATALOG.READ,
+    PERMISSIONS.INVENTORY.CATALOG.MANAGE,
+    PERMISSIONS.INVENTORY.CATALOG.DELETE,
+];
+
 const maintenancePermissions = [
     PERMISSIONS.MAINTENANCE.COMPANIES.READ,
     PERMISSIONS.MAINTENANCE.COMPANIES.MANAGE,
@@ -64,6 +77,7 @@ export function useNavSections() {
     const { hasAnyPermission } = usePermissions();
 
     const canViewInventorySection = hasAnyPermission(inventoryPermissions);
+    const canViewLocationsSection = hasAnyPermission(locationsPermissions);
     const canViewUsersSubmodule = hasAnyPermission(userPermissions);
     const canViewRolesSubmodule = hasAnyPermission(rolePermissions);
     const canViewSecuritySection = canViewUsersSubmodule || canViewRolesSubmodule;
@@ -77,22 +91,24 @@ export function useNavSections() {
             result.push({
                 key: 'inventory',
                 icon: WarehouseIcon,
-                label: 'Gestión Inventarios',
+                label: 'Inventario',
                 items: [
                     { key: 'assets', icon: AppsIcon, label: 'Activos', path: '/inventario/activos' },
                 ],
             });
         }
 
-        if (canViewSecuritySection) {
+        if (canViewLocationsSection) {
             result.push({
-                key: 'security',
-                icon: ShieldIcon,
-                label: 'Gestión Seguridad',
+                key: 'locations',
+                icon: PushPinIcon,
+                label: 'Ubicaciones',
                 items: [
-                    canViewUsersSubmodule ? { key: 'users', icon: PeopleIcon, label: 'Usuarios', path: '/seguridad/usuarios' } : null,
-                    canViewRolesSubmodule ? { key: 'roles', icon: VerifiedUserIcon, label: 'Roles', path: '/seguridad/roles' } : null,
-                ].filter(Boolean),
+                    { key: 'campus', icon: BusinessIcon, label: 'Campus', path: '/ubicaciones/campus' },
+                    { key: 'buildings', icon: ApartmentIcon, label: 'Edificios', path: '/ubicaciones/edificios' },
+                    { key: 'locations', icon: PlaceIcon, label: 'Locaciones', path: '/ubicaciones/locaciones' },
+                    { key: 'emails', icon: EmailIcon, label: 'Correos', path: '/ubicaciones/correos' },
+                ],
             });
         }
 
@@ -100,17 +116,29 @@ export function useNavSections() {
             result.push({
                 key: 'maintenance',
                 icon: BuildIcon,
-                label: 'Gestión Mantenimiento',
+                label: 'Mantenimiento',
                 items: [
                     { key: 'companies', icon: BusinessIcon, label: 'Empresas', path: '/mantenimiento/empresas' },
-                    { key: 'requests', icon: ConstructionIcon, label: 'Solicitudes', path: '/mantenimiento/solicitudes' },
-                    canViewRegistersSubmodule ? { key: 'registers', icon: AssignmentIcon, label: 'Registros', path: '/mantenimiento/registros' } : null,
+                    { key: 'requests', icon: ConstructionIcon, label: 'Solicitud de mantenimiento', path: '/mantenimiento/solicitudes' },
+                    canViewRegistersSubmodule ? { key: 'registers', icon: AssignmentIcon, label: 'Registro de mantenimiento', path: '/mantenimiento/registros' } : null,
+                ].filter(Boolean),
+            });
+        }
+
+        if (canViewSecuritySection) {
+            result.push({
+                key: 'security',
+                icon: ShieldIcon,
+                label: 'Seguridad',
+                items: [
+                    canViewUsersSubmodule ? { key: 'users', icon: PeopleIcon, label: 'Usuarios', path: '/seguridad/usuarios' } : null,
+                    canViewRolesSubmodule ? { key: 'roles', icon: VerifiedUserIcon, label: 'Roles', path: '/seguridad/roles' } : null,
                 ].filter(Boolean),
             });
         }
 
         return result;
-    }, [canViewInventorySection, canViewSecuritySection, canViewUsersSubmodule, canViewRolesSubmodule, canViewMaintenanceSection, canViewRegistersSubmodule]);
+    }, [canViewInventorySection, canViewLocationsSection, canViewSecuritySection, canViewUsersSubmodule, canViewRolesSubmodule, canViewMaintenanceSection, canViewRegistersSubmodule]);
 
     return { sections };
 }

@@ -3,15 +3,14 @@ import { Box, Button, Collapse, useTheme, useMediaQuery } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 
-export default function CatalogGrid({ children }) {
+export default function LocationGrid({ children }) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-    const isLgUp = useMediaQuery(theme.breakpoints.up('lg'));
 
     const [view, setView] = useState('default');
 
     const all = Children.toArray(children);
-    const firstRowCount = isMobile ? 1 : isLgUp ? 3 : 2;
+    const firstRowCount = isMobile ? 1 : 2;
     const firstRow = all.slice(0, firstRowCount);
     const rest = all.slice(firstRowCount);
 
@@ -26,7 +25,7 @@ export default function CatalogGrid({ children }) {
     });
 
     const buttonLabel = view === 'collapsed'
-        ? 'Mostrar Catalogo'
+        ? 'Mostrar otras ubicaciónes'
         : allVisible
             ? 'Mostrar menos'
             : `Mostrar ${rest.length} más`;
@@ -38,7 +37,6 @@ export default function CatalogGrid({ children }) {
         minWidth: {
             xs: '100%',
             sm: 'calc(50% - 6px)',
-            lg: 'calc(33.33% - 8px)',
         },
     };
 

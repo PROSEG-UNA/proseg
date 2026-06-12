@@ -19,6 +19,10 @@ import DashboardLayout from './layouts/DashboardLayout';
 import CompaniesPage from "./features/maintenance/pages/company/CompaniesPage.jsx";
 import RequestsPage from "./features/maintenance/pages/request/RequestsPage.jsx";
 import MaintenanceRegisterPage from "./features/maintenance/pages/register/RegisterPage.jsx";
+import CampusPage from './features/locations/pages/CampusPage';
+import BuildingPage from './features/locations/pages/BuildingPage';
+import LocationPage from './features/locations/pages/LocationPage';
+import EmailPage from './features/locations/pages/EmailPage';
 
 function App() {
     return (
@@ -55,6 +59,55 @@ function App() {
                                             element={
                                                 <DashboardLayout title="Gestión de Activos">
                                                     <AssetPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route path="/ubicaciones" element={<Navigate to="/ubicaciones/campus" replace />} />
+                                <Route
+                                    path="/ubicaciones/campus"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Gestión de Campus">
+                                                    <CampusPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/ubicaciones/edificios"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Gestión de Edificios">
+                                                    <BuildingPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/ubicaciones/locaciones"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Gestión de Locaciones">
+                                                    <LocationPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/ubicaciones/correos"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Gestión de Correos">
+                                                    <EmailPage />
                                                 </DashboardLayout>
                                             }
                                         />
