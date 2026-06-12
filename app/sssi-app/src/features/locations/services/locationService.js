@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const config = { withCredentials: true };
 
-export async function fetchCatalogPage(baseUrl, { page = 0, size = 10, search = '', filters = {}, sort = [] } = {}) {
+export async function fetchLocationPage(baseUrl, { page = 0, size = 10, search = '', filters = {}, sort = [] } = {}) {
     const params = new URLSearchParams();
     params.append('page', String(page));
     params.append('size', String(size));
@@ -17,7 +17,7 @@ export async function fetchCatalogPage(baseUrl, { page = 0, size = 10, search = 
     return data?.data ?? { content: [], page, size, totalElements: 0, totalPages: 0, last: true };
 }
 
-export async function fetchCatalogOptions(baseUrl) {
+export async function fetchLocationOptions(baseUrl) {
     const { data } = await axios.get(baseUrl, {
         ...config,
         params: { page: 0, size: 200 },
@@ -25,16 +25,16 @@ export async function fetchCatalogOptions(baseUrl) {
     return data?.data?.content ?? [];
 }
 
-export async function createCatalogItem(baseUrl, payload) {
+export async function createLocationItem(baseUrl, payload) {
     const { data } = await axios.post(baseUrl, payload, config);
     return data?.data;
 }
 
-export async function updateCatalogItem(baseUrl, id, payload) {
+export async function updateLocationItem(baseUrl, id, payload) {
     const { data } = await axios.put(`${baseUrl}/${id}`, payload, config);
     return data?.data;
 }
 
-export async function deleteCatalogItem(baseUrl, id) {
+export async function deleteLocationItem(baseUrl, id) {
     await axios.delete(`${baseUrl}/${id}`, config);
 }

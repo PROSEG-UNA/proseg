@@ -1,11 +1,11 @@
 import TableBase from '../../../../common/components/TablaBase.jsx';
 import AccessDeniedState from '../../../../common/components/AccessDeniedState.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
-import CatalogFormModal from './CatalogFormModal.jsx';
+import LocationFormModal from './LocationFormModal.jsx';
 import BuildingEmailsModal from '../email/BuildingEmailModal.jsx';
 import CampusEmailsModal from '../email/CampusEmailModal.jsx';
 
-export default function CatalogTableView({ table }) {
+export default function LocationTableView({ table }) {
     const {
         config, title, columns,
         rows, loading, error, totalElements,
@@ -22,11 +22,11 @@ export default function CatalogTableView({ table }) {
         alert, setAlert,
     } = table;
 
-    const { canViewCatalog, hasRowActions } = permissions;
+    const { canView, hasRowActions } = permissions;
 
     return (
         <>
-            {!canViewCatalog || isAccessDeniedError ? (
+            {!canView || isAccessDeniedError ? (
                 <AccessDeniedState />
             ) : (
                 <TableBase
@@ -57,7 +57,7 @@ export default function CatalogTableView({ table }) {
                 />
             )}
 
-            <CatalogFormModal
+            <LocationFormModal
                 open={formOpen}
                 onClose={() => { setFormOpen(false); setFormRow(null); }}
                 onSaved={handleFormSaved}

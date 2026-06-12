@@ -1,10 +1,10 @@
 import ApartmentIcon from '@mui/icons-material/Apartment';
 import PlaceIcon from '@mui/icons-material/Place';
-import LocationCatalogPage from '../components/LocationCatalogPage.jsx';
+import LocationBrowserPage from '../components/LocationBrowserPage.jsx';
 
 export function CampusPage() {
     return (
-        <LocationCatalogPage
+        <LocationBrowserPage
             mainEntity="campus"
             pageTitle="Campus"
             pageDescription="Administración de los campus universitarios."

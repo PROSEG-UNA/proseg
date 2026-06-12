@@ -2,7 +2,7 @@ import { Box, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
-export default function LocationCatalogCard({ title, entityName, onClick, icon: Icon, tone = 'rose', description }) {
+export default function LocationCard({ title, entityName, onClick, icon: Icon, tone = 'rose', description }) {
     const theme = useTheme();
     const t = theme.palette.tones[tone] ?? theme.palette.tones.rose;
 

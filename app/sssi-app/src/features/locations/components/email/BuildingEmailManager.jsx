@@ -27,7 +27,7 @@ import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
-import { fetchCatalogOptions } from '../../services/catalogService';
+import { fetchLocationOptions } from '../../services/locationService.js';
 import { LOCATION_ENDPOINTS } from '../../services/endpoints';
 import {
     fetchEmailsByBuilding,
@@ -232,8 +232,8 @@ export default function BuildingEmailManager() {
         setLoadingOptions(true);
         try {
             const [campusList, buildingList] = await Promise.all([
-                fetchCatalogOptions(LOCATION_ENDPOINTS.campuses),
-                fetchCatalogOptions(LOCATION_ENDPOINTS.buildings),
+                fetchLocationOptions(LOCATION_ENDPOINTS.campuses),
+                fetchLocationOptions(LOCATION_ENDPOINTS.buildings),
             ]);
             setCampuses(campusList);
             setBuildings(buildingList);

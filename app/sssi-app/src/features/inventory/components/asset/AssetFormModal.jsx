@@ -15,7 +15,7 @@ import DialogModal from '../../../../common/components/DialogModal.jsx';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
 import CatalogFormModal from '../catalog/CatalogFormModal.jsx';
 import { CATALOG_CONFIG } from '../catalog/catalogConfig.js';
-import { CATALOG_CONFIG as LOCATION_CATALOG_CONFIG } from '../../../locations/components/catalog/catalogConfig.js';
+import { LOCATION_CONFIG as LOCATION_CATALOG_CONFIG } from '../../../locations/components/location/locationConfig.js';
 import { fetchCatalogOptions, createCatalogItem } from '../../services/catalogService.js';
 import { createAsset, updateAsset, fetchAssetById, fetchLastKnownNetworkInterface, checkAssetNumber } from '../../services/assetsService.js';
 import { uploadPhoto, registerArchive, fetchAssetArchives, deleteArchive } from '../../services/assetArchiveService.js';

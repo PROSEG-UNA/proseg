@@ -6,10 +6,10 @@ import {
 } from '@mui/material';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
-import { createCatalogItem, updateCatalogItem, fetchCatalogOptions } from '../../services/catalogService';
+import { createLocationItem, updateLocationItem, fetchLocationOptions } from '../../services/locationService.js';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
 
-export default function CatalogFormModal({ open, onClose, onSaved, config, row, initialValues }) {
+export default function LocationFormModal({ open, onClose, onSaved, config, row, initialValues }) {
     const theme = useTheme();
 
     const { title = '', icon: Icon = null, formFields = [], baseUrl = '' } = config ?? {};
@@ -64,7 +64,7 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row, 
 
         Promise.all(
             selectFields.map((field) =>
-                fetchCatalogOptions(field.optionsUrl).then((opts) => ({ key: field.key, opts }))
+                fetchLocationOptions(field.optionsUrl).then((opts) => ({ key: field.key, opts }))
             )
         )
             .then((results) => {
@@ -135,9 +135,9 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row, 
             formFields.forEach((field) => { payload[field.key] = formValues[field.key]; });
 
             if (isEditMode) {
-                await updateCatalogItem(baseUrl, row.id, payload);
+                await updateLocationItem(baseUrl, row.id, payload);
             } else {
-                await createCatalogItem(baseUrl, payload);
+                await createLocationItem(baseUrl, payload);
             }
             onSaved?.();
         } catch (e) {

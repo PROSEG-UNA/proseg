@@ -3,7 +3,7 @@ import ApartmentIcon from '@mui/icons-material/Apartment';
 import PlaceIcon from '@mui/icons-material/Place';
 import { LOCATION_ENDPOINTS } from '../../services/endpoints';
 
-export const CATALOG_CONFIG = {
+export const LOCATION_CONFIG = {
     campus: {
         title: 'Campus',
         pluralTitle: 'Campus',

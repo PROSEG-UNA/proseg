@@ -3,7 +3,7 @@ import { Box, Button, Collapse, useTheme, useMediaQuery } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 
-export default function LocationCatalogGrid({ children }) {
+export default function LocationGrid({ children }) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 

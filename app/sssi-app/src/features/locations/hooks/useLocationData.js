@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { fetchCatalogPage } from '../services/catalogService';
+import { fetchLocationPage } from '../services/locationService.js';
 
-export function useCatalogData({ baseUrl, pageIndex, pageSize, search = '', filters = {}, sort = [], refreshKey }) {
+export function useLocationData({ baseUrl, pageIndex, pageSize, search = '', filters = {}, sort = [], refreshKey }) {
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -15,7 +15,7 @@ export function useCatalogData({ baseUrl, pageIndex, pageSize, search = '', filt
         let cancelled = false;
         setLoading(true);
 
-        fetchCatalogPage(baseUrl, { page: pageIndex, size: pageSize, search, filters, sort })
+        fetchLocationPage(baseUrl, { page: pageIndex, size: pageSize, search, filters, sort })
             .then((result) => {
                 if (!cancelled) {
                     setRows(result.content);

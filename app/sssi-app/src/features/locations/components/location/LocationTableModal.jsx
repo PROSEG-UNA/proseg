@@ -2,11 +2,11 @@ import { useEffect } from 'react';
 import { Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
-import { useCatalogTable } from '../../hooks/useCatalogTable.jsx';
-import CatalogTableView from './CatalogTableView.jsx';
+import { useLocationTable } from '../../hooks/useLocationTable.jsx';
+import LocationTableView from './LocationTableView.jsx';
 
-export default function CatalogTableModal({ open, onClose, config }) {
-    const table = useCatalogTable(config, { enabled: open });
+export default function LocationTableModal({ open, onClose, config }) {
+    const table = useLocationTable(config, { enabled: open });
     const { title, pluralTitle, icon: Icon, loading, totalElements, permissions, handleCreate, resetState } = table;
 
     const resetOnOpen = () => {
@@ -35,11 +35,11 @@ export default function CatalogTableModal({ open, onClose, config }) {
             loading={loading}
             footerLeft={footerLeft}
             secondaryButton={{ label: 'Cerrar', onClick: onClose }}
-            primaryButton={permissions.canCreateCatalog
+            primaryButton={permissions.canCreate
                 ? { label: `Crear ${title}`, onClick: handleCreate, startIcon: <AddIcon /> }
                 : null}
         >
-            <CatalogTableView table={table} />
+            <LocationTableView table={table} />
         </GeneralModal>
     );
 }

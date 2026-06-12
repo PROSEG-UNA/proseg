@@ -1,10 +1,10 @@
 import BusinessIcon from '@mui/icons-material/Business';
 import PlaceIcon from '@mui/icons-material/Place';
-import LocationCatalogPage from '../components/LocationCatalogPage.jsx';
+import LocationBrowserPage from '../components/LocationBrowserPage.jsx';
 
 export function BuildingPage() {
     return (
-        <LocationCatalogPage
+        <LocationBrowserPage
             mainEntity="building"
             pageTitle="Edificios"
             pageDescription="Administración de los edificios dentro de cada campus."

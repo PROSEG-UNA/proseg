@@ -7,8 +7,8 @@ import RowActionsMenu from '../../../common/components/RowActionsMenu.jsx';
 import { usePermissions } from '../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../common/constants/permissions';
 import { getFriendlyApiErrorMessage } from '../../../common/utils/index.js';
-import { useCatalogData } from './useCatalogData';
-import { deleteCatalogItem } from '../services/catalogService';
+import { useLocationData } from './useLocationData.js';
+import { deleteLocationItem } from '../services/locationService.js';
 
 const getLocationPermissionGroup = (baseUrl = '') => {
     if (baseUrl.includes('/campuses') || baseUrl.includes('/locations')) {
@@ -20,7 +20,7 @@ const getLocationPermissionGroup = (baseUrl = '') => {
 const isBuilding = (baseUrl = '') => baseUrl.includes('/buildings');
 const isCampus   = (baseUrl = '') => baseUrl.includes('/campuses');
 
-export function useCatalogTable(config, { enabled = true } = {}) {
+export function useLocationTable(config, { enabled = true } = {}) {
     const { title = '', pluralTitle = '', baseUrl = '', icon = null, columns: configColumns = [] } = config ?? {};
 
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
@@ -39,24 +39,24 @@ export function useCatalogTable(config, { enabled = true } = {}) {
 
     const { hasPermission } = usePermissions();
     const locationPermissions = useMemo(() => getLocationPermissionGroup(baseUrl), [baseUrl]);
-    const canViewCatalog = hasPermission(locationPermissions.READ)
+    const canView = hasPermission(locationPermissions.READ)
         || hasPermission(locationPermissions.MANAGE)
         || hasPermission(locationPermissions.DELETE);
-    const canManageCatalog = hasPermission(locationPermissions.MANAGE);
-    const canDeleteCatalog = hasPermission(locationPermissions.DELETE);
+    const canManage = hasPermission(locationPermissions.MANAGE);
+    const canDelete = hasPermission(locationPermissions.DELETE);
 
     const canReadEmails = hasPermission(PERMISSIONS.INVENTORY.LOCATIONS?.READ)
         || hasPermission(PERMISSIONS.INVENTORY.LOCATIONS?.MANAGE)
         || hasPermission(PERMISSIONS.INVENTORY.LOCATIONS?.DELETE);
 
-    const hasCatalogAction = useCallback((action) => {
+    const hasAction = useCallback((action) => {
         if (!Array.isArray(config?.actions)) return true;
         return config.actions.includes(action);
     }, [config]);
 
-    const canCreateCatalog = canManageCatalog && hasCatalogAction('create');
-    const canEditCatalog   = canManageCatalog && hasCatalogAction('edit');
-    const canRemoveCatalog = canDeleteCatalog && hasCatalogAction('delete');
+    const canCreate = canManage && hasAction('create');
+    const canEdit   = canManage && hasAction('edit');
+    const canRemove = canDelete && hasAction('delete');
 
     const columnToBackendKey = config?.columnToBackendKey ?? {};
 
@@ -95,7 +95,7 @@ export function useCatalogTable(config, { enabled = true } = {}) {
     };
     useEffect(resetPageOnFilterChange, [debouncedGlobalFilter, backendFilters, backendSort]);
 
-    const { rows, loading, error, totalElements } = useCatalogData({
+    const { rows, loading, error, totalElements } = useLocationData({
         baseUrl: enabled ? baseUrl : '',
         pageIndex: pagination.pageIndex,
         pageSize: pagination.pageSize,
@@ -112,7 +112,7 @@ export function useCatalogTable(config, { enabled = true } = {}) {
     const handleConfirmDelete = async () => {
         setDeleting(true);
         try {
-            await deleteCatalogItem(baseUrl, deletingRow.id);
+            await deleteLocationItem(baseUrl, deletingRow.id);
             setDeletingRow(null);
             triggerRefresh();
             setAlert({ type: 'success', message: `${title} eliminado correctamente` });
@@ -158,7 +158,7 @@ export function useCatalogTable(config, { enabled = true } = {}) {
                 key: 'edit',
                 label: 'Editar',
                 icon: <EditIcon fontSize="small" />,
-                hidden: !canEditCatalog,
+                hidden: !canEdit,
                 onClick: () => handleEdit(row.original),
             },
             {
@@ -166,12 +166,12 @@ export function useCatalogTable(config, { enabled = true } = {}) {
                 label: 'Eliminar',
                 icon: <DeleteIcon fontSize="small" />,
                 color: 'error',
-                hidden: !canRemoveCatalog,
+                hidden: !canRemove,
                 onClick: () => handleDelete(row.original),
             },
         ];
         return <RowActionsMenu actions={actions} tooltip="Ver acción" />;
-    }, [handleEdit, handleDelete, canEditCatalog, canRemoveCatalog, showBuildingEmailAction, showCampusEmailAction]);
+    }, [handleEdit, handleDelete, canEdit, canRemove, showBuildingEmailAction, showCampusEmailAction]);
 
     const columns = useMemo(
         () => configColumns.map((col) => ({
@@ -185,7 +185,7 @@ export function useCatalogTable(config, { enabled = true } = {}) {
     );
 
     const isAccessDeniedError = error && (error.includes('permisos') || error.includes('403') || error.includes('Acceso denegado'));
-    const hasRowActions = canEditCatalog || canRemoveCatalog || showBuildingEmailAction || showCampusEmailAction;
+    const hasRowActions = canEdit || canRemove || showBuildingEmailAction || showCampusEmailAction;
 
     return {
         config,
@@ -197,10 +197,10 @@ export function useCatalogTable(config, { enabled = true } = {}) {
         sorting, setSorting,
         isAccessDeniedError,
         permissions: {
-            canViewCatalog,
-            canCreateCatalog,
-            canEditCatalog,
-            canRemoveCatalog,
+            canView,
+            canCreate,
+            canEdit,
+            canRemove,
             showBuildingEmailAction,
             showCampusEmailAction,
             hasRowActions,
@@ -218,4 +218,4 @@ export function useCatalogTable(config, { enabled = true } = {}) {
     };
 }
 
-export default useCatalogTable;
+export default useLocationTable;

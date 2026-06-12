@@ -4,15 +4,15 @@ import AddIcon from '@mui/icons-material/Add';
 import { PrimaryButton } from '../../../common/components/PrimaryButton.jsx';
 import { PageHeader } from '../../../common/components/index.js';
 import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
-import LocationCatalogCard from './catalog/LocationCatalogCard.jsx';
-import LocationCatalogGrid from './catalog/LocationCatalogGrid.jsx';
-import CatalogTableView from './catalog/CatalogTableView.jsx';
-import CatalogTableModal from './catalog/CatalogTableModal.jsx';
-import { useCatalogTable } from '../hooks/useCatalogTable.jsx';
-import { CATALOG_CONFIG } from './catalog/catalogConfig.js';
+import LocationCard from './location/LocationCard.jsx';
+import LocationGrid from './location/LocationGrid.jsx';
+import LocationTableView from './location/LocationTableView.jsx';
+import LocationTableModal from './location/LocationTableModal.jsx';
+import { useLocationTable } from '../hooks/useLocationTable.jsx';
+import { LOCATION_CONFIG } from './location/locationConfig.js';
 
-export default function LocationCatalogPage({ mainEntity, cards = [], pageTitle, pageDescription }) {
-    const table = useCatalogTable(CATALOG_CONFIG[mainEntity]);
+export default function LocationBrowserPage({ mainEntity, cards = [], pageTitle, pageDescription }) {
+    const table = useLocationTable(LOCATION_CONFIG[mainEntity]);
     const [modalEntity, setModalEntity] = useState(null);
     const { permissions } = table;
 
@@ -22,12 +22,12 @@ export default function LocationCatalogPage({ mainEntity, cards = [], pageTitle,
     return (
         <Box>
             <Container maxWidth="xl" sx={{ pt: 1, pb: 2, mt: 2 }}>
-                {permissions.canViewCatalog ? (
+                {permissions.canView ? (
                     <>
                         <Box sx={{ mb: 3 }}>
-                            <LocationCatalogGrid>
+                            <LocationGrid>
                                 {cards.map((card) => (
-                                    <LocationCatalogCard
+                                    <LocationCard
                                         key={card.entityName}
                                         title={card.title}
                                         entityName={card.entityName}
@@ -37,13 +37,13 @@ export default function LocationCatalogPage({ mainEntity, cards = [], pageTitle,
                                         onClick={openModal}
                                     />
                                 ))}
-                            </LocationCatalogGrid>
+                            </LocationGrid>
                         </Box>
 
                         <PageHeader
                             title={pageTitle}
                             description={pageDescription}
-                            action={permissions.canCreateCatalog ? (
+                            action={permissions.canCreate ? (
                                 <PrimaryButton startIcon={<AddIcon />} onClick={table.handleCreate} sx={{ px: '28px' }}>
                                     Crear
                                 </PrimaryButton>
@@ -52,12 +52,12 @@ export default function LocationCatalogPage({ mainEntity, cards = [], pageTitle,
                             titleSx={{ fontSize: '1.65rem', letterSpacing: '0.3px' }}
                         />
 
-                        <CatalogTableView table={table} />
+                        <LocationTableView table={table} />
 
-                        <CatalogTableModal
+                        <LocationTableModal
                             open={!!modalEntity}
                             onClose={closeModal}
-                            config={modalEntity ? CATALOG_CONFIG[modalEntity] : null}
+                            config={modalEntity ? LOCATION_CONFIG[modalEntity] : null}
                         />
                     </>
                 ) : (
