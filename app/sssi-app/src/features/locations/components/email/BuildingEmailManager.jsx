@@ -483,8 +483,6 @@ export default function BuildingEmailManager() {
                             )}
                         </Box>
 
-                        <Divider />
-
                         {canManage && (
                             <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
                                 <TextField
@@ -531,6 +529,8 @@ export default function BuildingEmailManager() {
                                 </Tooltip>
                             </Box>
                         )}
+
+                        <Divider sx={{ mb: 2 }} />
 
                         <TextField
                             value={emailSearch}
