@@ -8,6 +8,7 @@ import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import BusinessIcon from '@mui/icons-material/Business';
 import ConstructionIcon from '@mui/icons-material/Construction';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import PushPinIcon from '@mui/icons-material/PushPin';
 import PlaceIcon from '@mui/icons-material/Place';
 import ApartmentIcon from '@mui/icons-material/Apartment';
 import EmailIcon from '@mui/icons-material/Email';
@@ -100,7 +101,7 @@ export function useNavSections() {
         if (canViewLocationsSection) {
             result.push({
                 key: 'locations',
-                icon: PlaceIcon,
+                icon: PushPinIcon,
                 label: 'Ubicaciones',
                 items: [
                     { key: 'campus', icon: BusinessIcon, label: 'Campus', path: '/ubicaciones/campus' },
