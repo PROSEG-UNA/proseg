@@ -10,6 +10,7 @@ import ConstructionIcon from '@mui/icons-material/Construction';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import PlaceIcon from '@mui/icons-material/Place';
 import ApartmentIcon from '@mui/icons-material/Apartment';
+import EmailIcon from '@mui/icons-material/Email';
 import { PERMISSIONS } from '../../constants/permissions';
 import { usePermissions } from '../../hooks';
 
@@ -105,6 +106,7 @@ export function useNavSections() {
                     { key: 'campus', icon: BusinessIcon, label: 'Campus', path: '/ubicaciones/campus' },
                     { key: 'buildings', icon: ApartmentIcon, label: 'Edificios', path: '/ubicaciones/edificios' },
                     { key: 'locations', icon: PlaceIcon, label: 'Locaciones', path: '/ubicaciones/locaciones' },
+                    { key: 'emails', icon: EmailIcon, label: 'Correos', path: '/ubicaciones/correos' },
                 ],
             });
         }
