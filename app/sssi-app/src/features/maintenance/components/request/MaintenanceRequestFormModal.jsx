@@ -9,7 +9,9 @@ import DialogModal from '../../../../common/components/DialogModal.jsx';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
 import TimeSelect from '../../../../common/components/TimeSelect.jsx';
 import { createMaintenanceRequest, fetchMaintenanceRequestById, updateMaintenanceRequest } from '../../services/request/requestsService';
-import { fetchCompanies, fetchCompanyTechnicians } from '../../services/company/companiesService';
+import { fetchCompanies, fetchCompanyTechnicians, fetchMyCompany } from '../../services/company/companiesService';
+import { usePermissions } from '../../../../common/hooks/index.js';
+import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { fetchCampuses, fetchBuildingsByCampus, fetchBuildingEmails, fetchCampusEmails } from '../../services/locationsService';
 import { MAINTENANCE_STATUS_OPTIONS, checkScheduleConsistency } from '../../maintenanceUtils';
 
@@ -47,6 +49,10 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
     const theme = useTheme();
     const accentColor = theme.vars.palette.tones.rose.fg;
     const isEdit = !!requestId;
+
+    const { hasPermission } = usePermissions();
+    const canSelectCompany = hasPermission(PERMISSIONS.MAINTENANCE.REQUESTS.SELECT_COMPANY);
+    const lockCompany = !canSelectCompany;
 
     const [formValues, setFormValues] = useState(INITIAL_VALUES);
     const [errors, setErrors] = useState({});
@@ -97,6 +103,23 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
         let cancelled = false;
         setLoadingOptions(true);
 
+        if (lockCompany) {
+            fetchMyCompany()
+                .then((company) => {
+                    if (cancelled || !company) return;
+                    setCompanies([company]);
+                    setFormValues((prev) => ({ ...prev, companyId: company.id }));
+                })
+                .catch(() => {})
+                .finally(() => {
+                    if (!cancelled) setLoadingOptions(false);
+                });
+
+            return () => {
+                cancelled = true;
+            };
+        }
+
         fetchCompanies({ page: 0, size: 200 })
             .then((page) => {
                 if (!cancelled) setCompanies(page.content ?? []);
@@ -111,7 +134,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
         };
     };
 
-    useEffect(loadCompanies, [open]);
+    useEffect(loadCompanies, [open, lockCompany]);
 
     const loadCampuses = () => {
         if (!open) return;
@@ -502,7 +525,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                             required
                             fullWidth
                             size="small"
-                            disabled={anyLoading}
+                            disabled={anyLoading || lockCompany}
                             error={touched.companyId && !!errors.companyId}
                             helperText={touched.companyId ? (errors.companyId || ' ') : ' '}
                             sx={fieldSx}

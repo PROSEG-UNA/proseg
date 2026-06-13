@@ -11,6 +11,11 @@ export async function fetchCompanyById(companyId) {
     return data?.data ?? null;
 }
 
+export async function fetchMyCompany() {
+    const { data } = await axios.get(`${MAINTENANCE_ENDPOINTS.companies}/me`, maintenanceConfig);
+    return data?.data ?? null;
+}
+
 export async function createCompany(payload) {
     const { data } = await axios.post(MAINTENANCE_ENDPOINTS.companies, payload, maintenanceConfig);
     return data?.data;
