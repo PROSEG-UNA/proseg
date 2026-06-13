@@ -770,6 +770,17 @@ public class KeycloakAdminService {
         }
     }
 
+    public String getRoleNameById(String roleId) {
+        String adminToken = getAdminToken();
+        HttpHeaders headers = buildJsonHeaders(adminToken);
+        try {
+            return (String) resolveRoleMappingById(roleId, headers).get("name");
+        } catch (Exception e) {
+            log.error("Error obteniendo el nombre del rol {}: {}", roleId, e.getMessage());
+            throw KeycloakException.roleNotFound(roleId);
+        }
+    }
+
     private Map<String, Object> resolveRoleMappingById(String roleId, HttpHeaders headers) throws Exception {
         String rolesByIdUrl = keycloakServerUrl + "/admin/realms/" + realm + "/roles-by-id/" + roleId;
 
