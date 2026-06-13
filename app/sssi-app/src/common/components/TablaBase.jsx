@@ -8,6 +8,7 @@ import {
     MRT_ToggleFullScreenButton,
     MRT_ToolbarAlertBanner,
     MRT_LinearProgressBar,
+    MRT_BottomToolbar,
 } from 'material-react-table';
 import { Box, IconButton, TextField, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
@@ -15,6 +16,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import { MRT_Localization_ES } from 'material-react-table/locales/es';
 import { headerSurfaceSx } from '../theme/sxStyles';
+import TableHorizontalScrollbar from './TableHorizontalScrollbar.jsx';
 
 export default function TableBase({
                                       columns,
@@ -41,6 +43,7 @@ export default function TableBase({
                                   }) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const isTouch = useMediaQuery('(pointer: coarse)');
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
     const [isDesktopSearchOpen, setIsDesktopSearchOpen] = useState(false);
 
@@ -99,14 +102,17 @@ export default function TableBase({
         enableBottomToolbar: enablePagination,
 
         muiTableContainerProps: ({ table }) => ({
-            sx: maxHeight
-                ? { maxHeight, overflow: 'auto' }
-                : {
-                    height: table.getState().isFullScreen
-                        ? 'calc(100vh - 120px)'
-                        : 'calc(100vh - 315px)',
-                    overflow: 'auto',
-                },
+            sx: {
+                overflowX: isTouch ? 'auto' : 'hidden',
+                overflowY: 'auto',
+                ...(maxHeight
+                    ? { maxHeight }
+                    : {
+                        height: table.getState().isFullScreen
+                            ? 'calc(100vh - 120px)'
+                            : 'calc(100vh - 315px)',
+                    }),
+            },
         }),
 
         paginationDisplayMode: 'pages',
@@ -256,12 +262,25 @@ export default function TableBase({
             );
         },
 
+        renderBottomToolbar: enablePagination
+            ? ({ table }) => (
+                <Box
+                    sx={(t) => ({
+                        ...headerSurfaceSx(t),
+                        position: 'sticky',
+                        bottom: 0,
+                        zIndex: 3,
+                    })}
+                >
+                    {!isTouch && <TableHorizontalScrollbar containerRef={table.refs.tableContainerRef} />}
+                    <MRT_BottomToolbar table={table} />
+                </Box>
+            )
+            : undefined,
+
         muiBottomToolbarProps: {
             sx: (t) => ({
                 ...headerSurfaceSx(t),
-                position: 'sticky',
-                bottom: 0,
-                zIndex: 3,
             }),
         },
 
