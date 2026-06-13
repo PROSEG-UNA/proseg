@@ -33,6 +33,17 @@ public class SecurityConfig {
                         ).permitAll()
 
                         .requestMatchers(HttpMethod.GET,
+                                "/api/v1/maintenance/companies/me"
+                        ).hasAnyAuthority(
+                                Privileges.SolicitudesMantenimiento.SOLICITAR,
+                                Privileges.SolicitudesMantenimiento.EDITAR
+                        )
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/maintenance/user-companies/*/has-company"
+                        ).authenticated()
+
+                        .requestMatchers(HttpMethod.GET,
                                 "/api/v1/maintenance/companies",
                                 "/api/v1/maintenance/companies/**"
                         ).hasAuthority(Privileges.Empresas.LEER)
@@ -59,11 +70,11 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/maintenance/requests"
-                        ).hasAuthority(Privileges.SolicitudesMantenimiento.GESTIONAR)
+                        ).hasAuthority(Privileges.SolicitudesMantenimiento.SOLICITAR)
 
                         .requestMatchers(HttpMethod.PUT,
                                 "/api/v1/maintenance/requests/**"
-                        ).hasAuthority(Privileges.SolicitudesMantenimiento.GESTIONAR)
+                        ).hasAuthority(Privileges.SolicitudesMantenimiento.EDITAR)
 
                         .requestMatchers(HttpMethod.DELETE,
                                 "/api/v1/maintenance/requests/**"

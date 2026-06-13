@@ -21,6 +21,7 @@ import com.sssi.msvc_maintenance.repository.CompanyRepository;
 import com.sssi.msvc_maintenance.repository.MaintenanceEmailRepository;
 import com.sssi.msvc_maintenance.repository.MaintenanceRequestRepository;
 import com.sssi.msvc_maintenance.repository.UserCompanyRepository;
+import com.sssi.msvc_maintenance.security.Privileges;
 import com.sssi.msvc_maintenance.service.MaintenanceRequestService;
 import com.sssi.msvc_maintenance.specification.GenericSpecifications;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,10 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,6 +59,8 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
     public MaintenanceRequestResponseDto create(MaintenanceRequestRequestDto request) {
 
         UUID companyId = parseUuid(request.getCompanyId(), "companyId");
+
+        enforceCompanyForRequester(companyId);
 
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(CompanyException::notFound);
@@ -206,6 +213,33 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                 .orElseThrow(MaintenanceRequestException::notFound);
 
         maintenanceRequestRepository.delete(maintenanceRequest);
+    }
+
+    private void enforceCompanyForRequester(UUID companyId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return;
+        }
+
+        boolean canSelectAnyCompany = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority -> authority.equals(Privileges.SolicitudesMantenimiento.SELECCIONAR_EMPRESA));
+        if (canSelectAnyCompany) {
+            return;
+        }
+
+        if (!(authentication.getPrincipal() instanceof Jwt jwt)) {
+            throw MaintenanceRequestException.companyNotAllowed();
+        }
+
+        UUID ownCompanyId = userCompanyRepository.findAllByKeycloakUserId(jwt.getSubject()).stream()
+                .findFirst()
+                .map(userCompany -> userCompany.getCompany().getId())
+                .orElseThrow(CompanyException::noAssociatedCompany);
+
+        if (!ownCompanyId.equals(companyId)) {
+            throw MaintenanceRequestException.companyNotAllowed();
+        }
     }
 
     private List<UserCompany> resolveAssignedTechnicians(List<UUID> ids, Company company) {

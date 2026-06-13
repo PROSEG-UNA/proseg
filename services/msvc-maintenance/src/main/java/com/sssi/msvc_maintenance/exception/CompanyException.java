@@ -41,6 +41,14 @@ public class CompanyException extends BaseException {
         );
     }
 
+    public static CompanyException noAssociatedCompany() {
+        return new CompanyException(
+                HttpStatus.NOT_FOUND,
+                "COMPANY_NO_ASSOCIATED",
+                "El usuario no tiene una empresa asociada."
+        );
+    }
+
     public static CompanyException invalidKeycloakUser(String userId) {
         return new CompanyException(
                 HttpStatus.NOT_FOUND,
