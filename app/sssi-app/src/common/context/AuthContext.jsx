@@ -1,7 +1,6 @@
 import { createContext, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { getCurrentUser, refreshAccessToken } from '../../features/auth/services/authService';
-import { PERMISSIONS } from '../constants/permissions';
 
 let isRefreshing = false;
 let failedQueue = [];
@@ -72,12 +71,10 @@ export function AuthProvider({ children }) {
     return Array.from(new Set(source.filter(Boolean)));
   }, [user]);
 
-  const isSuperAdmin = permissions.includes(PERMISSIONS.SUPER_ADMIN);
-
-  const hasPermission = (permission) => isSuperAdmin || permissions.includes(permission);
+  const hasPermission = (permission) => permissions.includes(permission);
 
   const hasAnyPermission = (permissionList = []) =>
-    isSuperAdmin || permissionList.some((permission) => permissions.includes(permission));
+    permissionList.some((permission) => permissions.includes(permission));
 
   const refreshAuth = async () => {
     try {
