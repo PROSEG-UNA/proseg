@@ -89,6 +89,21 @@ public class CompanyServiceImpl implements CompanyService {
 
     @Override
     @Transactional(readOnly = true)
+    public CompanyResponseDto findByKeycloakUserId(String keycloakUserId) {
+        return userCompanyRepository.findAllByKeycloakUserId(keycloakUserId).stream()
+                .findFirst()
+                .map(userCompany -> companyMapper.toResponse(userCompany.getCompany()))
+                .orElseThrow(CompanyException::noAssociatedCompany);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasCompany(String keycloakUserId) {
+        return !userCompanyRepository.findAllByKeycloakUserId(keycloakUserId).isEmpty();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<CompanyResponseDto> findAll(String search, Map<String, String> filters, Pageable pageable) {
         Specification<Company> spec = Specification
                 .where(GenericSpecifications.<Company>withSearch(Company.class, search))
