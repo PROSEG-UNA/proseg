@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Box, Button, Chip, Divider, Typography } from '@mui/material';
+import { Box, Button, Chip, Divider, Typography, useTheme } from '@mui/material';
 import PeopleIcon from '@mui/icons-material/People';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { useDebounce } from '../../../../common/hooks/useDebounce.js';
-import { fetchCompanyUsers, unassignCompanyUser, assignCompanyUsersBulk } from '../../services/companiesService';
+import { fetchCompanyUsers, unassignCompanyUser, assignCompanyUsersBulk } from '../../services/company/companiesService';
 import { searchUsers } from '../../../security/services/usersService';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
 
@@ -14,19 +14,20 @@ function userLabel(user) {
 }
 
 export default function CompanyUsersModal({ open, companyId, companyName, onClose, onSaved }) {
-    const [users, setUsers] = useState([]);
-    const [availableUsers, setAvailableUsers] = useState([]);
-    const [search, setSearch] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [selectedUserId, setSelectedUserId] = useState('');
-    const [selectedUser, setSelectedUser] = useState(null);
-    const [selectedUsers, setSelectedUsers] = useState({});
-    const [confirmAssign, setConfirmAssign] = useState(false);
-    const [alert, setAlert] = useState(null);
-    const [confirmRemove, setConfirmRemove] = useState(null);
-    const [duplicateWarning, setDuplicateWarning] = useState(null);
-    const debouncedSearch = useDebounce(search, 350);
+     const theme = useTheme();
+     const [users, setUsers] = useState([]);
+     const [availableUsers, setAvailableUsers] = useState([]);
+     const [search, setSearch] = useState('');
+     const [loading, setLoading] = useState(false);
+     const [saving, setSaving] = useState(false);
+     const [selectedUserId, setSelectedUserId] = useState('');
+     const [selectedUser, setSelectedUser] = useState(null);
+     const [selectedUsers, setSelectedUsers] = useState({});
+     const [confirmAssign, setConfirmAssign] = useState(false);
+     const [alert, setAlert] = useState(null);
+     const [confirmRemove, setConfirmRemove] = useState(null);
+     const [duplicateWarning, setDuplicateWarning] = useState(null);
+     const debouncedSearch = useDebounce(search, 350);
 
     const loadUsers = () => {
         if (!open || !companyId) return;
@@ -184,7 +185,24 @@ export default function CompanyUsersModal({ open, companyId, companyName, onClos
                 subtitle="Gestiona las cuentas vinculadas a esta empresa"
                 loading={loading || saving}
                 secondaryButton={{ label: 'Cerrar', onClick: onClose, disabled: saving }}
-                primaryButton={{ label: saving ? 'Vinculando…' : 'Vincular', onClick: () => setConfirmAssign(true), disabled: saving }}
+                primaryButton={{
+                    label: saving ? 'Vinculando…' : 'Vincular',
+                    onClick: () => setConfirmAssign(true),
+                    disabled: saving,
+                    variant: 'contained',
+                    sx: {
+                        background: `linear-gradient(135deg, ${theme.vars.palette.tones.rose.headerBg} 0%, ${theme.vars.palette.tones.rose.headerBgEnd} 100%)`,
+                        borderColor: 'transparent',
+                        color: '#fff',
+                        fontWeight: 700,
+                        boxShadow: theme.vars.palette.tones.rose.buttonShadow,
+                        '&:hover': {
+                            background: `linear-gradient(135deg, ${theme.vars.palette.tones.rose.hoverBg}, ${theme.vars.palette.tones.rose.hoverBg})`,
+                            boxShadow: theme.vars.palette.tones.rose.buttonShadowHover,
+                            borderColor: 'transparent',
+                        },
+                    }
+                }}
             >
                 <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -202,7 +220,6 @@ export default function CompanyUsersModal({ open, companyId, companyName, onClos
                             fullWidth
                             size="small"
                             disabled={saving}
-                            helperText={selectedUser ? `ID: ${selectedUser.id} · Correo: ${selectedUser.email || '—'}` : 'Busca y selecciona un usuario del sistema'}
                             externalSearch={search}
                             onSearchChange={(value) => {
                                 setSearch(value);
@@ -311,6 +328,7 @@ export default function CompanyUsersModal({ open, companyId, companyName, onClos
             />
 
             <DialogModal
+                type="info"
                 open={!!confirmAssign}
                 title="Vincular usuarios"
                 message={`¿Deseas vincular ${Object.keys(selectedUsers).length} usuario(s) a la empresa?`}

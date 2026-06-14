@@ -1,26 +1,15 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Typography, Container, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Typography, Container } from '@mui/material';
 import StorageIcon from '@mui/icons-material/Storage';
 import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import { FeatureCard } from '../../../common/components/FeatureCard.jsx';
-import { Header } from '../../../common/components/Header.jsx';
-import { NavDrawer } from '../../../common/components/NavDrawer.jsx';
 
 export function HomePage() {
     const navigate = useNavigate();
-    const [drawerOpen, setDrawerOpen] = useState(false);
-    const theme = useTheme();
-    const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
 
     return (
         <Box sx={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
-            <Header
-                title="Sistema Programa Servicios Generales"
-                onMenuClick={isMediumOrDown ? () => setDrawerOpen(true) : undefined}
-            />
-            <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
             <Container maxWidth="lg" sx={{ pt: { xs: 6, md: 9 }, pb: { xs: 4, md: 5 } }}>
                 <Box sx={{ maxWidth: 580 }}>

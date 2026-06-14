@@ -5,6 +5,7 @@ import com.sssi.msvc_maintenance.dto.response.InventoryCampusResponseDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface MaintenanceLocationService {
@@ -16,4 +17,8 @@ public interface MaintenanceLocationService {
     InventoryCampusResponseDto findCampusById(UUID id);
 
     InventoryBuildingResponseDto findBuildingById(UUID id);
+
+    List<String> findBuildingEmails(UUID buildingId);
+
+    List<String> findCampusEmails(UUID campusId);
 }

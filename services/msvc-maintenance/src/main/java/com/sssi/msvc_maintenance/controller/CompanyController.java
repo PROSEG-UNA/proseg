@@ -7,7 +7,9 @@ import com.sssi.common.api.util.PageMapper;
 import com.sssi.common.specification.FilterConstants;
 import com.sssi.msvc_maintenance.dto.request.CompanyRequestDto;
 import com.sssi.msvc_maintenance.dto.request.CompanyUserRequestDto;
+import com.sssi.msvc_maintenance.dto.request.CreateManagedUserRequestDto;
 import com.sssi.msvc_maintenance.dto.response.CompanyResponseDto;
+import com.sssi.msvc_maintenance.dto.response.CreateManagedUserResponseDto;
 import com.sssi.msvc_maintenance.dto.response.KeycloakUserResponse;
 import com.sssi.msvc_maintenance.dto.response.UserCompanyResponseDto;
 import com.sssi.msvc_maintenance.mapper.UserCompanyMapper;
@@ -19,6 +21,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -48,6 +52,24 @@ public class CompanyController {
         return ApiResponseBuilder.created(
                 companyService.create(request),
                 "Empresa creada correctamente"
+        );
+    }
+
+    @PostMapping("/users")
+    public ResponseEntity<ApiResponse<CreateManagedUserResponseDto>> createManagedUser(
+            @Valid @RequestBody CreateManagedUserRequestDto request
+    ) {
+        return ApiResponseBuilder.created(
+                companyService.createManagedUser(request),
+                "Usuario invitado correctamente"
+        );
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<CompanyResponseDto>> findMyCompany(@AuthenticationPrincipal Jwt jwt) {
+        return ApiResponseBuilder.ok(
+                companyService.findByKeycloakUserId(jwt.getSubject()),
+                "Empresa asociada obtenida correctamente"
         );
     }
 

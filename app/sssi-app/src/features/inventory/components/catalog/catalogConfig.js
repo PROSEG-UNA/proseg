@@ -1,126 +1,12 @@
-import BusinessIcon from '@mui/icons-material/Business';
-import ApartmentIcon from '@mui/icons-material/Apartment';
-import PlaceIcon from '@mui/icons-material/Place';
 import CategoryIcon from '@mui/icons-material/Category';
 import LabelIcon from '@mui/icons-material/Label';
 import DevicesIcon from '@mui/icons-material/Devices';
 import { INVENTORY_ENDPOINTS } from '../../services/endpoints';
 
 export const CATALOG_CONFIG = {
-    campus: {
-        title: 'Campus',
-        pluralTitle: 'Campus',
-        baseUrl: INVENTORY_ENDPOINTS.campuses,
-        icon: BusinessIcon,
-        columnToBackendKey: { name: 'name' },
-        columns: [
-            { accessorKey: 'name', header: 'Nombre', size: 200, grow: true },
-        ],
-        formFields: [
-            { key: 'name', label: 'Nombre', type: 'text', required: true },
-        ],
-    },
-    building: {
-        title: 'Edificio',
-        pluralTitle: 'Edificios',
-        baseUrl: INVENTORY_ENDPOINTS.buildings,
-        icon: ApartmentIcon,
-        columnToBackendKey: { name: 'name', campus: 'campus.name' },
-        columns: [
-            { accessorKey: 'name', header: 'Nombre', size: 160, grow: true },
-            {
-                id: 'campus',
-                header: 'Campus',
-                accessorFn: (row) => row.campus?.name ?? '-',
-                size: 140,
-                grow: 1,
-            },
-        ],
-        formFields: [
-            { key: 'name', label: 'Nombre', type: 'text', required: true },
-            {
-                key: 'campusId',
-                label: 'Campus',
-                type: 'select',
-                required: true,
-                optionsUrl: INVENTORY_ENDPOINTS.campuses,
-                getOptionLabel: (opt) => opt.name,
-                getOptionValue: (opt) => opt.id,
-                getInitialValue: (row) => row?.campus?.id ?? '',
-            },
-        ],
-    },
-    location: {
-        title: 'Locación',
-        pluralTitle: 'Locaciones',
-        baseUrl: INVENTORY_ENDPOINTS.locations,
-        icon: PlaceIcon,
-        columnToBackendKey: {
-            campus: 'floor.building.campus.name',
-            building: 'floor.building.name',
-            floor: 'floor.name',
-            description: 'description',
-        },
-        columns: [
-            { accessorKey: 'description', header: 'Descripción', size: 180, grow: 2 },
-            {
-                id: 'campus',
-                header: 'Campus',
-                accessorFn: (row) => row.floor?.building?.campus?.name ?? '-',
-                size: 130,
-                grow: 1,
-            },
-            {
-                id: 'building',
-                header: 'Edificio',
-                accessorFn: (row) => row.floor?.building?.name ?? '-',
-                size: 130,
-                grow: 1,
-            },
-            {
-                id: 'floor',
-                header: 'Piso',
-                accessorFn: (row) => row.floor?.name ?? '-',
-                size: 80,
-                grow: 0,
-            },
-        ],
-        formFields: [
-            {
-                key: 'campusId',
-                label: 'Campus',
-                type: 'select',
-                required: true,
-                optionsUrl: INVENTORY_ENDPOINTS.campuses,
-                getOptionLabel: (opt) => opt.name,
-                getOptionValue: (opt) => opt.id,
-                getInitialValue: (row) => row?.floor?.building?.campus?.id ?? '',
-            },
-            {
-                key: 'buildingId',
-                label: 'Edificio',
-                type: 'select',
-                required: true,
-                optionsUrl: INVENTORY_ENDPOINTS.buildings,
-                getOptionLabel: (opt) => opt.name,
-                getOptionValue: (opt) => opt.id,
-                getInitialValue: (row) => row?.floor?.building?.id ?? '',
-                dependsOn: 'campusId',
-                filterBy: (opt, campusId) => opt.campus?.id === campusId,
-            },
-            {
-                key: 'floorNumber',
-                label: 'Número de piso',
-                type: 'number',
-                required: true,
-                getInitialValue: (row) => row?.floor?.name ? parseInt(row.floor.name) : '',
-            },
-            { key: 'description', label: 'Descripción', type: 'textarea', required: true },
-        ],
-    },
     type: {
-        title: 'Tipo',
-        pluralTitle: 'Tipos',
+        title: 'Tipo de Activo',
+        pluralTitle: 'Tipos de Activos',
         baseUrl: INVENTORY_ENDPOINTS.types,
         icon: CategoryIcon,
         columnToBackendKey: { name: 'name', description: 'description' },
@@ -178,7 +64,7 @@ export const CATALOG_CONFIG = {
             },
             {
                 id: 'type',
-                header: 'Tipo',
+                header: 'Tipo de Activo',
                 accessorFn: (row) => row.type?.name ?? '-',
                 size: 140,
                 grow: 1,
@@ -198,7 +84,7 @@ export const CATALOG_CONFIG = {
             },
             {
                 key: 'typeId',
-                label: 'Tipo',
+                label: 'Tipo de Activo',
                 type: 'select',
                 required: true,
                 optionsUrl: INVENTORY_ENDPOINTS.types,

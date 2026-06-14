@@ -5,10 +5,12 @@ import com.sssi.common.kafka.events.ManagedUserCreatedEvent;
 import com.sssi.common.kafka.events.UserInvitedEvent;
 import com.sssi.common.kafka.events.UserPasswordConfiguredEvent;
 import com.sssi.common.kafka.topics.KafkaTopics;
+import com.sssi.msvc_auth.client.MaintenanceCompanyClient;
 import com.sssi.msvc_auth.dto.*;
 import com.sssi.msvc_auth.entity.InvitationToken;
 import com.sssi.msvc_auth.entity.User;
 import com.sssi.msvc_auth.exception.InvitationException;
+import com.sssi.msvc_auth.exception.KeycloakException;
 import com.sssi.msvc_auth.repository.InvitationTokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,12 +31,17 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 public class UserService {
+
+    private static final String SOLICITAR_MANTENIMIENTO = "SOLICITAR_MANTENIMIENTO";
+    private static final String SELECCIONAR_EMPRESA_EN_SOLICITUD_MANTENIMIENTO = "SELECCIONAR_EMPRESA_EN_SOLICITUD_MANTENIMIENTO";
+
     private final KeycloakAdminService keycloakAdminService;
     private final UserApprobationService userApprobationService;
     private final PasswordPolicyService passwordPolicyService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final SecureRandom secureRandom = new SecureRandom();
     private final InvitationTokenRepository invitationTokenRepository;
+    private final MaintenanceCompanyClient maintenanceCompanyClient;
 
     @Transactional(readOnly = true)
     public PagedResponse<KeycloakUserResponseDto> getAllUsers(Pageable pageable) {
@@ -211,7 +218,25 @@ public class UserService {
     }
 
     public void assignRoleToUser(String userId, String roleId) {
+        validateAssociatedCompanyForRole(userId, roleId);
         keycloakAdminService.assignRoleToUser(userId, roleId);
+    }
+
+    private void validateAssociatedCompanyForRole(String userId, String roleId) {
+        String roleName = keycloakAdminService.getRoleNameById(roleId);
+
+        List<String> privileges = keycloakAdminService.getRoleComposites(roleName).stream()
+                .map(RoleResponseDto::getName)
+                .toList();
+
+        boolean grantsSolicitar = SOLICITAR_MANTENIMIENTO.equals(roleName)
+                || privileges.contains(SOLICITAR_MANTENIMIENTO);
+        boolean grantsSeleccionarEmpresa = SELECCIONAR_EMPRESA_EN_SOLICITUD_MANTENIMIENTO.equals(roleName)
+                || privileges.contains(SELECCIONAR_EMPRESA_EN_SOLICITUD_MANTENIMIENTO);
+
+        if (grantsSolicitar && !grantsSeleccionarEmpresa && !maintenanceCompanyClient.userHasCompany(userId)) {
+            throw KeycloakException.requiresAssociatedCompany();
+        }
     }
 
     public void removeRoleFromUser(String userId, String roleId) {

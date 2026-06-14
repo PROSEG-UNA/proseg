@@ -1,0 +1,21 @@
+info:
+  name: create
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{gatewayUrl}}/api/{{apiVersion}}/inventory/buildings/6c642cc3-c937-40f5-b950-dcc4d6566589/emails"
+  body:
+    type: json
+    data: |-
+      {
+        "email": "isaacfelibrenes1904@gmail.com"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

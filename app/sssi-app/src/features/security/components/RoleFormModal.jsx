@@ -13,6 +13,10 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import FolderIcon from '@mui/icons-material/Folder';
+import BusinessIcon from '@mui/icons-material/Business';
+import ConstructionIcon from '@mui/icons-material/Construction';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import PushPinIcon from '@mui/icons-material/PushPin';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import GeneralModal from '../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../common/components/DialogModal.jsx';
@@ -52,7 +56,15 @@ const DOMAIN_META = {
         lightBg:    '#eff6ff',
         darkBg:     'rgba(30,58,95,0.35)',
         icon: InventoryIcon,
-        description: 'Gestión de activos y ubicaciones',
+        description: 'Gestión de activos',
+    },
+    Ubicaciones: {
+        lightColor: '#be185d',
+        darkColor:  '#f472b6',
+        lightBg:    '#fdf2f8',
+        darkBg:     'rgba(131,24,67,0.35)',
+        icon: PushPinIcon,
+        description: 'Gestión de campus, edificios y locaciones',
     },
     Archivos: {
         lightColor: '#7c3aed',
@@ -61,6 +73,38 @@ const DOMAIN_META = {
         darkBg:     'rgba(76,29,149,0.35)',
         icon: FolderIcon,
         description: 'Gestión y acceso a archivos del sistema',
+    },
+    Empresas: {
+        lightColor: '#059669',
+        darkColor:  '#34d399',
+        lightBg:    '#ecfdf5',
+        darkBg:     'rgba(6,78,59,0.35)',
+        icon: BusinessIcon,
+        description: 'Empresas de mantenimiento y sus usuarios',
+    },
+    'Solicitud de mantenimiento': {
+        lightColor: '#ea580c',
+        darkColor:  '#fb923c',
+        lightBg:    '#fff7ed',
+        darkBg:     'rgba(124,45,18,0.35)',
+        icon: ConstructionIcon,
+        description: 'Solicitudes de mantenimiento',
+    },
+    'Registro de mantenimiento': {
+        lightColor: '#0284c7',
+        darkColor:  '#38bdf8',
+        lightBg:    '#f0f9ff',
+        darkBg:     'rgba(12,74,110,0.35)',
+        icon: AssignmentIcon,
+        description: 'Registros, historial y técnicos de mantenimiento',
+    },
+    Tickets: {
+        lightColor: '#4f46e5',
+        darkColor:  '#818cf8',
+        lightBg:    '#eef2ff',
+        darkBg:     'rgba(49,46,129,0.35)',
+        icon: ConfirmationNumberIcon,
+        description: 'Tickets de mantenimiento y su seguimiento',
     },
     Mantenimiento: {
         lightColor: '#0f766e',
@@ -76,7 +120,7 @@ const ROLE_PRESETS = [
     {
         id: 'solo-lectura',
         name: 'Solo Lectura',
-        description: 'Consulta usuarios, roles y composites sin modificar nada',
+        description: 'Consulta todos los módulos (usuarios, roles, inventario, ubicaciones, archivos, empresas, mantenimiento y tickets) sin modificar nada',
         color: '#0f766e',
         darkColor: '#2dd4bf',
         icon: VisibilityIcon,
@@ -89,7 +133,7 @@ const ROLE_PRESETS = [
         color: '#dc2626',
         darkColor: '#f87171',
         icon: PeopleIcon,
-        privileges: ['LEER_USUARIOS','LEER_USUARIO','REGISTRAR_USUARIO','APROBAR_USUARIO','LEER_ROLES_USUARIO','LEER_USUARIOS_POR_ROL'],
+        privileges: ['LEER_USUARIOS','LEER_USUARIO','CREAR_USUARIO','APROBAR_USUARIO','LEER_ROLES_USUARIO','LEER_USUARIOS_POR_ROL'],
     },
     {
         id: 'gestion-roles',
@@ -132,8 +176,12 @@ const groupPrivilegesByDomain = (privileges) => {
         Roles: [],
         'Roles de Usuario': [],
         Inventario: [],
+        Ubicaciones: [],
         Archivos: [],
-        Mantenimiento: [],
+        Empresas: [],
+        'Solicitud de mantenimiento': [],
+        'Registro de mantenimiento': [],
+        Tickets: [],
     };
     privileges.forEach(p => {
         const target = p.domain && groups[p.domain] !== undefined ? p.domain : 'Usuarios';

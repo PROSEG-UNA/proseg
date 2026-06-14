@@ -41,11 +41,29 @@ public class CompanyException extends BaseException {
         );
     }
 
+    public static CompanyException noAssociatedCompany() {
+        return new CompanyException(
+                HttpStatus.NOT_FOUND,
+                "COMPANY_NO_ASSOCIATED",
+                "El usuario no tiene una empresa asociada."
+        );
+    }
+
     public static CompanyException invalidKeycloakUser(String userId) {
         return new CompanyException(
                 HttpStatus.NOT_FOUND,
                 "INVALID_KEYCLOAK_USER",
                 "No existe un usuario en Keycloak con el id: " + userId
+        );
+    }
+
+    public static CompanyException inviteUserFailed(String detail) {
+        return new CompanyException(
+                HttpStatus.BAD_REQUEST,
+                "COMPANY_USER_INVITATION_FAILED",
+                detail != null && !detail.isBlank()
+                        ? detail
+                        : "No se pudo invitar el usuario para esta empresa"
         );
     }
 }

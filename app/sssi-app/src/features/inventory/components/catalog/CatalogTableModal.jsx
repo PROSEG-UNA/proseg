@@ -14,15 +14,9 @@ import { deleteCatalogItem } from '../../services/catalogService';
 import CatalogFormModal from './CatalogFormModal.jsx';
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
-import {getFriendlyApiErrorMessage} from "../../../../common/utils/index.js";
+import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
 
-const getInventoryPermissionGroup = (baseUrl = '') => {
-    if (baseUrl.includes('/campuses') || baseUrl.includes('/locations')) {
-        return PERMISSIONS.INVENTORY.LOCATIONS;
-    }
-
-    return PERMISSIONS.INVENTORY.CATALOG ?? PERMISSIONS.INVENTORY;
-};
+const getInventoryPermissionGroup = () => PERMISSIONS.INVENTORY.CATALOG ?? PERMISSIONS.INVENTORY;
 
 export default function CatalogTableModal({ open, onClose, config }) {
     const { title = '', pluralTitle = '', baseUrl = '', icon: Icon = null, columns: configColumns = [] } = config ?? {};
@@ -37,25 +31,27 @@ export default function CatalogTableModal({ open, onClose, config }) {
     const [deletingRow, setDeletingRow] = useState(null);
     const [deleting, setDeleting] = useState(false);
     const [alert, setAlert] = useState(null);
+
     const { hasPermission } = usePermissions();
-    const inventoryPermissions = useMemo(() => getInventoryPermissionGroup(baseUrl), [baseUrl]);
+    const inventoryPermissions = useMemo(() => getInventoryPermissionGroup(), []);
     const canViewCatalog = hasPermission(inventoryPermissions.READ)
         || hasPermission(inventoryPermissions.MANAGE)
         || hasPermission(inventoryPermissions.DELETE);
     const canManageCatalog = hasPermission(inventoryPermissions.MANAGE);
     const canDeleteCatalog = hasPermission(inventoryPermissions.DELETE);
+
     const hasCatalogAction = useCallback((action) => {
         if (!Array.isArray(config?.actions)) return true;
         return config.actions.includes(action);
     }, [config]);
 
     const canCreateCatalog = canManageCatalog && hasCatalogAction('create');
-    const canEditCatalog = canManageCatalog && hasCatalogAction('edit');
+    const canEditCatalog   = canManageCatalog && hasCatalogAction('edit');
     const canRemoveCatalog = canDeleteCatalog && hasCatalogAction('delete');
 
     const columnToBackendKey = config?.columnToBackendKey ?? {};
 
-    const debouncedGlobalFilter = useDebounce(globalFilter, 350);
+    const debouncedGlobalFilter  = useDebounce(globalFilter, 350);
     const debouncedColumnFilters = useDebounce(columnFilters, 350);
 
     const backendFilters = useMemo(() => {
@@ -69,11 +65,10 @@ export default function CatalogTableModal({ open, onClose, config }) {
     }, [debouncedColumnFilters, columnToBackendKey]);
 
     const backendSort = useMemo(
-        () => sorting
-            .map(({ id, desc }) => {
-                const key = columnToBackendKey[id] ?? id;
-                return `${key},${desc ? 'desc' : 'asc'}`;
-            }),
+        () => sorting.map(({ id, desc }) => {
+            const key = columnToBackendKey[id] ?? id;
+            return `${key},${desc ? 'desc' : 'asc'}`;
+        }),
         [sorting, columnToBackendKey]
     );
 
@@ -105,7 +100,7 @@ export default function CatalogTableModal({ open, onClose, config }) {
     });
 
     const handleCreate = () => { setFormRow(null); setFormOpen(true); };
-    const handleEdit = useCallback((row) => { setFormRow(row); setFormOpen(true); }, []);
+    const handleEdit   = useCallback((row) => { setFormRow(row); setFormOpen(true); }, []);
     const handleDelete = useCallback((row) => setDeletingRow(row), []);
 
     const handleConfirmDelete = async () => {
@@ -148,7 +143,7 @@ export default function CatalogTableModal({ open, onClose, config }) {
                 label: 'Eliminar',
                 icon: <DeleteIcon fontSize="small" />,
                 color: 'error',
-                    hidden: !canRemoveCatalog,
+                hidden: !canRemoveCatalog,
                 onClick: () => handleDelete(row.original),
             },
         ];
@@ -176,6 +171,8 @@ export default function CatalogTableModal({ open, onClose, config }) {
 
     const isAccessDeniedError = error && (error.includes('permisos') || error.includes('403') || error.includes('Acceso denegado'));
 
+    const hasRowActions = canEditCatalog || canRemoveCatalog;
+
     return (
         <>
             <GeneralModal
@@ -199,8 +196,8 @@ export default function CatalogTableModal({ open, onClose, config }) {
                         data={rows}
                         loading={loading}
                         error={error}
-                        enableRowActions={canEditCatalog || canRemoveCatalog}
-                        renderRowActions={canEditCatalog || canRemoveCatalog ? renderRowActions : undefined}
+                        enableRowActions={hasRowActions}
+                        renderRowActions={hasRowActions ? renderRowActions : undefined}
                         tableOptions={{
                             positionActionsColumn: 'last',
                             manualPagination: true,

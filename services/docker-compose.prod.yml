@@ -130,6 +130,7 @@ services:
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=${KEYCLOAK_ISSUER_URI:-https://auth.devbychris.com/realms/sssi-realm}
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:-http://msvc-eureka:8761/eureka/}
       - EUREKA_INSTANCE_HOSTNAME=${EUREKA_INSTANCE_HOSTNAME:-msvc-auth}
+      - GATEWAY_BASE_URL=${GATEWAY_BASE_URL:-http://msvc-gateway:8081}
       - KEYCLOAK_SERVER_URL=${KEYCLOAK_SERVER_URL:-https://auth.devbychris.com}
       - KEYCLOAK_REALM=${KEYCLOAK_REALM:-sssi-realm}
       - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-sssi-app}
@@ -328,6 +329,7 @@ services:
       - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=${SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT:-org.hibernate.dialect.PostgreSQLDialect}
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:-http://msvc-eureka:8761/eureka/}
       - EUREKA_INSTANCE_HOSTNAME=${EUREKA_INSTANCE_HOSTNAME:-msvc-maintenance}
+      - GATEWAY_BASE_URL=${GATEWAY_BASE_URL:-http://msvc-gateway:8081}
     depends_on:
       msvc-config:
         condition: service_healthy

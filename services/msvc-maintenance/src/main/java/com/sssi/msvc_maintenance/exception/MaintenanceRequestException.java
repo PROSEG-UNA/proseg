@@ -17,5 +17,13 @@ public class MaintenanceRequestException extends BaseException {
         );
     }
 
+    public static MaintenanceRequestException companyNotAllowed() {
+        return new MaintenanceRequestException(
+                HttpStatus.FORBIDDEN,
+                "MAINTENANCE_REQUEST_COMPANY_NOT_ALLOWED",
+                "Solo puedes registrar solicitudes para tu empresa asociada."
+        );
+    }
+
 }
 

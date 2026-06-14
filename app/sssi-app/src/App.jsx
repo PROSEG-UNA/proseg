@@ -17,8 +17,14 @@ import UserPage from './features/security/pages/UserPage';
 import RolePage from './features/security/pages/RolePage';
 import MaintenancePage from './features/maintenance/pages/MaintenancePage.jsx';
 import DashboardLayout from './layouts/DashboardLayout';
+import CompaniesPage from "./features/maintenance/pages/company/CompaniesPage.jsx";
+import RequestsPage from "./features/maintenance/pages/request/RequestsPage.jsx";
+import MaintenanceRegisterPage from "./features/maintenance/pages/register/RegisterPage.jsx";
+import CampusPage from './features/locations/pages/CampusPage';
+import BuildingPage from './features/locations/pages/BuildingPage';
+import LocationPage from './features/locations/pages/LocationPage';
+import EmailPage from './features/locations/pages/EmailPage';
 import CompaniesPage from "./features/maintenance/pages/CompaniesPage.jsx";
-import RequestsPage from "./features/maintenance/pages/RequestsPage.jsx";
 import TicketsPage from './features/maintenance/pages/TicketsPage.jsx';
 
 function App() {
@@ -41,7 +47,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout>
+                                                <DashboardLayout title="Sistema Programa Servicios Generales">
                                                     <HomePage />
                                                 </DashboardLayout>
                                             }
@@ -54,8 +60,57 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout>
+                                                <DashboardLayout title="Gestión de Activos">
                                                     <AssetPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route path="/ubicaciones" element={<Navigate to="/ubicaciones/campus" replace />} />
+                                <Route
+                                    path="/ubicaciones/campus"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Gestión de Campus">
+                                                    <CampusPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/ubicaciones/edificios"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Gestión de Edificios">
+                                                    <BuildingPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/ubicaciones/locaciones"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Gestión de Locaciones">
+                                                    <LocationPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/ubicaciones/correos"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Gestión de Correos">
+                                                    <EmailPage />
                                                 </DashboardLayout>
                                             }
                                         />
@@ -90,7 +145,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout>
+                                                <DashboardLayout title="Gestión de Seguridad">
                                                     <SecurityPage />
                                                 </DashboardLayout>
                                             }
@@ -102,7 +157,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout>
+                                                <DashboardLayout title="Gestión de Usuarios">
                                                     <UserPage />
                                                 </DashboardLayout>
                                             }
@@ -114,7 +169,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout>
+                                                <DashboardLayout title="Gestión de Roles">
                                                     <RolePage />
                                                 </DashboardLayout>
                                             }
@@ -126,7 +181,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout>
+                                                <DashboardLayout title="Gestión de Mantenimiento">
                                                     <CompaniesPage />
                                                 </DashboardLayout>
                                             }
@@ -138,8 +193,20 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout>
+                                                <DashboardLayout title="Gestión de Mantenimiento">
                                                     <RequestsPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/mantenimiento/registros"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Gestión de Mantenimiento">
+                                                    <MaintenanceRegisterPage />
                                                 </DashboardLayout>
                                             }
                                         />

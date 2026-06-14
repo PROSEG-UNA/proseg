@@ -15,6 +15,7 @@ import DialogModal from '../../../../common/components/DialogModal.jsx';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
 import CatalogFormModal from '../catalog/CatalogFormModal.jsx';
 import { CATALOG_CONFIG } from '../catalog/catalogConfig.js';
+import { LOCATION_CONFIG as LOCATION_CATALOG_CONFIG } from '../../../locations/components/location/locationConfig.js';
 import { fetchCatalogOptions, createCatalogItem } from '../../services/catalogService.js';
 import { createAsset, updateAsset, fetchAssetById, fetchLastKnownNetworkInterface, checkAssetNumber } from '../../services/assetsService.js';
 import { uploadPhoto, registerArchive, fetchAssetArchives, deleteArchive } from '../../services/assetArchiveService.js';
@@ -388,9 +389,9 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
             brandId:    CATALOG_CONFIG.brand,
             typeId:     CATALOG_CONFIG.type,
             modelId:    CATALOG_CONFIG.model,
-            campusId:   CATALOG_CONFIG.campus,
-            buildingId: CATALOG_CONFIG.building,
-            locationId: CATALOG_CONFIG.location,
+            campusId:   LOCATION_CATALOG_CONFIG.campus,
+            buildingId: LOCATION_CATALOG_CONFIG.building,
+            locationId: LOCATION_CATALOG_CONFIG.location,
         };
         let initialValues;
         if (fieldKey === 'buildingId') {
@@ -750,7 +751,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                             />
 
                             <SearchableSelect
-                                label="Tipo" value={formValues.typeId} required
+                                label="Tipo de activo" value={formValues.typeId} required
                                 onChange={handleTypeChange}
                                 onBlur={() => handleBlur('typeId')}
                                 fullWidth size="small" disabled={saving || loadingOptions}
@@ -761,7 +762,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                                 getItemLabel={t => t.name}
                                 getItemValue={t => t.id}
                                 onCreate={() => openCatalogModal('typeId')}
-                                createLabel="Crear nuevo Tipo"
+                                createLabel="Crear nuevo Tipo de Activo"
                             />
 
                             <SearchableSelect
@@ -772,7 +773,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                                 error={touched.modelId && !!errors.modelId}
                                 helperText={
                                     (!formValues.brandId || !formValues.typeId)
-                                        ? 'Selecciona marca y tipo primero'
+                                        ? 'Selecciona marca y tipo de activo primero'
                                         : (touched.modelId ? (errors.modelId || ' ') : ' ')
                                 }
                                 sx={{ ...fieldSx, gridColumn: '1 / -1' }}
@@ -781,32 +782,6 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                                 getItemValue={m => m.id}
                                 onCreate={() => openCatalogModal('modelId')}
                                 createLabel="Crear nuevo Modelo"
-                            />
-                        </Box>
-                    </Box>
-
-                    <Divider />
-
-                    <Box>
-                        {sectionLabel('Responsable')}
-                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2 }}>
-                            <TextField
-                                label="Unidad Ejecutora" value={formValues.executingUnit}
-                                onChange={e => handleChange('executingUnit', e.target.value)}
-                                fullWidth size="small" disabled={saving}
-                                sx={fieldSx}
-                            />
-                            <TextField
-                                label="Nombre Funcionario" value={formValues.responsibleEmployee}
-                                onChange={e => handleChange('responsibleEmployee', e.target.value)}
-                                fullWidth size="small" disabled={saving}
-                                sx={fieldSx}
-                            />
-                            <TextField
-                                label="Identificación Funcionario" value={formValues.responsibleEmployeeId}
-                                onChange={e => handleChange('responsibleEmployeeId', e.target.value)}
-                                fullWidth size="small" disabled={saving}
-                                sx={fieldSx}
                             />
                         </Box>
                     </Box>
@@ -890,23 +865,6 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     <Divider />
 
                     <Box>
-                        {sectionLabel('Coordenadas')}
-                        <CoordinateMapPicker
-                            latitude={formValues.latitude}
-                            longitude={formValues.longitude}
-                            onCoordinatesChange={handleCoordinatesChange}
-                            onLatitudeChange={v => handleChange('latitude', v)}
-                            onLongitudeChange={v => handleChange('longitude', v)}
-                            onBlur={key => handleBlur(key)}
-                            disabled={saving}
-                            errors={errors}
-                            touched={touched}
-                        />
-                    </Box>
-
-                    <Divider />
-
-                    <Box>
                         {sectionLabel('Estado')}
                         <Box sx={{ display: 'grid', gridTemplateColumns: formValues.status === 'DE_BAJA' ? { xs: '1fr', sm: '1fr 1fr' } : '1fr', gap: 2 }}>
                             <TextField
@@ -943,36 +901,8 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
 
                     <Divider />
 
-                    <Box>
-                        {sectionLabel('Fechas')}
-                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
-                            <DatePicker
-                                label="Fecha de adquisición"
-                                value={formValues.acquisitionDate ? dayjs(formValues.acquisitionDate) : null}
-                                onChange={v => handleChange('acquisitionDate', v ? v.format('YYYY-MM-DD') : '')}
-                                disabled={saving}
-                                slotProps={{ textField: { size: 'small', fullWidth: true, sx: fieldSx } }}
-                            />
-                            <DatePicker
-                                label="Fin de garantía"
-                                value={formValues.warrantyEndDate ? dayjs(formValues.warrantyEndDate) : null}
-                                onChange={v => handleChange('warrantyEndDate', v ? v.format('YYYY-MM-DD') : '')}
-                                disabled={saving}
-                                slotProps={{ textField: { size: 'small', fullWidth: true, sx: fieldSx } }}
-                            />
-                            <DatePicker
-                                label="Fin de soporte firmware"
-                                value={formValues.firmwareSupportEndDate ? dayjs(formValues.firmwareSupportEndDate) : null}
-                                onChange={v => handleChange('firmwareSupportEndDate', v ? v.format('YYYY-MM-DD') : '')}
-                                disabled={saving}
-                                slotProps={{ textField: { size: 'small', fullWidth: true, sx: fieldSx } }}
-                            />
-                        </Box>
-                    </Box>
-
                     {requiresNetworkInterface && (
                         <>
-                            <Divider />
                             <Box>
                                 {sectionLabel('IP y MAC')}
                                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
@@ -1023,8 +953,79 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                                     />
                                 </Box>
                             </Box>
+                            <Divider />
                         </>
                     )}
+
+                    <Box>
+                        {sectionLabel('Fechas')}
+                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+                            <DatePicker
+                                label="Fecha de adquisición"
+                                value={formValues.acquisitionDate ? dayjs(formValues.acquisitionDate) : null}
+                                onChange={v => handleChange('acquisitionDate', v ? v.format('YYYY-MM-DD') : '')}
+                                disabled={saving}
+                                slotProps={{ textField: { size: 'small', fullWidth: true, sx: fieldSx } }}
+                            />
+                            <DatePicker
+                                label="Fin de garantía"
+                                value={formValues.warrantyEndDate ? dayjs(formValues.warrantyEndDate) : null}
+                                onChange={v => handleChange('warrantyEndDate', v ? v.format('YYYY-MM-DD') : '')}
+                                disabled={saving}
+                                slotProps={{ textField: { size: 'small', fullWidth: true, sx: fieldSx } }}
+                            />
+                            <DatePicker
+                                label="Fin de soporte firmware"
+                                value={formValues.firmwareSupportEndDate ? dayjs(formValues.firmwareSupportEndDate) : null}
+                                onChange={v => handleChange('firmwareSupportEndDate', v ? v.format('YYYY-MM-DD') : '')}
+                                disabled={saving}
+                                slotProps={{ textField: { size: 'small', fullWidth: true, sx: fieldSx } }}
+                            />
+                        </Box>
+                    </Box>
+
+                    <Divider />
+
+                    <Box>
+                        {sectionLabel('Coordenadas')}
+                        <CoordinateMapPicker
+                            latitude={formValues.latitude}
+                            longitude={formValues.longitude}
+                            onCoordinatesChange={handleCoordinatesChange}
+                            onLatitudeChange={v => handleChange('latitude', v)}
+                            onLongitudeChange={v => handleChange('longitude', v)}
+                            onBlur={key => handleBlur(key)}
+                            disabled={saving}
+                            errors={errors}
+                            touched={touched}
+                        />
+                    </Box>
+
+                    <Divider />
+
+                    <Box>
+                        {sectionLabel('Responsable')}
+                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2 }}>
+                            <TextField
+                                label="Unidad Ejecutora" value={formValues.executingUnit}
+                                onChange={e => handleChange('executingUnit', e.target.value)}
+                                fullWidth size="small" disabled={saving}
+                                sx={fieldSx}
+                            />
+                            <TextField
+                                label="Identificación Funcionario" value={formValues.responsibleEmployeeId}
+                                onChange={e => handleChange('responsibleEmployeeId', e.target.value)}
+                                fullWidth size="small" disabled={saving}
+                                sx={fieldSx}
+                            />
+                            <TextField
+                                label="Nombre Funcionario" value={formValues.responsibleEmployee}
+                                onChange={e => handleChange('responsibleEmployee', e.target.value)}
+                                fullWidth size="small" disabled={saving}
+                                sx={fieldSx}
+                            />
+                        </Box>
+                    </Box>
 
                     <Divider />
 
@@ -1181,7 +1182,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 open={!!pendingTypeChange}
                 title="Eliminar IP y MAC"
                 message={[
-                    'El nuevo tipo seleccionado no requiere IP y MAC. La IP y MAC actualmente asociada a este activo será eliminada al guardar.',
+                    'El nuevo tipo de activo seleccionado no requiere IP y MAC. La IP y MAC actualmente asociada a este activo será eliminada al guardar.',
                     pendingTypeChange?.ipAddress  ? `IP: ${pendingTypeChange.ipAddress}`   : null,
                     pendingTypeChange?.macAddress ? `MAC: ${pendingTypeChange.macAddress}` : null,
                     '¿Deseas continuar?',

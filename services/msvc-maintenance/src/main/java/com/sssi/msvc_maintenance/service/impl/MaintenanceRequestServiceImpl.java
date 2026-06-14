@@ -8,16 +8,20 @@ import com.sssi.msvc_maintenance.dto.response.InventoryAssetResponseDto;
 import com.sssi.msvc_maintenance.dto.response.MaintenanceAssetOptionDto;
 import com.sssi.msvc_maintenance.dto.response.MaintenanceRequestResponseDto;
 import com.sssi.msvc_maintenance.entity.Company;
+import com.sssi.msvc_maintenance.entity.MaintenanceEmail;
 import com.sssi.msvc_maintenance.entity.MaintenanceRequest;
 import com.sssi.msvc_maintenance.entity.UserCompany;
 import com.sssi.msvc_maintenance.entity.enums.MaintenanceStatus;
 import com.sssi.msvc_maintenance.event.MaintenanceRequestCreatedDomainEvent;
 import com.sssi.msvc_maintenance.exception.CompanyException;
 import com.sssi.msvc_maintenance.exception.MaintenanceRequestException;
+import com.sssi.msvc_maintenance.mapper.MaintenanceAssetOptionMapper;
 import com.sssi.msvc_maintenance.mapper.MaintenanceRequestMapper;
 import com.sssi.msvc_maintenance.repository.CompanyRepository;
+import com.sssi.msvc_maintenance.repository.MaintenanceEmailRepository;
 import com.sssi.msvc_maintenance.repository.MaintenanceRequestRepository;
 import com.sssi.msvc_maintenance.repository.UserCompanyRepository;
+import com.sssi.msvc_maintenance.security.Privileges;
 import com.sssi.msvc_maintenance.service.MaintenanceRequestService;
 import com.sssi.msvc_maintenance.specification.GenericSpecifications;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +31,10 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +49,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
     private final MaintenanceRequestRepository maintenanceRequestRepository;
     private final CompanyRepository companyRepository;
     private final UserCompanyRepository userCompanyRepository;
+    private final MaintenanceEmailRepository maintenanceEmailRepository;
     private final MaintenanceRequestMapper maintenanceRequestMapper;
     private final InventoryClient inventoryClient;
     private final ApplicationEventPublisher eventPublisher;
@@ -50,6 +59,8 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
     public MaintenanceRequestResponseDto create(MaintenanceRequestRequestDto request) {
 
         UUID companyId = parseUuid(request.getCompanyId(), "companyId");
+
+        enforceCompanyForRequester(companyId);
 
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(CompanyException::notFound);
@@ -63,6 +74,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         maintenanceRequest.setBuildingId(request.getBuildingId());
         maintenanceRequest.setAssignedTechnicians(technicians);
         maintenanceRequest.setLeaderUserCompany(resolveLeader(request.getLeaderUserCompanyId(), technicians));
+        maintenanceRequest.setEmails(resolveEmails(request.getEmails()));
 
         MaintenanceRequest saved = maintenanceRequestRepository.save(maintenanceRequest);
 
@@ -82,8 +94,14 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                 ? saved.getLeaderUserCompany().getKeycloakUserId()
                 : null;
 
+        List<String> emails = saved.getEmails() == null
+                ? List.of()
+                : saved.getEmails().stream()
+                        .map(MaintenanceEmail::getEmail)
+                        .toList();
+
         eventPublisher.publishEvent(new MaintenanceRequestCreatedDomainEvent(
-                saved.getEmail(),
+                emails,
                 saved.getCompany().getName(),
                 saved.getCompany().getLegalId(),
                 saved.getDescription(),
@@ -155,6 +173,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         maintenanceRequest.setBuildingId(request.getBuildingId());
         maintenanceRequest.setAssignedTechnicians(technicians);
         maintenanceRequest.setLeaderUserCompany(resolveLeader(request.getLeaderUserCompanyId(), technicians));
+        maintenanceRequest.setEmails(resolveEmails(request.getEmails()));
 
         return maintenanceRequestMapper.toResponse(maintenanceRequestRepository.save(maintenanceRequest));
     }
@@ -180,7 +199,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
 
         List<MaintenanceAssetOptionDto> content = (data.getContent() == null ? List.<InventoryAssetResponseDto>of() : data.getContent())
                 .stream()
-                .map(this::toAssetOption)
+                .map(MaintenanceAssetOptionMapper::toOption)
                 .toList();
 
         return new PageImpl<>(content, pageable, data.getTotalElements());
@@ -196,6 +215,33 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         maintenanceRequestRepository.delete(maintenanceRequest);
     }
 
+    private void enforceCompanyForRequester(UUID companyId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return;
+        }
+
+        boolean canSelectAnyCompany = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority -> authority.equals(Privileges.SolicitudesMantenimiento.SELECCIONAR_EMPRESA));
+        if (canSelectAnyCompany) {
+            return;
+        }
+
+        if (!(authentication.getPrincipal() instanceof Jwt jwt)) {
+            throw MaintenanceRequestException.companyNotAllowed();
+        }
+
+        UUID ownCompanyId = userCompanyRepository.findAllByKeycloakUserId(jwt.getSubject()).stream()
+                .findFirst()
+                .map(userCompany -> userCompany.getCompany().getId())
+                .orElseThrow(CompanyException::noAssociatedCompany);
+
+        if (!ownCompanyId.equals(companyId)) {
+            throw MaintenanceRequestException.companyNotAllowed();
+        }
+    }
+
     private List<UserCompany> resolveAssignedTechnicians(List<UUID> ids, Company company) {
         if (ids == null || ids.isEmpty()) {
             return List.of();
@@ -209,6 +255,20 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         return found;
     }
 
+    private List<MaintenanceEmail> resolveEmails(List<String> rawEmails) {
+        if (rawEmails == null || rawEmails.isEmpty()) {
+            return List.of();
+        }
+        return rawEmails.stream()
+                .filter(email -> email != null && !email.isBlank())
+                .map(String::trim)
+                .distinct()
+                .map(email -> maintenanceEmailRepository.findByEmail(email)
+                        .orElseGet(() -> maintenanceEmailRepository.save(
+                                MaintenanceEmail.builder().email(email).build())))
+                .toList();
+    }
+
     private UserCompany resolveLeader(UUID leaderId, List<UserCompany> technicians) {
         if (leaderId == null) {
             return null;
@@ -216,7 +276,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         return technicians.stream()
                 .filter(uc -> uc.getId().equals(leaderId))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("El técnico líder debe estar en la lista de técnicos asignados"));
+                .orElseThrow(() -> new IllegalArgumentException("El técnico encargado debe estar en la lista de técnicos asignados"));
     }
 
     private UUID parseUuid(String value, String fieldName) {
@@ -225,18 +285,6 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         } catch (IllegalArgumentException | NullPointerException ex) {
             throw new IllegalArgumentException("El campo '" + fieldName + "' debe ser un UUID válido", ex);
         }
-    }
-
-    private MaintenanceAssetOptionDto toAssetOption(InventoryAssetResponseDto asset) {
-        return MaintenanceAssetOptionDto.builder()
-                .id(asset.getId())
-                .assetNumber(asset.getAssetNumber())
-                .serialNumber(asset.getSerialNumber())
-                .kind(asset.getKind())
-                .status(asset.getStatus())
-                .modelName(asset.getModel() != null ? asset.getModel().getName() : null)
-                .locationName(asset.getLocation() != null ? asset.getLocation().getName() : null)
-                .build();
     }
 }
 

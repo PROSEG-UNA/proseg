@@ -130,6 +130,7 @@ services:
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://msvc-eureka:8761/eureka/
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://msvc-eureka:8761/eureka/
       - EUREKA_INSTANCE_HOSTNAME=msvc-auth
+      - GATEWAY_BASE_URL=http://msvc-gateway:8081
       - API_PREFIX=/api
       - ROUTES_AUTH=/api/auth
       - ROUTES_USER=/api/user

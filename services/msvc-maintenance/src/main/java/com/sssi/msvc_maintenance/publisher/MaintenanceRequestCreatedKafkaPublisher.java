@@ -35,7 +35,7 @@ public class MaintenanceRequestCreatedKafkaPublisher {
             kafkaTemplate.send(
                     KafkaTopics.MAINTENANCE_REQUEST_CREATED_TOPIC,
                     MaintenanceRequestCreatedEvent.builder()
-                            .email(event.email())
+                            .emails(event.emails())
                             .companyName(event.companyName())
                             .legalId(event.legalId())
                             .description(event.description())

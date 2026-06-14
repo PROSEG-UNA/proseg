@@ -19,7 +19,7 @@ public class MaintenanceRequestResponseDto {
     private UUID id;
     private CompanyResponseDto company;
     private String description;
-    private String email;
+    private List<String> emails;
     private MaintenanceStatus status;
     private LocalDate startDate;
     private LocalDate endDate;

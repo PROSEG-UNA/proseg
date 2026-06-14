@@ -15,8 +15,6 @@ import java.util.UUID;
 @Builder
 public class InventoryAssetLocationResponseDto {
     private UUID id;
-    private String name;
     private String description;
-    private InventoryAssetSiteResponseDto site;  // ← agregar
+    private InventoryAssetFloorResponseDto floor;
 }
-

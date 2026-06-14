@@ -17,17 +17,21 @@ export default function CatalogGrid({ children }) {
 
     const accent = theme.vars.palette.tones.rose.fg;
 
-    const nextView = () => setView(v =>
-        v === 'default' ? 'expanded' : v === 'expanded' ? 'collapsed' : 'default'
-    );
+    const allVisible = view === 'expanded' || (view === 'default' && rest.length === 0);
 
-    const buttonLabel = view === 'expanded'
-        ? 'Mostrar menos'
-        : view === 'collapsed'
-            ? `Mostrar ${all.length}`
+    const nextView = () => setView(v => {
+        if (v === 'collapsed') return 'default';
+        if (v === 'default' && rest.length > 0) return 'expanded';
+        return 'collapsed';
+    });
+
+    const buttonLabel = view === 'collapsed'
+        ? 'Mostrar Catalogo'
+        : allVisible
+            ? 'Mostrar menos'
             : `Mostrar ${rest.length} más`;
 
-    const buttonIcon = view === 'expanded' ? <ExpandLessIcon /> : <ExpandMoreIcon />;
+    const buttonIcon = allVisible ? <ExpandLessIcon /> : <ExpandMoreIcon />;
 
     const itemSx = {
         flex: '1 1 auto',

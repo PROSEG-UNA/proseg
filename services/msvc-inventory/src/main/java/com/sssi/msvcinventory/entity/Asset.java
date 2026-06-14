@@ -61,7 +61,7 @@ public class Asset extends BaseEntity {
     @JoinColumn(name = "asset_model_id", nullable = false)
     private Model model;
 
-    @Filterable(type = FilterType.TEXT, nestedPaths = {"description"})
+    @Filterable(type = FilterType.TEXT, nestedPaths = {"description", "floor.name", "floor.building.name", "floor.building.campus.name"})
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "location_id", nullable = false)
     private Location location;

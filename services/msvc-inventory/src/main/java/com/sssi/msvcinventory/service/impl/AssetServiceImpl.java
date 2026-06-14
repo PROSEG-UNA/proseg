@@ -108,9 +108,38 @@ public class AssetServiceImpl implements AssetService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<AssetResponseDto> findByCampusId(UUID campusId, Pageable pageable) {
-        return assetRepository.findByLocationFloorBuildingCampusId(campusId, pageable)
-                .map(this::toPolymorphicResponse);
+    public Page<AssetResponseDto> findByCampusId(UUID campusId, String search, Map<String, String> filters, Pageable pageable) {
+        Specification<Asset> spec = Specification
+                .where((Specification<Asset>) (root, query, cb) ->
+                        cb.equal(root.get("location").get("floor").get("building").get("campus").get("id"), campusId))
+                .and(GenericSpecifications.<Asset>withSearch(Asset.class, search))
+                .and(GenericSpecifications.<Asset>withColumnFilters(Asset.class, filters));
+
+        Pageable sanitized = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                GenericSpecifications.sanitizeSort(Asset.class, pageable.getSort())
+        );
+
+        return assetRepository.findAll(spec, sanitized).map(this::toPolymorphicResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<AssetResponseDto> findByBuildingId(UUID buildingId, String search, Map<String, String> filters, Pageable pageable) {
+        Specification<Asset> spec = Specification
+                .where((Specification<Asset>) (root, query, cb) ->
+                        cb.equal(root.get("location").get("floor").get("building").get("id"), buildingId))
+                .and(GenericSpecifications.<Asset>withSearch(Asset.class, search))
+                .and(GenericSpecifications.<Asset>withColumnFilters(Asset.class, filters));
+
+        Pageable sanitized = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                GenericSpecifications.sanitizeSort(Asset.class, pageable.getSort())
+        );
+
+        return assetRepository.findAll(spec, sanitized).map(this::toPolymorphicResponse);
     }
 
     @Override

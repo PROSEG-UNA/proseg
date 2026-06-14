@@ -3,19 +3,32 @@ import { Box, Button, Chip, Divider, MenuItem, TextField, Typography, useTheme }
 import ConstructionIcon from '@mui/icons-material/Construction';
 import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import dayjs from 'dayjs';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
-import { createMaintenanceRequest, fetchMaintenanceRequestById, updateMaintenanceRequest } from '../../services/requestsService';
-import { fetchCompanies, fetchCompanyTechnicians } from '../../services/companiesService';
-import { fetchCampuses, fetchBuildingsByCampus } from '../../services/locationsService';
-import { MAINTENANCE_STATUS_OPTIONS } from '../../maintenanceUtils';
+import TimeSelect from '../../../../common/components/TimeSelect.jsx';
+import { createMaintenanceRequest, fetchMaintenanceRequestById, updateMaintenanceRequest } from '../../services/request/requestsService';
+import { fetchCompanies, fetchCompanyTechnicians, fetchMyCompany } from '../../services/company/companiesService';
+import { usePermissions } from '../../../../common/hooks/index.js';
+import { PERMISSIONS } from '../../../../common/constants/permissions';
+import { fetchCampuses, fetchBuildingsByCampus, fetchBuildingEmails, fetchCampusEmails } from '../../services/locationsService';
+import { MAINTENANCE_STATUS_OPTIONS, checkScheduleConsistency } from '../../maintenanceUtils';
+
+const SCHEDULE_DATE_ERROR = 'La fecha de fin no puede ser anterior a la fecha de inicio';
+const SCHEDULE_TIME_ERROR = 'La hora de salida no puede ser anterior a la hora de llegada';
+
+function scheduleErrorsFor(values) {
+    const { endDateInvalid, endTimeInvalid } = checkScheduleConsistency(values);
+    return {
+        endDate: endDateInvalid ? SCHEDULE_DATE_ERROR : '',
+        endTime: endTimeInvalid ? SCHEDULE_TIME_ERROR : '',
+    };
+}
 
 const INITIAL_VALUES = {
     companyId: '',
-    email: '',
+    emails: [],
     status: 'PENDING',
     description: '',
     startDate: null,
@@ -37,6 +50,10 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
     const accentColor = theme.vars.palette.tones.rose.fg;
     const isEdit = !!requestId;
 
+    const { hasPermission } = usePermissions();
+    const canSelectCompany = hasPermission(PERMISSIONS.MAINTENANCE.REQUESTS.SELECT_COMPANY);
+    const lockCompany = !canSelectCompany;
+
     const [formValues, setFormValues] = useState(INITIAL_VALUES);
     const [errors, setErrors] = useState({});
     const [touched, setTouched] = useState({});
@@ -48,6 +65,8 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
     const [buildings, setBuildings] = useState([]);
     const [loadingCampuses, setLoadingCampuses] = useState(false);
     const [loadingBuildings, setLoadingBuildings] = useState(false);
+    const [emailOptions, setEmailOptions] = useState([]);
+    const [loadingEmails, setLoadingEmails] = useState(false);
     const [technicianOptions, setTechnicianOptions] = useState([]);
     const [loadingTechnicians, setLoadingTechnicians] = useState(false);
     const [selectedTechnicians, setSelectedTechnicians] = useState({});
@@ -66,6 +85,8 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
             setCompanies([]);
             setCampuses([]);
             setBuildings([]);
+            setEmailOptions([]);
+            setLoadingEmails(false);
             setTechnicianOptions([]);
             setSelectedTechnicians({});
             setTechnicianToAdd('');
@@ -82,6 +103,23 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
         let cancelled = false;
         setLoadingOptions(true);
 
+        if (lockCompany) {
+            fetchMyCompany()
+                .then((company) => {
+                    if (cancelled || !company) return;
+                    setCompanies([company]);
+                    setFormValues((prev) => ({ ...prev, companyId: company.id }));
+                })
+                .catch(() => {})
+                .finally(() => {
+                    if (!cancelled) setLoadingOptions(false);
+                });
+
+            return () => {
+                cancelled = true;
+            };
+        }
+
         fetchCompanies({ page: 0, size: 200 })
             .then((page) => {
                 if (!cancelled) setCompanies(page.content ?? []);
@@ -96,7 +134,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
         };
     };
 
-    useEffect(loadCompanies, [open]);
+    useEffect(loadCompanies, [open, lockCompany]);
 
     const loadCampuses = () => {
         if (!open) return;
@@ -143,6 +181,36 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
 
     useEffect(loadBuildings, [open, formValues.campusId]);
 
+    const loadEmails = () => {
+        if (!open || (!formValues.buildingId && !formValues.campusId)) {
+            setEmailOptions([]);
+            return;
+        }
+        let cancelled = false;
+        setLoadingEmails(true);
+
+        const fetcher = formValues.buildingId
+            ? fetchBuildingEmails(formValues.buildingId)
+            : fetchCampusEmails(formValues.campusId);
+
+        fetcher
+            .then((data) => {
+                if (!cancelled) setEmailOptions(Array.isArray(data) ? data : []);
+            })
+            .catch(() => {
+                if (!cancelled) setEmailOptions([]);
+            })
+            .finally(() => {
+                if (!cancelled) setLoadingEmails(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    };
+
+    useEffect(loadEmails, [open, formValues.campusId, formValues.buildingId]);
+
     const loadTechnicians = () => {
         if (!open || !formValues.companyId) {
             setTechnicianOptions([]);
@@ -177,7 +245,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                 if (cancelled || !request) return;
                 setFormValues({
                     companyId: request.company?.id ?? initialCompanyId ?? '',
-                    email: request.email ?? '',
+                    emails: Array.isArray(request.emails) ? request.emails : [],
                     status: request.status ?? 'PENDING',
                     description: request.description ?? '',
                     startDate: request.startDate ? dayjs(request.startDate) : null,
@@ -214,12 +282,8 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
         let error = '';
         const trimmed = typeof value === 'string' ? value.trim() : value;
 
-        if (['companyId', 'campusId', 'email'].includes(key) && !trimmed) {
+        if (['companyId', 'campusId'].includes(key) && !trimmed) {
             error = 'Este campo es requerido';
-        }
-
-        if (key === 'email' && trimmed && !EMAIL_REGEX.test(trimmed)) {
-            error = 'El correo electrónico tiene un formato inválido';
         }
 
         if (['startDate', 'endDate', 'startTime', 'endTime'].includes(key) && !value) {
@@ -232,18 +296,37 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
 
     const PICKER_FIELDS = ['startDate', 'endDate', 'startTime', 'endTime'];
 
+    const applyScheduleErrors = (values) => {
+        const schedule = scheduleErrorsFor(values);
+        setErrors((prev) => ({
+            ...prev,
+            endDate: values.endDate ? schedule.endDate : prev.endDate,
+            endTime: values.endTime ? schedule.endTime : prev.endTime,
+        }));
+        setTouched((prev) => ({
+            ...prev,
+            ...(schedule.endDate ? { endDate: true } : {}),
+            ...(schedule.endTime ? { endTime: true } : {}),
+        }));
+    };
+
     const handleChange = (key, value) => {
+        let merged;
         if (key === 'companyId') {
+            merged = { ...formValues, companyId: value };
             setFormValues((prev) => ({ ...prev, companyId: value }));
             setSelectedTechnicians({});
             setTechnicianToAdd('');
             setLeaderId('');
         } else if (key === 'campusId') {
+            merged = { ...formValues, campusId: value, buildingId: '' };
             setFormValues((prev) => ({ ...prev, campusId: value, buildingId: '' }));
         } else {
+            merged = { ...formValues, [key]: value };
             setFormValues((prev) => ({ ...prev, [key]: value }));
         }
         if (touched[key] || PICKER_FIELDS.includes(key)) validateField(key, value);
+        if (PICKER_FIELDS.includes(key)) applyScheduleErrors(merged);
     };
 
     const handleBlur = (key) => {
@@ -272,6 +355,30 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
         });
     };
 
+    const handleEmailsChange = (values) => {
+        setFormValues((prev) => ({ ...prev, emails: values }));
+        if (values.length > 0) setErrors((prev) => ({ ...prev, emails: '' }));
+    };
+
+    const handleAddManualEmail = (rawEmail) => {
+        const email = (rawEmail || '').trim();
+        if (!email) return;
+        if (!EMAIL_REGEX.test(email)) {
+            setErrors((prev) => ({ ...prev, emails: 'El correo electrónico tiene un formato inválido' }));
+            return;
+        }
+        setFormValues((prev) => (
+            prev.emails.includes(email)
+                ? prev
+                : { ...prev, emails: [...prev.emails, email] }
+        ));
+        setErrors((prev) => ({ ...prev, emails: '' }));
+    };
+
+    const handleRemoveEmail = (email) => {
+        setFormValues((prev) => ({ ...prev, emails: prev.emails.filter((item) => item !== email) }));
+    };
+
     const handleLeaderChange = (value) => {
         setLeaderId(value);
         setErrors((prev) => ({ ...prev, leader: '' }));
@@ -285,7 +392,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
     };
 
     const handleSave = async () => {
-        const requiredFields = ['companyId', 'email', 'startDate', 'endDate', 'startTime', 'endTime', 'campusId'];
+        const requiredFields = ['companyId', 'startDate', 'endDate', 'startTime', 'endTime', 'campusId'];
         const nextTouched = {};
         const nextErrors = {};
 
@@ -298,10 +405,13 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
             }
         });
 
-        const emailTrimmed = formValues.email.trim();
-        if (!nextErrors.email && emailTrimmed && !EMAIL_REGEX.test(emailTrimmed)) {
-            nextErrors.email = 'El correo electrónico tiene un formato inválido';
+        if (!formValues.emails || formValues.emails.length === 0) {
+            nextErrors.emails = 'Se requiere al menos un correo electrónico';
         }
+
+        const schedule = scheduleErrorsFor(formValues);
+        if (!nextErrors.endDate && schedule.endDate) nextErrors.endDate = schedule.endDate;
+        if (!nextErrors.endTime && schedule.endTime) nextErrors.endTime = schedule.endTime;
 
         const technicianIds = Object.keys(selectedTechnicians);
         if (technicianIds.length === 0) {
@@ -309,7 +419,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
         }
 
         if (!leaderId) {
-            nextErrors.leader = 'Selecciona un líder';
+            nextErrors.leader = 'Selecciona un encargado';
         }
 
         setTouched((prev) => ({ ...prev, ...nextTouched }));
@@ -324,7 +434,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
         try {
             const payload = {
                 companyId: formValues.companyId,
-                email: emailTrimmed,
+                emails: formValues.emails,
                 description: formValues.description.trim() || null,
                 startDate: formValues.startDate ? dayjs(formValues.startDate).format('YYYY-MM-DD') : null,
                 endDate: formValues.endDate ? dayjs(formValues.endDate).format('YYYY-MM-DD') : null,
@@ -415,7 +525,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                             required
                             fullWidth
                             size="small"
-                            disabled={anyLoading}
+                            disabled={anyLoading || lockCompany}
                             error={touched.companyId && !!errors.companyId}
                             helperText={touched.companyId ? (errors.companyId || ' ') : ' '}
                             sx={fieldSx}
@@ -464,6 +574,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                                 onChange={(value) => handleChange('startDate', value)}
                                 onClose={() => handleBlur('startDate')}
                                 disabled={anyLoading}
+                                maxDate={formValues.endDate || undefined}
                                 slotProps={{
                                     textField: {
                                         size: 'small',
@@ -480,6 +591,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                                 onChange={(value) => handleChange('endDate', value)}
                                 onClose={() => handleBlur('endDate')}
                                 disabled={anyLoading}
+                                minDate={formValues.startDate || undefined}
                                 slotProps={{
                                     textField: {
                                         size: 'small',
@@ -490,37 +602,29 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                                     },
                                 }}
                             />
-                            <TimePicker
+                            <TimeSelect
                                 label="Hora de llegada *"
                                 value={formValues.startTime}
                                 onChange={(value) => handleChange('startTime', value)}
                                 onClose={() => handleBlur('startTime')}
                                 disabled={anyLoading}
-                                slotProps={{
-                                    textField: {
-                                        size: 'small',
-                                        fullWidth: true,
-                                        sx: fieldSx,
-                                        error: touched.startTime && !!errors.startTime,
-                                        helperText: touched.startTime ? (errors.startTime || ' ') : ' ',
-                                    },
-                                }}
+                                size="small"
+                                fullWidth
+                                sx={fieldSx}
+                                error={touched.startTime && !!errors.startTime}
+                                helperText={touched.startTime ? (errors.startTime || ' ') : ' '}
                             />
-                            <TimePicker
+                            <TimeSelect
                                 label="Hora de salida *"
                                 value={formValues.endTime}
                                 onChange={(value) => handleChange('endTime', value)}
                                 onClose={() => handleBlur('endTime')}
                                 disabled={anyLoading}
-                                slotProps={{
-                                    textField: {
-                                        size: 'small',
-                                        fullWidth: true,
-                                        sx: fieldSx,
-                                        error: touched.endTime && !!errors.endTime,
-                                        helperText: touched.endTime ? (errors.endTime || ' ') : ' ',
-                                    },
-                                }}
+                                size="small"
+                                fullWidth
+                                sx={fieldSx}
+                                error={touched.endTime && !!errors.endTime}
+                                helperText={touched.endTime ? (errors.endTime || ' ') : ' '}
                             />
                         </Box>
                     </Box>
@@ -599,7 +703,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                                     </Button>
                                 </Box>
                                 <SearchableSelect
-                                    label="Líder *"
+                                    label="Encargado *"
                                     value={leaderId}
                                     onChange={handleLeaderChange}
                                     fullWidth
@@ -609,7 +713,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                                     helperText={
                                         noCompany
                                             ? 'Selecciona una empresa primero'
-                                            : (errors.leader || 'El líder se agrega a la lista de técnicos')
+                                            : (errors.leader || 'El encargado se agrega a la lista de técnicos')
                                     }
                                     sx={fieldSx}
                                     items={technicianOptions}
@@ -629,7 +733,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                                         return (
                                             <Chip
                                                 key={technician.id}
-                                                label={isLeader ? `${technicianLabel(technician)} · Líder` : technicianLabel(technician)}
+                                                label={isLeader ? `${technicianLabel(technician)} · Encargado` : technicianLabel(technician)}
                                                 color={isLeader ? 'primary' : 'default'}
                                                 variant={isLeader ? 'filled' : 'outlined'}
                                                 onDelete={() => handleRemoveTechnician(technician.id)}
@@ -662,20 +766,47 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
 
                     <Box>
                         {sectionLabel('Contacto')}
-                        <TextField
-                            label="Correo electrónico"
-                            value={formValues.email}
-                            onChange={(e) => handleChange('email', e.target.value)}
-                            onBlur={() => handleBlur('email')}
-                            required
-                            fullWidth
-                            size="small"
-                            disabled={anyLoading}
-                            type="email"
-                            error={touched.email && !!errors.email}
-                            helperText={touched.email ? (errors.email || ' ') : ' '}
-                            sx={fieldSx}
-                        />
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                            <SearchableSelect
+                                label="Correos electrónicos *"
+                                multiple
+                                addMode
+                                validateCreate={(s) => EMAIL_REGEX.test((s || '').trim())}
+                                value={formValues.emails}
+                                onChange={handleEmailsChange}
+                                onCreate={handleAddManualEmail}
+                                fullWidth
+                                size="small"
+                                disabled={anyLoading || loadingEmails}
+                                error={!!errors.emails}
+                                helperText={
+                                    errors.emails
+                                        || (!formValues.campusId
+                                            ? 'Selecciona un campus o edificio para ver sus correos'
+                                            : 'Elige de la lista o escribe un correo para agregarlo')
+                                }
+                                sx={fieldSx}
+                                items={emailOptions}
+                                getItemLabel={(email) => email}
+                                getItemValue={(email) => email}
+                            />
+
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                {formValues.emails.length === 0 ? (
+                                    <Typography sx={{ color: 'text.secondary', fontSize: 13.5 }}>
+                                        No hay correos seleccionados.
+                                    </Typography>
+                                ) : (
+                                    formValues.emails.map((email) => (
+                                        <Chip
+                                            key={email}
+                                            label={email}
+                                            onDelete={() => handleRemoveEmail(email)}
+                                        />
+                                    ))
+                                )}
+                            </Box>
+                        </Box>
                     </Box>
 
                 </Box>

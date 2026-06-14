@@ -33,12 +33,24 @@ public class SecurityConfig {
                         ).permitAll()
 
                         .requestMatchers(HttpMethod.GET,
+                                "/api/v1/maintenance/companies/me"
+                        ).hasAnyAuthority(
+                                Privileges.SolicitudesMantenimiento.SOLICITAR,
+                                Privileges.SolicitudesMantenimiento.EDITAR
+                        )
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/maintenance/user-companies/*/has-company"
+                        ).authenticated()
+
+                        .requestMatchers(HttpMethod.GET,
                                 "/api/v1/maintenance/companies",
                                 "/api/v1/maintenance/companies/**"
                         ).hasAuthority(Privileges.Empresas.LEER)
 
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/maintenance/companies",
+                                "/api/v1/maintenance/companies/users",
                                 "/api/v1/maintenance/companies/*/users"
                         ).hasAuthority(Privileges.Empresas.GESTIONAR)
 
@@ -58,15 +70,33 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/maintenance/requests"
-                        ).hasAuthority(Privileges.SolicitudesMantenimiento.GESTIONAR)
+                        ).hasAuthority(Privileges.SolicitudesMantenimiento.SOLICITAR)
 
                         .requestMatchers(HttpMethod.PUT,
                                 "/api/v1/maintenance/requests/**"
-                        ).hasAuthority(Privileges.SolicitudesMantenimiento.GESTIONAR)
+                        ).hasAuthority(Privileges.SolicitudesMantenimiento.EDITAR)
 
                         .requestMatchers(HttpMethod.DELETE,
                                 "/api/v1/maintenance/requests/**"
                         ).hasAuthority(Privileges.SolicitudesMantenimiento.ELIMINAR)
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/maintenance/records",
+                                "/api/v1/maintenance/records/**"
+                        ).hasAuthority(Privileges.RegistrosMantenimiento.HISTORIAL)
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/maintenance/registers",
+                                "/api/v1/maintenance/registers/**"
+                        ).hasAuthority(Privileges.RegistrosMantenimiento.LEER)
+
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/maintenance/registers/**"
+                        ).hasAuthority(Privileges.RegistrosMantenimiento.GESTIONAR)
+
+                        .requestMatchers(HttpMethod.PUT,
+                                "/api/v1/maintenance/registers/**"
+                        ).hasAuthority(Privileges.RegistrosMantenimiento.GESTIONAR)
 
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/maintenance/technicians",

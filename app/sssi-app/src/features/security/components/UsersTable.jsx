@@ -9,6 +9,12 @@ import AssignUserRolesModal from './AssignUserRolesModal.jsx';
 import ReplayIcon from '@mui/icons-material/Replay';
 import { usePermissions } from '../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../common/constants/permissions';
+import GroupsIcon from '@mui/icons-material/Groups';
+import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import BlockIcon from '@mui/icons-material/Block';
+import MailIcon from '@mui/icons-material/Mail';
+import { getFriendlyApiErrorMessage } from '../../../common/utils';
 
 const STORAGE_KEY = 'users-table-column-visibility';
 const DEFAULT_COLUMN_VISIBILITY = {};
@@ -26,6 +32,23 @@ function toStatusLabel(status) {
             return 'Pendientes';
         default:
             return status;
+    }
+}
+
+function getStatusIcon(status) {
+    switch (status) {
+        case 'ALL':
+            return <GroupsIcon sx={{ fontSize: 18 }} />;
+        case 'PENDING':
+            return <HourglassEmptyIcon sx={{ fontSize: 18 }} />;
+        case 'APPROVED':
+            return <CheckCircleIcon sx={{ fontSize: 18 }} />;
+        case 'REJECTED':
+            return <BlockIcon sx={{ fontSize: 18 }} />;
+        case 'INVITED':
+            return <MailIcon sx={{ fontSize: 18 }} />;
+        default:
+            return null;
     }
 }
 
@@ -182,7 +205,7 @@ export default function UsersTable({ refreshKey = 0 }) {
 
     return (
         <>
-            <Box sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
+            <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 1 }}>
                 <Tabs
                     value={statusTab}
                     onChange={(_, newValue) => {
@@ -191,6 +214,7 @@ export default function UsersTable({ refreshKey = 0 }) {
                     }}
                     variant="scrollable"
                     scrollButtons="auto"
+                    allowScrollButtonsMobile
                     aria-label="Filtros por estado de usuario"
                 >
                     {tabItems.map((status) => (
@@ -198,6 +222,9 @@ export default function UsersTable({ refreshKey = 0 }) {
                             key={status}
                             value={status}
                             label={status === ALL_TAB_VALUE ? 'Todos' : toStatusLabel(status)}
+                            icon={getStatusIcon(status)}
+                            iconPosition="start"
+                            sx={{ textTransform: 'none', fontWeight: 700 }}
                         />
                     ))}
                 </Tabs>

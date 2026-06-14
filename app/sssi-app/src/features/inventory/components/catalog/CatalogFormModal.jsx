@@ -183,7 +183,7 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row, 
                 title={isEditMode ? `Editar ${title}` : `Nueva ${title}`}
                 subtitle={isEditMode
                     ? `Modifica los datos de la ${title.toLowerCase()}`
-                    : `Completa los datos para crear la ${title.toLowerCase()}`}
+                    : `Completa los datos para crear ${title.toLowerCase()}`}
                 loading={saving}
                 secondaryButton={{ label: 'Cancelar', onClick: onClose, disabled: saving }}
                 primaryButton={{

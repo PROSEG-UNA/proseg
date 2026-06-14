@@ -82,6 +82,19 @@ public class SecurityConfig {
                         ).hasAuthority(Privileges.Ubicaciones.ELIMINAR)
 
                         .requestMatchers(HttpMethod.GET,
+                                "/api/v1/inventory/buildings/*/emails",
+                                "/api/v1/inventory/campuses/*/emails"
+                        ).hasAuthority(Privileges.Ubicaciones.LEER)
+
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/inventory/buildings/*/emails"
+                        ).hasAuthority(Privileges.Ubicaciones.GESTIONAR)
+
+                        .requestMatchers(HttpMethod.DELETE,
+                                "/api/v1/inventory/emails/**"
+                        ).hasAuthority(Privileges.Ubicaciones.ELIMINAR)
+
+                        .requestMatchers(HttpMethod.GET,
                                 "/api/v1/inventory/brands",
                                 "/api/v1/inventory/brands/**",
                                 "/api/v1/inventory/asset-models",

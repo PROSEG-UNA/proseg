@@ -3,7 +3,7 @@ import { Box, Button, Divider, Skeleton, Typography } from '@mui/material';
 import BusinessIcon from '@mui/icons-material/Business';
 import PeopleIcon from '@mui/icons-material/People';
 import LaunchIcon from '@mui/icons-material/Launch';
-import { fetchCompanyById } from '../../services/companiesService';
+import { fetchCompanyById } from '../../services/company/companiesService';
 import { formatDateTime } from '../../maintenanceUtils';
 
 function InfoRow({ label, value }) {
