@@ -5,8 +5,8 @@ import { INVENTORY_ENDPOINTS } from '../../services/endpoints';
 
 export const CATALOG_CONFIG = {
     type: {
-        title: 'Tipo',
-        pluralTitle: 'Tipos',
+        title: 'Tipo de Activo',
+        pluralTitle: 'Tipos de Activos',
         baseUrl: INVENTORY_ENDPOINTS.types,
         icon: CategoryIcon,
         columnToBackendKey: { name: 'name', description: 'description' },
@@ -64,7 +64,7 @@ export const CATALOG_CONFIG = {
             },
             {
                 id: 'type',
-                header: 'Tipo',
+                header: 'Tipo de Activo',
                 accessorFn: (row) => row.type?.name ?? '-',
                 size: 140,
                 grow: 1,
@@ -84,7 +84,7 @@ export const CATALOG_CONFIG = {
             },
             {
                 key: 'typeId',
-                label: 'Tipo',
+                label: 'Tipo de Activo',
                 type: 'select',
                 required: true,
                 optionsUrl: INVENTORY_ENDPOINTS.types,

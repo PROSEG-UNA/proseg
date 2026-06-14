@@ -37,7 +37,7 @@ export function getAssetsColumns() {
         },
         {
             accessorKey: 'type',
-            header: 'Tipo',
+            header: 'Tipo de Activo',
             size: 140,
             grow: true,
         },
