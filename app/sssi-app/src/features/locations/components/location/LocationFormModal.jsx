@@ -182,8 +182,8 @@ export default function LocationFormModal({ open, onClose, onSaved, config, row,
                 icon={Icon}
                 title={isEditMode ? `Editar ${title}` : `Nueva ${title}`}
                 subtitle={isEditMode
-                    ? `Modifica los datos de la ${title.toLowerCase()}`
-                    : `Completa los datos para crear la ${title.toLowerCase()}`}
+                    ? `Modifica los datos de ${title.toLowerCase()}`
+                    : `Completa los datos para crear ${title.toLowerCase()}`}
                 loading={saving}
                 secondaryButton={{ label: 'Cancelar', onClick: onClose, disabled: saving }}
                 primaryButton={{

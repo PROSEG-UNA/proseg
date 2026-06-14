@@ -751,7 +751,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                             />
 
                             <SearchableSelect
-                                label="Tipo" value={formValues.typeId} required
+                                label="Tipo de activo" value={formValues.typeId} required
                                 onChange={handleTypeChange}
                                 onBlur={() => handleBlur('typeId')}
                                 fullWidth size="small" disabled={saving || loadingOptions}
@@ -762,7 +762,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                                 getItemLabel={t => t.name}
                                 getItemValue={t => t.id}
                                 onCreate={() => openCatalogModal('typeId')}
-                                createLabel="Crear nuevo Tipo"
+                                createLabel="Crear nuevo Tipo de Activo"
                             />
 
                             <SearchableSelect
@@ -773,7 +773,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                                 error={touched.modelId && !!errors.modelId}
                                 helperText={
                                     (!formValues.brandId || !formValues.typeId)
-                                        ? 'Selecciona marca y tipo primero'
+                                        ? 'Selecciona marca y tipo de activo primero'
                                         : (touched.modelId ? (errors.modelId || ' ') : ' ')
                                 }
                                 sx={{ ...fieldSx, gridColumn: '1 / -1' }}
@@ -1182,7 +1182,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 open={!!pendingTypeChange}
                 title="Eliminar IP y MAC"
                 message={[
-                    'El nuevo tipo seleccionado no requiere IP y MAC. La IP y MAC actualmente asociada a este activo será eliminada al guardar.',
+                    'El nuevo tipo de activo seleccionado no requiere IP y MAC. La IP y MAC actualmente asociada a este activo será eliminada al guardar.',
                     pendingTypeChange?.ipAddress  ? `IP: ${pendingTypeChange.ipAddress}`   : null,
                     pendingTypeChange?.macAddress ? `MAC: ${pendingTypeChange.macAddress}` : null,
                     '¿Deseas continuar?',

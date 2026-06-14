@@ -34,12 +34,12 @@ export default function Catalog() {
             <Container maxWidth="xl" sx={{ pt: 1, pb: 1,  mt: 2, mb: 1}}>
                 <CatalogGrid>
                     <CatalogCard
-                        title="Tipos"
+                        title="Tipos de Activos"
                         entityName="type"
                         onClick={handleCatalogClick}
                         icon={CategoryIcon}
                         tone="amber"
-                        description="Categoría de activo"
+                        description="Categoría de activos"
                     />
                     <CatalogCard
                         title="Marcas"
