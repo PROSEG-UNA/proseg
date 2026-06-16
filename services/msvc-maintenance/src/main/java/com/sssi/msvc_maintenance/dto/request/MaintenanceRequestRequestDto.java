@@ -61,7 +61,7 @@ public class MaintenanceRequestRequestDto {
     @NotEmpty(message = "Se requiere al menos un técnico asignado")
     private List<UUID> assignedTechnicianIds;
 
-    private UUID leaderUserCompanyId;
+    private UUID responsibleUserCompanyId;
 
     @NotEmpty(message = "Se requiere al menos un correo electrónico")
     private List<@Pattern(

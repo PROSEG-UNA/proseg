@@ -14,7 +14,7 @@ public interface MaintenanceRequestMapper {
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "emails", ignore = true)
     @Mapping(target = "assignedTechnicians", ignore = true)
-    @Mapping(target = "leaderUserCompany", ignore = true)
+    @Mapping(target = "responsibleUserCompany", ignore = true)
     MaintenanceRequest toEntity(MaintenanceRequestRequestDto request);
 
     MaintenanceRequestResponseDto toResponse(MaintenanceRequest maintenanceRequest);
@@ -24,7 +24,7 @@ public interface MaintenanceRequestMapper {
     @Mapping(target = "campusId", ignore = true)
     @Mapping(target = "emails", ignore = true)
     @Mapping(target = "assignedTechnicians", ignore = true)
-    @Mapping(target = "leaderUserCompany", ignore = true)
+    @Mapping(target = "responsibleUserCompany", ignore = true)
     void updateEntityFromRequest(MaintenanceRequestRequestDto request, @MappingTarget MaintenanceRequest maintenanceRequest);
 
     default String map(MaintenanceEmail maintenanceEmail) {

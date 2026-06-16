@@ -17,7 +17,7 @@ function mapRequest(request) {
         endTime: request.endTime ?? null,
         campusId: request.campusId ?? null,
         buildingId: request.buildingId ?? null,
-        leaderName: request.leaderUserCompany?.userEmail ?? request.leaderUserCompany?.keycloakUserId ?? '—',
+        responsibleName: request.responsibleUserCompany?.userEmail ?? request.responsibleUserCompany?.keycloakUserId ?? '—',
         techniciansCount: Array.isArray(request.assignedTechnicians) ? request.assignedTechnicians.length : 0,
         createdAt: request.createdAt ?? null,
         updatedAt: request.updatedAt ?? null,

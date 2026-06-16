@@ -28,7 +28,7 @@ public class MaintenanceRequestCreatedEmailTemplate implements EmailTemplateDefi
     private final String campusName;
     private final String buildingName;
     private final List<String> technicianNames;
-    private final String leaderName;
+    private final String responsibleName;
     private final long timestamp;
 
     @Override
@@ -52,7 +52,7 @@ public class MaintenanceRequestCreatedEmailTemplate implements EmailTemplateDefi
         ctx.setVariable("campusName",      campusName);
         ctx.setVariable("buildingName",    buildingName);
         ctx.setVariable("technicianNames", technicianNames == null ? List.of() : technicianNames);
-        ctx.setVariable("leaderName",      leaderName);
+        ctx.setVariable("responsibleName",    responsibleName);
         ctx.setVariable("timestamp",       DateUtils.formatReadable(timestamp));
         return ctx;
     }

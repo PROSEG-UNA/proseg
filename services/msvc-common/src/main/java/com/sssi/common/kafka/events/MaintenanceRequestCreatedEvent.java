@@ -27,6 +27,6 @@ public class MaintenanceRequestCreatedEvent {
     private String campusName;
     private String buildingName;
     private List<String> technicianNames;
-    private String leaderName;
+    private String responsibleName;
     private Long timestamp;
 }

@@ -71,7 +71,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
     const [loadingTechnicians, setLoadingTechnicians] = useState(false);
     const [selectedTechnicians, setSelectedTechnicians] = useState({});
     const [technicianToAdd, setTechnicianToAdd] = useState('');
-    const [leaderId, setLeaderId] = useState('');
+    const [responsibleId, setResponsibleId] = useState('');
     const [alert, setAlert] = useState(null);
 
     useEffect(() => {
@@ -90,7 +90,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
             setTechnicianOptions([]);
             setSelectedTechnicians({});
             setTechnicianToAdd('');
-            setLeaderId('');
+            setResponsibleId('');
             setAlert(null);
             return;
         }
@@ -260,7 +260,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                     acc[technician.id] = technician;
                     return acc;
                 }, {}));
-                setLeaderId(request.leaderUserCompany?.id ?? '');
+                setResponsibleId(request.responsibleUserCompany?.id ?? '');
             })
             .catch((error) => {
                 if (!cancelled) {
@@ -317,7 +317,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
             setFormValues((prev) => ({ ...prev, companyId: value }));
             setSelectedTechnicians({});
             setTechnicianToAdd('');
-            setLeaderId('');
+            setResponsibleId('');
         } else if (key === 'campusId') {
             merged = { ...formValues, campusId: value, buildingId: '' };
             setFormValues((prev) => ({ ...prev, campusId: value, buildingId: '' }));
@@ -347,7 +347,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
     };
 
     const handleRemoveTechnician = (technicianId) => {
-        if (technicianId === leaderId) setLeaderId('');
+        if (technicianId === responsibleId) setResponsibleId('');
         setSelectedTechnicians((prev) => {
             const copy = { ...prev };
             delete copy[technicianId];
@@ -379,14 +379,14 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
         setFormValues((prev) => ({ ...prev, emails: prev.emails.filter((item) => item !== email) }));
     };
 
-    const handleLeaderChange = (value) => {
-        setLeaderId(value);
-        setErrors((prev) => ({ ...prev, leader: '' }));
+    const handleResponsibleChange = (value) => {
+        setResponsibleId(value);
+        setErrors((prev) => ({ ...prev, responsible: '' }));
         if (value && !selectedTechnicians[value]) {
             const technician = technicianOptions.find((item) => item.id === value);
             if (technician) {
                 setSelectedTechnicians((prev) => ({ ...prev, [technician.id]: technician }));
-                setErrors((prev) => ({ ...prev, technicians: '', leader: '' }));
+                setErrors((prev) => ({ ...prev, technicians: '', responsible: '' }));
             }
         }
     };
@@ -418,8 +418,8 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
             nextErrors.technicians = 'Selecciona al menos un técnico';
         }
 
-        if (!leaderId) {
-            nextErrors.leader = 'Selecciona un encargado';
+        if (!responsibleId) {
+            nextErrors.responsible = 'Selecciona un responsable';
         }
 
         setTouched((prev) => ({ ...prev, ...nextTouched }));
@@ -443,7 +443,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                 campusId: formValues.campusId,
                 buildingId: formValues.buildingId || null,
                 assignedTechnicianIds: technicianIds,
-                leaderUserCompanyId: leaderId || null,
+                responsibleUserCompanyId: responsibleId || null,
             };
 
             if (isEdit) {
@@ -703,17 +703,17 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                                     </Button>
                                 </Box>
                                 <SearchableSelect
-                                    label="Encargado *"
-                                    value={leaderId}
-                                    onChange={handleLeaderChange}
+                                    label="Responsable *"
+                                    value={responsibleId}
+                                    onChange={handleResponsibleChange}
                                     fullWidth
                                     size="small"
                                     disabled={anyLoading || noCompany || loadingTechnicians}
-                                    error={!!errors.leader}
+                                    error={!!errors.responsible}
                                     helperText={
                                         noCompany
                                             ? 'Selecciona una empresa primero'
-                                            : (errors.leader || 'El encargado se agrega a la lista de técnicos')
+                                            : (errors.responsible || 'El responsable se agrega a la lista de técnicos')
                                     }
                                     sx={fieldSx}
                                     items={technicianOptions}
@@ -729,13 +729,13 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                                     </Typography>
                                 ) : (
                                     selectedList.map((technician) => {
-                                        const isLeader = technician.id === leaderId;
+                                        const isResponsible = technician.id === responsibleId;
                                         return (
                                             <Chip
                                                 key={technician.id}
-                                                label={isLeader ? `${technicianLabel(technician)} · Encargado` : technicianLabel(technician)}
-                                                color={isLeader ? 'primary' : 'default'}
-                                                variant={isLeader ? 'filled' : 'outlined'}
+                                                label={isResponsible ? `${technicianLabel(technician)} · Responsable` : technicianLabel(technician)}
+                                                color={isResponsible ? 'primary' : 'default'}
+                                                variant={isResponsible ? 'filled' : 'outlined'}
                                                 onDelete={() => handleRemoveTechnician(technician.id)}
                                             />
                                         );

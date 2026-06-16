@@ -86,5 +86,5 @@ public class MaintenanceRequest extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "leader_user_company_id")
-    private UserCompany leaderUserCompany;
+    private UserCompany responsibleUserCompany;
 }

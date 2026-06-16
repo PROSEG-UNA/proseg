@@ -62,7 +62,7 @@ export default function RegisterCard({ register, onClick }) {
                     </Box>
 
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-                        <InfoLine icon={PersonIcon}>{register.leaderName}</InfoLine>
+                        <InfoLine icon={PersonIcon}>{register.responsibleName}</InfoLine>
                         <InfoLine icon={EventIcon}>
                             {`${formatDate(register.startDate)} — ${formatDate(register.endDate)}`}
                         </InfoLine>

@@ -20,5 +20,5 @@ public record MaintenanceRequestCreatedDomainEvent(
         UUID campusId,
         UUID buildingId,
         List<String> technicianKeycloakIds,
-        String leaderKeycloakId
+        String responsibleKeycloakId
 ) {}
