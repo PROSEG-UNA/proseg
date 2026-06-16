@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -399,15 +400,17 @@ public class EmailEventService {
     }
 
     public void sendMaintenanceRequestCreatedEmail(MaintenanceRequestCreatedEvent event) {
-        List<String> recipients = event.getEmails() == null
-                ? List.of()
-                : event.getEmails().stream()
-                        .filter(email -> email != null && !email.isBlank())
-                        .map(String::trim)
-                        .distinct()
-                        .toList();
+        List<String> eventEmails = event.getEmails() == null ? List.of() : event.getEmails();
 
-        if (recipients.isEmpty()) {
+        List<String> bccRecipients = Stream.concat(
+                        eventEmails.stream(),
+                        resolveSuperAdminEmails().stream())
+                .filter(email -> email != null && !email.isBlank())
+                .map(String::trim)
+                .distinct()
+                .toList();
+
+        if (bccRecipients.isEmpty()) {
             log.warn("MaintenanceRequestCreatedEvent sin email destinatario, se omite envío");
             return;
         }
@@ -424,18 +427,36 @@ public class EmailEventService {
                 .campusName(event.getCampusName())
                 .buildingName(event.getBuildingName())
                 .technicianNames(event.getTechnicianNames())
-                .leaderName(event.getLeaderName())
+                .responsibleName(event.getResponsibleName())
                 .timestamp(event.getTimestamp() != null ? event.getTimestamp() : System.currentTimeMillis())
                 .build();
 
         emailService.sendEmail(
                 Email.builder()
-                        .to(recipients)
+                        .bcc(bccRecipients)
                         .subject("Nueva solicitud de mantenimiento registrada - PROSEG")
                         .templateDefinition(template)
                         .build()
         );
 
-        log.info("Email de solicitud de mantenimiento enviado a: {}", recipients);
+        log.info("Email de solicitud de mantenimiento enviado (bcc) a: {}", bccRecipients);
+    }
+
+    private List<String> resolveSuperAdminEmails() {
+        try {
+            ApiResponse<List<KeycloakUserResponseDto>> response = authClient.getUsersByRole("SUPER_ADMINISTRADOR");
+            List<KeycloakUserResponseDto> superAdmins = response != null ? response.getData() : null;
+            if (superAdmins == null || superAdmins.isEmpty()) {
+                return List.of();
+            }
+            return superAdmins.stream()
+                    .filter(admin -> admin.getUsername() != null && !admin.getUsername().startsWith("service-account"))
+                    .map(KeycloakUserResponseDto::getEmail)
+                    .filter(email -> email != null && !email.isBlank())
+                    .toList();
+        } catch (Exception e) {
+            log.error("No se pudieron resolver los SUPER_ADMINISTRADOR para la solicitud de mantenimiento: {}", e.getMessage());
+            return List.of();
+        }
     }
 }

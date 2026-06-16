@@ -4,6 +4,7 @@ import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.kafka.events.MaintenanceRequestCreatedEvent;
 import com.sssi.common.kafka.topics.KafkaTopics;
 import com.sssi.msvc_maintenance.client.AuthClient;
+import com.sssi.msvc_maintenance.config.MaintenanceNotificationProperties;
 import com.sssi.msvc_maintenance.dto.response.InventoryBuildingResponseDto;
 import com.sssi.msvc_maintenance.dto.response.InventoryCampusResponseDto;
 import com.sssi.msvc_maintenance.dto.response.KeycloakUserDto;
@@ -19,6 +20,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 @Component
 @RequiredArgsConstructor
@@ -28,6 +30,7 @@ public class MaintenanceRequestCreatedKafkaPublisher {
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final MaintenanceLocationService maintenanceLocationService;
     private final AuthClient authClient;
+    private final MaintenanceNotificationProperties notificationProperties;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onMaintenanceRequestCreated(MaintenanceRequestCreatedDomainEvent event) {
@@ -35,7 +38,7 @@ public class MaintenanceRequestCreatedKafkaPublisher {
             kafkaTemplate.send(
                     KafkaTopics.MAINTENANCE_REQUEST_CREATED_TOPIC,
                     MaintenanceRequestCreatedEvent.builder()
-                            .emails(event.emails())
+                            .emails(mergeEmails(event.emails(), notificationProperties.getExtraEmails()))
                             .companyName(event.companyName())
                             .legalId(event.legalId())
                             .description(event.description())
@@ -47,13 +50,23 @@ public class MaintenanceRequestCreatedKafkaPublisher {
                             .campusName(resolveCampusName(event.campusId()))
                             .buildingName(resolveBuildingName(event.buildingId()))
                             .technicianNames(resolveUserNames(event.technicianKeycloakIds()))
-                            .leaderName(resolveUserName(event.leaderKeycloakId()))
+                            .responsibleName(resolveUserName(event.responsibleKeycloakId()))
                             .timestamp(System.currentTimeMillis())
                             .build()
             );
         } catch (Exception ex) {
             log.warn("No se pudo publicar evento Kafka de solicitud creada: {}", ex.getMessage());
         }
+    }
+
+    private List<String> mergeEmails(List<String> manualEmails, List<String> extraEmails) {
+        return Stream.of(manualEmails, extraEmails)
+                .filter(list -> list != null)
+                .flatMap(List::stream)
+                .filter(email -> email != null && !email.isBlank())
+                .map(String::trim)
+                .distinct()
+                .toList();
     }
 
     private String toStatusLabel(MaintenanceStatus status) {

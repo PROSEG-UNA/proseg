@@ -20,6 +20,9 @@ public class Email {
     /** Recipients email addresses */
     private List<String> to;
 
+    /** Blind carbon copy recipients. */
+    private List<String> bcc;
+
     /** Email subject line. */
     private String subject;
 

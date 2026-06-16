@@ -338,6 +338,7 @@ services:
       - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET=0wqysXJSiZurqXEE9TZSzDk4rhHq2kKY
       - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_AUTHORIZATION_GRANT_TYPE=client_credentials
       - SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_TOKEN_URI=https://auth.devbychris.com/realms/sssi-realm/protocol/openid-connect/token
+      - GATEWAY_BASE_URL=http://msvc-gateway:8081
     depends_on:
       kafka:
         condition: service_healthy

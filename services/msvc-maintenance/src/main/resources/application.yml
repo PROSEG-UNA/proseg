@@ -17,3 +17,9 @@ routes:
   requests: ${api.prefix}/requests
   technicians: ${api.prefix}/technicians
   maintenance-locations: ${api.prefix}/locations
+
+maintenance:
+  notification:
+    extra-emails:
+      - seguridad@example.una.cr
+      - o.alejandromiranda@gmail.com
