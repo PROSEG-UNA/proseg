@@ -1,4 +1,4 @@
-package com.sssi.msvc_maintenance.service.impl;
+﻿package com.sssi.msvc_maintenance.service.impl;
 
 import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.api.response.PageResponse;
@@ -122,7 +122,7 @@ public class TicketServiceImpl implements TicketService {
                 throw new LocationException(
                         HttpStatus.BAD_REQUEST,
                         "LOCATION_FLOOR_MISMATCH",
-                        "La ubicación " + location.getId() + " no pertenece al piso indicado"
+                        "La ubicaciÃ³n " + location.getId() + " no pertenece al piso indicado"
                 );
             }
         }
@@ -202,7 +202,7 @@ public class TicketServiceImpl implements TicketService {
                 throw new LocationException(
                         HttpStatus.BAD_REQUEST,
                         "LOCATION_FLOOR_MISMATCH",
-                        "La ubicación " + location.getId() + " no pertenece al piso indicado"
+                        "La ubicaciÃ³n " + location.getId() + " no pertenece al piso indicado"
                 );
             }
         }
@@ -391,7 +391,47 @@ public class TicketServiceImpl implements TicketService {
 
         saveHistory(ticket, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.COMMENT_ADDED, "comment", null, saved.getContent(), extractUserId(authentication), null);
 
-        return toCommentResponse(saved);
+        return toCommentResponse(saved);\npublic Page<com.sssi.msvc_maintenance.dto.response.TicketHistoryChangeResponseDto> findHistoryByTicket(UUID ticketId, Pageable pageable, Authentication authentication) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+
+        if (!isAdmin(authentication) && !hasViewAllTickets(authentication) && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            throw new RuntimeException("Acceso denegado");
+        }
+
+        return ticketHistoryChangeRepository.findByTicketIdOrderByCreatedAtDesc(ticketId, pageable)
+                .map(this::toHistoryResponse);
+    }
+
+    private com.sssi.msvc_maintenance.dto.response.TicketHistoryChangeResponseDto toHistoryResponse(com.sssi.msvc_maintenance.entity.TicketHistoryChange history) {
+        return com.sssi.msvc_maintenance.dto.response.TicketHistoryChangeResponseDto.builder()
+                .id(history.getId())
+                .type(history.getType())
+                .fieldName(history.getFieldName())
+                .oldValue(history.getOldValue())
+                .newValue(history.getNewValue())
+                .authorId(history.getAuthorId())
+                .authorName(resolveAuthorName(history.getAuthorId()))
+                .createdAt(toOffsetDateTime(history.getCreatedAt()))
+                .updatedAt(toOffsetDateTime(history.getUpdatedAt()))
+                .build();
+    }
+
+    private void saveHistory(Ticket ticket, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType type, String fieldName, String oldValue, String newValue, String authorId, String metadata) {
+        com.sssi.msvc_maintenance.entity.TicketHistoryChange history = com.sssi.msvc_maintenance.entity.TicketHistoryChange.builder()
+                .ticket(ticket)
+                .type(type)
+                .fieldName(fieldName)
+                .oldValue(oldValue)
+                .newValue(newValue)
+                .authorId(authorId)
+                .metadata(metadata)
+                .build();
+
+        ticketHistoryChangeRepository.save(history);
+    }
+
+    \n
     }
 
     private void saveHistory(Ticket ticket, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType type, String fieldName, String oldValue, String newValue, String authorId, String metadata) {
@@ -454,7 +494,7 @@ public class TicketServiceImpl implements TicketService {
                 throw new AssetException(
                         HttpStatus.BAD_REQUEST,
                         "ASSET_LOCATION_MISMATCH",
-                        "El activo " + asset.getId() + " no pertenece a la ubicación indicada"
+                        "El activo " + asset.getId() + " no pertenece a la ubicaciÃ³n indicada"
                 );
             }
 
@@ -858,3 +898,4 @@ public class TicketServiceImpl implements TicketService {
         return value == null ? null : value.atZone(TICKET_TIME_ZONE).toOffsetDateTime();
     }
 }
+
