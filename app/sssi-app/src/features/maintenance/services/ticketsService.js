@@ -53,3 +53,12 @@ export async function addMaintenanceTicketComment(ticketId, content) {
     const { data } = await axios.post(`${TICKETS_BASE}/${ticketId}/comments`, { content }, maintenanceConfig);
     return data?.data;
 }
+
+export async function fetchMaintenanceTicketHistory(ticketId, options = {}) {
+    const { page = 0, size = 50 } = options;
+    const { data } = await axios.get(`${TICKETS_BASE}/${ticketId}/history`, {
+        ...maintenanceConfig,
+        params: { page, size },
+    });
+    return data?.data ?? null;
+}
