@@ -1,4 +1,4 @@
-﻿package com.sssi.msvc_maintenance.service.impl;
+package com.sssi.msvc_maintenance.service.impl;
 
 import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.api.response.PageResponse;
@@ -95,7 +95,8 @@ public class TicketServiceImpl implements TicketService {
 
     @Override
     @Transactional
-    public TicketResponseDto create(TicketCreateRequestDto request, List<MultipartFile> photos, Authentication authentication) {
+    public TicketResponseDto create(TicketCreateRequestDto request, List<MultipartFile> photos,
+            Authentication authentication) {
         InventoryCampusResponseDto site = requireCampus(request.getSiteId());
 
         InventoryBuildingResponseDto building = requireBuilding(request.getBuildingId());
@@ -110,8 +111,7 @@ public class TicketServiceImpl implements TicketService {
                 throw new FloorException(
                         HttpStatus.BAD_REQUEST,
                         "FLOOR_BUILDING_MISMATCH",
-                        "El piso " + floor.getName() + " no pertenece al edificio indicado"
-                );
+                        "El piso " + floor.getName() + " no pertenece al edificio indicado");
             }
         }
 
@@ -122,8 +122,7 @@ public class TicketServiceImpl implements TicketService {
                 throw new LocationException(
                         HttpStatus.BAD_REQUEST,
                         "LOCATION_FLOOR_MISMATCH",
-                        "La ubicaciÃ³n " + location.getId() + " no pertenece al piso indicado"
-                );
+                        "La ubicaciÃ³n " + location.getId() + " no pertenece al piso indicado");
             }
         }
 
@@ -168,13 +167,18 @@ public class TicketServiceImpl implements TicketService {
 
     @Override
     @Transactional
-    public TicketResponseDto update(UUID id, TicketCreateRequestDto request, List<MultipartFile> photos, Authentication authentication) {
+    public TicketResponseDto update(UUID id, TicketCreateRequestDto request, List<MultipartFile> photos,
+            Authentication authentication) {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
 
-        if (!isAdmin(authentication) && !hasViewAllTickets(authentication) && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+        if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
+                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
             throw new RuntimeException("Acceso denegado");
         }
+
+        String oldTitle = ticket.getTitle();
+        String oldDescription = ticket.getDescription();
 
         InventoryCampusResponseDto site = requireCampus(request.getSiteId());
 
@@ -190,8 +194,7 @@ public class TicketServiceImpl implements TicketService {
                 throw new FloorException(
                         HttpStatus.BAD_REQUEST,
                         "FLOOR_BUILDING_MISMATCH",
-                        "El piso " + floor.getName() + " no pertenece al edificio indicado"
-                );
+                        "El piso " + floor.getName() + " no pertenece al edificio indicado");
             }
         }
 
@@ -202,8 +205,7 @@ public class TicketServiceImpl implements TicketService {
                 throw new LocationException(
                         HttpStatus.BAD_REQUEST,
                         "LOCATION_FLOOR_MISMATCH",
-                        "La ubicaciÃ³n " + location.getId() + " no pertenece al piso indicado"
-                );
+                        "La ubicación " + location.getId() + " no pertenece al piso indicado");
             }
         }
 
@@ -230,10 +232,13 @@ public class TicketServiceImpl implements TicketService {
         Ticket saved = ticketRepository.save(ticket);
 
         if (!java.util.Objects.equals(oldTitle, saved.getTitle())) {
-            saveHistory(saved, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.EDITED, "title", oldTitle, saved.getTitle(), extractUserId(authentication), null);
+            saveHistory(saved, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.EDITED, "title", oldTitle,
+                    saved.getTitle(), extractUserId(authentication), null);
         }
+
         if (!java.util.Objects.equals(oldDescription, saved.getDescription())) {
-            saveHistory(saved, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.EDITED, "description", oldDescription, saved.getDescription(), extractUserId(authentication), null);
+            saveHistory(saved, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.EDITED, "description",
+                    oldDescription, saved.getDescription(), extractUserId(authentication), null);
         }
 
         webSocketManager.broadcast(TicketWebSocketEventDto.builder()
@@ -264,7 +269,8 @@ public class TicketServiceImpl implements TicketService {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
 
-        if (!isAdmin(authentication) && !hasViewAllTickets(authentication) && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+        if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
+                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
             throw new RuntimeException("Acceso denegado");
         }
 
@@ -273,7 +279,8 @@ public class TicketServiceImpl implements TicketService {
 
     @Override
     @Transactional
-    public TicketResponseDto updatePriority(UUID id, TicketPriorityUpdateRequestDto request, Authentication authentication) {
+    public TicketResponseDto updatePriority(UUID id, TicketPriorityUpdateRequestDto request,
+            Authentication authentication) {
         if (!isAdmin(authentication) && !hasSetPriorityPermission(authentication)) {
             throw new RuntimeException("Solo administradores o usuarios con permiso pueden cambiar la prioridad");
         }
@@ -286,7 +293,10 @@ public class TicketServiceImpl implements TicketService {
         Ticket saved = ticketRepository.save(ticket);
 
         if (oldPriority == null || !oldPriority.equals(saved.getPriority())) {
-            saveHistory(saved, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.PRIORITY_CHANGED, "priority", oldPriority == null ? null : oldPriority.name(), saved.getPriority() == null ? null : saved.getPriority().name(), extractUserId(authentication), null);
+            saveHistory(saved, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.PRIORITY_CHANGED,
+                    "priority", oldPriority == null ? null : oldPriority.name(),
+                    saved.getPriority() == null ? null : saved.getPriority().name(), extractUserId(authentication),
+                    null);
         }
 
         webSocketManager.broadcast(TicketWebSocketEventDto.builder()
@@ -303,7 +313,8 @@ public class TicketServiceImpl implements TicketService {
 
     @Override
     @Transactional
-    public TicketResponseDto updateAssignedRole(UUID id, TicketAssignedRoleUpdateRequestDto request, Authentication authentication) {
+    public TicketResponseDto updateAssignedRole(UUID id, TicketAssignedRoleUpdateRequestDto request,
+            Authentication authentication) {
         if (!isAdmin(authentication)) {
             throw new RuntimeException("Solo administradores pueden asignar rol responsable");
         }
@@ -315,8 +326,10 @@ public class TicketServiceImpl implements TicketService {
         ticket.setAssignedRole(request.getAssignedRole());
         Ticket saved = ticketRepository.save(ticket);
 
-        if (oldAssignedRole == null && saved.getAssignedRole() != null || (oldAssignedRole != null && !oldAssignedRole.equals(saved.getAssignedRole()))) {
-            saveHistory(saved, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.ASSIGNED_ROLE_CHANGED, "assignedRole", oldAssignedRole, saved.getAssignedRole(), extractUserId(authentication), null);
+        if (oldAssignedRole == null && saved.getAssignedRole() != null
+                || (oldAssignedRole != null && !oldAssignedRole.equals(saved.getAssignedRole()))) {
+            saveHistory(saved, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.ASSIGNED_ROLE_CHANGED,
+                    "assignedRole", oldAssignedRole, saved.getAssignedRole(), extractUserId(authentication), null);
         }
 
         webSocketManager.broadcast(TicketWebSocketEventDto.builder()
@@ -355,7 +368,9 @@ public class TicketServiceImpl implements TicketService {
         Ticket saved = ticketRepository.save(ticket);
 
         if (oldStatus == null || !oldStatus.equals(saved.getStatus())) {
-            saveHistory(saved, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.STATUS_CHANGED, "status", oldStatus == null ? null : oldStatus.name(), saved.getStatus() == null ? null : saved.getStatus().name(), extractUserId(authentication), null);
+            saveHistory(saved, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.STATUS_CHANGED, "status",
+                    oldStatus == null ? null : oldStatus.name(),
+                    saved.getStatus() == null ? null : saved.getStatus().name(), extractUserId(authentication), null);
         }
 
         webSocketManager.broadcast(TicketWebSocketEventDto.builder()
@@ -372,11 +387,13 @@ public class TicketServiceImpl implements TicketService {
 
     @Override
     @Transactional
-    public TicketCommentResponseDto addComment(UUID id, TicketCommentCreateRequestDto request, Authentication authentication) {
+    public TicketCommentResponseDto addComment(UUID id, TicketCommentCreateRequestDto request,
+            Authentication authentication) {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
 
-        if (!isAdmin(authentication) && !hasViewAllTickets(authentication) && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+        if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
+                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
             throw new RuntimeException("Acceso denegado");
         }
 
@@ -389,13 +406,21 @@ public class TicketServiceImpl implements TicketService {
         TicketComment saved = ticketCommentRepository.save(comment);
         ticket.getTicketComments().add(saved);
 
-        saveHistory(ticket, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.COMMENT_ADDED, "comment", null, saved.getContent(), extractUserId(authentication), null);
+        saveHistory(ticket, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.COMMENT_ADDED, "comment",
+                null, saved.getContent(), extractUserId(authentication), null);
 
-        return toCommentResponse(saved);\npublic Page<com.sssi.msvc_maintenance.dto.response.TicketHistoryChangeResponseDto> findHistoryByTicket(UUID ticketId, Pageable pageable, Authentication authentication) {
+        return toCommentResponse(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<com.sssi.msvc_maintenance.dto.response.TicketHistoryChangeResponseDto> findHistoryByTicket(
+            UUID ticketId, Pageable pageable, Authentication authentication) {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
 
-        if (!isAdmin(authentication) && !hasViewAllTickets(authentication) && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+        if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
+                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
             throw new RuntimeException("Acceso denegado");
         }
 
@@ -403,7 +428,8 @@ public class TicketServiceImpl implements TicketService {
                 .map(this::toHistoryResponse);
     }
 
-    private com.sssi.msvc_maintenance.dto.response.TicketHistoryChangeResponseDto toHistoryResponse(com.sssi.msvc_maintenance.entity.TicketHistoryChange history) {
+    private com.sssi.msvc_maintenance.dto.response.TicketHistoryChangeResponseDto toHistoryResponse(
+            com.sssi.msvc_maintenance.entity.TicketHistoryChange history) {
         return com.sssi.msvc_maintenance.dto.response.TicketHistoryChangeResponseDto.builder()
                 .id(history.getId())
                 .type(history.getType())
@@ -417,25 +443,10 @@ public class TicketServiceImpl implements TicketService {
                 .build();
     }
 
-    private void saveHistory(Ticket ticket, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType type, String fieldName, String oldValue, String newValue, String authorId, String metadata) {
-        com.sssi.msvc_maintenance.entity.TicketHistoryChange history = com.sssi.msvc_maintenance.entity.TicketHistoryChange.builder()
-                .ticket(ticket)
-                .type(type)
-                .fieldName(fieldName)
-                .oldValue(oldValue)
-                .newValue(newValue)
-                .authorId(authorId)
-                .metadata(metadata)
-                .build();
-
-        ticketHistoryChangeRepository.save(history);
-    }
-
-    \n
-    }
-
-    private void saveHistory(Ticket ticket, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType type, String fieldName, String oldValue, String newValue, String authorId, String metadata) {
-        com.sssi.msvc_maintenance.entity.TicketHistoryChange history = com.sssi.msvc_maintenance.entity.TicketHistoryChange.builder()
+    private void saveHistory(Ticket ticket, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType type,
+            String fieldName, String oldValue, String newValue, String authorId, String metadata) {
+        com.sssi.msvc_maintenance.entity.TicketHistoryChange history = com.sssi.msvc_maintenance.entity.TicketHistoryChange
+                .builder()
                 .ticket(ticket)
                 .type(type)
                 .fieldName(fieldName)
@@ -490,12 +501,12 @@ public class TicketServiceImpl implements TicketService {
         for (UUID assetId : requestAssetIds) {
             InventoryAssetResponseDto asset = requireAsset(assetId);
 
-            if (location != null && asset.getLocation() != null && !asset.getLocation().getId().equals(location.getId())) {
+            if (location != null && asset.getLocation() != null
+                    && !asset.getLocation().getId().equals(location.getId())) {
                 throw new AssetException(
                         HttpStatus.BAD_REQUEST,
                         "ASSET_LOCATION_MISMATCH",
-                        "El activo " + asset.getId() + " no pertenece a la ubicaciÃ³n indicada"
-                );
+                        "El activo " + asset.getId() + " no pertenece a la ubicación indicada");
             }
 
             assetIds.add(assetId);
@@ -519,9 +530,12 @@ public class TicketServiceImpl implements TicketService {
 
     private TicketResponseDto toResponse(Ticket ticket) {
         InventoryCampusResponseDto site = ticket.getSiteId() != null ? requireCampus(ticket.getSiteId()) : null;
-        InventoryBuildingResponseDto building = ticket.getBuildingId() != null ? requireBuilding(ticket.getBuildingId()) : null;
+        InventoryBuildingResponseDto building = ticket.getBuildingId() != null ? requireBuilding(ticket.getBuildingId())
+                : null;
         InventoryAssetFloorResponseDto floor = ticket.getFloorId() != null ? requireFloor(ticket.getFloorId()) : null;
-        InventoryAssetLocationResponseDto location = ticket.getLocationId() != null ? requireLocation(ticket.getLocationId()) : null;
+        InventoryAssetLocationResponseDto location = ticket.getLocationId() != null
+                ? requireLocation(ticket.getLocationId())
+                : null;
 
         List<TicketAssetResponseDto> assets = ticket.getTicketAssets().stream()
                 .map(ticketAsset -> {
@@ -533,7 +547,8 @@ public class TicketServiceImpl implements TicketService {
                             .assetNumber(asset.getAssetNumber())
                             .serialNumber(asset.getSerialNumber())
                             .assetName(asset.getModel() != null ? asset.getModel().getName() : null)
-                            .locationDescription(asset.getLocation() != null ? asset.getLocation().getDescription() : null)
+                            .locationDescription(
+                                    asset.getLocation() != null ? asset.getLocation().getDescription() : null)
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -562,9 +577,12 @@ public class TicketServiceImpl implements TicketService {
                     LocalDateTime aDate = a.getCreatedAt();
                     LocalDateTime bDate = b.getCreatedAt();
 
-                    if (aDate == null && bDate == null) return 0;
-                    if (aDate == null) return 1;
-                    if (bDate == null) return -1;
+                    if (aDate == null && bDate == null)
+                        return 0;
+                    if (aDate == null)
+                        return 1;
+                    if (bDate == null)
+                        return -1;
 
                     return bDate.compareTo(aDate);
                 })
@@ -627,8 +645,7 @@ public class TicketServiceImpl implements TicketService {
                         authorId -> {
                             String authorName = resolveAuthorName(authorId);
                             return authorName != null && !authorName.isBlank() ? authorName : authorId;
-                        }
-                ));
+                        }));
     }
 
     private String resolveAuthorName(String authorId) {
@@ -644,7 +661,8 @@ public class TicketServiceImpl implements TicketService {
                 return authorId;
             }
 
-            String fullName = ((user.firstName() != null ? user.firstName() : "") + " " + (user.lastName() != null ? user.lastName() : "")).trim();
+            String fullName = ((user.firstName() != null ? user.firstName() : "") + " "
+                    + (user.lastName() != null ? user.lastName() : "")).trim();
 
             if (!fullName.isBlank()) {
                 return fullName;
@@ -720,7 +738,8 @@ public class TicketServiceImpl implements TicketService {
     }
 
     private boolean belongsToCampus(UUID buildingId, UUID campusId) {
-        ApiResponse<PageResponse<InventoryBuildingResponseDto>> response = inventoryClient.findBuildingsByCampus(campusId, 0, 1000);
+        ApiResponse<PageResponse<InventoryBuildingResponseDto>> response = inventoryClient
+                .findBuildingsByCampus(campusId, 0, 1000);
         PageResponse<InventoryBuildingResponseDto> body = response != null ? response.getData() : null;
 
         if (body == null || body.getContent() == null) {
@@ -804,8 +823,7 @@ public class TicketServiceImpl implements TicketService {
                 HttpMethod.POST,
                 new HttpEntity<>(initHeaders),
                 new ParameterizedTypeReference<>() {
-                }
-        );
+                });
 
         ArchiveUploadInitResponseDto init = initResponse.getBody() != null ? initResponse.getBody().getData() : null;
 
@@ -877,13 +895,13 @@ public class TicketServiceImpl implements TicketService {
 
         ResponseEntity<ApiResponse<com.sssi.msvc_archive.dto.PresignedUrlResponseDto>> response = restTemplate.exchange(
                 UriComponentsBuilder.fromHttpUrl(url)
-                        .queryParam("objectName", UriUtils.encodePath(objectName, java.nio.charset.StandardCharsets.UTF_8))
+                        .queryParam("objectName",
+                                UriUtils.encodePath(objectName, java.nio.charset.StandardCharsets.UTF_8))
                         .toUriString(),
                 HttpMethod.GET,
                 new HttpEntity<>(headers),
                 new ParameterizedTypeReference<>() {
-                }
-        );
+                });
 
         ApiResponse<com.sssi.msvc_archive.dto.PresignedUrlResponseDto> body = response.getBody();
 
@@ -898,5 +916,3 @@ public class TicketServiceImpl implements TicketService {
         return value == null ? null : value.atZone(TICKET_TIME_ZONE).toOffsetDateTime();
     }
 }
-
-

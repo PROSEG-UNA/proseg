@@ -24,6 +24,5 @@ public interface TicketService {
     TicketResponseDto updateAssignedRole(UUID id, TicketAssignedRoleUpdateRequestDto request, Authentication authentication);
     TicketResponseDto resolve(UUID id, Authentication authentication);
     TicketCommentResponseDto addComment(UUID id, TicketCommentCreateRequestDto request, Authentication authentication);
-
     Page<com.sssi.msvc_maintenance.dto.response.TicketHistoryChangeResponseDto> findHistoryByTicket(UUID id, Pageable pageable, Authentication authentication);
 }
