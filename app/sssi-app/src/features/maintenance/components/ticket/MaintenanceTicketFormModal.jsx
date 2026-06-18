@@ -5,7 +5,11 @@ import {
     Button,
     Chip,
     Divider,
+    FormControl,
+    FormControlLabel,
     MenuItem,
+    Radio,
+    RadioGroup,
     Stack,
     Tab,
     Tabs,
@@ -14,6 +18,8 @@ import {
     useTheme,
 } from '@mui/material';
 import ConstructionIcon from '@mui/icons-material/Construction';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
@@ -21,18 +27,17 @@ import {
     addMaintenanceTicketComment,
     createMaintenanceTicket,
     updateMaintenanceTicket,
-    fetchTicketAssets,
-    fetchTicketBuildings,
-    fetchTicketCampuses,
-    fetchTicketFloors,
-    fetchTicketLocations,
 } from '../../services/ticketsService';
+import {
+    fetchAssetsByLocation,
+    fetchBuildingsByCampus,
+    fetchCampuses,
+    fetchFloorsByBuilding,
+    fetchLocationsByBuilding,
+} from '../../services/locationsService';
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { MAINTENANCE_PRIORITY_OPTIONS } from '../../maintenanceUtils';
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
-import AddCommentOutlinedIcon from '@mui/icons-material/AddCommentOutlined';
-import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 
 const INITIAL_VALUES = {
     title: '',
@@ -43,7 +48,11 @@ const INITIAL_VALUES = {
     buildingId: '',
     floorId: '',
     locationId: '',
+    requiresAsset: 'false',
 };
+
+const LOCATION_PAGE_OPTIONS = { page: 0, size: 100 };
+const ASSET_PAGE_OPTIONS = { page: 0, size: 100 };
 
 const buildAssetLabel = (asset) => {
     const assetNumber = asset.assetNumber ?? asset.id;
@@ -66,6 +75,19 @@ const formatCommentDate = (value) => {
     });
 };
 
+const getCommentDateValue = (comment) => {
+    const value = comment?.createdAt ?? comment?.updatedAt;
+    return value ? new Date(value).getTime() : 0;
+};
+
+const getTicketCampusId = (ticket) => ticket?.siteId ?? ticket?.campusId ?? ticket?.site?.id ?? ticket?.campus?.id ?? '';
+
+const getTicketBuildingId = (ticket) => ticket?.buildingId ?? ticket?.building?.id ?? '';
+
+const getTicketFloorId = (ticket) => ticket?.floorId ?? ticket?.floor?.id ?? '';
+
+const getTicketLocationId = (ticket) => ticket?.locationId ?? ticket?.location?.id ?? '';
+
 export default function MaintenanceTicketFormModal({ open, onClose, onCreated, ticket = null, readOnly = false, loadingDetail = false }) {
     const theme = useTheme();
     const accentColor = theme.vars.palette.tones.rose.fg;
@@ -82,6 +104,10 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
     const [saving, setSaving] = useState(false);
     const [savingComment, setSavingComment] = useState(false);
     const [loadingOptions, setLoadingOptions] = useState(false);
+    const [loadingBuildings, setLoadingBuildings] = useState(false);
+    const [loadingFloors, setLoadingFloors] = useState(false);
+    const [loadingLocations, setLoadingLocations] = useState(false);
+    const [loadingAssets, setLoadingAssets] = useState(false);
     const [campuses, setCampuses] = useState([]);
     const [buildings, setBuildings] = useState([]);
     const [floors, setFloors] = useState([]);
@@ -93,6 +119,8 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
     const [pendingComments, setPendingComments] = useState([]);
     const [alert, setAlert] = useState(null);
 
+    const loadingCatalogs = loadingOptions || loadingBuildings || loadingFloors || loadingLocations || loadingAssets;
+
     useEffect(() => {
         if (!open) {
             setActiveTab('details');
@@ -102,6 +130,10 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             setSaving(false);
             setSavingComment(false);
             setLoadingOptions(false);
+            setLoadingBuildings(false);
+            setLoadingFloors(false);
+            setLoadingLocations(false);
+            setLoadingAssets(false);
             setCampuses([]);
             setBuildings([]);
             setFloors([]);
@@ -118,101 +150,200 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         setActiveTab('details');
         setTicketComments(ticket?.comments ?? []);
         setPendingComments([]);
+        setPhotos([]);
+        setErrors({});
+        setTouched({});
+        setBuildings([]);
+        setFloors([]);
+        setLocations([]);
+        setAssets([]);
+
+        if (ticket) {
+            const ticketAssets = ticket.assets ?? [];
+
+            setFormValues({
+                title: ticket.title ?? '',
+                description: ticket.description ?? '',
+                comment: '',
+                priority: ticket.priority ?? 'LOW',
+                siteId: getTicketCampusId(ticket),
+                buildingId: getTicketBuildingId(ticket),
+                floorId: getTicketFloorId(ticket),
+                locationId: getTicketLocationId(ticket),
+                requiresAsset: ticketAssets.length > 0 ? 'true' : 'false',
+            });
+
+            setSelectedAssets(ticketAssets.map((ticketAsset) => ({
+                id: ticketAsset.assetId ?? ticketAsset.id,
+                assetNumber: ticketAsset.assetNumber,
+                serialNumber: ticketAsset.serialNumber,
+                assetName: ticketAsset.assetName,
+                locationDescription: ticketAsset.locationDescription,
+            })));
+        } else {
+            setFormValues(INITIAL_VALUES);
+            setSelectedAssets([]);
+        }
 
         let cancelled = false;
-        setLoadingOptions(true);
 
-        Promise.all([
-            fetchTicketCampuses(),
-            fetchTicketBuildings(),
-            fetchTicketFloors(),
-            fetchTicketLocations(),
-            fetchTicketAssets(),
-        ])
-            .then(([campusItems, buildingItems, floorItems, locationItems, assetItems]) => {
+        async function loadCampuses() {
+            setLoadingOptions(true);
+
+            try {
+                const campusPage = await fetchCampuses(LOCATION_PAGE_OPTIONS);
                 if (cancelled) return;
 
-                const assetOptions = assetItems ?? [];
-
-                setCampuses(campusItems ?? []);
-                setBuildings(buildingItems ?? []);
-                setFloors(floorItems ?? []);
-                setLocations(locationItems ?? []);
-                setAssets(assetOptions);
-
-                if (ticket) {
-                    setFormValues({
-                        title: ticket.title ?? '',
-                        description: ticket.description ?? '',
-                        comment: '',
-                        priority: ticket.priority ?? 'LOW',
-                        siteId: ticket.siteId ?? '',
-                        buildingId: ticket.buildingId ?? '',
-                        floorId: ticket.floorId ?? '',
-                        locationId: ticket.locationId ?? '',
-                    });
-
-                    setSelectedAssets((ticket.assets ?? []).map((ticketAsset) => {
-                        const assetId = ticketAsset.assetId ?? ticketAsset.id;
-                        const asset = assetOptions.find((item) => item.id === assetId);
-
-                        return asset ?? {
-                            id: assetId,
-                            assetNumber: ticketAsset.assetNumber,
-                            serialNumber: ticketAsset.serialNumber,
-                            assetName: ticketAsset.assetName,
-                            locationDescription: ticketAsset.locationDescription,
-                        };
-                    }));
-                } else {
-                    setFormValues(INITIAL_VALUES);
-                    setSelectedAssets([]);
-                }
-            })
-            .catch((error) => {
+                setCampuses(campusPage?.content ?? []);
+            } catch (error) {
                 if (!cancelled) {
-                    setAlert({ type: 'error', message: error?.response?.data?.message ?? error?.message ?? 'No se pudieron cargar las opciones' });
+                    setAlert({ type: 'error', message: error?.response?.data?.message ?? error?.message ?? 'No se pudieron cargar las sedes' });
                 }
-            })
-            .finally(() => {
+            } finally {
                 if (!cancelled) setLoadingOptions(false);
-            });
+            }
+        }
+
+        loadCampuses();
 
         return () => {
             cancelled = true;
         };
     }, [open, ticket]);
 
-    const filteredBuildings = useMemo(
-        () => buildings.filter((building) => !formValues.siteId || building.campus?.id === formValues.siteId),
-        [buildings, formValues.siteId]
-    );
+    useEffect(() => {
+        if (!open || !formValues.siteId) {
+            setBuildings([]);
+            return;
+        }
 
-    const filteredFloors = useMemo(
-        () => floors.filter((floor) => !formValues.buildingId || floor.building?.id === formValues.buildingId),
-        [floors, formValues.buildingId]
-    );
+        let cancelled = false;
+
+        async function loadBuildings() {
+            setLoadingBuildings(true);
+
+            try {
+                const buildingPage = await fetchBuildingsByCampus(formValues.siteId, LOCATION_PAGE_OPTIONS);
+                if (cancelled) return;
+
+                setBuildings(buildingPage?.content ?? []);
+            } catch (error) {
+                if (!cancelled) {
+                    setAlert({ type: 'error', message: error?.response?.data?.message ?? error?.message ?? 'No se pudieron cargar los edificios' });
+                }
+            } finally {
+                if (!cancelled) setLoadingBuildings(false);
+            }
+        }
+
+        loadBuildings();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [open, formValues.siteId]);
+
+    useEffect(() => {
+        if (!open || !formValues.buildingId) {
+            setFloors([]);
+            setLocations([]);
+            return;
+        }
+
+        let cancelled = false;
+
+        async function loadFloorsAndLocations() {
+            setLoadingFloors(true);
+            setLoadingLocations(true);
+
+            try {
+                const [floorPage, locationPage] = await Promise.all([
+                    fetchFloorsByBuilding(formValues.buildingId, LOCATION_PAGE_OPTIONS),
+                    fetchLocationsByBuilding(formValues.buildingId, LOCATION_PAGE_OPTIONS),
+                ]);
+
+                if (cancelled) return;
+
+                setFloors(floorPage?.content ?? []);
+                setLocations(locationPage?.content ?? []);
+            } catch (error) {
+                if (!cancelled) {
+                    setAlert({ type: 'error', message: error?.response?.data?.message ?? error?.message ?? 'No se pudieron cargar pisos y ubicaciones' });
+                }
+            } finally {
+                if (!cancelled) {
+                    setLoadingFloors(false);
+                    setLoadingLocations(false);
+                }
+            }
+        }
+
+        loadFloorsAndLocations();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [open, formValues.buildingId]);
+
+    useEffect(() => {
+        if (!open || formValues.requiresAsset !== 'true' || !formValues.locationId) {
+            setAssets([]);
+            return;
+        }
+
+        let cancelled = false;
+
+        async function loadAssets() {
+            setLoadingAssets(true);
+
+            try {
+                const assetPage = await fetchAssetsByLocation(formValues.locationId, ASSET_PAGE_OPTIONS);
+                if (cancelled) return;
+
+                const assetItems = assetPage?.content ?? [];
+                setAssets(assetItems);
+                setSelectedAssets((prev) => prev.map((selected) => assetItems.find((asset) => asset.id === selected.id) ?? selected));
+            } catch (error) {
+                if (!cancelled) {
+                    setAlert({ type: 'error', message: error?.response?.data?.message ?? error?.message ?? 'No se pudieron cargar los activos' });
+                }
+            } finally {
+                if (!cancelled) setLoadingAssets(false);
+            }
+        }
+
+        loadAssets();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [open, formValues.requiresAsset, formValues.locationId]);
 
     const filteredLocations = useMemo(() => {
+        if (!formValues.floorId) return locations;
+
         return locations.filter((location) => {
-            const floorMatch = !formValues.floorId || location.floor?.id === formValues.floorId;
-            const buildingMatch = !formValues.buildingId || location.floor?.building?.id === formValues.buildingId;
-            return floorMatch && buildingMatch;
+            const floorId = location.floor?.id ?? location.floorId;
+            return floorId === formValues.floorId;
         });
-    }, [locations, formValues.buildingId, formValues.floorId]);
+    }, [locations, formValues.floorId]);
 
     const commentsToShow = useMemo(
-        () => [...ticketComments, ...pendingComments],
+        () => [...ticketComments, ...pendingComments].sort((a, b) => getCommentDateValue(b) - getCommentDateValue(a)),
         [ticketComments, pendingComments]
     );
 
-    const validateField = (key, value) => {
+    const validateField = (key, value, values = formValues) => {
         let error = '';
         const trimmed = typeof value === 'string' ? value.trim() : value;
         const requiredKeys = ['title', 'description', 'siteId', 'buildingId', ...(canSetPriority ? ['priority'] : [])];
 
         if (requiredKeys.includes(key) && !trimmed) {
             error = 'Este campo es requerido';
+        }
+
+        if (!error && key === 'locationId' && values.requiresAsset === 'true' && !trimmed) {
+            error = 'Debes seleccionar una ubicación para vincular activos';
         }
 
         if (!error && key === 'title' && trimmed && trimmed.length > 120) {
@@ -233,26 +364,78 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
 
     const handleChange = (key, value) => {
         if (key === 'siteId') {
-            setFormValues((prev) => ({ ...prev, siteId: value, buildingId: '', floorId: '', locationId: '' }));
-            if (touched.siteId) validateField('siteId', value);
-            if (touched.buildingId) validateField('buildingId', '');
+            const nextValues = { ...formValues, siteId: value, buildingId: '', floorId: '', locationId: '' };
+
+            setFormValues(nextValues);
+            setBuildings([]);
+            setFloors([]);
+            setLocations([]);
+            setAssets([]);
+            setSelectedAssets([]);
+
+            if (touched.siteId) validateField('siteId', value, nextValues);
+            if (touched.buildingId) validateField('buildingId', '', nextValues);
+            if (touched.locationId) validateField('locationId', '', nextValues);
             return;
         }
 
         if (key === 'buildingId') {
-            setFormValues((prev) => ({ ...prev, buildingId: value, floorId: '', locationId: '' }));
-            if (touched.buildingId) validateField('buildingId', value);
+            const nextValues = { ...formValues, buildingId: value, floorId: '', locationId: '' };
+
+            setFormValues(nextValues);
+            setFloors([]);
+            setLocations([]);
+            setAssets([]);
+            setSelectedAssets([]);
+
+            if (touched.buildingId) validateField('buildingId', value, nextValues);
+            if (touched.locationId) validateField('locationId', '', nextValues);
             return;
         }
 
         if (key === 'floorId') {
-            setFormValues((prev) => ({ ...prev, floorId: value, locationId: '' }));
-            if (touched.floorId) validateField('floorId', value);
+            const nextValues = { ...formValues, floorId: value, locationId: '' };
+
+            setFormValues(nextValues);
+            setAssets([]);
+            setSelectedAssets([]);
+
+            if (touched.floorId) validateField('floorId', value, nextValues);
+            if (touched.locationId) validateField('locationId', '', nextValues);
             return;
         }
 
-        setFormValues((prev) => ({ ...prev, [key]: value }));
-        if (touched[key]) validateField(key, value);
+        if (key === 'locationId') {
+            const nextValues = { ...formValues, locationId: value };
+
+            setFormValues(nextValues);
+            setAssets([]);
+            setSelectedAssets([]);
+
+            if (touched.locationId) validateField('locationId', value, nextValues);
+            return;
+        }
+
+        if (key === 'requiresAsset') {
+            const nextValues = { ...formValues, requiresAsset: value };
+
+            setFormValues(nextValues);
+
+            if (value !== 'true') {
+                setAssets([]);
+                setSelectedAssets([]);
+                setErrors((prev) => ({ ...prev, locationId: '' }));
+            } else if (touched.locationId) {
+                validateField('locationId', nextValues.locationId, nextValues);
+            }
+
+            return;
+        }
+
+        const nextValues = { ...formValues, [key]: value };
+
+        setFormValues(nextValues);
+        if (touched[key]) validateField(key, value, nextValues);
     };
 
     const handleBlur = (key) => {
@@ -276,14 +459,14 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
 
         if (!isEditing) {
             setPendingComments((prev) => [
-                ...prev,
                 {
                     id: `pending-${Date.now()}`,
                     content: comment,
-                    authorId: 'Tú',
+                    authorName: 'Tú',
                     createdAt: new Date().toISOString(),
                     pending: true,
                 },
+                ...prev,
             ]);
             setFormValues((prev) => ({ ...prev, comment: '' }));
             setErrors((prev) => ({ ...prev, comment: '' }));
@@ -294,14 +477,9 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         setSavingComment(true);
 
         try {
-            const response = await addMaintenanceTicketComment(ticket.id, comment);
-            const savedComment = response?.data ?? response ?? {
-                id: `comment-${Date.now()}`,
-                content: comment,
-                createdAt: new Date().toISOString(),
-            };
+            const savedComment = await addMaintenanceTicketComment(ticket.id, comment);
 
-            setTicketComments((prev) => [...prev, savedComment]);
+            setTicketComments((prev) => [savedComment, ...prev]);
             setFormValues((prev) => ({ ...prev, comment: '' }));
             setErrors((prev) => ({ ...prev, comment: '' }));
             setTouched((prev) => ({ ...prev, comment: false }));
@@ -329,6 +507,11 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                 nextErrors[key] = 'Este campo es requerido';
             }
         });
+
+        if (formValues.requiresAsset === 'true' && !formValues.locationId?.trim()) {
+            nextTouched.locationId = true;
+            nextErrors.locationId = 'Debes seleccionar una ubicación para vincular activos';
+        }
 
         if (formValues.title?.trim()?.length > 120) {
             nextErrors.title = 'El título no puede superar los 120 caracteres';
@@ -364,7 +547,9 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                 buildingId: formValues.buildingId,
                 floorId: formValues.floorId || null,
                 locationId: formValues.locationId || null,
-                assetIds: selectedAssets.map((asset) => asset.id),
+                assetIds: formValues.requiresAsset === 'true'
+                    ? selectedAssets.map((asset) => asset.id)
+                    : [],
             };
 
             const savedTicket = isEditing
@@ -439,7 +624,15 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
     const cardSx = {
         border: '1px solid',
         borderColor: 'divider',
-        borderRadius: '10px',
+        borderRadius: '8px',
+        backgroundColor: 'background.paper',
+        p: 1.5,
+    };
+
+    const commentComposerSx = {
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: '8px',
         backgroundColor: 'background.paper',
         p: 1.5,
     };
@@ -453,11 +646,11 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                 icon={ConstructionIcon}
                 title={isReadOnly ? 'Detalle de ticket de mantenimiento' : isEditing ? 'Editar ticket de mantenimiento' : 'Nuevo ticket de mantenimiento'}
                 subtitle={isReadOnly ? 'Visualiza los datos del ticket sin posibilidad de modificar' : isEditing ? 'Actualiza la información del ticket seleccionado' : 'Registra una incidencia con ubicación, activos, fotos y comentario inicial'}
-                loading={saving || loadingOptions || loadingDetail}
+                loading={saving || loadingCatalogs || loadingDetail}
                 secondaryButton={isReadOnly ? undefined : { label: 'Cancelar', onClick: onClose, disabled: saving }}
                 primaryButton={isReadOnly
                     ? { label: 'Cerrar', onClick: onClose, disabled: false }
-                    : { label: saving ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear ticket', onClick: handleSave, disabled: saving || loadingOptions || loadingDetail || savingComment }
+                    : { label: saving ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear ticket', onClick: handleSave, disabled: saving || loadingCatalogs || loadingDetail || savingComment }
                 }
                 contentSx={contentSx}
             >
@@ -471,7 +664,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                             required
                             fullWidth
                             size="small"
-                            disabled={saving || loadingOptions || isReadOnly}
+                            disabled={saving || loadingCatalogs || isReadOnly}
                             error={touched.title && !!errors.title}
                             helperText={touched.title ? (errors.title || ' ') : ' '}
                             sx={fieldSx}
@@ -497,18 +690,8 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                 },
                             }}
                         >
-                            <Tab
-                                value="details"
-                                label={buildTabLabel(DescriptionOutlinedIcon, 'Detalles')}
-                            />
-                            <Tab
-                                value="comments"
-                                label={buildTabLabel(AddCommentOutlinedIcon, `Comentarios (${commentsToShow.length})`)}
-                            />
-                            <Tab
-                                value="attachments"
-                                label={buildTabLabel(ImageOutlinedIcon, `Adjuntos (${(ticket?.photos?.length ?? 0) + photos.length})`)}
-                            />
+                            <Tab value="details" label={buildTabLabel(DescriptionOutlinedIcon, 'Detalles')} />
+                            <Tab value="attachments" label={buildTabLabel(ImageOutlinedIcon, `Adjuntos (${(ticket?.photos?.length ?? 0) + photos.length})`)} />
                         </Tabs>
                     </Box>
 
@@ -519,14 +702,12 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                 pt: 2.5,
                                 pb: 3,
                                 display: 'grid',
-                                gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 320px' },
-                                gap: 2,
+                                gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 340px' },
+                                gap: 2.5,
                             }}
                         >
                             <Box>
-                                <Typography sx={sectionTitleSx}>
-                                    Descripción
-                                </Typography>
+                                <Typography sx={sectionTitleSx}>Descripción</Typography>
 
                                 <TextField
                                     value={formValues.description}
@@ -536,75 +717,85 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                     fullWidth
                                     multiline
                                     minRows={6}
-                                    disabled={saving || loadingOptions || isReadOnly}
+                                    disabled={saving || loadingCatalogs || isReadOnly}
                                     error={touched.description && !!errors.description}
                                     helperText={touched.description ? (errors.description || ' ') : 'Máximo 500 caracteres'}
                                     sx={fieldSx}
                                 />
 
-                                <Typography sx={{ ...sectionTitleSx, mt: 2.5 }}>
-                                    Activos vinculados
-                                </Typography>
+                                <Box sx={{ mt: 3 }}>
+                                    <Typography sx={sectionTitleSx}>Comentarios</Typography>
 
-                                <Autocomplete
-                                    multiple
-                                    options={assets}
-                                    value={selectedAssets}
-                                    onChange={(_, value) => setSelectedAssets(value)}
-                                    getOptionLabel={buildAssetLabel}
-                                    isOptionEqualToValue={(option, value) => option.id === value.id}
-                                    loading={loadingOptions}
-                                    disabled={isReadOnly}
-                                    renderTags={(value, getTagProps) => value.map((option, index) => (
-                                        <Chip
-                                            {...getTagProps({ index })}
-                                            key={option.id}
-                                            label={buildAssetLabel(option)}
-                                            size="small"
-                                            sx={chipSx}
-                                        />
-                                    ))}
-                                    renderInput={(params) => (
-                                        <TextField
-                                            {...params}
-                                            placeholder="Busca y selecciona activos"
-                                            size="small"
-                                            sx={fieldSx}
-                                            helperText="Opcional"
-                                        />
-                                    )}
-                                />
-
-                                {selectedAssets.length > 0 ? (
-                                    <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                                        {selectedAssets.map((asset) => (
-                                            <Chip
-                                                key={asset.id}
-                                                label={buildAssetLabel(asset)}
-                                                size="small"
-                                                variant="outlined"
-                                                sx={chipSx}
+                                    {!isReadOnly ? (
+                                        <Box sx={commentComposerSx}>
+                                            <TextField
+                                                value={formValues.comment}
+                                                onChange={(event) => handleChange('comment', event.target.value)}
+                                                onBlur={() => handleBlur('comment')}
+                                                placeholder={isEditing ? 'Escribe un comentario' : 'Agrega comentarios antes de crear el ticket'}
+                                                fullWidth
+                                                multiline
+                                                minRows={4}
+                                                disabled={saving || loadingCatalogs || savingComment}
+                                                error={touched.comment && !!errors.comment}
+                                                helperText={touched.comment ? (errors.comment || ' ') : 'Máximo 1000 caracteres'}
+                                                sx={fieldSx}
                                             />
-                                        ))}
+
+                                            <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'flex-end' }}>
+                                                <Button
+                                                    variant="contained"
+                                                    onClick={handleAddComment}
+                                                    disabled={saving || loadingCatalogs || savingComment}
+                                                    sx={{ textTransform: 'none', borderRadius: '8px' }}
+                                                >
+                                                    {savingComment ? 'Guardando...' : 'Comentar'}
+                                                </Button>
+                                            </Box>
+                                        </Box>
+                                    ) : null}
+
+                                    <Box sx={{ mt: isReadOnly ? 0 : 2 }}>
+                                        {commentsToShow.length > 0 ? (
+                                            <Stack spacing={1.25}>
+                                                {commentsToShow.map((comment) => (
+                                                    <Box key={comment.id} sx={cardSx}>
+                                                        <Stack
+                                                            direction="row"
+                                                            spacing={1}
+                                                            sx={{
+                                                                mb: 0.75,
+                                                                flexWrap: 'wrap',
+                                                                alignItems: 'center',
+                                                            }}
+                                                        >
+                                                            <Typography sx={{ fontWeight: 700, fontSize: 13 }}>
+                                                                {comment.authorName ?? 'Usuario'}
+                                                            </Typography>
+                                                            <Typography sx={{ color: 'text.secondary', fontSize: 12.5 }}>
+                                                                {comment.pending ? 'Pendiente de guardar' : formatCommentDate(comment.createdAt)}
+                                                            </Typography>
+                                                        </Stack>
+
+                                                        <Typography sx={{ whiteSpace: 'pre-wrap', fontSize: 13.5 }}>
+                                                            {comment.content}
+                                                        </Typography>
+                                                    </Box>
+                                                ))}
+                                            </Stack>
+                                        ) : (
+                                            <Typography sx={{ color: 'text.secondary', fontSize: 13.5 }}>
+                                                No hay comentarios registrados.
+                                            </Typography>
+                                        )}
                                     </Box>
-                                ) : null}
+                                </Box>
                             </Box>
 
                             <Box sx={{ borderLeft: { xs: 0, md: '1px solid' }, borderColor: 'divider', pl: { xs: 0, md: 3 } }}>
-                                <Typography sx={sectionTitleSx}>
-                                    Planeación
-                                </Typography>
+                                <Typography sx={sectionTitleSx}>Planeación</Typography>
 
                                 <Stack spacing={2}>
-                                    <Box>
-                                        <Typography sx={{ color: 'text.secondary', fontSize: 12, mb: 0.5 }}>
-                                            Estado
-                                        </Typography>
-                                        <Typography sx={{ fontWeight: 600, fontSize: 13.5 }}>
-                                            {ticket?.status ?? 'Nuevo'}
-                                        </Typography>
-                                    </Box>
-
                                     {canSetPriority ? (
                                         <TextField
                                             select
@@ -615,7 +806,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                             required
                                             fullWidth
                                             size="small"
-                                            disabled={saving || loadingOptions || isReadOnly}
+                                            disabled={saving || loadingCatalogs || isReadOnly}
                                             error={touched.priority && !!errors.priority}
                                             helperText={touched.priority ? (errors.priority || ' ') : ' '}
                                             sx={fieldSx}
@@ -631,9 +822,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
 
                                 <Divider sx={{ my: 2.5 }} />
 
-                                <Typography sx={sectionTitleSx}>
-                                    Ubicación
-                                </Typography>
+                                <Typography sx={sectionTitleSx}>Ubicación</Typography>
 
                                 <Stack spacing={2}>
                                     <SearchableSelect
@@ -658,13 +847,13 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                         value={formValues.buildingId}
                                         onChange={(value) => handleChange('buildingId', value)}
                                         onBlur={() => handleBlur('buildingId')}
-                                        items={filteredBuildings}
+                                        items={buildings}
                                         getItemLabel={(building) => building.name}
                                         getItemValue={(building) => building.id}
                                         required
                                         fullWidth
                                         size="small"
-                                        disabled={saving || loadingOptions || isReadOnly || !formValues.siteId || filteredBuildings.length === 0}
+                                        disabled={saving || loadingBuildings || isReadOnly || !formValues.siteId}
                                         error={touched.buildingId && !!errors.buildingId}
                                         helperText={touched.buildingId ? (errors.buildingId || ' ') : ' '}
                                         sx={fieldSx}
@@ -675,12 +864,13 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                         value={formValues.floorId}
                                         onChange={(value) => handleChange('floorId', value)}
                                         onBlur={() => handleBlur('floorId')}
-                                        items={filteredFloors}
+                                        items={floors}
                                         getItemLabel={(floor) => floor.name}
                                         getItemValue={(floor) => floor.id}
+                                        clearable
                                         fullWidth
                                         size="small"
-                                        disabled={saving || loadingOptions || isReadOnly || !formValues.buildingId || filteredFloors.length === 0}
+                                        disabled={saving || loadingFloors || isReadOnly || !formValues.buildingId}
                                         helperText={touched.floorId ? (errors.floorId || ' ') : ' '}
                                         sx={fieldSx}
                                     />
@@ -691,83 +881,84 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                         onChange={(value) => handleChange('locationId', value)}
                                         onBlur={() => handleBlur('locationId')}
                                         items={filteredLocations}
-                                        getItemLabel={(location) => location.description}
+                                        getItemLabel={(location) => location.description ?? location.name}
                                         getItemValue={(location) => location.id}
+                                        clearable
                                         fullWidth
                                         size="small"
-                                        disabled={saving || loadingOptions || isReadOnly || !formValues.buildingId || filteredLocations.length === 0}
+                                        disabled={saving || loadingLocations || isReadOnly || !formValues.buildingId}
+                                        error={touched.locationId && !!errors.locationId}
                                         helperText={touched.locationId ? (errors.locationId || ' ') : ' '}
                                         sx={fieldSx}
                                     />
                                 </Stack>
-                            </Box>
-                        </Box>
-                    ) : null}
 
-                    {activeTab === 'comments' ? (
-                        <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 3 }}>
-                            {!isReadOnly ? (
-                                <>
-                                    <Typography sx={sectionTitleSx}>
-                                        Nuevo comentario
-                                    </Typography>
+                                <Divider sx={{ my: 2.5 }} />
 
-                                    <TextField
-                                        value={formValues.comment}
-                                        onChange={(event) => handleChange('comment', event.target.value)}
-                                        onBlur={() => handleBlur('comment')}
-                                        placeholder={isEditing ? 'Agrega un nuevo comentario al ticket' : 'Agrega comentarios antes de crear el ticket'}
-                                        fullWidth
-                                        multiline
-                                        minRows={5}
-                                        disabled={saving || loadingOptions || savingComment}
-                                        error={touched.comment && !!errors.comment}
-                                        helperText={touched.comment ? (errors.comment || ' ') : 'Máximo 1000 caracteres'}
-                                        sx={fieldSx}
-                                    />
+                                <Typography sx={sectionTitleSx}>¿Se requiere activo?</Typography>
 
-                                    <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'flex-end' }}>
-                                        <Button
-                                            variant="contained"
-                                            onClick={handleAddComment}
-                                            disabled={saving || loadingOptions || savingComment}
-                                            sx={{ textTransform: 'none', borderRadius: '10px' }}
-                                        >
-                                            {savingComment ? 'Guardando...' : 'Agregar comentario'}
-                                        </Button>
+                                <FormControl disabled={saving || loadingCatalogs || isReadOnly}>
+                                    <RadioGroup
+                                        row
+                                        value={formValues.requiresAsset}
+                                        onChange={(event) => handleChange('requiresAsset', event.target.value)}
+                                    >
+                                        <FormControlLabel value="true" control={<Radio />} label="Sí" />
+                                        <FormControlLabel value="false" control={<Radio />} label="No" />
+                                    </RadioGroup>
+                                </FormControl>
+
+                                {formValues.requiresAsset === 'true' ? (
+                                    <Box sx={{ mt: 1.5 }}>
+                                        <Typography sx={{ fontWeight: 700, fontSize: 13.5, mb: 1 }}>
+                                            Activos
+                                        </Typography>
+
+                                        <Autocomplete
+                                            multiple
+                                            options={assets}
+                                            value={selectedAssets}
+                                            onChange={(_, value) => setSelectedAssets(value)}
+                                            getOptionLabel={buildAssetLabel}
+                                            isOptionEqualToValue={(option, value) => option.id === value.id}
+                                            loading={loadingAssets}
+                                            disabled={isReadOnly || !formValues.locationId || loadingAssets}
+                                            renderTags={(value, getTagProps) => value.map((option, index) => (
+                                                <Chip
+                                                    {...getTagProps({ index })}
+                                                    key={option.id}
+                                                    label={buildAssetLabel(option)}
+                                                    size="small"
+                                                    sx={chipSx}
+                                                />
+                                            ))}
+                                            renderInput={(params) => (
+                                                <TextField
+                                                    {...params}
+                                                    placeholder={formValues.locationId ? 'Busca y selecciona activos' : 'Selecciona una ubicación primero'}
+                                                    size="small"
+                                                    sx={fieldSx}
+                                                    helperText={formValues.locationId ? 'Opcional' : 'Debes seleccionar una ubicación para ver activos'}
+                                                />
+                                            )}
+                                        />
+
+                                        {selectedAssets.length > 0 ? (
+                                            <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                                                {selectedAssets.map((asset) => (
+                                                    <Chip
+                                                        key={asset.id}
+                                                        label={buildAssetLabel(asset)}
+                                                        size="small"
+                                                        variant="outlined"
+                                                        sx={chipSx}
+                                                    />
+                                                ))}
+                                            </Box>
+                                        ) : null}
                                     </Box>
-
-                                    <Divider sx={{ my: 2.5 }} />
-                                </>
-                            ) : null}
-
-                            <Typography sx={sectionTitleSx}>
-                                Historial de comentarios
-                            </Typography>
-
-                            {commentsToShow.length > 0 ? (
-                                <Stack spacing={1.5}>
-                                    {commentsToShow.map((comment) => (
-                                        <Box key={comment.id} sx={cardSx}>
-                                            <Stack direction="row" spacing={1} sx={{ mb: 0.5, flexWrap: 'wrap' }}>
-                                                <Typography sx={{ fontWeight: 700, fontSize: 13 }}>
-                                                    {comment.authorName ?? comment.authorId ?? 'Usuario'}
-                                                </Typography>
-                                                <Typography sx={{ color: 'text.secondary', fontSize: 13 }}>
-                                                    {comment.pending ? 'Pendiente de guardar' : formatCommentDate(comment.createdAt)}
-                                                </Typography>
-                                            </Stack>
-                                            <Typography sx={{ whiteSpace: 'pre-wrap', fontSize: 13.5 }}>
-                                                {comment.content}
-                                            </Typography>
-                                        </Box>
-                                    ))}
-                                </Stack>
-                            ) : (
-                                <Typography sx={{ color: 'text.secondary', fontSize: 13.5 }}>
-                                    No hay comentarios registrados.
-                                </Typography>
-                            )}
+                                ) : null}
+                            </Box>
                         </Box>
                     ) : null}
 
@@ -775,9 +966,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                         <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 3 }}>
                             {!isReadOnly ? (
                                 <>
-                                    <Typography sx={sectionTitleSx}>
-                                        Agregar fotos
-                                    </Typography>
+                                    <Typography sx={sectionTitleSx}>Agregar fotos</Typography>
 
                                     <TextField
                                         type="file"
@@ -785,7 +974,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                         onChange={(event) => setPhotos(Array.from(event.target.files || []))}
                                         fullWidth
                                         size="small"
-                                        disabled={saving || loadingOptions}
+                                        disabled={saving || loadingCatalogs}
                                         helperText={photos.length > 0 ? `${photos.length} archivo(s) seleccionado(s)` : 'Opcional'}
                                         sx={fieldSx}
                                     />
@@ -794,9 +983,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                 </>
                             ) : null}
 
-                            <Typography sx={sectionTitleSx}>
-                                Adjuntos actuales
-                            </Typography>
+                            <Typography sx={sectionTitleSx}>Adjuntos actuales</Typography>
 
                             {(ticket?.photos?.length ?? 0) > 0 ? (
                                 <Stack spacing={1.5}>
@@ -837,9 +1024,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                 <>
                                     <Divider sx={{ my: 2.5 }} />
 
-                                    <Typography sx={sectionTitleSx}>
-                                        Adjuntos por guardar
-                                    </Typography>
+                                    <Typography sx={sectionTitleSx}>Adjuntos por guardar</Typography>
 
                                     <Stack spacing={1}>
                                         {photos.map((photo) => (

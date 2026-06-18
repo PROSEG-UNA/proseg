@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../features/auth/hooks/useAuth';
+import { PERMISSIONS } from '../../constants/permissions';
 import {
   Box,
   Collapse,
@@ -27,6 +28,9 @@ import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import { useColorScheme } from '@mui/material/styles';
 import { panelSurfaceSx } from '../../theme/sxStyles';
 import { useNavSections } from './useNavSections';
+import { usePermissions } from '../../hooks/usePermissions';
+import AppsIcon from '@mui/icons-material/Apps';
+import BusinessIcon from '@mui/icons-material/Business';
 
 const iconBoxSx = (t, { active = false } = {}) => ({
   width: 34, height: 34, mr: 1.5,
@@ -122,6 +126,7 @@ export function NavDrawer({ open, onClose }) {
   const { mode, systemMode } = useColorScheme();
   const { sections } = useNavSections();
   const resolvedMode = mode === 'system' ? systemMode : mode;
+  const { hasAnyPermission } = usePermissions();
 
   const toggleMenu = (menu) => setExpandedMenu(expandedMenu === menu ? null : menu);
   const handleNavigation = (path) => { navigate(path); onClose(); };

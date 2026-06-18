@@ -24,7 +24,6 @@ import CampusPage from './features/locations/pages/CampusPage';
 import BuildingPage from './features/locations/pages/BuildingPage';
 import LocationPage from './features/locations/pages/LocationPage';
 import EmailPage from './features/locations/pages/EmailPage';
-import CompaniesPage from "./features/maintenance/pages/CompaniesPage.jsx";
 import TicketsPage from './features/maintenance/pages/TicketsPage.jsx';
 
 function App() {

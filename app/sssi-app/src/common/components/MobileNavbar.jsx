@@ -27,6 +27,7 @@ import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import { usePermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/permissions';
 import { alpha } from '@mui/material/styles';
+import { usePermissions } from '../../hooks/usePermissions';
 
 export function MobileNavbar() {
   const navigate = useNavigate();

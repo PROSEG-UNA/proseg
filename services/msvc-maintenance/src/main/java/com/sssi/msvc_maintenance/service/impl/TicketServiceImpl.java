@@ -9,7 +9,17 @@ import com.sssi.msvc_maintenance.dto.request.TicketAssignedRoleUpdateRequestDto;
 import com.sssi.msvc_maintenance.dto.request.TicketCommentCreateRequestDto;
 import com.sssi.msvc_maintenance.dto.request.TicketCreateRequestDto;
 import com.sssi.msvc_maintenance.dto.request.TicketPriorityUpdateRequestDto;
-import com.sssi.msvc_maintenance.dto.response.*;
+import com.sssi.msvc_maintenance.dto.response.InventoryAssetFloorResponseDto;
+import com.sssi.msvc_maintenance.dto.response.InventoryAssetLocationResponseDto;
+import com.sssi.msvc_maintenance.dto.response.InventoryAssetResponseDto;
+import com.sssi.msvc_maintenance.dto.response.InventoryBuildingResponseDto;
+import com.sssi.msvc_maintenance.dto.response.InventoryCampusResponseDto;
+import com.sssi.msvc_maintenance.dto.response.KeycloakUserResponse;
+import com.sssi.msvc_maintenance.dto.response.TicketAssetResponseDto;
+import com.sssi.msvc_maintenance.dto.response.TicketCommentResponseDto;
+import com.sssi.msvc_maintenance.dto.response.TicketListResponseDto;
+import com.sssi.msvc_maintenance.dto.response.TicketPhotoResponseDto;
+import com.sssi.msvc_maintenance.dto.response.TicketResponseDto;
 import com.sssi.msvc_maintenance.entity.Ticket;
 import com.sssi.msvc_maintenance.entity.TicketAsset;
 import com.sssi.msvc_maintenance.entity.TicketComment;
@@ -24,8 +34,6 @@ import com.sssi.msvc_maintenance.security.Privileges;
 import com.sssi.msvc_maintenance.service.TicketService;
 import com.sssi.msvc_maintenance.websocket.TicketWebSocketEventDto;
 import com.sssi.msvc_maintenance.websocket.TicketWebSocketManager;
-import com.sssi.msvcinventory.dto.response.FloorResponseDto;
-import com.sssi.msvcinventory.dto.response.LocationResponseDto;
 import com.sssi.msvcinventory.exception.AssetException;
 import com.sssi.msvcinventory.exception.BuildingException;
 import com.sssi.msvcinventory.exception.CampusException;
@@ -35,7 +43,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpEntity;
@@ -59,7 +66,12 @@ import org.springframework.web.util.UriUtils;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -73,6 +85,7 @@ public class TicketServiceImpl implements TicketService {
     private final TicketAssetRepository ticketAssetRepository;
     private final TicketPhotoRepository ticketPhotoRepository;
     private final TicketCommentRepository ticketCommentRepository;
+    private final com.sssi.msvc_maintenance.repository.TicketHistoryChangeRepository ticketHistoryChangeRepository;
     private final InventoryClient inventoryClient;
     private final RestTemplate restTemplate;
     private final TicketWebSocketManager webSocketManager;
@@ -90,7 +103,7 @@ public class TicketServiceImpl implements TicketService {
             throw BuildingException.campusDoesNotMatch(building.getId(), site.getId());
         }
 
-        FloorResponseDto floor = null;
+        InventoryAssetFloorResponseDto floor = null;
         if (request.getFloorId() != null) {
             floor = requireFloor(request.getFloorId());
             if (floor.getBuilding() == null || !floor.getBuilding().getId().equals(building.getId())) {
@@ -102,7 +115,7 @@ public class TicketServiceImpl implements TicketService {
             }
         }
 
-        LocationResponseDto location = null;
+        InventoryAssetLocationResponseDto location = null;
         if (request.getLocationId() != null) {
             location = requireLocation(request.getLocationId());
             if (floor == null || location.getFloor() == null || !location.getFloor().getId().equals(floor.getId())) {
@@ -114,13 +127,7 @@ public class TicketServiceImpl implements TicketService {
             }
         }
 
-        List<UUID> assetIds = new ArrayList<>();
-        if (request.getAssetIds() != null && !request.getAssetIds().isEmpty()) {
-            for (UUID assetId : request.getAssetIds()) {
-                requireAsset(assetId);
-                assetIds.add(assetId);
-            }
-        }
+        List<UUID> assetIds = resolveValidAssetIds(request.getAssetIds(), location);
 
         String createdBy = extractUserId(authentication);
 
@@ -142,28 +149,8 @@ public class TicketServiceImpl implements TicketService {
 
         Ticket saved = ticketRepository.save(ticket);
 
-        for (UUID assetId : assetIds) {
-            TicketAsset ticketAsset = TicketAsset.builder()
-                    .ticket(saved)
-                    .assetId(assetId)
-                    .build();
-            ticketAssetRepository.save(ticketAsset);
-            saved.getTicketAssets().add(ticketAsset);
-        }
-
-        if (photos != null && !photos.isEmpty()) {
-            for (MultipartFile file : photos) {
-                String objectName = uploadFileToArchive(file, authentication);
-                TicketPhoto photo = TicketPhoto.builder()
-                        .ticket(saved)
-                        .objectName(objectName)
-                        .fileName(file.getOriginalFilename())
-                        .contentType(file.getContentType())
-                        .build();
-                ticketPhotoRepository.save(photo);
-                saved.getTicketPhotos().add(photo);
-            }
-        }
+        saveTicketAssets(saved, assetIds);
+        saveTicketPhotos(saved, photos, authentication);
 
         TicketResponseDto response = toResponse(saved);
 
@@ -196,7 +183,7 @@ public class TicketServiceImpl implements TicketService {
             throw BuildingException.campusDoesNotMatch(building.getId(), site.getId());
         }
 
-        FloorResponseDto floor = null;
+        InventoryAssetFloorResponseDto floor = null;
         if (request.getFloorId() != null) {
             floor = requireFloor(request.getFloorId());
             if (floor.getBuilding() == null || !floor.getBuilding().getId().equals(building.getId())) {
@@ -208,7 +195,7 @@ public class TicketServiceImpl implements TicketService {
             }
         }
 
-        LocationResponseDto location = null;
+        InventoryAssetLocationResponseDto location = null;
         if (request.getLocationId() != null) {
             location = requireLocation(request.getLocationId());
             if (floor == null || location.getFloor() == null || !location.getFloor().getId().equals(floor.getId())) {
@@ -219,6 +206,11 @@ public class TicketServiceImpl implements TicketService {
                 );
             }
         }
+
+        List<UUID> assetIds = resolveValidAssetIds(request.getAssetIds(), location);
+
+        String oldTitle = ticket.getTitle();
+        String oldDescription = ticket.getDescription();
 
         ticket.setTitle(request.getTitle().trim());
         ticket.setDescription(request.getDescription().trim());
@@ -235,33 +227,17 @@ public class TicketServiceImpl implements TicketService {
         ticketAssetRepository.deleteAll(currentAssets);
         ticket.getTicketAssets().clear();
 
-        if (request.getAssetIds() != null && !request.getAssetIds().isEmpty()) {
-            for (UUID assetId : request.getAssetIds()) {
-                requireAsset(assetId);
-                TicketAsset ticketAsset = TicketAsset.builder()
-                        .ticket(ticket)
-                        .assetId(assetId)
-                        .build();
-                ticketAssetRepository.save(ticketAsset);
-                ticket.getTicketAssets().add(ticketAsset);
-            }
-        }
-
-        if (photos != null && !photos.isEmpty()) {
-            for (MultipartFile file : photos) {
-                String objectName = uploadFileToArchive(file, authentication);
-                TicketPhoto photo = TicketPhoto.builder()
-                        .ticket(ticket)
-                        .objectName(objectName)
-                        .fileName(file.getOriginalFilename())
-                        .contentType(file.getContentType())
-                        .build();
-                ticketPhotoRepository.save(photo);
-                ticket.getTicketPhotos().add(photo);
-            }
-        }
+        saveTicketAssets(ticket, assetIds);
+        saveTicketPhotos(ticket, photos, authentication);
 
         Ticket saved = ticketRepository.save(ticket);
+
+        if (!java.util.Objects.equals(oldTitle, saved.getTitle())) {
+            saveHistory(saved, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.EDITED, "title", oldTitle, saved.getTitle(), extractUserId(authentication), null);
+        }
+        if (!java.util.Objects.equals(oldDescription, saved.getDescription())) {
+            saveHistory(saved, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.EDITED, "description", oldDescription, saved.getDescription(), extractUserId(authentication), null);
+        }
 
         webSocketManager.broadcast(TicketWebSocketEventDto.builder()
                 .type("ticket.updated")
@@ -308,8 +284,13 @@ public class TicketServiceImpl implements TicketService {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
 
+        com.sssi.msvc_maintenance.entity.enums.TicketPriority oldPriority = ticket.getPriority();
         ticket.setPriority(request.getPriority());
         Ticket saved = ticketRepository.save(ticket);
+
+        if (oldPriority == null || !oldPriority.equals(saved.getPriority())) {
+            saveHistory(saved, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.PRIORITY_CHANGED, "priority", oldPriority == null ? null : oldPriority.name(), saved.getPriority() == null ? null : saved.getPriority().name(), extractUserId(authentication), null);
+        }
 
         webSocketManager.broadcast(TicketWebSocketEventDto.builder()
                 .type("ticket.priority.updated")
@@ -333,8 +314,13 @@ public class TicketServiceImpl implements TicketService {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
 
+        String oldAssignedRole = ticket.getAssignedRole();
         ticket.setAssignedRole(request.getAssignedRole());
         Ticket saved = ticketRepository.save(ticket);
+
+        if (oldAssignedRole == null && saved.getAssignedRole() != null || (oldAssignedRole != null && !oldAssignedRole.equals(saved.getAssignedRole()))) {
+            saveHistory(saved, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.ASSIGNED_ROLE_CHANGED, "assignedRole", oldAssignedRole, saved.getAssignedRole(), extractUserId(authentication), null);
+        }
 
         webSocketManager.broadcast(TicketWebSocketEventDto.builder()
                 .type("ticket.assignedRole.updated")
@@ -367,8 +353,13 @@ public class TicketServiceImpl implements TicketService {
             }
         }
 
+        TicketStatus oldStatus = ticket.getStatus();
         ticket.setStatus(TicketStatus.RESOLVED);
         Ticket saved = ticketRepository.save(ticket);
+
+        if (oldStatus == null || !oldStatus.equals(saved.getStatus())) {
+            saveHistory(saved, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.STATUS_CHANGED, "status", oldStatus == null ? null : oldStatus.name(), saved.getStatus() == null ? null : saved.getStatus().name(), extractUserId(authentication), null);
+        }
 
         webSocketManager.broadcast(TicketWebSocketEventDto.builder()
                 .type("ticket.resolved")
@@ -401,7 +392,109 @@ public class TicketServiceImpl implements TicketService {
         TicketComment saved = ticketCommentRepository.save(comment);
         ticket.getTicketComments().add(saved);
 
+        saveHistory(ticket, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.COMMENT_ADDED, "comment", null, saved.getContent(), extractUserId(authentication), null);
+
         return toCommentResponse(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<com.sssi.msvc_maintenance.dto.response.TicketHistoryChangeResponseDto> findHistoryByTicket(UUID ticketId, Pageable pageable, Authentication authentication) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+
+        if (!isAdmin(authentication) && !hasViewAllTickets(authentication) && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            throw new RuntimeException("Acceso denegado");
+        }
+
+        return ticketHistoryChangeRepository.findByTicketIdOrderByCreatedAtDesc(ticketId, pageable)
+                .map(this::toHistoryResponse);
+    }
+
+    private com.sssi.msvc_maintenance.dto.response.TicketHistoryChangeResponseDto toHistoryResponse(com.sssi.msvc_maintenance.entity.TicketHistoryChange history) {
+        return com.sssi.msvc_maintenance.dto.response.TicketHistoryChangeResponseDto.builder()
+                .id(history.getId())
+                .type(history.getType())
+                .fieldName(history.getFieldName())
+                .oldValue(history.getOldValue())
+                .newValue(history.getNewValue())
+                .authorId(history.getAuthorId())
+                .authorName(resolveAuthorName(history.getAuthorId()))
+                .createdAt(toOffsetDateTime(history.getCreatedAt()))
+                .updatedAt(toOffsetDateTime(history.getUpdatedAt()))
+                .build();
+    }
+
+    private void saveHistory(Ticket ticket, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType type, String fieldName, String oldValue, String newValue, String authorId, String metadata) {
+        com.sssi.msvc_maintenance.entity.TicketHistoryChange history = com.sssi.msvc_maintenance.entity.TicketHistoryChange.builder()
+                .ticket(ticket)
+                .type(type)
+                .fieldName(fieldName)
+                .oldValue(oldValue)
+                .newValue(newValue)
+                .authorId(authorId)
+                .metadata(metadata)
+                .build();
+
+        ticketHistoryChangeRepository.save(history);
+    }
+
+    private void saveTicketAssets(Ticket ticket, List<UUID> assetIds) {
+        for (UUID assetId : assetIds) {
+            TicketAsset ticketAsset = TicketAsset.builder()
+                    .ticket(ticket)
+                    .assetId(assetId)
+                    .build();
+
+            ticketAssetRepository.save(ticketAsset);
+            ticket.getTicketAssets().add(ticketAsset);
+        }
+    }
+
+    private void saveTicketPhotos(Ticket ticket, List<MultipartFile> photos, Authentication authentication) {
+        if (photos == null || photos.isEmpty()) {
+            return;
+        }
+
+        for (MultipartFile file : photos) {
+            String objectName = uploadFileToArchive(file, authentication);
+
+            TicketPhoto photo = TicketPhoto.builder()
+                    .ticket(ticket)
+                    .objectName(objectName)
+                    .fileName(file.getOriginalFilename())
+                    .contentType(file.getContentType())
+                    .build();
+
+            ticketPhotoRepository.save(photo);
+            ticket.getTicketPhotos().add(photo);
+
+            saveHistory(ticket, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.ATTACHMENT_ADDED, "photo", null, photo.getFileName(), extractUserId(authentication), photo.getObjectName());
+        }
+    }
+
+    private List<UUID> resolveValidAssetIds(List<UUID> requestAssetIds, InventoryAssetLocationResponseDto location) {
+        List<UUID> assetIds = new ArrayList<>();
+
+        if (requestAssetIds == null || requestAssetIds.isEmpty()) {
+            return assetIds;
+        }
+
+        for (UUID assetId : requestAssetIds) {
+            InventoryAssetResponseDto asset = requireAsset(assetId);
+
+            if (location != null && asset.getLocation() != null && !asset.getLocation().getId().equals(location.getId())) {
+                throw new AssetException(
+                        HttpStatus.BAD_REQUEST,
+                        "ASSET_LOCATION_MISMATCH",
+                        "El activo " + asset.getId() + " no pertenece a la ubicación indicada"
+                );
+            }
+
+            assetIds.add(assetId);
+        }
+
+        return assetIds;
     }
 
     private TicketListResponseDto toListResponse(Ticket ticket) {
@@ -417,75 +510,23 @@ public class TicketServiceImpl implements TicketService {
                 .build();
     }
 
-    private TicketCommentResponseDto toCommentResponse(TicketComment comment, Map<String, String> authorNames) {
-        return TicketCommentResponseDto.builder()
-                .id(comment.getId())
-                .authorId(comment.getAuthorId())
-                .authorName(authorNames.getOrDefault(comment.getAuthorId(), comment.getAuthorId()))
-                .content(comment.getContent())
-                .createdAt(toOffsetDateTime(comment.getCreatedAt()))
-                .updatedAt(toOffsetDateTime(comment.getUpdatedAt()))
-                .build();
-    }
-
-    private Map<String, String> resolveAuthorNames(List<TicketComment> comments) {
-        Set<String> authorIds = comments.stream()
-                .map(TicketComment::getAuthorId)
-                .filter(authorId -> authorId != null && !authorId.isBlank())
-                .collect(Collectors.toSet());
-
-        return authorIds.stream()
-                .collect(Collectors.toMap(Function.identity(), this::resolveAuthorName));
-    }
-
-    private String resolveAuthorName(String authorId) {
-        if (authorId == null || authorId.isBlank()) {
-            return "Usuario";
-        }
-
-        try {
-            ApiResponse<KeycloakUserResponse> response = authClient.findUserByKeycloakId(authorId);
-            KeycloakUserResponse user = response != null ? response.getData() : null;
-
-            if (user == null) {
-                return authorId;
-            }
-
-            String fullName = ((user.firstName() != null ? user.firstName() : "") + " " + (user.lastName() != null ? user.lastName() : "")).trim();
-
-            if (!fullName.isBlank()) {
-                return fullName;
-            }
-
-            if (user.username() != null && !user.username().isBlank()) {
-                return user.username();
-            }
-
-            if (user.email() != null && !user.email().isBlank()) {
-                return user.email();
-            }
-
-            return authorId;
-        } catch (Exception ignored) {
-            return authorId;
-        }
-    }
-
     private TicketResponseDto toResponse(Ticket ticket) {
         InventoryCampusResponseDto site = ticket.getSiteId() != null ? requireCampus(ticket.getSiteId()) : null;
         InventoryBuildingResponseDto building = ticket.getBuildingId() != null ? requireBuilding(ticket.getBuildingId()) : null;
-        FloorResponseDto floor = ticket.getFloorId() != null ? requireFloor(ticket.getFloorId()) : null;
-        LocationResponseDto location = ticket.getLocationId() != null ? requireLocation(ticket.getLocationId()) : null;
+        InventoryAssetFloorResponseDto floor = ticket.getFloorId() != null ? requireFloor(ticket.getFloorId()) : null;
+        InventoryAssetLocationResponseDto location = ticket.getLocationId() != null ? requireLocation(ticket.getLocationId()) : null;
 
         List<TicketAssetResponseDto> assets = ticket.getTicketAssets().stream()
                 .map(ticketAsset -> {
                     InventoryAssetResponseDto asset = requireAsset(ticketAsset.getAssetId());
+
                     return TicketAssetResponseDto.builder()
                             .id(ticketAsset.getId())
                             .assetId(asset.getId())
                             .assetNumber(asset.getAssetNumber())
                             .serialNumber(asset.getSerialNumber())
                             .assetName(asset.getModel() != null ? asset.getModel().getName() : null)
+                            .locationDescription(asset.getLocation() != null ? asset.getLocation().getDescription() : null)
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -493,6 +534,7 @@ public class TicketServiceImpl implements TicketService {
         List<TicketPhotoResponseDto> photos = ticket.getTicketPhotos().stream()
                 .map(photo -> {
                     String imageUrl = null;
+
                     try {
                         imageUrl = getPresignedUrl(photo.getObjectName());
                     } catch (Exception ignored) {
@@ -512,10 +554,12 @@ public class TicketServiceImpl implements TicketService {
                 .sorted((a, b) -> {
                     LocalDateTime aDate = a.getCreatedAt();
                     LocalDateTime bDate = b.getCreatedAt();
+
                     if (aDate == null && bDate == null) return 0;
-                    if (aDate == null) return -1;
-                    if (bDate == null) return 1;
-                    return aDate.compareTo(bDate);
+                    if (aDate == null) return 1;
+                    if (bDate == null) return -1;
+
+                    return bDate.compareTo(aDate);
                 })
                 .collect(Collectors.toList());
 
@@ -553,6 +597,66 @@ public class TicketServiceImpl implements TicketService {
         return toCommentResponse(comment, Map.of(comment.getAuthorId(), resolveAuthorName(comment.getAuthorId())));
     }
 
+    private TicketCommentResponseDto toCommentResponse(TicketComment comment, Map<String, String> authorNames) {
+        return TicketCommentResponseDto.builder()
+                .id(comment.getId())
+                .authorId(comment.getAuthorId())
+                .authorName(authorNames.getOrDefault(comment.getAuthorId(), comment.getAuthorId()))
+                .content(comment.getContent())
+                .createdAt(toOffsetDateTime(comment.getCreatedAt()))
+                .updatedAt(toOffsetDateTime(comment.getUpdatedAt()))
+                .build();
+    }
+
+    private Map<String, String> resolveAuthorNames(List<TicketComment> comments) {
+        Set<String> authorIds = comments.stream()
+                .map(TicketComment::getAuthorId)
+                .filter(authorId -> authorId != null && !authorId.isBlank())
+                .collect(Collectors.toSet());
+
+        return authorIds.stream()
+                .collect(Collectors.toMap(
+                        Function.identity(),
+                        authorId -> {
+                            String authorName = resolveAuthorName(authorId);
+                            return authorName != null && !authorName.isBlank() ? authorName : authorId;
+                        }
+                ));
+    }
+
+    private String resolveAuthorName(String authorId) {
+        if (authorId == null || authorId.isBlank()) {
+            return "Usuario";
+        }
+
+        try {
+            ApiResponse<KeycloakUserResponse> response = authClient.findUserByKeycloakId(authorId);
+            KeycloakUserResponse user = response != null ? response.getData() : null;
+
+            if (user == null) {
+                return authorId;
+            }
+
+            String fullName = ((user.firstName() != null ? user.firstName() : "") + " " + (user.lastName() != null ? user.lastName() : "")).trim();
+
+            if (!fullName.isBlank()) {
+                return fullName;
+            }
+
+            if (user.username() != null && !user.username().isBlank()) {
+                return user.username();
+            }
+
+            if (user.email() != null && !user.email().isBlank()) {
+                return user.email();
+            }
+
+            return authorId;
+        } catch (Exception exception) {
+            return authorId;
+        }
+    }
+
     private InventoryCampusResponseDto requireCampus(UUID id) {
         ApiResponse<InventoryCampusResponseDto> response = inventoryClient.findCampusById(id);
         InventoryCampusResponseDto campus = response != null ? response.getData() : null;
@@ -575,9 +679,9 @@ public class TicketServiceImpl implements TicketService {
         return building;
     }
 
-    private FloorResponseDto requireFloor(UUID id) {
-        ApiResponse<FloorResponseDto> response = inventoryClient.findFloorById(id);
-        FloorResponseDto floor = response != null ? response.getData() : null;
+    private InventoryAssetFloorResponseDto requireFloor(UUID id) {
+        ApiResponse<InventoryAssetFloorResponseDto> response = inventoryClient.findFloorById(id);
+        InventoryAssetFloorResponseDto floor = response != null ? response.getData() : null;
 
         if (floor == null) {
             throw FloorException.notFound(id.toString());
@@ -586,26 +690,15 @@ public class TicketServiceImpl implements TicketService {
         return floor;
     }
 
-    private LocationResponseDto requireLocation(UUID id) {
-        ApiResponse<LocationResponseDto> response = inventoryClient.findLocationById(id);
-        LocationResponseDto location = response != null ? response.getData() : null;
+    private InventoryAssetLocationResponseDto requireLocation(UUID id) {
+        ApiResponse<InventoryAssetLocationResponseDto> response = inventoryClient.findLocationById(id);
+        InventoryAssetLocationResponseDto location = response != null ? response.getData() : null;
 
         if (location == null) {
             throw LocationException.notFound(id.toString());
         }
 
         return location;
-    }
-
-    private boolean belongsToCampus(UUID buildingId, UUID campusId) {
-        ApiResponse<PageResponse<InventoryBuildingResponseDto>> response = inventoryClient.findBuildingsByCampus(campusId, 0, 1000);
-        PageResponse<InventoryBuildingResponseDto> body = response != null ? response.getData() : null;
-
-        if (body == null || body.getContent() == null) {
-            return false;
-        }
-
-        return body.getContent().stream().anyMatch(building -> building.getId() != null && building.getId().equals(buildingId));
     }
 
     private InventoryAssetResponseDto requireAsset(UUID id) {
@@ -619,6 +712,18 @@ public class TicketServiceImpl implements TicketService {
         return asset;
     }
 
+    private boolean belongsToCampus(UUID buildingId, UUID campusId) {
+        ApiResponse<PageResponse<InventoryBuildingResponseDto>> response = inventoryClient.findBuildingsByCampus(campusId, 0, 1000);
+        PageResponse<InventoryBuildingResponseDto> body = response != null ? response.getData() : null;
+
+        if (body == null || body.getContent() == null) {
+            return false;
+        }
+
+        return body.getContent().stream()
+                .anyMatch(building -> building.getId() != null && building.getId().equals(buildingId));
+    }
+
     private boolean isAdmin(Authentication authentication) {
         if (authentication == null) {
             return false;
@@ -627,6 +732,7 @@ public class TicketServiceImpl implements TicketService {
         return authentication.getAuthorities().stream()
                 .anyMatch(authority -> {
                     String auth = authority.getAuthority();
+
                     return auth.equalsIgnoreCase("admin")
                             || auth.equalsIgnoreCase("ADMIN")
                             || auth.equalsIgnoreCase("administrador")
@@ -642,6 +748,7 @@ public class TicketServiceImpl implements TicketService {
         return authentication.getAuthorities().stream()
                 .anyMatch(authority -> {
                     String auth = authority.getAuthority();
+
                     return auth.equalsIgnoreCase(Privileges.Tickets.VER_TODOS)
                             || auth.equalsIgnoreCase("MAINTENANCE_TICKETS_VIEW_ALL")
                             || auth.equalsIgnoreCase("maintenance.tickets.view_all")
@@ -657,6 +764,7 @@ public class TicketServiceImpl implements TicketService {
         return authentication.getAuthorities().stream()
                 .anyMatch(authority -> {
                     String auth = authority.getAuthority();
+
                     return auth.equalsIgnoreCase(Privileges.Tickets.ASIGNAR_PRIORIDAD)
                             || auth.equalsIgnoreCase("MAINTENANCE_TICKETS_SET_PRIORITY")
                             || auth.equalsIgnoreCase("maintenance.tickets.set_priority")
@@ -746,6 +854,7 @@ public class TicketServiceImpl implements TicketService {
 
     private String resolveBearerToken() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
         if (authentication instanceof JwtAuthenticationToken jwt) {
             return jwt.getToken().getTokenValue();
         }

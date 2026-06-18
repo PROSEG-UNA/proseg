@@ -3,5 +3,6 @@ export const MAINTENANCE_ENDPOINTS = {
     requests: '/api/v1/maintenance/requests',
     registers: '/api/v1/maintenance/registers',
     locations: '/api/v1/maintenance/locations',
+    tickets: '/api/v1/maintenance/tickets',
 };
 

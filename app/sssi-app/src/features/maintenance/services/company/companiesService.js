@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { MAINTENANCE_ENDPOINTS } from '../endpoints';
 import { fetchPage, maintenanceConfig } from '../api';
-import { fetchPage, maintenanceConfig } from './api';
 
 const COMPANIES_BASE = '/api/v1/maintenance/companies';
 

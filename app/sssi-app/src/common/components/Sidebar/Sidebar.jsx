@@ -1,5 +1,6 @@
 import { useState, useContext, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { PERMISSIONS } from '../../constants/permissions';
 import {
     Box,
     List,
@@ -31,7 +32,10 @@ import { useAuth } from '../../../features/auth/hooks/useAuth';
 import '../../css/Sidebar.css';
 import { panelSurfaceSx } from '../../theme/sxStyles';
 import { useNavSections } from './useNavSections';
-
+import { usePermissions } from '../../hooks/usePermissions';
+import BusinessIcon from '@mui/icons-material/Business';
+import ConstructionIcon from '@mui/icons-material/Construction';
+import BuildIcon from '@mui/icons-material/Build';
 
 const neutralHoverSx = (t) => ({
     bgcolor: 'hsla(220, 20%, 50%, 0.05)',
@@ -180,14 +184,13 @@ export function Sidebar() {
     const { handleLogout } = useAuth();
     const [expandedMenu, setExpandedMenu] = useState(null);
     const { isMinimized, setIsMinimized } = useContext(SidebarContext);
+      const { hasAnyPermission } = usePermissions();
     const theme = useTheme();
     const { mode, systemMode } = useColorScheme();
     const { sections } = useNavSections();
     const resolvedMode = mode === 'system' ? systemMode : mode;
-
     const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
     const [showExpandedContent, setShowExpandedContent] = useState(!isMinimized);
-
     const syncMinimizedToBreakpoint = () => {
         setIsMinimized(isMediumOrDown);
     };

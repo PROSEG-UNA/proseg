@@ -72,6 +72,17 @@ public class TicketController {
         return ApiResponseBuilder.ok(ticketService.findById(id, authentication), "Ticket obtenido correctamente");
     }
 
+    @GetMapping("/{id}/history")
+    public ResponseEntity<ApiResponse<PageResponse<com.sssi.msvc_maintenance.dto.response.TicketHistoryChangeResponseDto>>> history(
+            @PathVariable UUID id,
+            @PageableDefault(size = 10, page = 0) Pageable pageable,
+            Authentication authentication) {
+        return ApiResponseBuilder.ok(
+                PageMapper.from(ticketService.findHistoryByTicket(id, pageable, authentication)),
+                "Historial de cambios"
+        );
+    }
+
     @PatchMapping("/{id}/priority")
     public ResponseEntity<ApiResponse<TicketResponseDto>> updatePriority(
             @PathVariable UUID id,

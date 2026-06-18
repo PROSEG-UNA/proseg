@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { Box, Container, Typography, useMediaQuery, useTheme } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { Header } from '../../../common/components/Header';
-import { NavDrawer } from '../../../common/components/NavDrawer';
+import { NavDrawer } from '../../../common/components/Sidebar';
 import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
 import { PrimaryButton } from '../../../common/components/PrimaryButton.jsx';
 import { usePermissions } from '../../../common/hooks/usePermissions';
@@ -84,10 +84,6 @@ export default function TicketsPage() {
 
     return (
         <Box className="maintenance-tickets-page">
-            <Header
-                title="Gestión de Mantenimiento"
-                onMenuClick={isMediumOrDown ? () => setDrawerOpen(true) : undefined}
-            />
             <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
             <Container maxWidth="xl" sx={{ pb: 3, pt: 3 }}>
