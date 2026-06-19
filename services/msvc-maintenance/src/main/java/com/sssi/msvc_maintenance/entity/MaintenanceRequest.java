@@ -85,6 +85,6 @@ public class MaintenanceRequest extends BaseEntity {
     private List<UserCompany> assignedTechnicians;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "leader_user_company_id")
+    @JoinColumn(name = "responsible_user_company_id")
     private UserCompany responsibleUserCompany;
 }
