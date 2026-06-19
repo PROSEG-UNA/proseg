@@ -20,7 +20,6 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 @Component
 @RequiredArgsConstructor
@@ -38,7 +37,8 @@ public class MaintenanceRequestCreatedKafkaPublisher {
             kafkaTemplate.send(
                     KafkaTopics.MAINTENANCE_REQUEST_CREATED_TOPIC,
                     MaintenanceRequestCreatedEvent.builder()
-                            .emails(mergeEmails(event.emails(), notificationProperties.getExtraEmails()))
+                            .emails(cleanEmails(event.emails()))
+                            .extraEmails(cleanEmails(notificationProperties.getExtraEmails()))
                             .companyName(event.companyName())
                             .legalId(event.legalId())
                             .description(event.description())
@@ -59,10 +59,11 @@ public class MaintenanceRequestCreatedKafkaPublisher {
         }
     }
 
-    private List<String> mergeEmails(List<String> manualEmails, List<String> extraEmails) {
-        return Stream.of(manualEmails, extraEmails)
-                .filter(list -> list != null)
-                .flatMap(List::stream)
+    private List<String> cleanEmails(List<String> emails) {
+        if (emails == null) {
+            return List.of();
+        }
+        return emails.stream()
                 .filter(email -> email != null && !email.isBlank())
                 .map(String::trim)
                 .distinct()

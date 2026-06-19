@@ -15,7 +15,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -400,17 +399,17 @@ public class EmailEventService {
     }
 
     public void sendMaintenanceRequestCreatedEmail(MaintenanceRequestCreatedEvent event) {
-        List<String> eventEmails = event.getEmails() == null ? List.of() : event.getEmails();
+        List<String> toRecipients = cleanEmails(event.getEmails());
 
-        List<String> bccRecipients = Stream.concat(
-                        eventEmails.stream(),
-                        resolveSuperAdminEmails().stream())
-                .filter(email -> email != null && !email.isBlank())
-                .map(String::trim)
-                .distinct()
+        List<String> ccRecipients = cleanEmails(event.getExtraEmails()).stream()
+                .filter(email -> !toRecipients.contains(email))
                 .toList();
 
-        if (bccRecipients.isEmpty()) {
+        List<String> bccRecipients = cleanEmails(resolveSuperAdminEmails()).stream()
+                .filter(email -> !toRecipients.contains(email) && !ccRecipients.contains(email))
+                .toList();
+
+        if (toRecipients.isEmpty() && ccRecipients.isEmpty() && bccRecipients.isEmpty()) {
             log.warn("MaintenanceRequestCreatedEvent sin email destinatario, se omite envío");
             return;
         }
@@ -433,13 +432,26 @@ public class EmailEventService {
 
         emailService.sendEmail(
                 Email.builder()
+                        .to(toRecipients)
+                        .cc(ccRecipients)
                         .bcc(bccRecipients)
                         .subject("Nueva solicitud de mantenimiento registrada - PROSEG")
                         .templateDefinition(template)
                         .build()
         );
 
-        log.info("Email de solicitud de mantenimiento enviado (bcc) a: {}", bccRecipients);
+        log.info("Email de solicitud de mantenimiento enviado a to={} cc={} bcc={}", toRecipients, ccRecipients, bccRecipients);
+    }
+
+    private List<String> cleanEmails(List<String> emails) {
+        if (emails == null) {
+            return List.of();
+        }
+        return emails.stream()
+                .filter(email -> email != null && !email.isBlank())
+                .map(String::trim)
+                .distinct()
+                .toList();
     }
 
     private List<String> resolveSuperAdminEmails() {
@@ -455,7 +467,7 @@ public class EmailEventService {
                     .filter(email -> email != null && !email.isBlank())
                     .toList();
         } catch (Exception e) {
-            log.error("No se pudieron resolver los SUPER_ADMINISTRADOR para la solicitud de mantenimiento: {}", e.getMessage());
+            log.error("No se pudieron resolver los SUPER_ADMINISTRADOR para la solicitud de mantenimiento: {}", e.getMessage(), e);
             return List.of();
         }
     }

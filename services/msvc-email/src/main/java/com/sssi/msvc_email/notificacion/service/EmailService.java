@@ -33,13 +33,15 @@ public class EmailService {
         emailValidator.validate(sender);
 
         List<String> to = email.getTo() == null ? List.of() : email.getTo();
+        List<String> cc = email.getCc() == null ? List.of() : email.getCc();
         List<String> bcc = email.getBcc() == null ? List.of() : email.getBcc();
 
-        if (to.isEmpty() && bcc.isEmpty()) {
+        if (to.isEmpty() && cc.isEmpty() && bcc.isEmpty()) {
             throw new EmailSendingException("Email debe tener al menos un destinatario");
         }
 
         to.forEach(emailValidator::validate);
+        cc.forEach(emailValidator::validate);
         bcc.forEach(emailValidator::validate);
 
         EmailTemplateDefinition template = email.getTemplateDefinition();
@@ -54,6 +56,9 @@ public class EmailService {
 
             helper.setFrom(sender);
             helper.setTo(to.isEmpty() ? new String[]{sender} : to.toArray(new String[0]));
+            if (!cc.isEmpty()) {
+                helper.setCc(cc.toArray(new String[0]));
+            }
             if (!bcc.isEmpty()) {
                 helper.setBcc(bcc.toArray(new String[0]));
             }
@@ -64,12 +69,12 @@ public class EmailService {
 
             mailSender.send(message);
 
-            log.info("Email enviado a to={} bcc={} usando template {}",
-                    to, bcc, template.getTemplateName());
+            log.info("Email enviado a to={} cc={} bcc={} usando template {}",
+                    to, cc, bcc, template.getTemplateName());
 
         } catch (Exception e) {
             throw new EmailSendingException(
-                    "Error enviando email a to=" + to + " bcc=" + bcc, e);
+                    "Error enviando email a to=" + to + " cc=" + cc + " bcc=" + bcc, e);
         }
     }
 
