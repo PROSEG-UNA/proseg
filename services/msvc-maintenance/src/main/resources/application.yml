@@ -20,5 +20,4 @@ routes:
 
 maintenance:
   notification:
-    extra-emails:
-      - seguridad@example.una.cr
+    extra-emails: ${MAINTENANCE_EXTRA_EMAILS:}
