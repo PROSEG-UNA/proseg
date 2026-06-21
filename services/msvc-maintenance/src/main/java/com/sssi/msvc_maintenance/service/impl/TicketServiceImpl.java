@@ -539,7 +539,7 @@ public class TicketServiceImpl implements TicketService {
     public void deleteComment(UUID ticketId, UUID commentId, Authentication authentication) {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(TicketException::notFound);
-
+        
         if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
                 && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
             throw TicketException.accessDenied();
@@ -555,7 +555,7 @@ public class TicketServiceImpl implements TicketService {
         ticket.getTicketComments().remove(comment);
         ticketCommentRepository.delete(comment);
 
-        saveHistory(ticket, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.OTHER,
+        saveHistory(ticket, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.COMMENT_REMOVED,
                 "eliminó un comentario", oldContent, null, actorId, null);
     }
 
