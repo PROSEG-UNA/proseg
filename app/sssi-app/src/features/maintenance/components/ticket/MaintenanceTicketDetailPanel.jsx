@@ -92,11 +92,9 @@ export default function MaintenanceTicketDetailPanel({ ticket }) {
 
             <Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <AddCommentOutlinedIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
                     <Typography sx={{ fontSize: 11.5, fontWeight: 700, color: 'text.disabled', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                        Discusion y comentarios
+                        Discusión y comentarios
                     </Typography>
-                </Box>
 
                 <Box sx={{ pl: 2.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                     <Box
