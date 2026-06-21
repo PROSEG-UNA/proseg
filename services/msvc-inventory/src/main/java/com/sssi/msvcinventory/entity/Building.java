@@ -12,6 +12,12 @@ import org.hibernate.annotations.UuidGenerator;
 import java.util.List;
 import java.util.UUID;
 
+@NamedEntityGraph(
+        name = "Building.withCampus",
+        attributeNodes = {
+                @NamedAttributeNode("campus")
+        }
+)
 @Entity
 @Table(name = "building_table")
 @Getter
