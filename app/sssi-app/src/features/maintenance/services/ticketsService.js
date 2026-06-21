@@ -74,11 +74,6 @@ export async function updateMaintenanceTicketAssignedTo(ticketId, assignedTo) {
     return data?.data;
 }
 
-export async function resolveMaintenanceTicket(ticketId) {
-    const { data } = await axios.patch(`${TICKETS_BASE}/${ticketId}/resolve`, null, maintenanceConfig);
-    return data?.data;
-}
-
 export async function addMaintenanceTicketComment(ticketId, content) {
     const { data } = await axios.post(`${TICKETS_BASE}/${ticketId}/comments`, { content }, maintenanceConfig);
     return data?.data;
