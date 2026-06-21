@@ -134,7 +134,7 @@ export default function MaintenanceTicketDetailPanel({ ticket }) {
 
                     {(sortedComments ?? []).length === 0 ? (
                         <Typography sx={{ color: 'text.secondary', fontSize: 13.25 }}>
-                            Todavia no hay comentarios en este ticket.
+                            Todavía no hay comentarios en este ticket.
                         </Typography>
                     ) : (
                         <Stack spacing={1.25}>
