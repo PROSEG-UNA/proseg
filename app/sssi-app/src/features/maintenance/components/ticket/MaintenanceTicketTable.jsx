@@ -166,8 +166,8 @@ export default function MaintenanceTicketTable({ refreshKey = 0, onRefresh, onEd
             accessorKey: 'updatedAt',
             header: 'Modificado',
             enableColumnFilter: true,
-            Cell: ({ row }) => new Date(row.original.updatedAt).toLocaleDateString('es-CR'),
-        },
+            Cell: ({ row }) => (row.original.updatedAt ? new Date(row.original.updatedAt).toLocaleDateString('es-CR') : '—'),
+        }
     ], []);
 
     const renderRowActions = ({ row }) => {
