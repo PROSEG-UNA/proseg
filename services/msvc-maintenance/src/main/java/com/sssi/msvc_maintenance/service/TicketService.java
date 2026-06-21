@@ -28,7 +28,6 @@ public interface TicketService {
     TicketResponseDto updatePriority(UUID id, TicketPriorityUpdateRequestDto request, Authentication authentication);
     List<KeycloakUserResponse> findAssignableUsers(Authentication authentication);
     TicketResponseDto updateAssignedTo(UUID id, TicketAssignedToUpdateRequestDto request, Authentication authentication);
-    TicketResponseDto resolve(UUID id, Authentication authentication);
     TicketResponseDto updateStatus(UUID id, TicketStatusUpdateRequestDto request, Authentication authentication);
     List<TicketPhotoResponseDto> getPhotos(UUID id, Authentication authentication);
     TicketCommentResponseDto addComment(UUID id, TicketCommentCreateRequestDto request, Authentication authentication);

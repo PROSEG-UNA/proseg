@@ -15,5 +15,6 @@ import java.util.UUID;
 public class TicketAssignedToUpdateRequestDto {
 
     @NotNull
+    
     private UUID assignedTo;
 }

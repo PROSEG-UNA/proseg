@@ -22,6 +22,7 @@ import com.sssi.msvc_maintenance.dto.response.TicketCommentResponseDto;
 import com.sssi.msvc_maintenance.dto.response.TicketListResponseDto;
 import com.sssi.msvc_maintenance.dto.response.TicketPhotoResponseDto;
 import com.sssi.msvc_maintenance.dto.response.TicketResponseDto;
+import com.sssi.msvc_maintenance.exception.TicketException;
 import com.sssi.msvc_maintenance.entity.Ticket;
 import com.sssi.msvc_maintenance.entity.TicketAsset;
 import com.sssi.msvc_maintenance.entity.TicketComment;
@@ -65,7 +66,6 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.util.UriUtils;
 
@@ -123,7 +123,7 @@ public class TicketServiceImpl implements TicketService {
                 throw new LocationException(
                         HttpStatus.BAD_REQUEST,
                         "LOCATION_FLOOR_MISMATCH",
-                        "La ubicaciÃ³n " + location.getId() + " no pertenece al piso indicado");
+                        "La ubicación " + location.getId() + " no pertenece al piso indicado");
             }
         }
 
@@ -173,11 +173,11 @@ public class TicketServiceImpl implements TicketService {
     public TicketResponseDto update(UUID id, TicketCreateRequestDto request, List<MultipartFile> photos,
                                     Authentication authentication) {
         Ticket ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+                .orElseThrow(TicketException::notFound);
 
         if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
-            && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
-            throw new RuntimeException("Acceso denegado");
+                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            throw TicketException.accessDenied();
         }
 
         String actorId = extractUserId(authentication);
@@ -374,11 +374,11 @@ public class TicketServiceImpl implements TicketService {
     @Transactional(readOnly = true)
     public TicketResponseDto findById(UUID id, Authentication authentication) {
         Ticket ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+                .orElseThrow(TicketException::notFound);
 
         if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
-            && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
-            throw new RuntimeException("Acceso denegado");
+                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            throw TicketException.accessDenied();
         }
 
         return toResponse(ticket);
@@ -389,11 +389,11 @@ public class TicketServiceImpl implements TicketService {
     public TicketResponseDto updatePriority(UUID id, TicketPriorityUpdateRequestDto request,
                                             Authentication authentication) {
         if (!isAdmin(authentication) && !hasSetPriorityPermission(authentication)) {
-            throw new RuntimeException("Solo administradores o usuarios con permiso pueden cambiar la prioridad");
+            throw TicketException.priorityForbidden();
         }
 
         Ticket ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+                .orElseThrow(TicketException::notFound);
 
         com.sssi.msvc_maintenance.entity.enums.TicketPriority oldPriority = ticket.getPriority();
         ticket.setPriority(request.getPriority());
@@ -423,7 +423,7 @@ public class TicketServiceImpl implements TicketService {
     @Transactional
     public List<KeycloakUserResponse> findAssignableUsers(Authentication authentication) {
         if (!isAdmin(authentication) && !hasAssignTicketPermission(authentication)) {
-            throw new RuntimeException("No tienes permisos para consultar usuarios asignables");
+            throw TicketException.assignableUsersForbidden();
         }
 
         ApiResponse<PageResponse<KeycloakUserResponse>> response = authClient.findUsers(0, 200, null);
@@ -440,11 +440,11 @@ public class TicketServiceImpl implements TicketService {
     public TicketResponseDto updateAssignedTo(UUID id, TicketAssignedToUpdateRequestDto request,
                                               Authentication authentication) {
         if (!isAdmin(authentication) && !hasAssignTicketPermission(authentication)) {
-            throw new RuntimeException("Solo administradores o usuarios con permiso pueden asignar tickets");
+            throw TicketException.assignForbidden();
         }
 
         Ticket ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+                .orElseThrow(TicketException::notFound);
 
         UUID oldAssignedTo = ticket.getAssignedTo();
         UUID newAssignedTo = request.getAssignedTo();
@@ -478,56 +478,14 @@ public class TicketServiceImpl implements TicketService {
 
     @Override
     @Transactional
-    public TicketResponseDto resolve(UUID id, Authentication authentication) {
-        Ticket ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
-
-        if (!isAdmin(authentication)) {
-            if (ticket.getAssignedTo() == null) {
-                throw new RuntimeException("No se puede resolver ticket sin usuario asignado");
-            }
-
-            UUID actorUuid = parseUuidOrNull(extractUserId(authentication));
-            boolean canResolve = actorUuid != null && actorUuid.equals(ticket.getAssignedTo());
-
-            if (!canResolve) {
-                throw new RuntimeException("Usuario no autorizado para resolver este ticket");
-            }
-        }
-
-        TicketStatus oldStatus = ticket.getStatus();
-        ticket.setStatus(TicketStatus.RESOLVED);
-        ticket.setUpdatedBy(extractUserId(authentication));
-        Ticket saved = ticketRepository.save(ticket);
-
-        if (oldStatus == null || !oldStatus.equals(saved.getStatus())) {
-            saveHistory(saved, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.STATUS_CHANGED, "status",
-                    oldStatus == null ? null : oldStatus.name(),
-                    saved.getStatus() == null ? null : saved.getStatus().name(), extractUserId(authentication), null);
-        }
-
-        webSocketManager.broadcast(TicketWebSocketEventDto.builder()
-                .type("ticket.resolved")
-                .ticketId(saved.getId())
-                .createdAt(toOffsetDateTime(saved.getCreatedAt()))
-                .updatedAt(toOffsetDateTime(saved.getUpdatedAt()))
-                .status(saved.getStatus())
-                .priority(saved.getPriority())
-                .build());
-
-        return toResponse(saved);
-    }
-
-    @Override
-    @Transactional
     public TicketCommentResponseDto addComment(UUID id, TicketCommentCreateRequestDto request,
                                                Authentication authentication) {
         Ticket ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+                .orElseThrow(TicketException::notFound);
 
         if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
-            && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
-            throw new RuntimeException("Acceso denegado");
+                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            throw TicketException.accessDenied();
         }
 
         TicketComment comment = TicketComment.builder()
@@ -550,18 +508,17 @@ public class TicketServiceImpl implements TicketService {
     public TicketCommentResponseDto updateComment(UUID ticketId, UUID commentId, TicketCommentUpdateRequestDto request,
                                                   Authentication authentication) {
         Ticket ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+                .orElseThrow(TicketException::notFound);
 
         if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
-            && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
-            throw new RuntimeException("Acceso denegado");
+                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            throw TicketException.accessDenied();
         }
 
         TicketComment comment = findCommentInTicket(ticket, commentId);
         String actorId = extractUserId(authentication);
         if (!actorId.equals(comment.getAuthorId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Solo puedes editar tus propios comentarios");
+            throw TicketException.commentEditForbidden();
         }
 
         String oldContent = comment.getContent();
@@ -581,18 +538,17 @@ public class TicketServiceImpl implements TicketService {
     @Transactional
     public void deleteComment(UUID ticketId, UUID commentId, Authentication authentication) {
         Ticket ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+                .orElseThrow(TicketException::notFound);
 
         if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
-            && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
-            throw new RuntimeException("Acceso denegado");
+                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            throw TicketException.accessDenied();
         }
 
         TicketComment comment = findCommentInTicket(ticket, commentId);
         String actorId = extractUserId(authentication);
         if (!actorId.equals(comment.getAuthorId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Solo puedes eliminar tus propios comentarios");
+            throw TicketException.commentDeleteForbidden();
         }
 
         String oldContent = comment.getContent();
@@ -608,11 +564,11 @@ public class TicketServiceImpl implements TicketService {
     public TicketResponseDto updateStatus(UUID id, TicketStatusUpdateRequestDto request,
                                           Authentication authentication) {
         Ticket ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+                .orElseThrow(TicketException::notFound);
 
         if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
-            && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
-            throw new RuntimeException("Acceso denegado");
+                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            throw TicketException.accessDenied();
         }
 
         TicketStatus oldStatus = ticket.getStatus();
@@ -645,11 +601,11 @@ public class TicketServiceImpl implements TicketService {
     public List<com.sssi.msvc_maintenance.dto.response.TicketPhotoResponseDto> getPhotos(UUID id,
                                                                                          Authentication authentication) {
         Ticket ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+                .orElseThrow(TicketException::notFound);
 
         if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
-            && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
-            throw new RuntimeException("Acceso denegado");
+                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            throw TicketException.accessDenied();
         }
 
         return ticket.getTicketPhotos().stream()
@@ -675,11 +631,11 @@ public class TicketServiceImpl implements TicketService {
     public Page<com.sssi.msvc_maintenance.dto.response.TicketHistoryChangeResponseDto> findHistoryByTicket(
             UUID ticketId, Pageable pageable, Authentication authentication) {
         Ticket ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+                .orElseThrow(TicketException::notFound);
 
         if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
-            && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
-            throw new RuntimeException("Acceso denegado");
+                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            throw TicketException.accessDenied();
         }
 
         return ticketHistoryChangeRepository.findByTicketIdOrderByCreatedAtDesc(ticketId, pageable)
@@ -776,7 +732,7 @@ public class TicketServiceImpl implements TicketService {
             return assetNumber;
         }
 
-        return assetNumber + " · " + modelName;
+        return assetNumber + " - " + modelName;
     }
 
     private String buildAssetHistoryLabel(UUID assetId) {
@@ -854,7 +810,7 @@ public class TicketServiceImpl implements TicketService {
                 throw new AssetException(
                         HttpStatus.BAD_REQUEST,
                         "ASSET_LOCATION_MISMATCH",
-                        "El activo " + asset.getId() + " no pertenece a la ubicaciÃ³n indicada");
+                        "El activo " + asset.getId() + " no pertenece a la ubicación indicada");
             }
 
             assetIds.add(assetId);
@@ -990,8 +946,7 @@ public class TicketServiceImpl implements TicketService {
         return ticket.getTicketComments().stream()
                 .filter(comment -> comment.getId().equals(commentId))
                 .findFirst()
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Comentario no encontrado para este ticket"));
+                .orElseThrow(TicketException::commentNotFound);
     }
 
     private Map<String, String> resolveAuthorNames(List<TicketComment> comments) {
@@ -1217,7 +1172,7 @@ public class TicketServiceImpl implements TicketService {
         ArchiveUploadInitResponseDto init = initResponse.getBody() != null ? initResponse.getBody().getData() : null;
 
         if (init == null) {
-            throw new RuntimeException("No se pudo iniciar carga en archive");
+            throw TicketException.archiveUploadFailed();
         }
 
         MultiValueMap<String, Object> multipart = new LinkedMultiValueMap<>();
@@ -1263,7 +1218,7 @@ public class TicketServiceImpl implements TicketService {
             return jwt.getToken().getTokenValue();
         }
 
-        throw new RuntimeException("No hay token de autenticacion para solicitar al archive");
+        throw TicketException.missingAuthenticationToken();
     }
 
     private String resolveBearerToken() {
@@ -1273,7 +1228,7 @@ public class TicketServiceImpl implements TicketService {
             return jwt.getToken().getTokenValue();
         }
 
-        throw new RuntimeException("No hay token de autenticacion para solicitar al archive");
+        throw TicketException.missingAuthenticationToken();
     }
 
     private String getPresignedUrl(String objectName) {

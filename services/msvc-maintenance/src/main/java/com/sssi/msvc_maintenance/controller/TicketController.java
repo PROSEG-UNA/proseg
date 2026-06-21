@@ -126,13 +126,6 @@ public class TicketController {
         return ApiResponseBuilder.ok(ticketService.updateAssignedTo(id, request, authentication), "Ticket asignado correctamente");
     }
 
-    @PatchMapping("/{id}/resolve")
-    public ResponseEntity<ApiResponse<TicketResponseDto>> resolve(
-            @PathVariable UUID id,
-            Authentication authentication) {
-        return ApiResponseBuilder.ok(ticketService.resolve(id, authentication), "Ticket resuelto correctamente");
-    }
-
     @PostMapping("/{id}/comments")
     public ResponseEntity<ApiResponse<TicketCommentResponseDto>> addComment(
             @PathVariable UUID id,
