@@ -1,6 +1,7 @@
 package com.sssi.msvc_maintenance.repository;
 
 import com.sssi.msvc_maintenance.entity.Ticket;
+import com.sssi.msvc_maintenance.entity.enums.TicketStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -16,4 +17,10 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID>, JpaSpecif
 
     @EntityGraph(value = "Ticket.withRelations")
     Page<Ticket> findByCreatedBy(String createdBy, Pageable pageable);
+
+    @EntityGraph(value = "Ticket.withRelations")
+    Page<Ticket> findByStatus(TicketStatus status, Pageable pageable);
+
+    @EntityGraph(value = "Ticket.withRelations")
+    Page<Ticket> findByCreatedByAndStatus(String createdBy, TicketStatus status, Pageable pageable);
 }

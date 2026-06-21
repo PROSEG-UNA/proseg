@@ -18,6 +18,12 @@ public abstract class BaseEntity {
 	@Column(name = "updated_at", nullable = false)
 	private LocalDateTime updatedAt;
 
+	@Column(name = "created_by", length = 100)
+	private String createdBy;
+
+	@Column(name = "updated_by", length = 100)
+	private String updatedBy;
+
 	@Column(name = "is_deleted", nullable = false)
 	private boolean isDeleted = false;
 
@@ -40,5 +46,13 @@ public abstract class BaseEntity {
 
 	public void markAsActive() {
 		this.isDeleted = false;
+	}
+
+	public void setCreatedBy(String createdBy) {
+		this.createdBy = createdBy;
+	}
+
+	public void setUpdatedBy(String updatedBy) {
+		this.updatedBy = updatedBy;
 	}
 }

@@ -37,4 +37,5 @@ public class TicketCreateRequestDto {
     private UUID floorId;
     private UUID locationId;
     private List<UUID> assetIds;
+    private List<UUID> removedPhotoIds;
 }

@@ -50,11 +50,11 @@ public class Ticket extends BaseEntity {
     @Builder.Default
     private TicketPriority priority = TicketPriority.LOW;
 
-    @Column(name = "created_by", nullable = false)
-    private String createdBy;
+    @Column(name = "assigned_to")
+    private UUID assignedTo;
 
-    @Column(name = "assigned_role")
-    private String assignedRole;
+    @Column(name = "assigned_by")
+    private UUID assignedBy;
 
     @Column(name = "site_id", nullable = false)
     private UUID siteId;

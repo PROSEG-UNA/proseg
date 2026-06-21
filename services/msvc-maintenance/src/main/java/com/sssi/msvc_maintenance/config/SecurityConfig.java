@@ -146,7 +146,10 @@ public class SecurityConfig {
                         ).hasAnyAuthority(Privileges.Tickets.EDITAR, Privileges.Tickets.ASIGNAR_PRIORIDAD)
 
                         .requestMatchers(HttpMethod.PATCH,
-                                "/api/v1/maintenance/tickets/*/assigned-role",
+                                "/api/v1/maintenance/tickets/*/assigned-to"
+                        ).hasAuthority(Privileges.Tickets.ASIGNAR_TICKET)
+
+                        .requestMatchers(HttpMethod.PATCH,
                                 "/api/v1/maintenance/tickets/*/resolve"
                         ).hasAuthority(Privileges.Tickets.EDITAR)
 

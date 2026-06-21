@@ -5,10 +5,12 @@ import com.sssi.common.api.response.PageResponse;
 import com.sssi.msvc_archive.dto.ArchiveUploadInitResponseDto;
 import com.sssi.msvc_maintenance.client.AuthClient;
 import com.sssi.msvc_maintenance.client.InventoryClient;
-import com.sssi.msvc_maintenance.dto.request.TicketAssignedRoleUpdateRequestDto;
+import com.sssi.msvc_maintenance.dto.request.TicketAssignedToUpdateRequestDto;
 import com.sssi.msvc_maintenance.dto.request.TicketCommentCreateRequestDto;
+import com.sssi.msvc_maintenance.dto.request.TicketCommentUpdateRequestDto;
 import com.sssi.msvc_maintenance.dto.request.TicketCreateRequestDto;
 import com.sssi.msvc_maintenance.dto.request.TicketPriorityUpdateRequestDto;
+import com.sssi.msvc_maintenance.dto.request.TicketStatusUpdateRequestDto;
 import com.sssi.msvc_maintenance.dto.response.InventoryAssetFloorResponseDto;
 import com.sssi.msvc_maintenance.dto.response.InventoryAssetLocationResponseDto;
 import com.sssi.msvc_maintenance.dto.response.InventoryAssetResponseDto;
@@ -24,6 +26,7 @@ import com.sssi.msvc_maintenance.entity.Ticket;
 import com.sssi.msvc_maintenance.entity.TicketAsset;
 import com.sssi.msvc_maintenance.entity.TicketComment;
 import com.sssi.msvc_maintenance.entity.TicketPhoto;
+import com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType;
 import com.sssi.msvc_maintenance.entity.enums.TicketPriority;
 import com.sssi.msvc_maintenance.entity.enums.TicketStatus;
 import com.sssi.msvc_maintenance.repository.TicketAssetRepository;
@@ -44,7 +47,9 @@ import lombok.SneakyThrows;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -60,18 +65,14 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.util.UriUtils;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -96,7 +97,7 @@ public class TicketServiceImpl implements TicketService {
     @Override
     @Transactional
     public TicketResponseDto create(TicketCreateRequestDto request, List<MultipartFile> photos,
-            Authentication authentication) {
+                                    Authentication authentication) {
         InventoryCampusResponseDto site = requireCampus(request.getSiteId());
 
         InventoryBuildingResponseDto building = requireBuilding(request.getBuildingId());
@@ -139,12 +140,14 @@ public class TicketServiceImpl implements TicketService {
                 .description(request.getDescription().trim())
                 .priority(effectivePriority)
                 .status(TicketStatus.OPEN)
-                .createdBy(createdBy)
                 .siteId(site.getId())
                 .buildingId(building.getId())
                 .floorId(floor != null ? floor.getId() : null)
                 .locationId(location != null ? location.getId() : null)
                 .build();
+
+        ticket.setCreatedBy(createdBy);
+        ticket.setUpdatedBy(createdBy);
 
         Ticket saved = ticketRepository.save(ticket);
 
@@ -156,8 +159,8 @@ public class TicketServiceImpl implements TicketService {
         webSocketManager.broadcast(TicketWebSocketEventDto.builder()
                 .type("ticket.created")
                 .ticketId(saved.getId())
-                .createdBy(saved.getCreatedBy())
-                .assignedRole(saved.getAssignedRole())
+                .createdAt(toOffsetDateTime(saved.getCreatedAt()))
+                .updatedAt(toOffsetDateTime(saved.getUpdatedAt()))
                 .status(saved.getStatus())
                 .priority(saved.getPriority())
                 .build());
@@ -168,17 +171,30 @@ public class TicketServiceImpl implements TicketService {
     @Override
     @Transactional
     public TicketResponseDto update(UUID id, TicketCreateRequestDto request, List<MultipartFile> photos,
-            Authentication authentication) {
+                                    Authentication authentication) {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
 
         if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
-                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
             throw new RuntimeException("Acceso denegado");
         }
 
+        String actorId = extractUserId(authentication);
         String oldTitle = ticket.getTitle();
         String oldDescription = ticket.getDescription();
+        TicketPriority oldPriority = ticket.getPriority();
+        UUID oldSiteId = ticket.getSiteId();
+        UUID oldBuildingId = ticket.getBuildingId();
+        UUID oldFloorId = ticket.getFloorId();
+        UUID oldLocationId = ticket.getLocationId();
+        String oldSiteName = resolveCampusNameSafe(oldSiteId);
+        String oldBuildingName = resolveBuildingNameSafe(oldBuildingId);
+        String oldFloorName = resolveFloorNameSafe(oldFloorId);
+        String oldLocationName = resolveLocationNameSafe(oldLocationId);
+        List<TicketPhoto> currentPhotos = new ArrayList<>(ticket.getTicketPhotos());
+        Map<UUID, TicketPhoto> currentPhotosById = currentPhotos.stream()
+                .collect(Collectors.toMap(TicketPhoto::getId, Function.identity()));
 
         InventoryCampusResponseDto site = requireCampus(request.getSiteId());
 
@@ -210,6 +226,28 @@ public class TicketServiceImpl implements TicketService {
         }
 
         List<UUID> assetIds = resolveValidAssetIds(request.getAssetIds(), location);
+        List<TicketAsset> currentAssets = new ArrayList<>(ticket.getTicketAssets());
+        Set<UUID> oldAssetIds = currentAssets.stream()
+                .map(TicketAsset::getAssetId)
+                .collect(Collectors.toSet());
+        Map<UUID, String> oldAssetLabels = oldAssetIds.stream()
+                .collect(Collectors.toMap(
+                        Function.identity(),
+                        this::buildAssetHistoryLabel));
+
+        List<String> removedPhotoNames = new ArrayList<>();
+        if (request.getRemovedPhotoIds() != null && !request.getRemovedPhotoIds().isEmpty()) {
+            for (UUID photoId : request.getRemovedPhotoIds()) {
+                TicketPhoto existingPhoto = currentPhotosById.get(photoId);
+                if (existingPhoto == null) {
+                    continue;
+                }
+
+                removedPhotoNames.add(resolvePhotoHistoryLabel(existingPhoto));
+                ticket.getTicketPhotos().remove(existingPhoto);
+                ticketPhotoRepository.delete(existingPhoto);
+            }
+        }
 
         ticket.setTitle(request.getTitle().trim());
         ticket.setDescription(request.getDescription().trim());
@@ -217,35 +255,88 @@ public class TicketServiceImpl implements TicketService {
         ticket.setBuildingId(building.getId());
         ticket.setFloorId(floor != null ? floor.getId() : null);
         ticket.setLocationId(location != null ? location.getId() : null);
+        ticket.setUpdatedBy(actorId);
 
         if (request.getPriority() != null && (isAdmin(authentication) || hasSetPriorityPermission(authentication))) {
             ticket.setPriority(request.getPriority());
         }
 
-        List<TicketAsset> currentAssets = new ArrayList<>(ticket.getTicketAssets());
         ticketAssetRepository.deleteAll(currentAssets);
         ticket.getTicketAssets().clear();
 
         saveTicketAssets(ticket, assetIds);
-        saveTicketPhotos(ticket, photos, authentication);
+        List<String> addedPhotoNames = saveTicketPhotos(ticket, photos, authentication);
 
         Ticket saved = ticketRepository.save(ticket);
+        Set<UUID> newAssetIds = assetIds.stream().collect(Collectors.toSet());
 
-        if (!java.util.Objects.equals(oldTitle, saved.getTitle())) {
-            saveHistory(saved, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.EDITED, "title", oldTitle,
-                    saved.getTitle(), extractUserId(authentication), null);
+        if (!Objects.equals(oldTitle, saved.getTitle())) {
+            saveHistory(saved, TicketHistoryChangeType.EDITED, "title", oldTitle,
+                    saved.getTitle(), actorId, null);
         }
 
-        if (!java.util.Objects.equals(oldDescription, saved.getDescription())) {
-            saveHistory(saved, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.EDITED, "description",
-                    oldDescription, saved.getDescription(), extractUserId(authentication), null);
+        if (!Objects.equals(oldDescription, saved.getDescription())) {
+            saveHistory(saved, TicketHistoryChangeType.EDITED, "description",
+                    oldDescription, saved.getDescription(), actorId, null);
+        }
+
+        if (!Objects.equals(oldPriority, saved.getPriority())) {
+            saveHistory(saved, TicketHistoryChangeType.PRIORITY_CHANGED,
+                    "priority",
+                    oldPriority == null ? null : oldPriority.name(),
+                    saved.getPriority() == null ? null : saved.getPriority().name(),
+                    actorId, null);
+        }
+
+        if (!Objects.equals(oldSiteId, saved.getSiteId())) {
+            saveHistory(saved, TicketHistoryChangeType.EDITED, "site",
+                    oldSiteName, site.getName(), actorId, null);
+        }
+
+        if (!Objects.equals(oldBuildingId, saved.getBuildingId())) {
+            saveHistory(saved, TicketHistoryChangeType.EDITED, "building",
+                    oldBuildingName, building.getName(), actorId, null);
+        }
+
+        if (!Objects.equals(oldFloorId, saved.getFloorId())) {
+            saveHistory(saved, TicketHistoryChangeType.EDITED, "floor",
+                    oldFloorName, floor != null ? floor.getName() : null, actorId, null);
+        }
+
+        if (!Objects.equals(oldLocationId, saved.getLocationId())) {
+            saveHistory(saved, TicketHistoryChangeType.EDITED, "location",
+                    oldLocationName, location != null ? location.getDescription() : null, actorId, null);
+        }
+
+        for (UUID assetId : newAssetIds) {
+            if (!oldAssetIds.contains(assetId)) {
+                saveHistory(saved, TicketHistoryChangeType.EDITED, "asset",
+                        null, buildAssetHistoryLabel(assetId), actorId, null);
+            }
+        }
+
+        for (UUID oldAssetId : oldAssetIds) {
+            if (!newAssetIds.contains(oldAssetId)) {
+                saveHistory(saved, TicketHistoryChangeType.EDITED, "asset",
+                        oldAssetLabels.get(oldAssetId), null, actorId, null);
+            }
+        }
+
+        for (String removedPhotoName : removedPhotoNames) {
+            saveHistory(saved, TicketHistoryChangeType.ATTACHMENT_REMOVED,
+                    "attachment", removedPhotoName, null, actorId, null);
+        }
+
+        for (String addedPhotoName : addedPhotoNames) {
+            saveHistory(saved, TicketHistoryChangeType.ATTACHMENT_ADDED,
+                    "attachment", null, addedPhotoName, actorId, null);
         }
 
         webSocketManager.broadcast(TicketWebSocketEventDto.builder()
                 .type("ticket.updated")
                 .ticketId(saved.getId())
-                .createdBy(saved.getCreatedBy())
-                .assignedRole(saved.getAssignedRole())
+                .createdAt(toOffsetDateTime(saved.getCreatedAt()))
+                .updatedAt(toOffsetDateTime(saved.getUpdatedAt()))
                 .status(saved.getStatus())
                 .priority(saved.getPriority())
                 .build());
@@ -255,12 +346,28 @@ public class TicketServiceImpl implements TicketService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<TicketListResponseDto> findAll(Pageable pageable, Authentication authentication) {
+    public Page<TicketListResponseDto> findAll(TicketStatus status, Pageable pageable, Authentication authentication) {
+        Pageable sortedPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Order.desc("createdAt"))
+        );
+
         if (isAdmin(authentication) || hasViewAllTickets(authentication)) {
-            return ticketRepository.findAll(pageable).map(this::toListResponse);
+            if (status != null) {
+                return ticketRepository.findByStatus(status, sortedPageable).map(this::toListResponse);
+            }
+
+            return ticketRepository.findAll(sortedPageable).map(this::toListResponse);
         }
 
-        return ticketRepository.findByCreatedBy(extractUserId(authentication), pageable).map(this::toListResponse);
+        String userId = extractUserId(authentication);
+
+        if (status != null) {
+            return ticketRepository.findByCreatedByAndStatus(userId, status, sortedPageable).map(this::toListResponse);
+        }
+
+        return ticketRepository.findByCreatedBy(userId, sortedPageable).map(this::toListResponse);
     }
 
     @Override
@@ -270,7 +377,7 @@ public class TicketServiceImpl implements TicketService {
                 .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
 
         if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
-                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
             throw new RuntimeException("Acceso denegado");
         }
 
@@ -280,7 +387,7 @@ public class TicketServiceImpl implements TicketService {
     @Override
     @Transactional
     public TicketResponseDto updatePriority(UUID id, TicketPriorityUpdateRequestDto request,
-            Authentication authentication) {
+                                            Authentication authentication) {
         if (!isAdmin(authentication) && !hasSetPriorityPermission(authentication)) {
             throw new RuntimeException("Solo administradores o usuarios con permiso pueden cambiar la prioridad");
         }
@@ -290,6 +397,7 @@ public class TicketServiceImpl implements TicketService {
 
         com.sssi.msvc_maintenance.entity.enums.TicketPriority oldPriority = ticket.getPriority();
         ticket.setPriority(request.getPriority());
+        ticket.setUpdatedBy(extractUserId(authentication));
         Ticket saved = ticketRepository.save(ticket);
 
         if (oldPriority == null || !oldPriority.equals(saved.getPriority())) {
@@ -302,8 +410,8 @@ public class TicketServiceImpl implements TicketService {
         webSocketManager.broadcast(TicketWebSocketEventDto.builder()
                 .type("ticket.priority.updated")
                 .ticketId(saved.getId())
-                .createdBy(saved.getCreatedBy())
-                .assignedRole(saved.getAssignedRole())
+                .createdAt(toOffsetDateTime(saved.getCreatedAt()))
+                .updatedAt(toOffsetDateTime(saved.getUpdatedAt()))
                 .status(saved.getStatus())
                 .priority(saved.getPriority())
                 .build());
@@ -313,30 +421,54 @@ public class TicketServiceImpl implements TicketService {
 
     @Override
     @Transactional
-    public TicketResponseDto updateAssignedRole(UUID id, TicketAssignedRoleUpdateRequestDto request,
-            Authentication authentication) {
-        if (!isAdmin(authentication)) {
-            throw new RuntimeException("Solo administradores pueden asignar rol responsable");
+    public List<KeycloakUserResponse> findAssignableUsers(Authentication authentication) {
+        if (!isAdmin(authentication) && !hasAssignTicketPermission(authentication)) {
+            throw new RuntimeException("No tienes permisos para consultar usuarios asignables");
+        }
+
+        ApiResponse<PageResponse<KeycloakUserResponse>> response = authClient.findUsers(0, 200, null);
+        PageResponse<KeycloakUserResponse> page = response != null ? response.getData() : null;
+        List<KeycloakUserResponse> users = page != null && page.getContent() != null ? page.getContent() : List.of();
+
+        return users.stream()
+                .filter(user -> user != null && user.status() != null && "APPROVED".equalsIgnoreCase(user.status()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public TicketResponseDto updateAssignedTo(UUID id, TicketAssignedToUpdateRequestDto request,
+                                              Authentication authentication) {
+        if (!isAdmin(authentication) && !hasAssignTicketPermission(authentication)) {
+            throw new RuntimeException("Solo administradores o usuarios con permiso pueden asignar tickets");
         }
 
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
 
-        String oldAssignedRole = ticket.getAssignedRole();
-        ticket.setAssignedRole(request.getAssignedRole());
+        UUID oldAssignedTo = ticket.getAssignedTo();
+        UUID newAssignedTo = request.getAssignedTo();
+        UUID assignedBy = parseUuidOrNull(extractUserId(authentication));
+
+        ticket.setAssignedTo(newAssignedTo);
+        ticket.setAssignedBy(assignedBy);
+        ticket.setUpdatedBy(extractUserId(authentication));
+
         Ticket saved = ticketRepository.save(ticket);
 
-        if (oldAssignedRole == null && saved.getAssignedRole() != null
-                || (oldAssignedRole != null && !oldAssignedRole.equals(saved.getAssignedRole()))) {
-            saveHistory(saved, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.ASSIGNED_ROLE_CHANGED,
-                    "assignedRole", oldAssignedRole, saved.getAssignedRole(), extractUserId(authentication), null);
+        if (!java.util.Objects.equals(oldAssignedTo, saved.getAssignedTo())) {
+            String oldValue = oldAssignedTo != null ? resolveAuthorName(oldAssignedTo.toString()) : "Sin asignar";
+            String newValue = saved.getAssignedTo() != null ? resolveAuthorName(saved.getAssignedTo().toString()) : "Sin asignar";
+
+            saveHistory(saved, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.EDITED,
+                    "assignedTo", oldValue, newValue, extractUserId(authentication), null);
         }
 
         webSocketManager.broadcast(TicketWebSocketEventDto.builder()
-                .type("ticket.assignedRole.updated")
+                .type("ticket.assignedTo.updated")
                 .ticketId(saved.getId())
-                .createdBy(saved.getCreatedBy())
-                .assignedRole(saved.getAssignedRole())
+                .createdAt(toOffsetDateTime(saved.getCreatedAt()))
+                .updatedAt(toOffsetDateTime(saved.getUpdatedAt()))
                 .status(saved.getStatus())
                 .priority(saved.getPriority())
                 .build());
@@ -351,20 +483,21 @@ public class TicketServiceImpl implements TicketService {
                 .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
 
         if (!isAdmin(authentication)) {
-            if (ticket.getAssignedRole() == null || ticket.getAssignedRole().isBlank()) {
-                throw new RuntimeException("No se puede resolver ticket sin rol asignado");
+            if (ticket.getAssignedTo() == null) {
+                throw new RuntimeException("No se puede resolver ticket sin usuario asignado");
             }
 
-            boolean hasRole = authentication.getAuthorities().stream()
-                    .anyMatch(authority -> authority.getAuthority().equalsIgnoreCase(ticket.getAssignedRole()));
+            UUID actorUuid = parseUuidOrNull(extractUserId(authentication));
+            boolean canResolve = actorUuid != null && actorUuid.equals(ticket.getAssignedTo());
 
-            if (!hasRole) {
+            if (!canResolve) {
                 throw new RuntimeException("Usuario no autorizado para resolver este ticket");
             }
         }
 
         TicketStatus oldStatus = ticket.getStatus();
         ticket.setStatus(TicketStatus.RESOLVED);
+        ticket.setUpdatedBy(extractUserId(authentication));
         Ticket saved = ticketRepository.save(ticket);
 
         if (oldStatus == null || !oldStatus.equals(saved.getStatus())) {
@@ -376,8 +509,8 @@ public class TicketServiceImpl implements TicketService {
         webSocketManager.broadcast(TicketWebSocketEventDto.builder()
                 .type("ticket.resolved")
                 .ticketId(saved.getId())
-                .createdBy(saved.getCreatedBy())
-                .assignedRole(saved.getAssignedRole())
+                .createdAt(toOffsetDateTime(saved.getCreatedAt()))
+                .updatedAt(toOffsetDateTime(saved.getUpdatedAt()))
                 .status(saved.getStatus())
                 .priority(saved.getPriority())
                 .build());
@@ -388,12 +521,12 @@ public class TicketServiceImpl implements TicketService {
     @Override
     @Transactional
     public TicketCommentResponseDto addComment(UUID id, TicketCommentCreateRequestDto request,
-            Authentication authentication) {
+                                               Authentication authentication) {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
 
         if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
-                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
             throw new RuntimeException("Acceso denegado");
         }
 
@@ -406,10 +539,135 @@ public class TicketServiceImpl implements TicketService {
         TicketComment saved = ticketCommentRepository.save(comment);
         ticket.getTicketComments().add(saved);
 
-        saveHistory(ticket, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.COMMENT_ADDED, "comment",
+        saveHistory(ticket, TicketHistoryChangeType.COMMENT_ADDED, "comment",
                 null, saved.getContent(), extractUserId(authentication), null);
 
         return toCommentResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public TicketCommentResponseDto updateComment(UUID ticketId, UUID commentId, TicketCommentUpdateRequestDto request,
+                                                  Authentication authentication) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+
+        if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
+            && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            throw new RuntimeException("Acceso denegado");
+        }
+
+        TicketComment comment = findCommentInTicket(ticket, commentId);
+        String actorId = extractUserId(authentication);
+        if (!actorId.equals(comment.getAuthorId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Solo puedes editar tus propios comentarios");
+        }
+
+        String oldContent = comment.getContent();
+        String newContent = request.getContent().trim();
+        comment.setContent(newContent);
+        TicketComment updated = ticketCommentRepository.save(comment);
+
+        if (!Objects.equals(oldContent, newContent)) {
+            saveHistory(ticket, TicketHistoryChangeType.EDITED,
+                    "comment", oldContent, newContent, actorId, null);
+        }
+
+        return toCommentResponse(updated);
+    }
+
+    @Override
+    @Transactional
+    public void deleteComment(UUID ticketId, UUID commentId, Authentication authentication) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+
+        if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
+            && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            throw new RuntimeException("Acceso denegado");
+        }
+
+        TicketComment comment = findCommentInTicket(ticket, commentId);
+        String actorId = extractUserId(authentication);
+        if (!actorId.equals(comment.getAuthorId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Solo puedes eliminar tus propios comentarios");
+        }
+
+        String oldContent = comment.getContent();
+        ticket.getTicketComments().remove(comment);
+        ticketCommentRepository.delete(comment);
+
+        saveHistory(ticket, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.OTHER,
+                "eliminó un comentario", oldContent, null, actorId, null);
+    }
+
+    @Override
+    @Transactional
+    public TicketResponseDto updateStatus(UUID id, TicketStatusUpdateRequestDto request,
+                                          Authentication authentication) {
+        Ticket ticket = ticketRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+
+        if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
+            && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            throw new RuntimeException("Acceso denegado");
+        }
+
+        TicketStatus oldStatus = ticket.getStatus();
+        ticket.setStatus(request.getStatus());
+        ticket.setUpdatedBy(extractUserId(authentication));
+        Ticket saved = ticketRepository.save(ticket);
+
+        if (!java.util.Objects.equals(oldStatus, saved.getStatus())) {
+            saveHistory(saved, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.STATUS_CHANGED,
+                    "status",
+                    oldStatus == null ? null : oldStatus.name(),
+                    saved.getStatus() == null ? null : saved.getStatus().name(),
+                    extractUserId(authentication), null);
+        }
+
+        webSocketManager.broadcast(TicketWebSocketEventDto.builder()
+                .type("ticket.status.updated")
+                .ticketId(saved.getId())
+                .createdAt(toOffsetDateTime(saved.getCreatedAt()))
+                .updatedAt(toOffsetDateTime(saved.getUpdatedAt()))
+                .status(saved.getStatus())
+                .priority(saved.getPriority())
+                .build());
+
+        return toResponse(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<com.sssi.msvc_maintenance.dto.response.TicketPhotoResponseDto> getPhotos(UUID id,
+                                                                                         Authentication authentication) {
+        Ticket ticket = ticketRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+
+        if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
+            && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            throw new RuntimeException("Acceso denegado");
+        }
+
+        return ticket.getTicketPhotos().stream()
+                .map(photo -> {
+                    String imageUrl = null;
+                    try {
+                        imageUrl = getPresignedUrl(photo.getObjectName());
+                    } catch (Exception ignored) {
+                    }
+                    return com.sssi.msvc_maintenance.dto.response.TicketPhotoResponseDto.builder()
+                            .id(photo.getId())
+                            .objectName(photo.getObjectName())
+                            .fileName(photo.getFileName())
+                            .contentType(photo.getContentType())
+                            .imageUrl(imageUrl)
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -420,7 +678,7 @@ public class TicketServiceImpl implements TicketService {
                 .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
 
         if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
-                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
             throw new RuntimeException("Acceso denegado");
         }
 
@@ -444,7 +702,7 @@ public class TicketServiceImpl implements TicketService {
     }
 
     private void saveHistory(Ticket ticket, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType type,
-            String fieldName, String oldValue, String newValue, String authorId, String metadata) {
+                             String fieldName, String oldValue, String newValue, String authorId, String metadata) {
         com.sssi.msvc_maintenance.entity.TicketHistoryChange history = com.sssi.msvc_maintenance.entity.TicketHistoryChange
                 .builder()
                 .ticket(ticket)
@@ -471,9 +729,11 @@ public class TicketServiceImpl implements TicketService {
         }
     }
 
-    private void saveTicketPhotos(Ticket ticket, List<MultipartFile> photos, Authentication authentication) {
+    private List<String> saveTicketPhotos(Ticket ticket, List<MultipartFile> photos, Authentication authentication) {
+        List<String> addedPhotoNames = new ArrayList<>();
+
         if (photos == null || photos.isEmpty()) {
-            return;
+            return addedPhotoNames;
         }
 
         for (MultipartFile file : photos) {
@@ -488,6 +748,94 @@ public class TicketServiceImpl implements TicketService {
 
             ticketPhotoRepository.save(photo);
             ticket.getTicketPhotos().add(photo);
+            addedPhotoNames.add(resolvePhotoHistoryLabel(photo));
+        }
+
+        return addedPhotoNames;
+    }
+
+    private String resolvePhotoHistoryLabel(TicketPhoto photo) {
+        if (photo.getFileName() != null && !photo.getFileName().isBlank()) {
+            return photo.getFileName();
+        }
+
+        return photo.getObjectName();
+    }
+
+    private String buildAssetHistoryLabel(InventoryAssetResponseDto asset) {
+        if (asset == null) {
+            return "Activo";
+        }
+
+        String assetNumber = asset.getAssetNumber() != null && !asset.getAssetNumber().isBlank()
+                ? asset.getAssetNumber()
+                : asset.getId().toString();
+        String modelName = asset.getModel() != null ? asset.getModel().getName() : null;
+
+        if (modelName == null || modelName.isBlank()) {
+            return assetNumber;
+        }
+
+        return assetNumber + " · " + modelName;
+    }
+
+    private String buildAssetHistoryLabel(UUID assetId) {
+        if (assetId == null) {
+            return "Activo";
+        }
+
+        try {
+            return buildAssetHistoryLabel(requireAsset(assetId));
+        } catch (Exception exception) {
+            return assetId.toString();
+        }
+    }
+
+    private String resolveCampusNameSafe(UUID campusId) {
+        if (campusId == null) {
+            return null;
+        }
+
+        try {
+            return requireCampus(campusId).getName();
+        } catch (Exception exception) {
+            return campusId.toString();
+        }
+    }
+
+    private String resolveBuildingNameSafe(UUID buildingId) {
+        if (buildingId == null) {
+            return null;
+        }
+
+        try {
+            return requireBuilding(buildingId).getName();
+        } catch (Exception exception) {
+            return buildingId.toString();
+        }
+    }
+
+    private String resolveFloorNameSafe(UUID floorId) {
+        if (floorId == null) {
+            return null;
+        }
+
+        try {
+            return requireFloor(floorId).getName();
+        } catch (Exception exception) {
+            return floorId.toString();
+        }
+    }
+
+    private String resolveLocationNameSafe(UUID locationId) {
+        if (locationId == null) {
+            return null;
+        }
+
+        try {
+            return requireLocation(locationId).getDescription();
+        } catch (Exception exception) {
+            return locationId.toString();
         }
     }
 
@@ -506,7 +854,7 @@ public class TicketServiceImpl implements TicketService {
                 throw new AssetException(
                         HttpStatus.BAD_REQUEST,
                         "ASSET_LOCATION_MISMATCH",
-                        "El activo " + asset.getId() + " no pertenece a la ubicación indicada");
+                        "El activo " + asset.getId() + " no pertenece a la ubicaciÃ³n indicada");
             }
 
             assetIds.add(assetId);
@@ -523,6 +871,7 @@ public class TicketServiceImpl implements TicketService {
                 .status(ticket.getStatus())
                 .priority(ticket.getPriority())
                 .createdBy(ticket.getCreatedBy())
+                .createdByName(resolveAuthorName(ticket.getCreatedBy()))
                 .createdAt(toOffsetDateTime(ticket.getCreatedAt()))
                 .updatedAt(toOffsetDateTime(ticket.getUpdatedAt()))
                 .build();
@@ -601,7 +950,11 @@ public class TicketServiceImpl implements TicketService {
                 .status(ticket.getStatus())
                 .priority(ticket.getPriority())
                 .createdBy(ticket.getCreatedBy())
-                .assignedRole(ticket.getAssignedRole())
+                .createdByName(resolveAuthorName(ticket.getCreatedBy()))
+                .assignedTo(ticket.getAssignedTo())
+                .assignedBy(ticket.getAssignedBy())
+                .assignedToName(ticket.getAssignedTo() != null ? resolveAuthorName(ticket.getAssignedTo().toString()) : null)
+                .assignedByName(ticket.getAssignedBy() != null ? resolveAuthorName(ticket.getAssignedBy().toString()) : null)
                 .siteId(ticket.getSiteId())
                 .siteName(site != null ? site.getName() : null)
                 .buildingId(ticket.getBuildingId())
@@ -631,6 +984,14 @@ public class TicketServiceImpl implements TicketService {
                 .createdAt(toOffsetDateTime(comment.getCreatedAt()))
                 .updatedAt(toOffsetDateTime(comment.getUpdatedAt()))
                 .build();
+    }
+
+    private TicketComment findCommentInTicket(Ticket ticket, UUID commentId) {
+        return ticket.getTicketComments().stream()
+                .filter(comment -> comment.getId().equals(commentId))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Comentario no encontrado para este ticket"));
     }
 
     private Map<String, String> resolveAuthorNames(List<TicketComment> comments) {
@@ -775,7 +1136,7 @@ public class TicketServiceImpl implements TicketService {
                 .anyMatch(authority -> {
                     String auth = authority.getAuthority();
 
-                    return auth.equalsIgnoreCase(Privileges.Tickets.VER_TODOS)
+                    return auth.equalsIgnoreCase(Privileges.Tickets.LEER_TODOS)
                             || auth.equalsIgnoreCase("MAINTENANCE_TICKETS_VIEW_ALL")
                             || auth.equalsIgnoreCase("maintenance.tickets.view_all")
                             || auth.equalsIgnoreCase("maintenance:tickets:view_all");
@@ -798,12 +1159,40 @@ public class TicketServiceImpl implements TicketService {
                 });
     }
 
+    private boolean hasAssignTicketPermission(Authentication authentication) {
+        if (authentication == null) {
+            return false;
+        }
+
+        return authentication.getAuthorities().stream()
+                .anyMatch(authority -> {
+                    String auth = authority.getAuthority();
+
+                    return auth.equalsIgnoreCase(Privileges.Tickets.ASIGNAR_TICKET)
+                            || auth.equalsIgnoreCase("MAINTENANCE_TICKETS_ASSIGN")
+                            || auth.equalsIgnoreCase("maintenance.tickets.assign")
+                            || auth.equalsIgnoreCase("maintenance:tickets:assign");
+                });
+    }
+
     private String extractUserId(Authentication authentication) {
         if (authentication instanceof JwtAuthenticationToken jwt) {
             return jwt.getToken().getSubject();
         }
 
         return authentication == null ? "" : authentication.getName();
+    }
+
+    private UUID parseUuidOrNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        try {
+            return UUID.fromString(value);
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
     }
 
     @SneakyThrows

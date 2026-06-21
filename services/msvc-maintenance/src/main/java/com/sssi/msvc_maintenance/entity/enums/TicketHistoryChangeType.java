@@ -8,6 +8,8 @@ public enum TicketHistoryChangeType {
     ASSIGNED_ROLE_CHANGED,
     EDITED,
     COMMENT_ADDED,
+    COMMENT_EDITED,
+    COMMENT_REMOVED,
     RESOLVED,
     OTHER
 }

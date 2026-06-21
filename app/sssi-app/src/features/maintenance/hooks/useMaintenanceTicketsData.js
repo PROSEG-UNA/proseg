@@ -28,9 +28,11 @@ export function useMaintenanceTicketsData({ pageIndex = 0, pageSize = 10, search
                     description: ticket.description ?? '—',
                     status: ticket.status ?? '—',
                     priority: ticket.priority ?? '—',
+                    assignedToName: ticket.assignedToName ?? '',
                     statusRaw: ticket.status ?? '',
                     priorityRaw: ticket.priority ?? '',
                     createdBy: ticket.createdBy ?? '—',
+                    createdByName: ticket.createdByName ?? ticket.createdBy ?? '—',
                     createdAt: ticket.createdAt ?? null,
                     updatedAt: ticket.updatedAt ?? null,
                 })));

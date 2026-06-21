@@ -22,7 +22,11 @@ public class TicketResponseDto {
     private TicketStatus status;
     private TicketPriority priority;
     private String createdBy;
-    private String assignedRole;
+    private String createdByName;
+    private UUID assignedTo;
+    private UUID assignedBy;
+    private String assignedToName;
+    private String assignedByName;
     private UUID siteId;
     private String siteName;
     private UUID buildingId;

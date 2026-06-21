@@ -21,6 +21,7 @@ public class TicketListResponseDto {
     private TicketStatus status;
     private TicketPriority priority;
     private String createdBy;
+    private String createdByName;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 }

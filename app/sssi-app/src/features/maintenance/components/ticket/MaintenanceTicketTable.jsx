@@ -1,32 +1,73 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import DoneAllIcon from '@mui/icons-material/DoneAll';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import NewReleasesOutlinedIcon from '@mui/icons-material/NewReleasesOutlined';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
+import CheckCircleOutlinedIcon from "@mui/icons-material/CheckCircleOutlined";
+import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
+import { Box, Chip, Tab, Tabs } from '@mui/material';
 import RowActionsMenu from '../../../../common/components/RowActionsMenu.jsx';
 import TableBase from '../../../../common/components/TablaBase.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { useDebounce } from '../../../../common/hooks/useDebounce.js';
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
-import { resolveMaintenanceTicket } from '../../services/ticketsService';
 import { useMaintenanceTicketsData } from '../../hooks/useMaintenanceTicketsData';
+import { MAINTENANCE_PRIORITY_OPTIONS, MAINTENANCE_TICKET_STATUS_OPTIONS } from '../../maintenanceUtils';
+
+const ALL_TAB_VALUE = 'ALL';
+
+const STATUS_TAB_ICONS = {
+    ALL: <FormatListBulletedIcon sx={{ fontSize: 18 }} />,
+    OPEN: <NewReleasesOutlinedIcon sx={{ fontSize: 18 }} />,
+    IN_PROGRESS: <AutorenewIcon sx={{ fontSize: 18 }} />,
+    RESOLVED: <CheckCircleOutlinedIcon sx={{ fontSize: 18 }} />,
+    CANCELLED: <CancelOutlinedIcon sx={{ fontSize: 18 }} />,
+};
+
+const STATUS_TAB_LABELS = {
+    ALL: 'Todos',
+    OPEN: 'Abiertos',
+    IN_PROGRESS: 'En Progreso',
+    RESOLVED: 'Resueltos',
+    CANCELLED: 'Cancelados',
+};
+
+const STATUS_TABS = [ALL_TAB_VALUE, ...MAINTENANCE_TICKET_STATUS_OPTIONS.map((o) => o.value)];
 
 const COLUMN_TO_BACKEND_KEY = {
     title: 'title',
     description: 'description',
     statusRaw: 'status',
     priorityRaw: 'priority',
-    createdBy: 'createdBy',
+    createdByName: 'createdBy',
+    updatedBy: 'updatedBy',
 };
+
+function statusColor(status) {
+    if (status === 'OPEN') return 'info';
+    if (status === 'IN_PROGRESS') return 'warning';
+    if (status === 'RESOLVED') return 'success';
+    if (status === 'CANCELLED') return 'error';
+    return 'default';
+}
+
+const PRIORITY_LABELS = Object.fromEntries(
+    MAINTENANCE_PRIORITY_OPTIONS.map((option) => [option.value, option.label])
+);
+
+const STATUS_LABELS = Object.fromEntries(
+    MAINTENANCE_TICKET_STATUS_OPTIONS.map((option) => [option.value, option.label])
+);
 
 export default function MaintenanceTicketTable({ refreshKey = 0, onRefresh, onEdit, onView }) {
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
     const [sorting, setSorting] = useState([]);
-    const [ticketToResolve, setTicketToResolve] = useState(null);
+    const [statusTab, setStatusTab] = useState(ALL_TAB_VALUE);
     const [alert, setAlert] = useState(null);
-    const [resolving, setResolving] = useState(false);
     const { hasPermission } = usePermissions();
 
     const canViewTickets = hasPermission(PERMISSIONS.MAINTENANCE.TICKETS.READ)
@@ -46,8 +87,11 @@ export default function MaintenanceTicketTable({ refreshKey = 0, onRefresh, onEd
             if (value === null || value === undefined || value === '') return;
             output[key] = value;
         });
+        if (statusTab !== ALL_TAB_VALUE) {
+            output.status = statusTab;
+        }
         return output;
-    }, [debouncedColumnFilters]);
+    }, [debouncedColumnFilters, statusTab]);
 
     const backendSort = useMemo(
         () => sorting
@@ -62,7 +106,7 @@ export default function MaintenanceTicketTable({ refreshKey = 0, onRefresh, onEd
 
     useEffect(() => {
         setPagination((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }));
-    }, [debouncedGlobalFilter, backendFilters, backendSort]);
+    }, [debouncedGlobalFilter, backendFilters, backendSort, statusTab]);
 
     const { rows, loading, error, totalElements } = useMaintenanceTicketsData({
         pageIndex: pagination.pageIndex,
@@ -85,16 +129,44 @@ export default function MaintenanceTicketTable({ refreshKey = 0, onRefresh, onEd
             enableColumnFilter: true,
         },
         {
+            accessorKey: 'assignedToName',
+            header: 'Asignado',
+            enableColumnFilter: true,
+            Cell: ({ row }) => {
+                const value = row.original.assignedToName;
+                return (typeof value === 'string' && value.trim()) ? value : '';
+            },
+        },
+        {
             accessorKey: 'priorityRaw',
             header: 'Prioridad',
             enableColumnFilter: true,
-            Cell: ({ row }) => row.original.priority,
+            Cell: ({ row }) => PRIORITY_LABELS[row.original.priorityRaw] ?? row.original.priority ?? row.original.priorityRaw,
         },
         {
-            accessorKey: 'createdAt',
-            header: 'Creado',
+            accessorKey: 'statusRaw',
+            header: 'Estado',
             enableColumnFilter: true,
-            Cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString('es-CR'),
+            Cell: ({ row }) => (
+                <Chip
+                    label={STATUS_LABELS[row.original.statusRaw] ?? row.original.statusRaw}
+                    size="small"
+                    variant="outlined"
+                    color={statusColor(row.original.statusRaw)}
+                />
+            ),
+        },
+        {
+            accessorKey: 'createdByName',
+            header: 'Creado por',
+            enableColumnFilter: true,
+            Cell: ({ row }) => row.original.createdByName || row.original.createdBy || '—',
+        },
+        {
+            accessorKey: 'updatedAt',
+            header: 'Modificado',
+            enableColumnFilter: true,
+            Cell: ({ row }) => new Date(row.original.updatedAt).toLocaleDateString('es-CR'),
         },
     ], []);
 
@@ -117,16 +189,9 @@ export default function MaintenanceTicketTable({ refreshKey = 0, onRefresh, onEd
                 hidden: !canEditTickets,
                 onClick: () => handleEdit(row.original),
             },
-            {
-                key: 'resolve-ticket',
-                label: 'Resolver ticket',
-                icon: <DoneAllIcon fontSize="small" />,
-                hidden: !canEditTickets,
-                onClick: () => handleResolve(row.original),
-            },
         ];
 
-        return <RowActionsMenu actions={actions} tooltip="Acciones del ticket" />;
+        return <RowActionsMenu actions={actions} tooltip="Acciones" />;
     };
 
     const handleView = useCallback((row) => {
@@ -137,30 +202,33 @@ export default function MaintenanceTicketTable({ refreshKey = 0, onRefresh, onEd
         onEdit?.(row);
     }, [onEdit]);
 
-    const handleResolve = useCallback((row) => setTicketToResolve(row), []);
-
-    const handleResolveCancel = useCallback(() => {
-        if (resolving) return;
-        setTicketToResolve(null);
-    }, [resolving]);
-
-    const handleResolveConfirm = useCallback(async () => {
-        if (!ticketToResolve) return;
-        setResolving(true);
-        try {
-            await resolveMaintenanceTicket(ticketToResolve.id);
-            setTicketToResolve(null);
-            setAlert({ type: 'success', message: 'Ticket resuelto correctamente' });
-            onRefresh?.();
-        } catch (error) {
-            setAlert({ type: 'error', message: error?.response?.data?.message ?? error?.message ?? 'No se pudo resolver el ticket' });
-        } finally {
-            setResolving(false);
-        }
-    }, [ticketToResolve, onRefresh]);
-
     return (
         <>
+            <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 1 }}>
+                <Tabs
+                    value={statusTab}
+                    onChange={(_, newValue) => {
+                        setStatusTab(newValue);
+                        setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+                    }}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    allowScrollButtonsMobile
+                    aria-label="Filtros por estado de ticket"
+                >
+                    {STATUS_TABS.map((status) => (
+                        <Tab
+                            key={status}
+                            value={status}
+                            label={STATUS_TAB_LABELS[status]}
+                            icon={STATUS_TAB_ICONS[status]}
+                            iconPosition="start"
+                            sx={{ textTransform: 'none', fontWeight: 700 }}
+                        />
+                    ))}
+                </Tabs>
+            </Box>
+
             <TableBase
                 columns={columns}
                 data={rows}
@@ -189,16 +257,6 @@ export default function MaintenanceTicketTable({ refreshKey = 0, onRefresh, onEd
                     },
                 }}
                 enableGlobalFilter
-            />
-
-            <DialogModal
-                type="warning"
-                open={!!ticketToResolve}
-                title="Resolver ticket"
-                message={`¿Seguro que deseas resolver el ticket "${ticketToResolve?.title ?? ticketToResolve?.description}"?\nEsta acción cambiará su estado a RESUELTO.`}
-                onClose={handleResolveCancel}
-                onConfirm={handleResolveConfirm}
-                confirmLabel={resolving ? 'Resolviendo...' : 'Resolver'}
             />
 
             <DialogModal

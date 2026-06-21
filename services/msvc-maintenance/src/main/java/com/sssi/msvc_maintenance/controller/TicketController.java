@@ -4,13 +4,18 @@ import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.api.response.PageResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
 import com.sssi.common.api.util.PageMapper;
-import com.sssi.msvc_maintenance.dto.request.TicketAssignedRoleUpdateRequestDto;
+import com.sssi.msvc_maintenance.dto.request.TicketAssignedToUpdateRequestDto;
 import com.sssi.msvc_maintenance.dto.request.TicketCommentCreateRequestDto;
+import com.sssi.msvc_maintenance.dto.request.TicketCommentUpdateRequestDto;
 import com.sssi.msvc_maintenance.dto.request.TicketCreateRequestDto;
 import com.sssi.msvc_maintenance.dto.request.TicketPriorityUpdateRequestDto;
+import com.sssi.msvc_maintenance.dto.request.TicketStatusUpdateRequestDto;
 import com.sssi.msvc_maintenance.dto.response.TicketCommentResponseDto;
+import com.sssi.msvc_maintenance.dto.response.KeycloakUserResponse;
 import com.sssi.msvc_maintenance.dto.response.TicketListResponseDto;
+import com.sssi.msvc_maintenance.dto.response.TicketPhotoResponseDto;
 import com.sssi.msvc_maintenance.dto.response.TicketResponseDto;
+import com.sssi.msvc_maintenance.entity.enums.TicketStatus;
 import com.sssi.msvc_maintenance.service.TicketService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -57,10 +62,11 @@ public class TicketController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<TicketListResponseDto>>> findAll(
+            @RequestParam(required = false) TicketStatus status,
             @PageableDefault(size = 10, page = 0) Pageable pageable,
             Authentication authentication) {
         return ApiResponseBuilder.ok(
-                PageMapper.from(ticketService.findAll(pageable, authentication)),
+                PageMapper.from(ticketService.findAll(status, pageable, authentication)),
                 "Lista de tickets"
         );
     }
@@ -91,12 +97,33 @@ public class TicketController {
         return ApiResponseBuilder.ok(ticketService.updatePriority(id, request, authentication), "Prioridad actualizada correctamente");
     }
 
-    @PatchMapping("/{id}/assigned-role")
-    public ResponseEntity<ApiResponse<TicketResponseDto>> updateAssignedRole(
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<ApiResponse<TicketResponseDto>> updateStatus(
             @PathVariable UUID id,
-            @Valid @RequestBody TicketAssignedRoleUpdateRequestDto request,
+            @Valid @RequestBody TicketStatusUpdateRequestDto request,
             Authentication authentication) {
-        return ApiResponseBuilder.ok(ticketService.updateAssignedRole(id, request, authentication), "Rol responsable actualizado correctamente");
+        return ApiResponseBuilder.ok(ticketService.updateStatus(id, request, authentication), "Estado actualizado correctamente");
+    }
+
+    @GetMapping("/{id}/photos")
+    public ResponseEntity<ApiResponse<java.util.List<TicketPhotoResponseDto>>> getPhotos(
+            @PathVariable UUID id,
+            Authentication authentication) {
+        return ApiResponseBuilder.ok(ticketService.getPhotos(id, authentication), "Fotos obtenidas correctamente");
+    }
+
+    @GetMapping("/assignees")
+    public ResponseEntity<ApiResponse<List<KeycloakUserResponse>>> getAssignees(
+            Authentication authentication) {
+        return ApiResponseBuilder.ok(ticketService.findAssignableUsers(authentication), "Usuarios obtenidos correctamente");
+    }
+
+    @PatchMapping("/{id}/assigned-to")
+    public ResponseEntity<ApiResponse<TicketResponseDto>> updateAssignedTo(
+            @PathVariable UUID id,
+            @Valid @RequestBody TicketAssignedToUpdateRequestDto request,
+            Authentication authentication) {
+        return ApiResponseBuilder.ok(ticketService.updateAssignedTo(id, request, authentication), "Ticket asignado correctamente");
     }
 
     @PatchMapping("/{id}/resolve")
@@ -115,5 +142,26 @@ public class TicketController {
                 ticketService.addComment(id, request, authentication),
                 "Comentario agregado correctamente"
         );
+    }
+
+    @PutMapping("/{id}/comments/{commentId}")
+    public ResponseEntity<ApiResponse<TicketCommentResponseDto>> updateComment(
+            @PathVariable UUID id,
+            @PathVariable UUID commentId,
+            @Valid @RequestBody TicketCommentUpdateRequestDto request,
+            Authentication authentication) {
+        return ApiResponseBuilder.ok(
+                ticketService.updateComment(id, commentId, request, authentication),
+                "Comentario actualizado correctamente"
+        );
+    }
+
+    @DeleteMapping("/{id}/comments/{commentId}")
+    public ResponseEntity<ApiResponse<Void>> deleteComment(
+            @PathVariable UUID id,
+            @PathVariable UUID commentId,
+            Authentication authentication) {
+        ticketService.deleteComment(id, commentId, authentication);
+        return ApiResponseBuilder.ok(null, "Comentario eliminado correctamente");
     }
 }

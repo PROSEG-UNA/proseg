@@ -4,20 +4,66 @@ import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import SwapHorizOutlinedIcon from '@mui/icons-material/SwapHorizOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import CommentOutlinedIcon from '@mui/icons-material/CommentOutlined';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CheckCircleOutlinedIcon from "@mui/icons-material/CheckCircleOutlined";
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
+
+const STATUS_LABELS = {
+    OPEN: 'Nuevo',
+    IN_PROGRESS: 'En Progreso',
+    RESOLVED: 'Resuelto',
+    CANCELLED: 'Eliminado',
+};
+
+const PRIORITY_LABELS = {
+    LOW: 'Baja',
+    MEDIUM: 'Media',
+    HIGH: 'Alta',
+};
 
 const TYPE_CONFIG = {
     ATTACHMENT_ADDED:     { icon: AttachFileOutlinedIcon,      color: '#2196f3', label: (h) => `agregó el adjunto ${h.newValue ?? ''}`.trim() },
     ATTACHMENT_REMOVED:   { icon: AttachFileOutlinedIcon,      color: '#f44336', label: (h) => `eliminó el adjunto ${h.oldValue ?? ''}`.trim() },
-    PRIORITY_CHANGED:     { icon: FlagOutlinedIcon,            color: '#ff9800', label: (h) => `cambió la prioridad de ${h.oldValue ?? '?'} a ${h.newValue ?? '?'}` },
-    STATUS_CHANGED:       { icon: SwapHorizOutlinedIcon,       color: '#9c27b0', label: (h) => `cambió el estado de ${h.oldValue ?? '?'} a ${h.newValue ?? '?'}` },
+    PRIORITY_CHANGED:     { icon: FlagOutlinedIcon,            color: '#ff9800', label: (h) => `cambió la prioridad de ${PRIORITY_LABELS[h.oldValue] ?? h.oldValue ?? '?'} a ${PRIORITY_LABELS[h.newValue] ?? h.newValue ?? '?'}` },
+    STATUS_CHANGED:       { icon: SwapHorizOutlinedIcon,       color: '#9c27b0', label: (h) => `cambió el estado de ${STATUS_LABELS[h.oldValue] ?? h.oldValue ?? '?'} a ${STATUS_LABELS[h.newValue] ?? h.newValue ?? '?'}` },
     ASSIGNED_ROLE_CHANGED:{ icon: PersonOutlineOutlinedIcon,   color: '#00bcd4', label: (h) => h.oldValue ? `cambió el rol asignado de "${h.oldValue}" a "${h.newValue}"` : `asignó el rol "${h.newValue}"` },
-    EDITED:               { icon: EditOutlinedIcon,            color: '#607d8b', label: (h) => h.fieldName === 'title' ? 'editó el título' : h.fieldName === 'description' ? 'editó la descripción' : `editó ${h.fieldName ?? 'un campo'}` },
+    EDITED:               { icon: EditOutlinedIcon,            color: '#607d8b', label: (h) => {
+        if (h.fieldName === 'title') return 'editó el título';
+        if (h.fieldName === 'description') return 'editó la descripción';
+        if (h.fieldName === 'comment') return 'editó un comentario';
+
+        const changedFieldNames = {
+            site: 'sede',
+            building: 'edificio',
+            floor: 'piso',
+            location: 'ubicación',
+        };
+
+        if (h.fieldName === 'assignedTo') {
+            if (h.oldValue && !h.newValue) return `quitó la asignación de "${h.oldValue}"`;
+            if (!h.oldValue && h.newValue) return `asignó el ticket a "${h.newValue}"`;
+            return `reasignó el ticket de "${h.oldValue ?? '?'}" a "${h.newValue ?? '?'}"`;
+        }
+
+        if (h.fieldName === 'asset') {
+            if (h.oldValue && !h.newValue) return `quitó el activo "${h.oldValue}"`;
+            if (!h.oldValue && h.newValue) return `agregó el activo "${h.newValue}"`;
+            return `cambió el activo de "${h.oldValue ?? '?'}" a "${h.newValue ?? '?'}"`;
+        }
+
+        if (changedFieldNames[h.fieldName]) {
+            if (h.oldValue && !h.newValue) return `quitó la ${changedFieldNames[h.fieldName]} "${h.oldValue}"`;
+            if (!h.oldValue && h.newValue) return `asignó la ${changedFieldNames[h.fieldName]} "${h.newValue}"`;
+            return `cambió ${changedFieldNames[h.fieldName]} de "${h.oldValue ?? '?'}" a "${h.newValue ?? '?'}"`;
+        }
+
+        return `editó ${h.fieldName ?? 'un campo'}`;
+    } },
     COMMENT_ADDED:        { icon: CommentOutlinedIcon,         color: '#4caf50', label: () => 'agregó un comentario' },
-    RESOLVED:             { icon: CheckCircleOutlineIcon,      color: '#4caf50', label: () => 'resolvió el ticket' },
-    OTHER:                { icon: HelpOutlineIcon,             color: '#9e9e9e', label: (h) => h.fieldName ?? 'realizó un cambio' },
+    COMMENT_EDITED:       { icon: EditOutlinedIcon,            color: '#607d8b', label: () => 'editó un comentario' },
+    COMMENT_REMOVED:      { icon: CommentOutlinedIcon,         color: '#f44336', label: () => 'eliminó un comentario' },
+    RESOLVED:             { icon: CheckCircleOutlinedIcon,      color: '#4caf50', label: () => 'resolvió el ticket' },
+    OTHER:                { icon: HelpOutlineOutlinedIcon,             color: '#9e9e9e', label: (h) => h.fieldName ?? 'realizó un cambio' },
 };
 
 function getInitials(name) {
