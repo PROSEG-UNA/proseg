@@ -14,7 +14,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class TicketWebSocketManager {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(TicketWebSocketManager.class);
+
+    private final ObjectMapper objectMapper;
 
     private final Set<WebSocketSession> sessions = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
@@ -31,8 +33,19 @@ public class TicketWebSocketManager {
             String payload = objectMapper.writeValueAsString(event);
             TextMessage msg = new TextMessage(payload);
             for (WebSocketSession s : sessions) {
-                if (s.isOpen()) s.sendMessage(msg);
+                try {
+                    if (s.isOpen()) {
+                        s.sendMessage(msg);
+                    } else {
+                        sessions.remove(s);
+                    }
+                } catch (Exception ex) {
+                    sessions.remove(s);
+                    log.warn("Failed to send ticket websocket event", ex);
+                }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ex) {
+            log.warn("Failed to serialize ticket websocket event", ex);
+        }
     }
 }
