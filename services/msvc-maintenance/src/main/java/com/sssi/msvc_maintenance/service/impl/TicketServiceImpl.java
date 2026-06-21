@@ -527,7 +527,7 @@ public class TicketServiceImpl implements TicketService {
         TicketComment updated = ticketCommentRepository.save(comment);
 
         if (!Objects.equals(oldContent, newContent)) {
-            saveHistory(ticket, TicketHistoryChangeType.EDITED,
+            saveHistory(ticket, TicketHistoryChangeType.COMMENT_EDITED,
                     "comment", oldContent, newContent, actorId, null);
         }
 
