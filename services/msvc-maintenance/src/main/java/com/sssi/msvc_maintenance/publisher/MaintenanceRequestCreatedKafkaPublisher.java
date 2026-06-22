@@ -62,7 +62,7 @@ public class MaintenanceRequestCreatedKafkaPublisher {
         }
         return switch (status) {
             case PENDING -> "Pendiente";
-            case IN_PROGRESS -> "En progreso";
+            case IN_PROGRESS -> "En Progreso";
             case COMPLETED -> "Completado";
             case CANCELLED -> "Cancelado";
         };

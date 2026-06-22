@@ -7,5 +7,6 @@ export const INVENTORY_ENDPOINTS = {
     types:             '/api/v1/inventory/types',
     brands:            '/api/v1/inventory/brands',
     models:            '/api/v1/inventory/models',
+    floors: '/api/v1/inventory/floors',
     networkInterfaces: '/api/v1/inventory/network-interfaces',
 };

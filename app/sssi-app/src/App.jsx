@@ -15,10 +15,16 @@ import AssetPage from './features/inventory/pages/AssetPage';
 import SecurityPage from './features/security/pages/SecurityPage';
 import UserPage from './features/security/pages/UserPage';
 import RolePage from './features/security/pages/RolePage';
+import MaintenancePage from './features/maintenance/pages/MaintenancePage.jsx';
 import DashboardLayout from './layouts/DashboardLayout';
 import CompaniesPage from "./features/maintenance/pages/company/CompaniesPage.jsx";
 import RequestsPage from "./features/maintenance/pages/request/RequestsPage.jsx";
 import MaintenanceRegisterPage from "./features/maintenance/pages/register/RegisterPage.jsx";
+import CampusPage from './features/locations/pages/CampusPage';
+import BuildingPage from './features/locations/pages/BuildingPage';
+import LocationPage from './features/locations/pages/LocationPage';
+import EmailPage from './features/locations/pages/EmailPage';
+import TicketsPage from './features/maintenance/pages/TicketsPage.jsx';
 
 function App() {
     return (
@@ -55,6 +61,79 @@ function App() {
                                             element={
                                                 <DashboardLayout title="Gestión de Activos">
                                                     <AssetPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route path="/ubicaciones" element={<Navigate to="/ubicaciones/campus" replace />} />
+                                <Route
+                                    path="/ubicaciones/campus"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Gestión de Campus">
+                                                    <CampusPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/ubicaciones/edificios"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Gestión de Edificios">
+                                                    <BuildingPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/ubicaciones/locaciones"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Gestión de Locaciones">
+                                                    <LocationPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/ubicaciones/correos"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Gestión de Correos">
+                                                    <EmailPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/mantenimiento"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout>
+                                                    <MaintenancePage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/mantenimiento/tecnicos"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout>
+                                                    <MaintenancePage />
                                                 </DashboardLayout>
                                             }
                                         />
@@ -127,6 +206,18 @@ function App() {
                                             element={
                                                 <DashboardLayout title="Gestión de Mantenimiento">
                                                     <MaintenanceRegisterPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/mantenimiento/tickets"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout>
+                                                    <TicketsPage />
                                                 </DashboardLayout>
                                             }
                                         />

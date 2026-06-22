@@ -18,6 +18,10 @@ public interface CompanyService {
 
     CompanyResponseDto findById(UUID id);
 
+    CompanyResponseDto findByKeycloakUserId(String keycloakUserId);
+
+    boolean hasCompany(String keycloakUserId);
+
     Page<CompanyResponseDto> findAll(String search, Map<String, String> filters, Pageable pageable);
 
     CompanyResponseDto update(UUID id, CompanyRequestDto request);

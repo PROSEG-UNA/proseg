@@ -43,8 +43,13 @@ export default function MaintenancePage() {
 
     const canViewRequests = hasAnyPermission([
         PERMISSIONS.MAINTENANCE.REQUESTS.READ,
-        PERMISSIONS.MAINTENANCE.REQUESTS.MANAGE,
+        PERMISSIONS.MAINTENANCE.REQUESTS.REQUEST,
+        PERMISSIONS.MAINTENANCE.REQUESTS.UPDATE,
         PERMISSIONS.MAINTENANCE.REQUESTS.DELETE,
+    ]);
+
+    const canCreateRequests = hasAnyPermission([
+        PERMISSIONS.MAINTENANCE.REQUESTS.REQUEST,
     ]);
 
     const tabs = useMemo(() => [
@@ -97,7 +102,7 @@ export default function MaintenancePage() {
                         <PrimaryButton startIcon={<AddIcon />} onClick={openCreateCompany} sx={{ px: '28px' }}>
                             Crear
                         </PrimaryButton>
-                    ) : currentTab?.key === 'requests' && hasPermission(PERMISSIONS.MAINTENANCE.REQUESTS.MANAGE) ? (
+                    ) : currentTab?.key === 'requests' && canCreateRequests ? (
                         <PrimaryButton startIcon={<AddIcon />} onClick={() => openCreateRequest('')} sx={{ px: '28px' }}>
                             Crear
                         </PrimaryButton>

@@ -28,7 +28,7 @@ export function getRegisterAssetColumns() {
         },
         {
             accessorKey: 'type',
-            header: 'Tipo',
+            header: 'Tipo de Activo',
             size: 140,
             grow: true,
         },

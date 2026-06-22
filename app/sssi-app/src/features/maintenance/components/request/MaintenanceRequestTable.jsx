@@ -26,7 +26,7 @@ export default function MaintenanceRequestTable({ refreshKey = 0, onRefresh, onE
     const [deleting, setDeleting] = useState(false);
     const { hasPermission } = usePermissions();
 
-    const canEdit = hasPermission(PERMISSIONS.MAINTENANCE.REQUESTS.MANAGE);
+    const canEdit = hasPermission(PERMISSIONS.MAINTENANCE.REQUESTS.UPDATE);
     const canDelete = hasPermission(PERMISSIONS.MAINTENANCE.REQUESTS.DELETE);
 
     const debouncedGlobalFilter = useDebounce(globalFilter, 350);

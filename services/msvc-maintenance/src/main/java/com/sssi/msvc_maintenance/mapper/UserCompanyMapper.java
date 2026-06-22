@@ -5,12 +5,13 @@ import com.sssi.msvc_maintenance.dto.response.UserCompanyResponseDto;
 import com.sssi.msvc_maintenance.entity.UserCompany;
 import org.mapstruct.*;
 
-@Mapper(componentModel = "spring", uses = {CompanyMapper.class})
+@Mapper(componentModel = "spring")
 public interface UserCompanyMapper {
 
     @Mapping(target = "company", ignore = true)
     UserCompany toEntity(UserCompanyRequestDto request);
 
+    @Mapping(target = "company", ignore = true)
     UserCompanyResponseDto toResponse(UserCompany userCompany);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)

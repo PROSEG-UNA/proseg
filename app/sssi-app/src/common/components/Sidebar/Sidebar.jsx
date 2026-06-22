@@ -26,7 +26,6 @@ import '../../css/Sidebar.css';
 import { panelSurfaceSx } from '../../theme/sxStyles';
 import { useNavSections } from './useNavSections';
 
-
 const neutralHoverSx = (t) => ({
     bgcolor: 'hsla(220, 20%, 50%, 0.05)',
     ...t.applyStyles('dark', {
@@ -178,10 +177,8 @@ export function Sidebar() {
     const { mode, systemMode } = useColorScheme();
     const { sections } = useNavSections();
     const resolvedMode = mode === 'system' ? systemMode : mode;
-
     const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
     const [showExpandedContent, setShowExpandedContent] = useState(!isMinimized);
-
     const syncMinimizedToBreakpoint = () => {
         setIsMinimized(isMediumOrDown);
     };
@@ -200,7 +197,6 @@ export function Sidebar() {
     const toggleMenu = (menu) => setExpandedMenu(expandedMenu === menu ? null : menu);
     const isActive = (path) => location.pathname === path;
     const sidebarWidth = isMinimized ? 80 : 280;
-
     const isSectionActive = (section) => section.items.some((item) => isActive(item.path));
 
     return (

@@ -14,12 +14,17 @@ export default function RequestsPage() {
     const [requestFormState, setRequestFormState] = useState({ open: false, requestId: null, initialCompanyId: '' });
     const [requestsRefresh, setRequestsRefresh] = useState(0);
 
-    const { hasPermission, hasAnyPermission } = usePermissions();
+    const { hasAnyPermission } = usePermissions();
 
     const canViewRequests = hasAnyPermission([
         PERMISSIONS.MAINTENANCE.REQUESTS.READ,
-        PERMISSIONS.MAINTENANCE.REQUESTS.MANAGE,
+        PERMISSIONS.MAINTENANCE.REQUESTS.REQUEST,
+        PERMISSIONS.MAINTENANCE.REQUESTS.UPDATE,
         PERMISSIONS.MAINTENANCE.REQUESTS.DELETE,
+    ]);
+
+    const canCreateRequests = hasAnyPermission([
+        PERMISSIONS.MAINTENANCE.REQUESTS.REQUEST,
     ]);
 
     const openCreateRequest = (initialCompanyId = '') => setRequestFormState({ open: true, requestId: null, initialCompanyId });
@@ -35,7 +40,7 @@ export default function RequestsPage() {
                 <PageHeader
                     title="Solicitudes"
                     description="Gestión de solicitudes"
-                    action={hasPermission(PERMISSIONS.MAINTENANCE.REQUESTS.MANAGE) ? (
+                    action={canCreateRequests ? (
                         <PrimaryButton startIcon={<AddIcon />} onClick={() => openCreateRequest('')} sx={{ px: '28px' }}>
                             Crear
                         </PrimaryButton>

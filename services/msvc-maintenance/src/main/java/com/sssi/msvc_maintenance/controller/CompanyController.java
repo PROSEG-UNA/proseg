@@ -21,6 +21,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -60,6 +62,14 @@ public class CompanyController {
         return ApiResponseBuilder.created(
                 companyService.createManagedUser(request),
                 "Usuario invitado correctamente"
+        );
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<CompanyResponseDto>> findMyCompany(@AuthenticationPrincipal Jwt jwt) {
+        return ApiResponseBuilder.ok(
+                companyService.findByKeycloakUserId(jwt.getSubject()),
+                "Empresa asociada obtenida correctamente"
         );
     }
 

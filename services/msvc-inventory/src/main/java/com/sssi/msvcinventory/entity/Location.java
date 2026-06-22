@@ -11,6 +11,20 @@ import org.hibernate.annotations.UuidGenerator;
 
 import java.util.UUID;
 
+@NamedEntityGraph(
+        name = "Location.withRelations",
+        attributeNodes = {
+                @NamedAttributeNode(value = "floor", subgraph = "floor-subgraph")
+        },
+        subgraphs = {
+                @NamedSubgraph(name = "floor-subgraph", attributeNodes = {
+                        @NamedAttributeNode(value = "building", subgraph = "building-subgraph")
+                }),
+                @NamedSubgraph(name = "building-subgraph", attributeNodes = {
+                        @NamedAttributeNode("campus")
+                })
+        }
+)
 @Entity
 @Table(name = "location_table")
 @Getter
