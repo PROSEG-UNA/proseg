@@ -18,7 +18,7 @@ public class TicketCommentUpdateRequestDto {
     @NotBlank(message = "El comentario es requerido")
     @Size(max = 1000, message = "El comentario no puede exceder 1000 caracteres")
     @Pattern(
-            regexp = ValidationUtils.SAFE_TEXT_REGEX,
+            regexp = ValidationUtils.COMMENT_TEXT_REGEX,
             message = "El comentario contiene caracteres inválidos"
     )
     private String content;
