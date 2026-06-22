@@ -100,15 +100,18 @@ public class TicketServiceImpl implements TicketService {
                                     Authentication authentication) {
         InventoryCampusResponseDto site = requireCampus(request.getSiteId());
 
-        InventoryBuildingResponseDto building = requireBuilding(request.getBuildingId());
-        if (!belongsToCampus(building.getId(), site.getId())) {
-            throw BuildingException.campusDoesNotMatch(building.getId(), site.getId());
+        InventoryBuildingResponseDto building = null;
+        if (request.getBuildingId() != null) {
+            building = requireBuilding(request.getBuildingId());
+            if (!belongsToCampus(building.getId(), site.getId())) {
+                throw BuildingException.campusDoesNotMatch(building.getId(), site.getId());
+            }
         }
 
         InventoryAssetFloorResponseDto floor = null;
         if (request.getFloorId() != null) {
             floor = requireFloor(request.getFloorId());
-            if (floor.getBuilding() == null || !floor.getBuilding().getId().equals(building.getId())) {
+            if (building == null || floor.getBuilding() == null || !floor.getBuilding().getId().equals(building.getId())) {
                 throw new FloorException(
                         HttpStatus.BAD_REQUEST,
                         "FLOOR_BUILDING_MISMATCH",
@@ -141,7 +144,7 @@ public class TicketServiceImpl implements TicketService {
                 .priority(effectivePriority)
                 .status(TicketStatus.OPEN)
                 .siteId(site.getId())
-                .buildingId(building.getId())
+                .buildingId(building != null ? building.getId() : null)
                 .floorId(floor != null ? floor.getId() : null)
                 .locationId(location != null ? location.getId() : null)
                 .build();
@@ -198,15 +201,18 @@ public class TicketServiceImpl implements TicketService {
 
         InventoryCampusResponseDto site = requireCampus(request.getSiteId());
 
-        InventoryBuildingResponseDto building = requireBuilding(request.getBuildingId());
-        if (!belongsToCampus(building.getId(), site.getId())) {
-            throw BuildingException.campusDoesNotMatch(building.getId(), site.getId());
+        InventoryBuildingResponseDto building = null;
+        if (request.getBuildingId() != null) {
+            building = requireBuilding(request.getBuildingId());
+            if (!belongsToCampus(building.getId(), site.getId())) {
+                throw BuildingException.campusDoesNotMatch(building.getId(), site.getId());
+            }
         }
 
         InventoryAssetFloorResponseDto floor = null;
         if (request.getFloorId() != null) {
             floor = requireFloor(request.getFloorId());
-            if (floor.getBuilding() == null || !floor.getBuilding().getId().equals(building.getId())) {
+            if (building == null || floor.getBuilding() == null || !floor.getBuilding().getId().equals(building.getId())) {
                 throw new FloorException(
                         HttpStatus.BAD_REQUEST,
                         "FLOOR_BUILDING_MISMATCH",
@@ -252,7 +258,7 @@ public class TicketServiceImpl implements TicketService {
         ticket.setTitle(request.getTitle().trim());
         ticket.setDescription(request.getDescription().trim());
         ticket.setSiteId(site.getId());
-        ticket.setBuildingId(building.getId());
+        ticket.setBuildingId(building != null ? building.getId() : null);
         ticket.setFloorId(floor != null ? floor.getId() : null);
         ticket.setLocationId(location != null ? location.getId() : null);
         ticket.setUpdatedBy(actorId);
@@ -295,7 +301,7 @@ public class TicketServiceImpl implements TicketService {
 
         if (!Objects.equals(oldBuildingId, saved.getBuildingId())) {
             saveHistory(saved, TicketHistoryChangeType.EDITED, "building",
-                    oldBuildingName, building.getName(), actorId, null);
+                    oldBuildingName, building != null ? building.getName() : null, actorId, null);
         }
 
         if (!Objects.equals(oldFloorId, saved.getFloorId())) {

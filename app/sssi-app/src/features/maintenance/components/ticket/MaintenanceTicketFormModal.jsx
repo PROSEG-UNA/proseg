@@ -568,7 +568,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
     const validateField = (key, value, values = formValues) => {
         let error = '';
         const trimmed = typeof value === 'string' ? value.trim() : value;
-        const requiredKeys = ['title', 'description', 'siteId', 'buildingId', ...(canSetPriority ? ['priority'] : [])];
+        const requiredKeys = ['title', 'description', 'siteId', ...(canSetPriority ? ['priority'] : [])];
 
         if (requiredKeys.includes(key) && !trimmed) {
             error = 'Este campo es requerido';
@@ -843,7 +843,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             return;
         }
 
-        const requiredFields = ['title', 'description', 'siteId', 'buildingId', ...(canSetPriority ? ['priority'] : [])];
+        const requiredFields = ['title', 'description', 'siteId', ...(canSetPriority ? ['priority'] : [])];
         const nextTouched = {};
         const nextErrors = {};
 
@@ -887,7 +887,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         try {
             const existingAssetIds = (ticket?.assets ?? []).map((asset) => asset.assetId ?? asset.id).filter(Boolean);
             const protectedSiteId = ticket ? getTicketCampusId(ticket) : formValues.siteId;
-            const protectedBuildingId = ticket ? getTicketBuildingId(ticket) : formValues.buildingId;
+            const protectedBuildingId = ticket ? (getTicketBuildingId(ticket) || null) : (formValues.buildingId || null);
             const protectedFloorId = ticket ? (getTicketFloorId(ticket) || null) : (formValues.floorId || null);
             const protectedLocationId = ticket ? (getTicketLocationId(ticket) || null) : (formValues.locationId || null);
 
@@ -896,7 +896,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                 description: isRestrictedEditor ? (ticket?.description ?? formValues.description.trim()) : formValues.description.trim(),
                 ...(canSetPriority ? { priority: formValues.priority } : {}),
                 siteId: isRestrictedEditor ? protectedSiteId : formValues.siteId,
-                buildingId: isRestrictedEditor ? protectedBuildingId : formValues.buildingId,
+                buildingId: isRestrictedEditor ? protectedBuildingId : (formValues.buildingId || null),
                 floorId: isRestrictedEditor ? protectedFloorId : (formValues.floorId || null),
                 locationId: isRestrictedEditor ? protectedLocationId : (formValues.locationId || null),
                 assetIds: isRestrictedEditor
@@ -1353,7 +1353,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                 items={buildings}
                                                 getItemLabel={(building) => building.name}
                                                 getItemValue={(building) => building.id}
-                                                required
+                                                clearable
                                                 fullWidth
                                                 size="small"
                                                 disabled={saving || loadingBuildings || !canEditCoreFields || !formValues.siteId}

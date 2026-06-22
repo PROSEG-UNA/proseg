@@ -41,7 +41,6 @@ public class TicketCreateRequestDto {
     @NotNull(message = "La sede es requerida")
     private UUID siteId;
 
-    @NotNull(message = "El edificio es requerido")
     private UUID buildingId;
 
     private UUID floorId;
