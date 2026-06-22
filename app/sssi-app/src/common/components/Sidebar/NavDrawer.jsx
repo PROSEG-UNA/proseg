@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../features/auth/hooks/useAuth';
-import { PERMISSIONS } from '../../constants/permissions';
 import {
   Box,
   Collapse,
@@ -130,55 +129,6 @@ export function NavDrawer({ open, onClose }) {
 
   const toggleMenu = (menu) => setExpandedMenu(expandedMenu === menu ? null : menu);
   const handleNavigation = (path) => { navigate(path); onClose(); };
-  const userPermissions = [
-    PERMISSIONS.USERS.CREATE,
-    PERMISSIONS.USERS.READ,
-    PERMISSIONS.USERS.READ_ALL,
-    PERMISSIONS.USERS.READ_ROLES,
-    PERMISSIONS.USERS.APPROVE,
-    PERMISSIONS.USERS.ASSIGN_ROLE,
-    PERMISSIONS.USERS.REMOVE_ROLE,
-    PERMISSIONS.USERS.READ_INVITATIONS,
-    PERMISSIONS.ROLES.READ_USERS_BY_ROLE,
-  ];
-
-  const rolePermissions = [
-    PERMISSIONS.ROLES.READ_BASE,
-    PERMISSIONS.ROLES.READ_COMPOSITE,
-    PERMISSIONS.ROLES.READ_ROLE_COMPOSITES,
-    PERMISSIONS.ROLES.CREATE,
-    PERMISSIONS.ROLES.UPDATE,
-    PERMISSIONS.ROLES.DELETE,
-    PERMISSIONS.ROLES.READ_USERS_BY_ROLE,
-  ];
-
-  const canViewInventorySection = hasAnyPermission([
-    PERMISSIONS.INVENTORY.READ,
-    PERMISSIONS.INVENTORY.MANAGE,
-    PERMISSIONS.INVENTORY.DELETE,
-    PERMISSIONS.INVENTORY.LOCATIONS.READ,
-    PERMISSIONS.INVENTORY.LOCATIONS.MANAGE,
-    PERMISSIONS.INVENTORY.LOCATIONS.DELETE,
-  ]);
-
-  const canViewUsersSubmodule = hasAnyPermission(userPermissions);
-  const canViewRolesSubmodule = hasAnyPermission(rolePermissions);
-  const canViewSecuritySection = canViewUsersSubmodule || canViewRolesSubmodule;
-  const canViewMaintenanceSection = hasAnyPermission([
-    PERMISSIONS.MAINTENANCE.COMPANIES.READ,
-    PERMISSIONS.MAINTENANCE.COMPANIES.MANAGE,
-    PERMISSIONS.MAINTENANCE.COMPANIES.DELETE,
-    PERMISSIONS.MAINTENANCE.REQUESTS.READ,
-    PERMISSIONS.MAINTENANCE.REQUESTS.MANAGE,
-    PERMISSIONS.MAINTENANCE.REQUESTS.DELETE,
-    PERMISSIONS.MAINTENANCE.COMPANY_USERS.READ,
-    PERMISSIONS.MAINTENANCE.COMPANY_USERS.MANAGE,
-    PERMISSIONS.MAINTENANCE.COMPANY_USERS.DELETE,
-    PERMISSIONS.MAINTENANCE.TICKETS.READ,
-    PERMISSIONS.MAINTENANCE.TICKETS.CREATE,
-    PERMISSIONS.MAINTENANCE.TICKETS.EDIT,
-    PERMISSIONS.MAINTENANCE.TICKETS.DELETE,
-  ]);
 
   return (
     <Drawer

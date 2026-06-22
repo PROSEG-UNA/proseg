@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Avatar, Box, Button, Chip, Divider, Stack, TextField, Typography } from '@mui/material';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
-import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
-import AddCommentOutlinedIcon from '@mui/icons-material/AddCommentOutlined';
 import { formatDateTime } from '../../maintenanceUtils';
 import { addMaintenanceTicketComment } from '../../services/ticketsService';
 import { usePermissions } from '../../../../common/hooks/usePermissions';

@@ -844,6 +844,7 @@ public class TicketServiceImpl implements TicketService {
                 .description(ticket.getDescription())
                 .status(ticket.getStatus())
                 .priority(ticket.getPriority())
+                .assignedToName(resolveAuthorName(String.valueOf(ticket.getAssignedTo())))
                 .createdBy(ticket.getCreatedBy())
                 .createdByName(resolveAuthorName(ticket.getCreatedBy()))
                 .createdAt(toOffsetDateTime(ticket.getCreatedAt()))

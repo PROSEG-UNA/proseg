@@ -1,4 +1,3 @@
-// ticketsService.js
 import axios from 'axios';
 import { MAINTENANCE_ENDPOINTS } from './endpoints';
 import { fetchPage, maintenanceConfig } from './api';
@@ -38,10 +37,7 @@ export async function createMaintenanceTicket(payload, photos = []) {
     form.append('ticket', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
     appendPhotos(form, photos);
 
-    const { data } = await axios.post(TICKETS_BASE, form, {
-        ...maintenanceConfig,
-        headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const { data } = await axios.post(TICKETS_BASE, form, maintenanceConfig);
 
     return data?.data;
 }
@@ -51,10 +47,7 @@ export async function updateMaintenanceTicket(ticketId, payload, photos = []) {
     form.append('ticket', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
     appendPhotos(form, photos);
 
-    const { data } = await axios.put(`${TICKETS_BASE}/${ticketId}`, form, {
-        ...maintenanceConfig,
-        headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const { data } = await axios.put(`${TICKETS_BASE}/${ticketId}`, form, maintenanceConfig);
 
     return data?.data;
 }

@@ -158,8 +158,7 @@ public class SecurityConfig {
                         ).hasAuthority(Privileges.Tickets.ASIGNAR_TICKET)
 
                         .requestMatchers(HttpMethod.PATCH,
-                                "/api/v1/maintenance/tickets/*/status",
-                                "/api/v1/maintenance/tickets/*/resolve"
+                                "/api/v1/maintenance/tickets/*/status"
                         ).hasAuthority(Privileges.Tickets.EDITAR)
 
                         .requestMatchers(HttpMethod.POST,

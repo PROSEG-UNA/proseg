@@ -39,6 +39,7 @@ const STATUS_TABS = [ALL_TAB_VALUE, ...MAINTENANCE_TICKET_STATUS_OPTIONS.map((o)
 const COLUMN_TO_BACKEND_KEY = {
     title: 'title',
     description: 'description',
+    assignedToName: 'assignedTo',
     statusRaw: 'status',
     priorityRaw: 'priority',
     createdByName: 'createdBy',
