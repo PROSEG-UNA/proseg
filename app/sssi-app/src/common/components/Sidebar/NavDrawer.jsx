@@ -180,31 +180,6 @@ export function NavDrawer({ open, onClose }) {
     PERMISSIONS.MAINTENANCE.TICKETS.DELETE,
   ]);
 
-  const inventoryItems = canViewInventorySection
-    ? [{ key: 'assets', icon: AppsIcon, label: 'Activos', path: '/inventario/activos' }]
-    : [];
-
-  const maintenanceItems = canViewMaintenanceSection
-    ? [
-        { key: 'module', icon: BuildIcon, label: 'Mantenimiento', path: '/mantenimiento' },
-        { key: 'companies', icon: BuildIcon, label: 'Empresas', path: '/mantenimiento/empresas' },
-        { key: 'requests', icon: ConstructionIcon, label: 'Solicitudes', path: '/mantenimiento/solicitudes' },
-        { key: 'technicians', icon: BuildIcon, label: 'Técnicos', path: '/mantenimiento/tecnicos' },
-        { key: 'tickets', icon: ConfirmationNumberIcon, label: 'Tickets', path: '/mantenimiento/tickets' },
-      ]
-    : [];
-
-  const securityItems = canViewSecuritySection
-    ? [
-        canViewUsersSubmodule ? { key: 'users', icon: PeopleIcon, label: 'Usuarios', path: '/seguridad/usuarios' } : null,
-        canViewRolesSubmodule ? { key: 'roles', icon: VerifiedUserIcon, label: 'Roles', path: '/seguridad/roles' } : null,
-      ]
-      .filter(Boolean)
-    : [];
-
-  const showInventorySection = canViewInventorySection;
-  const showSecuritySection = canViewSecuritySection;
-
   return (
     <Drawer
       anchor="left"

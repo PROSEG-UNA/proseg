@@ -285,10 +285,6 @@ export function Sidebar() {
     const showInventorySection = canViewInventorySection;
     const showSecuritySection = canViewSecuritySection;
     const showMaintenanceSection = canViewMaintenanceSection;
-
-    const inventoryActive = showInventorySection && inventoryItems.some((item) => isActive(item.path));
-    const maintenanceActive = showMaintenanceSection && maintenanceItems.some((item) => isActive(item.path));
-    const securityActive = showSecuritySection && securityItems.some((item) => isActive(item.path));
     const isSectionActive = (section) => section.items.some((item) => isActive(item.path));
 
     return (
