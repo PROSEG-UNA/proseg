@@ -95,9 +95,9 @@ export default function MaintenanceTicketDetailPanel({ ticket }) {
                     <Typography sx={{ fontSize: 11.5, fontWeight: 700, color: 'text.disabled', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                         Discusión y comentarios
                     </Typography>
+                </Box>
 
                 <Box sx={{ pl: 2.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                    <Box
                         sx={{
                             border: '1px solid',
                             borderColor: 'divider',
