@@ -1,11 +1,11 @@
 package com.sssi.msvc_archive.controller;
 
 import com.sssi.common.api.response.ApiResponse;
+import com.sssi.common.api.response.ArchiveUploadInitResponseDto;
+import com.sssi.common.api.response.ArchiveUploadPartResponseDto;
+import com.sssi.common.api.response.ArchiveUploadResponseDto;
+import com.sssi.common.api.response.PresignedUrlResponseDto;
 import com.sssi.common.api.util.ApiResponseBuilder;
-import com.sssi.msvc_archive.dto.ArchiveUploadInitResponseDto;
-import com.sssi.msvc_archive.dto.ArchiveUploadPartResponseDto;
-import com.sssi.msvc_archive.dto.ArchiveUploadResponseDto;
-import com.sssi.msvc_archive.dto.PresignedUrlResponseDto;
 import com.sssi.msvc_archive.service.ArchiveDownload;
 import com.sssi.msvc_archive.service.ArchiveService;
 

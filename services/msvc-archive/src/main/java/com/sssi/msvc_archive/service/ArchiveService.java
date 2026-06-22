@@ -1,9 +1,9 @@
 package com.sssi.msvc_archive.service;
 
 import com.sssi.msvc_archive.config.MinioProperties;
-import com.sssi.msvc_archive.dto.ArchiveUploadInitResponseDto;
-import com.sssi.msvc_archive.dto.ArchiveUploadPartResponseDto;
-import com.sssi.msvc_archive.dto.ArchiveUploadResponseDto;
+import com.sssi.common.api.response.ArchiveUploadInitResponseDto;
+import com.sssi.common.api.response.ArchiveUploadPartResponseDto;
+import com.sssi.common.api.response.ArchiveUploadResponseDto;
 import com.sssi.msvc_archive.exception.ArchiveException;
 import io.minio.ComposeObjectArgs;
 import io.minio.ComposeSource;
