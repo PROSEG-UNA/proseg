@@ -12,7 +12,7 @@ const STATUS_LABELS = {
     OPEN: 'Nuevo',
     IN_PROGRESS: 'En Progreso',
     RESOLVED: 'Resuelto',
-    CANCELLED: 'Eliminado',
+    CANCELLED: 'Cancelado',
 };
 
 const PRIORITY_LABELS = {
