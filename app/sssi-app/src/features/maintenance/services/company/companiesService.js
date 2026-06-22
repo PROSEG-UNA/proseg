@@ -2,12 +2,14 @@ import axios from 'axios';
 import { MAINTENANCE_ENDPOINTS } from '../endpoints';
 import { fetchPage, maintenanceConfig } from '../api';
 
+const COMPANIES_BASE = '/api/v1/maintenance/companies';
+
 export async function fetchCompanies(options = {}) {
-    return fetchPage(MAINTENANCE_ENDPOINTS.companies, options);
+    return fetchPage(COMPANIES_BASE, options);
 }
 
 export async function fetchCompanyById(companyId) {
-    const { data } = await axios.get(`${MAINTENANCE_ENDPOINTS.companies}/${companyId}`, maintenanceConfig);
+    const { data } = await axios.get(`${COMPANIES_BASE}/${companyId}`, maintenanceConfig);
     return data?.data ?? null;
 }
 
@@ -17,7 +19,7 @@ export async function fetchMyCompany() {
 }
 
 export async function createCompany(payload) {
-    const { data } = await axios.post(MAINTENANCE_ENDPOINTS.companies, payload, maintenanceConfig);
+    const { data } = await axios.post(COMPANIES_BASE, payload, maintenanceConfig);
     return data?.data;
 }
 
@@ -27,17 +29,17 @@ export async function inviteCompanyUser(payload) {
 }
 
 export async function updateCompany(companyId, payload) {
-    const { data } = await axios.put(`${MAINTENANCE_ENDPOINTS.companies}/${companyId}`, payload, maintenanceConfig);
+    const { data } = await axios.put(`${COMPANIES_BASE}/${companyId}`, payload, maintenanceConfig);
     return data?.data;
 }
 
 export async function deleteCompany(companyId) {
-    const { data } = await axios.delete(`${MAINTENANCE_ENDPOINTS.companies}/${companyId}`, maintenanceConfig);
+    const { data } = await axios.delete(`${COMPANIES_BASE}/${companyId}`, maintenanceConfig);
     return data?.data;
 }
 
 export async function fetchCompanyUsers(companyId) {
-    const { data } = await axios.get(`${MAINTENANCE_ENDPOINTS.companies}/${companyId}/users`, maintenanceConfig);
+    const { data } = await axios.get(`${COMPANIES_BASE}/${companyId}/users`, maintenanceConfig);
     return data?.data ?? [];
 }
 
@@ -48,7 +50,7 @@ export async function fetchCompanyTechnicians(companyId) {
 
 export async function assignCompanyUser(companyId, keycloakUserId) {
     const { data } = await axios.post(
-        `${MAINTENANCE_ENDPOINTS.companies}/${companyId}/users`,
+        `${COMPANIES_BASE}/${companyId}/users`,
         { keycloakUserId },
         maintenanceConfig
     );
@@ -57,7 +59,7 @@ export async function assignCompanyUser(companyId, keycloakUserId) {
 
 export async function assignCompanyUsersBulk(companyId, keycloakUserIds = []) {
     const { data } = await axios.post(
-        `${MAINTENANCE_ENDPOINTS.companies}/${companyId}/users/batch`,
+        `${COMPANIES_BASE}/${companyId}/users/batch`,
         { keycloakUserIds },
         maintenanceConfig
     );
@@ -66,7 +68,7 @@ export async function assignCompanyUsersBulk(companyId, keycloakUserIds = []) {
 
 export async function unassignCompanyUser(companyId, userId) {
     const { data } = await axios.delete(
-        `${MAINTENANCE_ENDPOINTS.companies}/${companyId}/users/${userId}`,
+        `${COMPANIES_BASE}/${companyId}/users/${userId}`,
         maintenanceConfig
     );
     return data?.data;

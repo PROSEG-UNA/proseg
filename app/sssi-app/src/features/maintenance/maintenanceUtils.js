@@ -1,15 +1,21 @@
 export const MAINTENANCE_STATUS_OPTIONS = [
     { value: 'PENDING', label: 'Pendiente' },
-    { value: 'IN_PROGRESS', label: 'En progreso' },
+    { value: 'IN_PROGRESS', label: 'En Progreso' },
     { value: 'COMPLETED', label: 'Completada' },
     { value: 'CANCELLED', label: 'Cancelada' },
+];
+
+export const MAINTENANCE_TICKET_STATUS_OPTIONS = [
+    { value: 'OPEN', label: 'Abierto' },
+    { value: 'IN_PROGRESS', label: 'En Progreso' },
+    { value: 'RESOLVED', label: 'Resuelto' },
+    { value: 'CANCELLED', label: 'Cancelado' },
 ];
 
 export const MAINTENANCE_PRIORITY_OPTIONS = [
     { value: 'LOW', label: 'Baja' },
     { value: 'MEDIUM', label: 'Media' },
-    { value: 'HIGH', label: 'Alta' },
-    { value: 'CRITICAL', label: 'Crítica' },
+    { value: 'HIGH', label: 'Alta' }
 ];
 
 export function formatDate(value) {

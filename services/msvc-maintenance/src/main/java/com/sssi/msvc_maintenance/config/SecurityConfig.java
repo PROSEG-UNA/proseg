@@ -132,6 +132,50 @@ public class SecurityConfig {
                                 "/api/v1/maintenance/user-companies/**"
                         ).hasAuthority(Privileges.UsuariosEmpresas.ELIMINAR)
 
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/maintenance/tickets/assignees"
+                        ).hasAuthority(Privileges.Tickets.ASIGNAR_TICKET)
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/maintenance/tickets",
+                                "/api/v1/maintenance/tickets/**"
+                        ).hasAuthority(Privileges.Tickets.LEER)
+
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/maintenance/tickets"
+                        ).hasAuthority(Privileges.Tickets.CREAR)
+
+                        .requestMatchers(HttpMethod.PUT,
+                                "/api/v1/maintenance/tickets/**"
+                        ).hasAuthority(Privileges.Tickets.EDITAR)
+
+                        .requestMatchers(HttpMethod.PATCH,
+                                "/api/v1/maintenance/tickets/*/priority"
+                        ).hasAnyAuthority(Privileges.Tickets.EDITAR, Privileges.Tickets.ASIGNAR_PRIORIDAD)
+
+                        .requestMatchers(HttpMethod.PATCH,
+                                "/api/v1/maintenance/tickets/*/assigned-to"
+                        ).hasAuthority(Privileges.Tickets.ASIGNAR_TICKET)
+
+                        .requestMatchers(HttpMethod.PATCH,
+                                "/api/v1/maintenance/tickets/*/status"
+                        ).hasAuthority(Privileges.Tickets.EDITAR)
+
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/maintenance/tickets/*/comments"
+                        ).hasAuthority(Privileges.Tickets.COMENTAR)
+
+                        .requestMatchers(HttpMethod.PUT,
+                                "/api/v1/maintenance/tickets/*/comments/*"
+                        ).hasAuthority(Privileges.Tickets.COMENTAR)
+
+                        .requestMatchers(HttpMethod.DELETE,
+                                "/api/v1/maintenance/tickets/*/comments/*"
+                        ).hasAuthority(Privileges.Tickets.COMENTAR)
+                        .requestMatchers(
+                                "/api/v1/maintenance/ws/**"
+                        ).authenticated()
+
                         .anyRequest().authenticated()
                 )
 

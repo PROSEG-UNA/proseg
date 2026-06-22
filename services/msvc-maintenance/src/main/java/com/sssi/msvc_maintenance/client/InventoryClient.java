@@ -3,6 +3,8 @@ package com.sssi.msvc_maintenance.client;
 import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.api.response.PageResponse;
 import com.sssi.msvc_maintenance.config.FeignConfig;
+import com.sssi.msvc_maintenance.dto.response.InventoryAssetFloorResponseDto;
+import com.sssi.msvc_maintenance.dto.response.InventoryAssetLocationResponseDto;
 import com.sssi.msvc_maintenance.dto.response.InventoryAssetResponseDto;
 import com.sssi.msvc_maintenance.dto.response.InventoryBuildingEmailResponseDto;
 import com.sssi.msvc_maintenance.dto.response.InventoryBuildingResponseDto;
@@ -19,7 +21,7 @@ import java.util.UUID;
 
 @FeignClient(
         name = "msvc-inventory",
-        url = "${GATEWAY_BASE_URL:http://localhost:8081}/api",
+        url = "${INVENTORY_SERVICE_URL:http://localhost:8095}/api",
         configuration = FeignConfig.class
 )
 public interface InventoryClient {
@@ -52,6 +54,14 @@ public interface InventoryClient {
             @SpringQueryMap Map<String, String> filters
     );
 
+    @GetMapping("/v1/inventory/assets/location/{locationId}")
+    ApiResponse<PageResponse<InventoryAssetResponseDto>> findAssetsByLocation(
+            @PathVariable UUID locationId,
+            @RequestParam(required = false) String search,
+            @RequestParam int page,
+            @RequestParam int size
+    );
+
     @GetMapping("/v1/inventory/campuses")
     ApiResponse<PageResponse<InventoryCampusResponseDto>> findCampuses(
             @RequestParam(required = false) String search,
@@ -66,16 +76,53 @@ public interface InventoryClient {
             @RequestParam int size
     );
 
+    @GetMapping("/v1/inventory/floors/building/{buildingId}")
+    ApiResponse<PageResponse<InventoryAssetFloorResponseDto>> findFloorsByBuilding(
+            @PathVariable UUID buildingId,
+            @RequestParam int page,
+            @RequestParam int size
+    );
+
+    @GetMapping("/v1/inventory/locations/building/{buildingId}")
+    ApiResponse<PageResponse<InventoryAssetLocationResponseDto>> findLocationsByBuilding(
+            @PathVariable UUID buildingId,
+            @RequestParam int page,
+            @RequestParam int size
+    );
+
+    @GetMapping("/v1/inventory/locations/campus/{campusId}")
+    ApiResponse<PageResponse<InventoryAssetLocationResponseDto>> findLocationsByCampus(
+            @PathVariable UUID campusId,
+            @RequestParam int page,
+            @RequestParam int size
+    );
+
     @GetMapping("/v1/inventory/campuses/{id}")
     ApiResponse<InventoryCampusResponseDto> findCampusById(@PathVariable UUID id);
 
     @GetMapping("/v1/inventory/buildings/{id}")
     ApiResponse<InventoryBuildingResponseDto> findBuildingById(@PathVariable UUID id);
 
+    @GetMapping("/v1/inventory/floors/{id}")
+    ApiResponse<InventoryAssetFloorResponseDto> findFloorById(@PathVariable UUID id);
+
+    @GetMapping("/v1/inventory/locations/{id}")
+    ApiResponse<InventoryAssetLocationResponseDto> findLocationById(@PathVariable UUID id);
+
     @GetMapping("/v1/inventory/buildings/{id}/emails")
-    ApiResponse<List<InventoryBuildingEmailResponseDto>> findBuildingEmails(@PathVariable UUID id);
+    ApiResponse<PageResponse<InventoryBuildingEmailResponseDto>> findBuildingEmails(
+            @PathVariable UUID id,
+            @RequestParam int page,
+            @RequestParam int size
+    );
 
     @GetMapping("/v1/inventory/campuses/{id}/emails")
-    ApiResponse<List<InventoryBuildingEmailResponseDto>> findCampusEmails(@PathVariable UUID id);
-}
+    ApiResponse<PageResponse<InventoryBuildingEmailResponseDto>> findCampusEmails(
+            @PathVariable UUID id,
+            @RequestParam int page,
+            @RequestParam int size
+    );
 
+    @GetMapping("/v1/inventory/assets/{id}")
+    ApiResponse<InventoryAssetResponseDto> findAssetById(@PathVariable UUID id);
+}

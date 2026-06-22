@@ -17,9 +17,19 @@ import CloseIcon from '@mui/icons-material/Close';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import LogoutIcon from '@mui/icons-material/Logout';
+import PeopleIcon from '@mui/icons-material/People';
+import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
+import BuildIcon from '@mui/icons-material/Build';
+import ConstructionIcon from '@mui/icons-material/Construction';
+import WarehouseIcon from '@mui/icons-material/Warehouse';
+import ShieldIcon from '@mui/icons-material/Shield';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import { useColorScheme } from '@mui/material/styles';
 import { panelSurfaceSx } from '../../theme/sxStyles';
 import { useNavSections } from './useNavSections';
+import { usePermissions } from '../../hooks/usePermissions';
+import AppsIcon from '@mui/icons-material/Apps';
+import BusinessIcon from '@mui/icons-material/Business';
 
 const iconBoxSx = (t, { active = false } = {}) => ({
   width: 34, height: 34, mr: 1.5,
@@ -115,6 +125,7 @@ export function NavDrawer({ open, onClose }) {
   const { mode, systemMode } = useColorScheme();
   const { sections } = useNavSections();
   const resolvedMode = mode === 'system' ? systemMode : mode;
+  const { hasAnyPermission } = usePermissions();
 
   const toggleMenu = (menu) => setExpandedMenu(expandedMenu === menu ? null : menu);
   const handleNavigation = (path) => { navigate(path); onClose(); };

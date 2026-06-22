@@ -12,6 +12,7 @@ import PushPinIcon from '@mui/icons-material/PushPin';
 import PlaceIcon from '@mui/icons-material/Place';
 import ApartmentIcon from '@mui/icons-material/Apartment';
 import EmailIcon from '@mui/icons-material/Email';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import { PERMISSIONS } from '../../constants/permissions';
 import { usePermissions } from '../../hooks';
 
@@ -65,6 +66,23 @@ const maintenancePermissions = [
     PERMISSIONS.MAINTENANCE.COMPANY_USERS.READ,
     PERMISSIONS.MAINTENANCE.COMPANY_USERS.MANAGE,
     PERMISSIONS.MAINTENANCE.COMPANY_USERS.DELETE,
+    PERMISSIONS.MAINTENANCE.TICKETS.READ,
+    PERMISSIONS.MAINTENANCE.TICKETS.CREATE,
+    PERMISSIONS.MAINTENANCE.TICKETS.EDIT,
+    PERMISSIONS.MAINTENANCE.TICKETS.SET_PRIORITY,
+    PERMISSIONS.MAINTENANCE.TICKETS.VIEW_ALL,
+    PERMISSIONS.MAINTENANCE.TICKETS.COMMENT,
+    PERMISSIONS.MAINTENANCE.TICKETS.DELETE,
+];
+
+const ticketPermissions = [
+    PERMISSIONS.MAINTENANCE.TICKETS.READ,
+    PERMISSIONS.MAINTENANCE.TICKETS.CREATE,
+    PERMISSIONS.MAINTENANCE.TICKETS.EDIT,
+    PERMISSIONS.MAINTENANCE.TICKETS.SET_PRIORITY,
+    PERMISSIONS.MAINTENANCE.TICKETS.VIEW_ALL,
+    PERMISSIONS.MAINTENANCE.TICKETS.COMMENT,
+    PERMISSIONS.MAINTENANCE.TICKETS.DELETE,
 ];
 
 const registerPermissions = [
@@ -83,6 +101,7 @@ export function useNavSections() {
     const canViewSecuritySection = canViewUsersSubmodule || canViewRolesSubmodule;
     const canViewMaintenanceSection = hasAnyPermission(maintenancePermissions);
     const canViewRegistersSubmodule = hasAnyPermission(registerPermissions);
+    const canViewTicketsSubmodule = hasAnyPermission(ticketPermissions);
 
     const sections = useMemo(() => {
         const result = [];
@@ -121,6 +140,7 @@ export function useNavSections() {
                     { key: 'companies', icon: BusinessIcon, label: 'Empresas', path: '/mantenimiento/empresas' },
                     { key: 'requests', icon: ConstructionIcon, label: 'Solicitud de mantenimiento', path: '/mantenimiento/solicitudes' },
                     canViewRegistersSubmodule ? { key: 'registers', icon: AssignmentIcon, label: 'Registro de mantenimiento', path: '/mantenimiento/registros' } : null,
+                    canViewTicketsSubmodule ? { key: 'tickets', icon: ConfirmationNumberIcon, label: 'Tickets', path: '/mantenimiento/tickets' } : null,
                 ].filter(Boolean),
             });
         }
@@ -138,7 +158,7 @@ export function useNavSections() {
         }
 
         return result;
-    }, [canViewInventorySection, canViewLocationsSection, canViewSecuritySection, canViewUsersSubmodule, canViewRolesSubmodule, canViewMaintenanceSection, canViewRegistersSubmodule]);
+    }, [canViewInventorySection, canViewLocationsSection, canViewSecuritySection, canViewUsersSubmodule, canViewRolesSubmodule, canViewMaintenanceSection, canViewRegistersSubmodule, canViewTicketsSubmodule]);
 
     return { sections };
 }

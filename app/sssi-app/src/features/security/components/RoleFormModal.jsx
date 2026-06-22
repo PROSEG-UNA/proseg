@@ -106,6 +106,14 @@ const DOMAIN_META = {
         icon: ConfirmationNumberIcon,
         description: 'Tickets de mantenimiento y su seguimiento',
     },
+    Mantenimiento: {
+        lightColor: '#0f766e',
+        darkColor:  '#2dd4bf',
+        lightBg:    '#f0fdfa',
+        darkBg:     'rgba(19,78,74,0.35)',
+        icon: ConfirmationNumberIcon,
+        description: 'Gestión de empresas, solicitudes, técnicos y tickets',
+    },
 };
 
 const ROLE_PRESETS = [
@@ -135,6 +143,21 @@ const ROLE_PRESETS = [
         darkColor: '#fbbf24',
         icon: ShieldIcon,
         privileges: ['CREAR_ROL','EDITAR_ROL','ELIMINAR_ROL','LEER_ROLES_BASE','LEER_ROLES_COMPUESTOS','LEER_COMPOSITES_ROL','ASIGNAR_ROL_USUARIO','REMOVER_ROL_USUARIO'],
+    },
+    {
+        id: 'gestion-mantenimiento',
+        name: 'Gestión de Mantenimiento',
+        description: 'Permisos de empresas, solicitudes, técnicos y tickets',
+        color: '#0f766e',
+        darkColor: '#2dd4bf',
+        icon: ConfirmationNumberIcon,
+        privileges: [
+            'LEER_EMPRESAS', 'GESTIONAR_EMPRESAS', 'ELIMINAR_EMPRESAS',
+            'LEER_SOLICITUDES_MANTENIMIENTO', 'GESTIONAR_SOLICITUDES_MANTENIMIENTO', 'ELIMINAR_SOLICITUDES_MANTENIMIENTO',
+            'LEER_TECNICOS_MANTENIMIENTO', 'GESTIONAR_TECNICOS_MANTENIMIENTO', 'ELIMINAR_TECNICOS_MANTENIMIENTO',
+            'LEER_USUARIOS_EMPRESAS', 'GESTIONAR_USUARIOS_EMPRESAS', 'ELIMINAR_USUARIOS_EMPRESAS',
+            'LEER_TICKET_MANTENIMIENTO', 'CREAR_TICKETS_MANTENIMIENTO', 'EDITAR_TICKETS_MANTENIMIENTO', 'ELIMINAR_TICKETS_MANTENIMIENTO',
+        ],
     },
     {
         id: 'administrador',

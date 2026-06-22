@@ -4,9 +4,11 @@ import RegisterPage from '../features/auth/pages/RegisterPage';
 import ResetPasswordPage from '../features/auth/pages/ResetPasswordPage';
 import HomePage from '../features/home/pages/HomePage.jsx';
 import AssetPage from '../features/inventory/pages/AssetPage';
+import MaintenancePage from '../features/maintenance/pages/MaintenancePage.jsx';
 import CompaniesPage from '../features/maintenance/pages/company/CompaniesPage.jsx';
 import RequestsPage from '../features/maintenance/pages/request/RequestsPage.jsx';
 import MaintenanceRegisterPage from '../features/maintenance/pages/register/RegisterPage.jsx';
+import TicketsPage from '../features/maintenance/pages/TicketsPage.jsx';
 import SecurityPage from '../features/security/pages/SecurityPage';
 import UserPage from '../features/security/pages/UserPage';
 import RolePage from '../features/security/pages/RolePage';
@@ -46,7 +48,11 @@ export const router = createBrowserRouter([
   },
   {
     path: '/mantenimiento',
-    element: <Navigate to="/mantenimiento/empresas" replace />,
+    element: <MaintenancePage />,
+  },
+  {
+    path: '/mantenimiento/tecnicos',
+    element: <MaintenancePage />,
   },
   {
     path: '/mantenimiento/empresas',
@@ -59,6 +65,10 @@ export const router = createBrowserRouter([
   {
     path: '/mantenimiento/registros',
     element: <MaintenanceRegisterPage />,
+  },
+  {
+    path: '/mantenimiento/tickets',
+    element: <TicketsPage />,
   },
   {
     path: '/seguridad',

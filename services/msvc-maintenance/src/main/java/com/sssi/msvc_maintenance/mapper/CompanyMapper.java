@@ -6,7 +6,7 @@ import com.sssi.msvc_maintenance.dto.response.UserCompanyResponseDto;
 import com.sssi.msvc_maintenance.entity.Company;
 import org.mapstruct.*;
 
-@Mapper(componentModel = "spring", uses = {UserCompanyMapper.class})
+@Mapper(componentModel = "spring")
 public interface CompanyMapper {
 
     @Mapping(target = "userCompanies", ignore = true)
