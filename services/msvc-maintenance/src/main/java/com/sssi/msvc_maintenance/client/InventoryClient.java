@@ -21,7 +21,7 @@ import java.util.UUID;
 
 @FeignClient(
         name = "msvc-inventory",
-        url = "${INVENTORY_SERVICE_URL:http://localhost:8095}/api",
+        url = "${GATEWAY_BASE_URL:http://localhost:8081}/api",
         configuration = FeignConfig.class
 )
 public interface InventoryClient {
