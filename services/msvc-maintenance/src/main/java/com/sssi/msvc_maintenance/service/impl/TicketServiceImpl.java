@@ -111,7 +111,13 @@ public class TicketServiceImpl implements TicketService {
         InventoryAssetFloorResponseDto floor = null;
         if (request.getFloorId() != null) {
             floor = requireFloor(request.getFloorId());
-            if (building == null || floor.getBuilding() == null || !floor.getBuilding().getId().equals(building.getId())) {
+            if (building == null) {
+                throw new FloorException(
+                        HttpStatus.BAD_REQUEST,
+                        "FLOOR_BUILDING_REQUIRED",
+                        "Debe seleccionar un edificio para indicar un piso");
+            }
+            if (floor.getBuilding() == null || !floor.getBuilding().getId().equals(building.getId())) {
                 throw new FloorException(
                         HttpStatus.BAD_REQUEST,
                         "FLOOR_BUILDING_MISMATCH",
@@ -212,7 +218,13 @@ public class TicketServiceImpl implements TicketService {
         InventoryAssetFloorResponseDto floor = null;
         if (request.getFloorId() != null) {
             floor = requireFloor(request.getFloorId());
-            if (building == null || floor.getBuilding() == null || !floor.getBuilding().getId().equals(building.getId())) {
+            if (building == null) {
+                throw new FloorException(
+                        HttpStatus.BAD_REQUEST,
+                        "FLOOR_BUILDING_REQUIRED",
+                        "Debe seleccionar un edificio para indicar un piso");
+            }
+            if (floor.getBuilding() == null || !floor.getBuilding().getId().equals(building.getId())) {
                 throw new FloorException(
                         HttpStatus.BAD_REQUEST,
                         "FLOOR_BUILDING_MISMATCH",
