@@ -16,7 +16,8 @@ COPY msvc-transport ./msvc-transport
 COPY msvc-document-processor ./msvc-document-processor
 COPY msvc-maintenance ./msvc-maintenance
 
-RUN mvn clean package -pl ${SERVICE_NAME} -am -DskipTests
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -U clean package -pl ${SERVICE_NAME} -am -DskipTests -Dmaven.test.skip=true -e
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app

@@ -31,7 +31,8 @@ jobs:
             npm run build
 
             cd ../../services
-            DOCKER_BUILDKIT=1 docker compose --env-file .env.prod.example -f docker-compose.prod.yml up -d --build
+            DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 COMPOSE_PARALLEL_LIMIT=1 docker compose --env-file .env.prod.example -f docker-compose.prod.yml build --progress=plain
+            docker compose --env-file .env.prod.example -f docker-compose.prod.yml up -d
             docker image prune -f
 
             nginx -t

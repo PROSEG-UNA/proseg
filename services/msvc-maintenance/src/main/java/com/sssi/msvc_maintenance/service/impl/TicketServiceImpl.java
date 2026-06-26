@@ -1,8 +1,14 @@
 package com.sssi.msvc_maintenance.service.impl;
 
 import com.sssi.common.api.response.ApiResponse;
+import com.sssi.common.api.response.ArchiveUploadInitResponseDto;
 import com.sssi.common.api.response.PageResponse;
-import com.sssi.msvc_archive.dto.ArchiveUploadInitResponseDto;
+import com.sssi.common.api.response.PresignedUrlResponseDto;
+import com.sssi.common.api.exception.AssetException;
+import com.sssi.common.api.exception.BuildingException;
+import com.sssi.common.api.exception.FloorException;
+import com.sssi.common.api.exception.LocationException;
+import com.sssi.common.api.exception.CampusException;
 import com.sssi.msvc_maintenance.client.AuthClient;
 import com.sssi.msvc_maintenance.client.InventoryClient;
 import com.sssi.msvc_maintenance.dto.request.TicketAssignedToUpdateRequestDto;
@@ -38,11 +44,6 @@ import com.sssi.msvc_maintenance.security.Privileges;
 import com.sssi.msvc_maintenance.service.TicketService;
 import com.sssi.msvc_maintenance.websocket.TicketWebSocketEventDto;
 import com.sssi.msvc_maintenance.websocket.TicketWebSocketManager;
-import com.sssi.msvcinventory.exception.AssetException;
-import com.sssi.msvcinventory.exception.BuildingException;
-import com.sssi.msvcinventory.exception.CampusException;
-import com.sssi.msvcinventory.exception.FloorException;
-import com.sssi.msvcinventory.exception.LocationException;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.springframework.core.ParameterizedTypeReference;
@@ -1256,7 +1257,7 @@ public class TicketServiceImpl implements TicketService {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(resolveBearerToken());
 
-        ResponseEntity<ApiResponse<com.sssi.msvc_archive.dto.PresignedUrlResponseDto>> response = restTemplate.exchange(
+        ResponseEntity<ApiResponse<PresignedUrlResponseDto>> response = restTemplate.exchange(
                 UriComponentsBuilder.fromHttpUrl(url)
                         .queryParam("objectName",
                                 UriUtils.encodePath(objectName, java.nio.charset.StandardCharsets.UTF_8))
@@ -1266,7 +1267,7 @@ public class TicketServiceImpl implements TicketService {
                 new ParameterizedTypeReference<>() {
                 });
 
-        ApiResponse<com.sssi.msvc_archive.dto.PresignedUrlResponseDto> body = response.getBody();
+        ApiResponse<PresignedUrlResponseDto> body = response.getBody();
 
         if (body == null || body.getData() == null) {
             return null;
