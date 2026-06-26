@@ -1144,7 +1144,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                                     {comment.authorName ?? 'Usuario'}
                                                                 </Typography>
                                                                 <Typography sx={{ color: 'text.secondary', fontSize: 12.5 }}>
-                                                                    {comment.pending ? 'Pendiente de guardar' : formatCommentDate(comment.createdAt)}
+                                                                    {formatCommentDate(comment.createdAt) || 'Pendiente de guardar'}
                                                                     {!comment.pending && isCommentEdited(comment) ? ' (editado)' : ''}
                                                                 </Typography>
                                                             </Box>

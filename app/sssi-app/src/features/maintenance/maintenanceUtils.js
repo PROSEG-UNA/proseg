@@ -9,6 +9,7 @@ export const MAINTENANCE_TICKET_STATUS_OPTIONS = [
     { value: 'OPEN', label: 'Abierto' },
     { value: 'IN_PROGRESS', label: 'En Progreso' },
     { value: 'RESOLVED', label: 'Resuelto' },
+    { value: 'REOPENED', label: 'Reabierto' },
     { value: 'CANCELLED', label: 'Cancelado' },
 ];
 

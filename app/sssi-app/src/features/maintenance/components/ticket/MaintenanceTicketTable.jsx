@@ -23,6 +23,7 @@ const STATUS_TAB_ICONS = {
     OPEN: <NewReleasesOutlinedIcon sx={{ fontSize: 18 }} />,
     IN_PROGRESS: <AutorenewIcon sx={{ fontSize: 18 }} />,
     RESOLVED: <CheckCircleOutlinedIcon sx={{ fontSize: 18 }} />,
+    REOPENED: <AutorenewIcon sx={{ fontSize: 18 }} />,
     CANCELLED: <CancelOutlinedIcon sx={{ fontSize: 18 }} />,
 };
 
@@ -31,6 +32,7 @@ const STATUS_TAB_LABELS = {
     OPEN: 'Abiertos',
     IN_PROGRESS: 'En Progreso',
     RESOLVED: 'Resueltos',
+    REOPENED: 'Reabiertos',
     CANCELLED: 'Cancelados',
 };
 
@@ -50,6 +52,7 @@ function statusColor(status) {
     if (status === 'OPEN') return 'info';
     if (status === 'IN_PROGRESS') return 'warning';
     if (status === 'RESOLVED') return 'success';
+    if (status === 'REOPENED') return 'warning';
     if (status === 'CANCELLED') return 'error';
     return 'default';
 }
