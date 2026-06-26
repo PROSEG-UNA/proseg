@@ -7,6 +7,7 @@ import { formatDateTime } from '../../maintenanceUtils';
 function statusColor(status) {
     if (status === 'RESOLVED') return 'success';
     if (status === 'IN_PROGRESS') return 'primary';
+    if (status === 'REOPENED') return 'warning';
     if (status === 'CANCELLED') return 'error';
     return 'warning';
 }

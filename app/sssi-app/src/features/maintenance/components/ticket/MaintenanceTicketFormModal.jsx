@@ -557,13 +557,21 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         [ticketComments, pendingComments]
     );
 
-    const canManageComment = (comment) => (
-        isEditing
-        && !isReadOnly
-        && !comment?.pending
-        && !!comment?.authorId
-        && currentUserIds.includes(String(comment.authorId))
-    );
+    const canManageComment = (comment) => {
+        if (isReadOnly) {
+            return false;
+        }
+
+        if (comment?.pending) {
+            return true;
+        }
+
+        return (
+            isEditing
+            && !!comment?.authorId
+            && currentUserIds.includes(String(comment.authorId))
+        );
+    };
 
     const validateField = (key, value, values = formValues) => {
         let error = '';
@@ -754,6 +762,17 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             return;
         }
 
+        if (comment?.pending) {
+            setPendingComments((prev) => prev.map((item) => (
+                item.id === comment.id
+                    ? { ...item, content: trimmedContent }
+                    : item
+            )));
+            setEditingCommentId(null);
+            setEditingCommentContent('');
+            return;
+        }
+
         setCommentActionLoadingId(comment.id);
         try {
             const updatedComment = await updateMaintenanceTicketComment(ticket.id, comment.id, trimmedContent);
@@ -774,6 +793,17 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         if (!canManageComment(comment)) {
             return;
         }
+
+        if (comment?.pending) {
+            setPendingComments((prev) => prev.filter((item) => item.id !== comment.id));
+            if (editingCommentId === comment.id) {
+                setEditingCommentId(null);
+                setEditingCommentContent('');
+            }
+            setCommentToDelete(null);
+            return;
+        }
+
         setCommentActionLoadingId(comment.id);
         try {
             await deleteMaintenanceTicketComment(ticket.id, comment.id);

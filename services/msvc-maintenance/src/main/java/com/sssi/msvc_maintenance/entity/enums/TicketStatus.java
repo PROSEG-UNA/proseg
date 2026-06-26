@@ -1,5 +1,5 @@
 package com.sssi.msvc_maintenance.entity.enums;
 
 public enum TicketStatus {
-    OPEN, IN_PROGRESS, RESOLVED, CANCELLED
+    OPEN, IN_PROGRESS, RESOLVED, REOPENED, CANCELLED
 }
