@@ -253,6 +253,8 @@ services:
       - SPRING_CONFIG_IMPORT=${SPRING_CONFIG_IMPORT:-optional:configserver:http://msvc-config:8888}
       - SERVER_PORT=8098
       - SPRING_APPLICATION_NAME=msvc-document-processor
+      - KEYCLOAK_ISSUER_URI=${KEYCLOAK_ISSUER_URI:-https://auth.devbychris.com/realms/sssi-realm}
+      - GATEWAY_BASE_URL=${GATEWAY_BASE_URL:-http://msvc-gateway:8081}
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:-http://msvc-eureka:8761/eureka/}
       - EUREKA_INSTANCE_HOSTNAME=${EUREKA_INSTANCE_HOSTNAME:-msvc-document-processor}
     depends_on:

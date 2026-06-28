@@ -4,6 +4,15 @@ server:
 spring:
   application:
     name: msvc-document-processor
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:https://auth.devbychris.com/realms/sssi-realm}
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
 
 eureka:
   instance:
