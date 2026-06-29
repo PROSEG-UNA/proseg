@@ -5,11 +5,17 @@ import com.sssi.common.api.response.PageResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
 import com.sssi.common.api.util.PageMapper;
 import com.sssi.common.specification.FilterConstants;
+import com.sssi.msvcinventory.dto.request.AssetImportRequestDto;
 import com.sssi.msvcinventory.dto.request.AssetRequestDto;
+import com.sssi.msvcinventory.dto.request.ImportConfirmRequestDto;
 import com.sssi.msvcinventory.dto.response.AssetArchiveResponseDto;
+import com.sssi.msvcinventory.dto.response.AssetImportResponseDto;
+import com.sssi.msvcinventory.dto.response.AssetSchemaDto;
+import com.sssi.msvcinventory.dto.response.ImportPreviewResponseDto;
 import com.sssi.msvcinventory.dto.response.AssetResponseDto;
 import com.sssi.msvcinventory.dto.response.NetworkInterfaceResponseDto;
 import com.sssi.msvcinventory.service.AssetArchiveService;
+import com.sssi.msvcinventory.service.AssetImportService;
 import com.sssi.msvcinventory.service.AssetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,10 +35,28 @@ public class AssetController {
 
     private final AssetService assetService;
     private final AssetArchiveService assetArchiveService;
+    private final AssetImportService assetImportService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<AssetResponseDto>> create(@Valid @RequestBody AssetRequestDto request) {
         return ApiResponseBuilder.created(assetService.create(request), "Activo creado correctamente");
+    }
+
+    @PostMapping("/import/preview")
+    public ResponseEntity<ApiResponse<ImportPreviewResponseDto>> previewImport(
+            @Valid @RequestBody AssetImportRequestDto request) {
+        return ApiResponseBuilder.ok(assetImportService.preview(request), "Previsualización de importación");
+    }
+
+    @PostMapping("/import/confirm")
+    public ResponseEntity<ApiResponse<AssetImportResponseDto>> confirmImport(
+            @Valid @RequestBody ImportConfirmRequestDto request) {
+        return ApiResponseBuilder.ok(assetImportService.confirm(request), "Importación procesada");
+    }
+
+    @GetMapping("/schema")
+    public ResponseEntity<ApiResponse<AssetSchemaDto>> getAssetSchema() {
+        return ApiResponseBuilder.ok(assetImportService.getAssetSchema(), "Esquema de importación");
     }
 
     @GetMapping("/{id}")

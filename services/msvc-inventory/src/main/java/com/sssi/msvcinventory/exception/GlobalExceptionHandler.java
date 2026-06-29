@@ -3,6 +3,7 @@ package com.sssi.msvcinventory.exception;
 import com.sssi.common.api.exception.BaseException;
 import com.sssi.common.api.response.ApiErrorResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -13,6 +14,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -78,6 +80,11 @@ public class GlobalExceptionHandler {
             );
         }
 
-        return ApiResponseBuilder.error(ex.getMessage(), List.of("SPRING_ERROR"), HttpStatus.INTERNAL_SERVER_ERROR);
+        log.error("Error inesperado procesando la solicitud", ex);
+        return ApiResponseBuilder.error(
+                "Ocurrió un error inesperado. Intenta de nuevo o contacta a soporte.",
+                List.of("INTERNAL_ERROR"),
+                HttpStatus.INTERNAL_SERVER_ERROR
+        );
     }
 }
