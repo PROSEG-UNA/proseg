@@ -1077,6 +1077,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                 open={open}
                 onClose={onClose}
                 maxWidth="lg"
+                fillHeight
                 icon={ConstructionIcon}
                 title={isReadOnly ? 'Detalle de ticket de mantenimiento' : isEditing ? 'Editar ticket de mantenimiento' : 'Crear ticket de mantenimiento'}
                 subtitle={isReadOnly ? 'Visualiza los datos del ticket' : isEditing ? 'Actualiza la información del ticket' : 'Registra una incidencia en el ticket'}
