@@ -22,6 +22,14 @@ public interface LocationRepository extends JpaRepository<Location, UUID>, JpaSp
     @EntityGraph("Location.withRelations")
     Optional<Location> findById(UUID id);
 
+    Optional<Location> findFirstByDescriptionIgnoreCaseAndFloorId(String description, UUID floorId);
+
+    @EntityGraph("Location.withRelations")
+    List<Location> findByDescriptionIgnoreCase(String description);
+
+    @EntityGraph("Location.withRelations")
+    Optional<Location> findFirstByDescriptionIgnoreCaseAndFloorBuildingId(String description, UUID buildingId);
+
     List<Location> findByFloorId(UUID floorId);
 
     boolean existsByFloorId(UUID floorId);

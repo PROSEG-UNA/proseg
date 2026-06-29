@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -20,6 +21,13 @@ public interface BuildingRepository extends JpaRepository<Building, UUID>, JpaSp
 
     @EntityGraph("Building.withCampus")
     Optional<Building> findById(UUID id);
+
+    Optional<Building> findFirstByNameIgnoreCaseAndCampusId(String name, UUID campusId);
+
+    @EntityGraph("Building.withCampus")
+    List<Building> findByNameIgnoreCase(String name);
+
+    List<Building> findByCampusId(UUID campusId);
 
     boolean existsByNameIgnoreCaseAndCampusId(String name, UUID campusId);
 
