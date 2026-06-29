@@ -9,12 +9,11 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SummaryDto {
-    private int totalRows;
+public class ImportPreviewDto {
 
-    private int created;
-
-    private boolean cancelled;
+    private int received;
 
     private List<RowIssueDto> errors;
+
+    private List<PendingCreationDto> pendingCreations;
 }

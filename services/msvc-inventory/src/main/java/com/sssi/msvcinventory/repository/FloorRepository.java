@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -12,6 +13,8 @@ import java.util.UUID;
 public interface FloorRepository extends JpaRepository<Floor, UUID>, JpaSpecificationExecutor<Floor> {
 
     Optional<Floor> findByNameAndBuildingId(String name, UUID buildingId);
+
+    List<Floor> findByBuildingId(UUID buildingId);
 
     boolean existsByBuildingId(UUID buildingId);
 }

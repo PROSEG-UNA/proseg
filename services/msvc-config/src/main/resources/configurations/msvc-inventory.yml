@@ -33,6 +33,10 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        order_inserts: true
+        order_updates: true
+        jdbc:
+          batch_size: 20
 
 eureka:
   instance:

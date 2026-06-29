@@ -25,6 +25,15 @@ public class SecurityConfig {
 
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
+                        // --- Importación de Activos ---
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/inventory/assets/import/**"
+                        ).hasAuthority(Privileges.Activos.IMPORTAR)
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/inventory/assets/schema"
+                        ).hasAuthority(Privileges.Activos.IMPORTAR)
+
                         // --- Activos ---
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/inventory/assets",

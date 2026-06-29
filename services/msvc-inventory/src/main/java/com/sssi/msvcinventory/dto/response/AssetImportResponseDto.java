@@ -1,4 +1,4 @@
-package com.sssi.msvc_document_processor.dto.response;
+package com.sssi.msvcinventory.dto.response;
 
 import lombok.*;
 
@@ -9,12 +9,13 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SummaryDto {
-    private int totalRows;
+public class AssetImportResponseDto {
+
+    private int received;
 
     private int created;
 
     private boolean cancelled;
 
-    private List<RowIssueDto> errors;
+    private List<AssetImportRowIssueDto> errors;
 }

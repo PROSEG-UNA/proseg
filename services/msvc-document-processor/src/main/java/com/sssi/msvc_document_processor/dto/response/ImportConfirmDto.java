@@ -9,8 +9,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SummaryDto {
-    private int totalRows;
+public class ImportConfirmDto {
+    private int received;
 
     private int created;
 
