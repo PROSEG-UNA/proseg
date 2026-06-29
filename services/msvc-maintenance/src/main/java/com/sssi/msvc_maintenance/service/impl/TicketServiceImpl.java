@@ -98,7 +98,8 @@ public class TicketServiceImpl implements TicketService {
     private final AuthClient authClient;
     private static final Logger log = LoggerFactory.getLogger(TicketServiceImpl.class);
 
-    private final String archiveBaseUrl = System.getProperty("archive.base-url", "http://localhost:8081");
+    @org.springframework.beans.factory.annotation.Value("${GATEWAY_BASE_URL:http://localhost:8081}")
+    private String archiveBaseUrl;
 
     @Override
     @Transactional
