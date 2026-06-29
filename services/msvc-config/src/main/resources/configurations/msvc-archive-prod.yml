@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: msvc-archive
+  servlet:
+    multipart:
+      max-file-size: 30MB
+      max-request-size: 60MB
   config:
     import: ${SPRING_CONFIG_IMPORT:optional:configserver:http://msvc-config:8888}
   security:
