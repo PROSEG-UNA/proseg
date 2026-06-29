@@ -10,3 +10,9 @@ export const INVENTORY_ENDPOINTS = {
     floors: '/api/v1/inventory/floors',
     networkInterfaces: '/api/v1/inventory/network-interfaces',
 };
+
+export const DOCUMENT_PROCESSOR_ENDPOINTS = {
+    imports: '/api/v1/document-processor/imports',
+};
+
+export const ASSETS_DOCUMENT_TYPE = 'assets';
