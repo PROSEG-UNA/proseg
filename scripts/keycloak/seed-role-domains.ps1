@@ -131,6 +131,7 @@ Write-Host "--- Inventario ---"
 Set-RoleDomain "LEER_ACTIVOS"      "Inventario"
 Set-RoleDomain "GESTIONAR_ACTIVOS" "Inventario"
 Set-RoleDomain "ELIMINAR_ACTIVOS"  "Inventario"
+Set-RoleDomain "IMPORTAR_ACTIVOS"  "Inventario"
 
 Write-Host ""
 Write-Host "--- Ubicaciones ---"
