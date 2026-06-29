@@ -127,5 +127,13 @@ public class UserController {
                 "Información de invitación obtenida correctamente"
         );
     }
+
+    @PostMapping("/keycloak/batch")
+    public ResponseEntity<ApiResponse<List<KeycloakUserResponseDto>>> getUsersByIds(
+            @RequestBody List<String> ids
+    ) {
+        List<KeycloakUserResponseDto> users = userService.getKeycloakUsersByIds(ids);
+        return ApiResponseBuilder.ok(users, "Usuarios obtenidos correctamente");
+    }
 }
 

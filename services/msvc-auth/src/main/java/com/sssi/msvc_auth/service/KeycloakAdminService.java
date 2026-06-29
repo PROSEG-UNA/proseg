@@ -938,4 +938,49 @@ public class KeycloakAdminService {
         setPassword(userId, newPassword, headers);
         log.info("Contraseña restablecida en Keycloak para userId={}", userId);
     }
+
+    public List<KeycloakUserResponseDto> getUsersByIds(List<String> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return List.of();
+        }
+
+        String adminToken = getAdminToken();
+        HttpHeaders headers = buildJsonHeaders(adminToken);
+        List<KeycloakUserResponseDto> users = new ArrayList<>();
+
+        for (String userId : userIds.stream().filter(id -> id != null && !id.isBlank()).distinct().toList()) {
+            String url = keycloakServerUrl + "/admin/realms/" + realm + "/users/" + userId;
+
+            try {
+                ResponseEntity<String> response = restTemplate.exchange(
+                        url,
+                        HttpMethod.GET,
+                        new HttpEntity<>(headers),
+                        String.class
+                );
+
+                JsonNode node = objectMapper.readTree(response.getBody());
+
+                users.add(KeycloakUserResponseDto.builder()
+                        .id(node.path("id").asText())
+                        .username(node.path("username").asText())
+                        .email(node.path("email").asText(null))
+                        .firstName(node.path("firstName").asText(null))
+                        .lastName(node.path("lastName").asText(null))
+                        .build());
+
+            } catch (HttpStatusCodeException e) {
+                if (e.getStatusCode().value() == 404) {
+                    continue;
+                }
+
+                throw e;
+            } catch (Exception e) {
+                log.error("Error obteniendo usuario {}: {}", userId, e.getMessage(), e);
+                throw new IllegalStateException("Error consultando usuarios en Keycloak", e);
+            }
+        }
+
+        return users;
+    }
 }

@@ -17,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -75,6 +76,20 @@ public class MaintenanceLocationServiceImpl implements MaintenanceLocationServic
                 campusId,
                 pageable.getPageNumber(),
                 pageable.getPageSize()
+        );
+
+        return toPage(response, pageable);
+    }
+
+    @Override
+    public Page<InventoryAssetResponseDto> findAssetsByBuilding(UUID buildingId, String search, Pageable pageable) {
+        ApiResponse<PageResponse<InventoryAssetResponseDto>> response = inventoryClient.findAssetsByBuilding(
+                buildingId,
+                search,
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                null,
+                Map.of()
         );
 
         return toPage(response, pageable);

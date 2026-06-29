@@ -9,6 +9,7 @@ export const MAINTENANCE_TICKET_STATUS_OPTIONS = [
     { value: 'OPEN', label: 'Abierto' },
     { value: 'IN_PROGRESS', label: 'En Progreso' },
     { value: 'RESOLVED', label: 'Resuelto' },
+    { value: 'REOPENED', label: 'Reabierto' },
     { value: 'CANCELLED', label: 'Cancelado' },
 ];
 
@@ -71,3 +72,14 @@ export function priorityLabel(value) {
     return MAINTENANCE_PRIORITY_OPTIONS.find((option) => option.value === value)?.label ?? value ?? '—';
 }
 
+export const formatDateHourMinute = (value) => {
+    if (!value) return '';
+
+    return new Date(value).toLocaleString('es-CR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+};

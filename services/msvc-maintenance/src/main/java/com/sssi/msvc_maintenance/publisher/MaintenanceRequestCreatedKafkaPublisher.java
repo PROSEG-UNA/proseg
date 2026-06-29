@@ -64,6 +64,7 @@ public class MaintenanceRequestCreatedKafkaPublisher {
             case PENDING -> "Pendiente";
             case IN_PROGRESS -> "En Progreso";
             case COMPLETED -> "Completado";
+            case REOPENED -> "Reabierto";
             case CANCELLED -> "Cancelado";
         };
     }

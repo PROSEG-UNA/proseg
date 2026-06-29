@@ -23,6 +23,8 @@ public interface MaintenanceLocationService {
 
     Page<InventoryAssetLocationResponseDto> findLocationsByCampus(UUID campusId, Pageable pageable);
 
+    Page<InventoryAssetResponseDto> findAssetsByBuilding(UUID buildingId, String search, Pageable pageable);
+
     Page<InventoryAssetResponseDto> findAssetsByLocation(UUID locationId, String search, Pageable pageable);
 
     InventoryCampusResponseDto findCampusById(UUID id);
