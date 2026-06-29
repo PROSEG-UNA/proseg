@@ -17,6 +17,8 @@ import io.minio.RemoveObjectArgs;
 import io.minio.StatObjectArgs;
 import io.minio.StatObjectResponse;
 import io.minio.http.Method;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -28,6 +30,8 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 public class ArchiveService {
+
+    private static final Logger log = LoggerFactory.getLogger(ArchiveService.class);
 
     private static final int PRESIGNED_URL_MINUTES = 10;
     private static final String OBJECT_NAME_REGEX = "^[a-zA-Z0-9._/-]+$";
@@ -92,6 +96,8 @@ public class ArchiveService {
         } catch (ArchiveException exception) {
             throw exception;
         } catch (Exception exception) {
+            log.error("Error subiendo parte a MinIO (bucket={}, uploadId={}, part={})",
+                    minioProperties.getBucket(), uploadId, partNumber, exception);
             throw ArchiveException.uploadPartError();
         }
     }
@@ -178,6 +184,8 @@ public class ArchiveService {
         } catch (ArchiveException exception) {
             throw exception;
         } catch (Exception exception) {
+            log.error("Error completando upload en MinIO (bucket={}, uploadId={}, objectName={})",
+                    minioProperties.getBucket(), uploadId, objectName, exception);
             throw ArchiveException.completeUploadError();
         }
     }
@@ -211,6 +219,8 @@ public class ArchiveService {
         } catch (ArchiveException exception) {
             throw exception;
         } catch (Exception exception) {
+            log.error("Error descargando objeto de MinIO (bucket={}, objectName={})",
+                    minioProperties.getBucket(), objectName, exception);
             throw ArchiveException.downloadError();
         }
     }
@@ -230,6 +240,8 @@ public class ArchiveService {
         } catch (ArchiveException exception) {
             throw exception;
         } catch (Exception exception) {
+            log.error("Error generando URL prefirmada en MinIO (bucket={}, objectName={})",
+                    minioProperties.getBucket(), objectName, exception);
             throw ArchiveException.presignedUrlError();
         }
     }
