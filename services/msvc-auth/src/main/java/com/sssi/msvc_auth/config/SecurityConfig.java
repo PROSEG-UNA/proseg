@@ -66,6 +66,8 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.GET, "/api/user/keycloak/*")
                         .hasAuthority(Privileges.User.READ)
+                        .requestMatchers(HttpMethod.POST, "/api/user/keycloak/batch")
+                        .hasAuthority(Privileges.User.READ)
 
                         .requestMatchers(HttpMethod.GET, "/api/user/*/roles")
                         .hasAuthority(Privileges.User.READ_ROLES)
