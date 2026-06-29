@@ -8,6 +8,8 @@ import { addMaintenanceTicketComment } from '../../services/ticketsService';
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 
+const isImageType = (type) => typeof type === 'string' && type.startsWith('image/');
+
 function InfoRow({ label, value }) {
     return (
         <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'baseline' }}>
@@ -96,6 +98,7 @@ export default function MaintenanceTicketDetailPanel({ ticket }) {
                 </Box>
 
                 <Box sx={{ pl: 2.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    <Box
                         sx={{
                             border: '1px solid',
                             borderColor: 'divider',
@@ -198,12 +201,12 @@ export default function MaintenanceTicketDetailPanel({ ticket }) {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     <ImageOutlinedIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
                     <Typography sx={{ fontSize: 11.5, fontWeight: 700, color: 'text.disabled', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                        Fotos adjuntas
+                        Archivos adjuntos
                     </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, pl: 2.5 }}>
                     {(ticket.photos ?? []).length === 0 ? (
-                        <Typography sx={{ color: 'text.secondary', fontSize: 13.25 }}>No hay fotos adjuntas para este ticket.</Typography>
+                        <Typography sx={{ color: 'text.secondary', fontSize: 13.25 }}>No hay archivos adjuntos para este ticket.</Typography>
                     ) : (
                         ticket.photos.map((photo) => (
                             <Box
@@ -221,10 +224,7 @@ export default function MaintenanceTicketDetailPanel({ ticket }) {
                                 <Typography sx={{ fontWeight: 700, fontSize: 13.25 }} noWrap>
                                     {photo.fileName || photo.objectName}
                                 </Typography>
-                                <Typography sx={{ color: 'text.secondary', fontSize: 12.5 }} noWrap>
-                                    {photo.contentType || 'Sin tipo'}
-                                </Typography>
-                                {photo.imageUrl ? (
+                                {photo.imageUrl && isImageType(photo.contentType) ? (
                                     <Box
                                         component="img"
                                         src={photo.imageUrl}
@@ -238,6 +238,19 @@ export default function MaintenanceTicketDetailPanel({ ticket }) {
                                             borderColor: 'divider',
                                         }}
                                     />
+                                ) : photo.imageUrl ? (
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        startIcon={<DescriptionOutlinedIcon />}
+                                        component="a"
+                                        href={photo.imageUrl}
+                                        target="_blank"
+                                        rel="noopener"
+                                        sx={{ alignSelf: 'flex-start' }}
+                                    >
+                                        Descargar
+                                    </Button>
                                 ) : null}
                             </Box>
                         ))

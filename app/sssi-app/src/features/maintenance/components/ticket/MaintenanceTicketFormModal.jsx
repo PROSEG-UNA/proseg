@@ -81,6 +81,8 @@ const readAsDataUrl = (file) => new Promise((resolve, reject) => {
     reader.readAsDataURL(file);
 });
 
+const isImageType = (type) => typeof type === 'string' && type.startsWith('image/');
+
 const buildAssetLabel = (asset) => {
     const assetNumber = asset.assetNumber ?? asset.id;
     const serialNumber = asset.serialNumber ? ` - ${asset.serialNumber}` : '';
@@ -867,25 +869,17 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
 
     const handleFileSelect = async (files) => {
         const allFiles = Array.from(files ?? []);
-        const validFiles = allFiles.filter((file) => file.type.startsWith('image/'));
-        const invalidFiles = allFiles.filter((file) => !file.type.startsWith('image/'));
 
-        if (invalidFiles.length > 0) {
-            setAlert({
-                type: 'warning',
-                message: `Se omitieron ${invalidFiles.length} archivo(s). Solo se permiten JPG, PNG y WEBP.`,
-            });
-        }
-
-        if (validFiles.length === 0) {
+        if (allFiles.length === 0) {
             return;
         }
 
         const nextPhotos = await Promise.all(
-            validFiles.map(async (file) => ({
+            allFiles.map(async (file) => ({
                 file,
                 name: file.name,
-                preview: await readAsDataUrl(file),
+                contentType: file.type,
+                preview: isImageType(file.type) ? await readAsDataUrl(file) : null,
             }))
         );
 
@@ -1626,20 +1620,19 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                     >
                                         <CloudUploadIcon sx={{ fontSize: 32, color: isDragOver ? accentColor : 'text.secondary' }} />
                                         <Typography sx={{ fontSize: 13.5, color: 'text.secondary', textAlign: 'center' }}>
-                                            Arrastra imágenes aquí o{' '}
+                                            Arrastra archivos aquí o{' '}
                                             <Typography component="span" sx={{ color: accentColor, fontWeight: 600 }}>
                                                 selecciona archivos
                                             </Typography>
                                         </Typography>
                                         <Typography sx={{ fontSize: 11.5, color: 'text.disabled' }}>
-                                            JPG, PNG, WEBP
+                                            Cualquier tipo de archivo
                                         </Typography>
                                     </Box>
 
                                     <input
                                         ref={fileInputRef}
                                         type="file"
-                                        accept="image/*"
                                         multiple
                                         style={{ display: 'none' }}
                                         onChange={(event) => {
@@ -1663,13 +1656,34 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                         borderColor: 'divider',
                                                     }}
                                                 >
-                                                    <Box
-                                                        component="img"
-                                                        src={photo.preview}
-                                                        alt={photo.name}
-                                                        loading="lazy"
-                                                        sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                    />
+                                                    {photo.preview ? (
+                                                        <Box
+                                                            component="img"
+                                                            src={photo.preview}
+                                                            alt={photo.name}
+                                                            loading="lazy"
+                                                            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                        />
+                                                    ) : (
+                                                        <Box
+                                                            sx={{
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                display: 'flex',
+                                                                flexDirection: 'column',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                gap: 0.5,
+                                                                p: 0.5,
+                                                                bgcolor: 'action.hover',
+                                                            }}
+                                                        >
+                                                            <DescriptionOutlinedIcon sx={{ fontSize: 28, color: 'text.secondary' }} />
+                                                            <Typography sx={{ fontSize: 10, color: 'text.secondary', textAlign: 'center', wordBreak: 'break-word', lineHeight: 1.1 }} noWrap>
+                                                                {photo.name}
+                                                            </Typography>
+                                                        </Box>
+                                                    )}
                                                     <IconButton
                                                         size="small"
                                                         onClick={(event) => {
@@ -1718,9 +1732,6 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                             <Typography sx={{ fontWeight: 700, fontSize: 13.5 }}>
                                                 {photo.fileName ?? photo.objectName}
                                             </Typography>
-                                            <Typography sx={{ color: 'text.secondary', fontSize: 13 }}>
-                                                {photo.contentType ?? 'Archivo'}
-                                            </Typography>
                                             {!isReadOnly && isEditing ? (
                                                 <Box sx={{ mt: 1 }}>
                                                     <Button
@@ -1734,7 +1745,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                     </Button>
                                                 </Box>
                                             ) : null}
-                                            {photo.imageUrl ? (
+                                            {photo.imageUrl && isImageType(photo.contentType) ? (
                                                 <Box
                                                     component="img"
                                                     src={photo.imageUrl}
@@ -1752,6 +1763,19 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                         cursor: 'zoom-in',
                                                     }}
                                                 />
+                                            ) : photo.imageUrl ? (
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    startIcon={<DescriptionOutlinedIcon />}
+                                                    component="a"
+                                                    href={photo.imageUrl}
+                                                    target="_blank"
+                                                    rel="noopener"
+                                                    sx={{ mt: 1, alignSelf: 'flex-start' }}
+                                                >
+                                                    Descargar
+                                                </Button>
                                             ) : null}
                                         </Box>
                                     ))}
