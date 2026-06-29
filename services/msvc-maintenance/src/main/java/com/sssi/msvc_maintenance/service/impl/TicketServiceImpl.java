@@ -908,56 +908,14 @@ public class TicketServiceImpl implements TicketService {
     }
 
     private TicketResponseDto toResponse(Ticket ticket) {
-        InventoryCampusResponseDto site = null;
-        if (ticket.getSiteId() != null) {
-            try {
-                site = requireCampus(ticket.getSiteId());
-            } catch (Exception ignored) {
-            }
-        }
-
-        InventoryBuildingResponseDto building = null;
-        if (ticket.getBuildingId() != null) {
-            try {
-                building = requireBuilding(ticket.getBuildingId());
-            } catch (Exception ignored) {
-            }
-        }
-
-        InventoryAssetFloorResponseDto floor = null;
-        if (ticket.getFloorId() != null) {
-            try {
-                floor = requireFloor(ticket.getFloorId());
-            } catch (Exception ignored) {
-            }
-        }
-
-        InventoryAssetLocationResponseDto location = null;
-        if (ticket.getLocationId() != null) {
-            try {
-                location = requireLocation(ticket.getLocationId());
-            } catch (Exception ignored) {
-            }
-        }
+        InventoryCampusResponseDto site = resolveCampusForResponse(ticket.getSiteId());
+        InventoryBuildingResponseDto building = resolveBuildingForResponse(ticket.getBuildingId());
+        InventoryAssetFloorResponseDto floor = resolveFloorForResponse(ticket.getFloorId());
+        InventoryAssetLocationResponseDto location = resolveLocationForResponse(ticket.getLocationId());
 
         List<TicketAssetResponseDto> assets = ticket.getTicketAssets().stream()
                 .map(ticketAsset -> {
-                    InventoryAssetResponseDto asset = null;
-                    try {
-                        asset = requireAsset(ticketAsset.getAssetId());
-                    } catch (Exception ignored) {
-                    }
-
-                    if (asset == null) {
-                        return TicketAssetResponseDto.builder()
-                                .id(ticketAsset.getId())
-                                .assetId(ticketAsset.getAssetId())
-                                .assetNumber(ticketAsset.getAssetId() != null ? ticketAsset.getAssetId().toString() : null)
-                                .serialNumber(null)
-                                .assetName(null)
-                                .locationDescription(null)
-                                .build();
-                    }
+                    InventoryAssetResponseDto asset = resolveAssetForResponse(ticketAsset.getAssetId());
 
                     return TicketAssetResponseDto.builder()
                             .id(ticketAsset.getId())
@@ -971,22 +929,13 @@ public class TicketServiceImpl implements TicketService {
                 .collect(Collectors.toList());
 
         List<TicketPhotoResponseDto> photos = ticket.getTicketPhotos().stream()
-                .map(photo -> {
-                    String imageUrl = null;
-
-                    try {
-                        imageUrl = getPresignedUrl(photo.getObjectName());
-                    } catch (Exception ignored) {
-                    }
-
-                    return TicketPhotoResponseDto.builder()
-                            .id(photo.getId())
-                            .objectName(photo.getObjectName())
-                            .fileName(photo.getFileName())
-                            .contentType(photo.getContentType())
-                            .imageUrl(imageUrl)
-                            .build();
-                })
+                .map(photo -> TicketPhotoResponseDto.builder()
+                        .id(photo.getId())
+                        .objectName(photo.getObjectName())
+                        .fileName(photo.getFileName())
+                        .contentType(photo.getContentType())
+                        .imageUrl(resolvePresignedUrlForResponse(photo.getObjectName()))
+                        .build())
                 .collect(Collectors.toList());
 
         List<TicketComment> sortedTicketComments = ticket.getTicketComments().stream()
@@ -1012,11 +961,11 @@ public class TicketServiceImpl implements TicketService {
         addAuthorId(authorIds, ticket.getCreatedBy());
 
         if (ticket.getAssignedTo() != null) {
-            authorIds.add(ticket.getAssignedTo().toString());
+            addAuthorId(authorIds, ticket.getAssignedTo().toString());
         }
 
         if (ticket.getAssignedBy() != null) {
-            authorIds.add(ticket.getAssignedBy().toString());
+            addAuthorId(authorIds, ticket.getAssignedBy().toString());
         }
 
         sortedTicketComments.stream()
@@ -1058,6 +1007,78 @@ public class TicketServiceImpl implements TicketService {
                 .photos(photos)
                 .comments(comments)
                 .build();
+    }
+
+    private InventoryCampusResponseDto resolveCampusForResponse(UUID id) {
+        if (id == null) {
+            return null;
+        }
+
+        try {
+            return requireCampus(id);
+        } catch (Exception exception) {
+            throw TicketException.relatedCampusUnavailable(id.toString());
+        }
+    }
+
+    private InventoryBuildingResponseDto resolveBuildingForResponse(UUID id) {
+        if (id == null) {
+            return null;
+        }
+
+        try {
+            return requireBuilding(id);
+        } catch (Exception exception) {
+            throw TicketException.relatedBuildingUnavailable(id.toString());
+        }
+    }
+
+    private InventoryAssetFloorResponseDto resolveFloorForResponse(UUID id) {
+        if (id == null) {
+            return null;
+        }
+
+        try {
+            return requireFloor(id);
+        } catch (Exception exception) {
+            throw TicketException.relatedFloorUnavailable(id.toString());
+        }
+    }
+
+    private InventoryAssetLocationResponseDto resolveLocationForResponse(UUID id) {
+        if (id == null) {
+            return null;
+        }
+
+        try {
+            return requireLocation(id);
+        } catch (Exception exception) {
+            throw TicketException.relatedLocationUnavailable(id.toString());
+        }
+    }
+
+    private InventoryAssetResponseDto resolveAssetForResponse(UUID id) {
+        if (id == null) {
+            throw TicketException.relatedAssetUnavailable(null);
+        }
+
+        try {
+            return requireAsset(id);
+        } catch (Exception exception) {
+            throw TicketException.relatedAssetUnavailable(id.toString());
+        }
+    }
+
+    private String resolvePresignedUrlForResponse(String objectName) {
+        if (objectName == null || objectName.isBlank()) {
+            return null;
+        }
+
+        try {
+            return getPresignedUrl(objectName);
+        } catch (Exception exception) {
+            throw TicketException.relatedPhotoUnavailable(objectName);
+        }
     }
 
     private TicketCommentResponseDto toCommentResponse(TicketComment comment) {

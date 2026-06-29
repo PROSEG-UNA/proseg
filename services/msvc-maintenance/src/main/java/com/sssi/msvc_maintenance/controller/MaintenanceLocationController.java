@@ -28,127 +28,119 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MaintenanceLocationController {
 
-    private static final String DEFAULT_PAGE = "0";
-    private static final String DEFAULT_SIZE = "200";
+        private static final String DEFAULT_PAGE = "0";
+        private static final String DEFAULT_SIZE = "200";
 
-    private final MaintenanceLocationService maintenanceLocationService;
+        private final MaintenanceLocationService maintenanceLocationService;
 
-    @GetMapping("/campuses")
-    public ResponseEntity<ApiResponse<PageResponse<InventoryCampusResponseDto>>> findCampuses(
-            @RequestParam(required = false) String search,
-            @RequestParam(defaultValue = DEFAULT_PAGE) int page,
-            @RequestParam(defaultValue = DEFAULT_SIZE) int size) {
+        @GetMapping("/campuses")
+        public ResponseEntity<ApiResponse<PageResponse<InventoryCampusResponseDto>>> findCampuses(
+                        @RequestParam(required = false) String search,
+                        @RequestParam(defaultValue = DEFAULT_PAGE) int page,
+                        @RequestParam(defaultValue = DEFAULT_SIZE) int size) {
 
-        Pageable pageable = PageRequest.of(page, size);
+                Pageable pageable = PageRequest.of(page, size);
 
-        return ApiResponseBuilder.ok(
-                PageMapper.from(maintenanceLocationService.findCampuses(search, pageable)),
-                "Lista de campus"
-        );
-    }
+                return ApiResponseBuilder.ok(
+                                PageMapper.from(maintenanceLocationService.findCampuses(search, pageable)),
+                                "Lista de campus");
+        }
 
-    @GetMapping("/campuses/{campusId}/buildings")
-    public ResponseEntity<ApiResponse<PageResponse<InventoryBuildingResponseDto>>> findBuildingsByCampus(
-            @PathVariable UUID campusId,
-            @RequestParam(defaultValue = DEFAULT_PAGE) int page,
-            @RequestParam(defaultValue = DEFAULT_SIZE) int size) {
+        @GetMapping("/campuses/{campusId}/buildings")
+        public ResponseEntity<ApiResponse<PageResponse<InventoryBuildingResponseDto>>> findBuildingsByCampus(
+                        @PathVariable UUID campusId,
+                        @RequestParam(defaultValue = DEFAULT_PAGE) int page,
+                        @RequestParam(defaultValue = DEFAULT_SIZE) int size) {
 
-        Pageable pageable = PageRequest.of(page, size);
+                Pageable pageable = PageRequest.of(page, size);
 
-        return ApiResponseBuilder.ok(
-                PageMapper.from(maintenanceLocationService.findBuildingsByCampus(campusId, pageable)),
-                "Edificios del campus"
-        );
-    }
+                return ApiResponseBuilder.ok(
+                                PageMapper.from(maintenanceLocationService.findBuildingsByCampus(campusId, pageable)),
+                                "Edificios del campus");
+        }
 
-    @GetMapping("/buildings/{buildingId}/floors")
-    public ResponseEntity<ApiResponse<PageResponse<InventoryAssetFloorResponseDto>>> findFloorsByBuilding(
-            @PathVariable UUID buildingId,
-            @RequestParam(defaultValue = DEFAULT_PAGE) int page,
-            @RequestParam(defaultValue = DEFAULT_SIZE) int size) {
+        @GetMapping("/buildings/{buildingId}/floors")
+        public ResponseEntity<ApiResponse<PageResponse<InventoryAssetFloorResponseDto>>> findFloorsByBuilding(
+                        @PathVariable UUID buildingId,
+                        @RequestParam(defaultValue = DEFAULT_PAGE) int page,
+                        @RequestParam(defaultValue = DEFAULT_SIZE) int size) {
 
-        Pageable pageable = PageRequest.of(page, size);
+                Pageable pageable = PageRequest.of(page, size);
 
-        return ApiResponseBuilder.ok(
-                PageMapper.from(maintenanceLocationService.findFloorsByBuilding(buildingId, pageable)),
-                "Pisos del edificio"
-        );
-    }
+                return ApiResponseBuilder.ok(
+                                PageMapper.from(maintenanceLocationService.findFloorsByBuilding(buildingId, pageable)),
+                                "Pisos del edificio");
+        }
 
-    @GetMapping("/buildings/{buildingId}/locations")
-    public ResponseEntity<ApiResponse<PageResponse<InventoryAssetLocationResponseDto>>> findLocationsByBuilding(
-            @PathVariable UUID buildingId,
-            @RequestParam(defaultValue = DEFAULT_PAGE) int page,
-            @RequestParam(defaultValue = DEFAULT_SIZE) int size) {
+        @GetMapping("/buildings/{buildingId}/locations")
+        public ResponseEntity<ApiResponse<PageResponse<InventoryAssetLocationResponseDto>>> findLocationsByBuilding(
+                        @PathVariable UUID buildingId,
+                        @RequestParam(defaultValue = DEFAULT_PAGE) int page,
+                        @RequestParam(defaultValue = DEFAULT_SIZE) int size) {
 
-        Pageable pageable = PageRequest.of(page, size);
+                Pageable pageable = PageRequest.of(page, size);
 
-        return ApiResponseBuilder.ok(
-                PageMapper.from(maintenanceLocationService.findLocationsByBuilding(buildingId, pageable)),
-                "Ubicaciones del edificio"
-        );
-    }
+                return ApiResponseBuilder.ok(
+                                PageMapper.from(maintenanceLocationService.findLocationsByBuilding(buildingId,
+                                                pageable)),
+                                "Ubicaciones del edificio");
+        }
 
-    @GetMapping("/campuses/{campusId}/locations")
-    public ResponseEntity<ApiResponse<PageResponse<InventoryAssetLocationResponseDto>>> findLocationsByCampus(
-            @PathVariable UUID campusId,
-            @RequestParam(defaultValue = DEFAULT_PAGE) int page,
-            @RequestParam(defaultValue = DEFAULT_SIZE) int size) {
+        @GetMapping("/campuses/{campusId}/locations")
+        public ResponseEntity<ApiResponse<PageResponse<InventoryAssetLocationResponseDto>>> findLocationsByCampus(
+                        @PathVariable UUID campusId,
+                        @RequestParam(defaultValue = DEFAULT_PAGE) int page,
+                        @RequestParam(defaultValue = DEFAULT_SIZE) int size) {
 
-        Pageable pageable = PageRequest.of(page, size);
+                Pageable pageable = PageRequest.of(page, size);
 
-        return ApiResponseBuilder.ok(
-                PageMapper.from(maintenanceLocationService.findLocationsByCampus(campusId, pageable)),
-                "Ubicaciones del campus"
-        );
-    }
+                return ApiResponseBuilder.ok(
+                                PageMapper.from(maintenanceLocationService.findLocationsByCampus(campusId, pageable)),
+                                "Ubicaciones del campus");
+        }
 
-    @GetMapping("/campuses/{id}")
-    public ResponseEntity<ApiResponse<InventoryCampusResponseDto>> findCampusById(@PathVariable UUID id) {
-        return ApiResponseBuilder.ok(
-                maintenanceLocationService.findCampusById(id),
-                "Campus obtenido correctamente"
-        );
-    }
+        @GetMapping("/campuses/{id}")
+        public ResponseEntity<ApiResponse<InventoryCampusResponseDto>> findCampusById(@PathVariable UUID id) {
+                return ApiResponseBuilder.ok(
+                                maintenanceLocationService.findCampusById(id),
+                                "Campus obtenido correctamente");
+        }
 
-    @GetMapping("/buildings/{id}")
-    public ResponseEntity<ApiResponse<InventoryBuildingResponseDto>> findBuildingById(@PathVariable UUID id) {
-        return ApiResponseBuilder.ok(
-                maintenanceLocationService.findBuildingById(id),
-                "Edificio obtenido correctamente"
-        );
-    }
+        @GetMapping("/buildings/{id}")
+        public ResponseEntity<ApiResponse<InventoryBuildingResponseDto>> findBuildingById(@PathVariable UUID id) {
+                return ApiResponseBuilder.ok(
+                                maintenanceLocationService.findBuildingById(id),
+                                "Edificio obtenido correctamente");
+        }
 
-    @GetMapping("/floors/{id}")
-    public ResponseEntity<ApiResponse<InventoryAssetFloorResponseDto>> findFloorById(@PathVariable UUID id) {
-        return ApiResponseBuilder.ok(
-                maintenanceLocationService.findFloorById(id),
-                "Piso obtenido correctamente"
-        );
-    }
+        @GetMapping("/floors/{id}")
+        public ResponseEntity<ApiResponse<InventoryAssetFloorResponseDto>> findFloorById(@PathVariable UUID id) {
+                return ApiResponseBuilder.ok(
+                                maintenanceLocationService.findFloorById(id),
+                                "Piso obtenido correctamente");
+        }
 
-    @GetMapping("/locations/{id}")
-    public ResponseEntity<ApiResponse<InventoryAssetLocationResponseDto>> findLocationById(@PathVariable UUID id) {
-        return ApiResponseBuilder.ok(
-                maintenanceLocationService.findLocationById(id),
-                "Ubicación obtenida correctamente"
-        );
-    }
+        @GetMapping("/locations/{id}")
+        public ResponseEntity<ApiResponse<InventoryAssetLocationResponseDto>> findLocationById(@PathVariable UUID id) {
+                return ApiResponseBuilder.ok(
+                                maintenanceLocationService.findLocationById(id),
+                                "Ubicación obtenida correctamente");
+        }
 
-    @GetMapping("/locations/{locationId}/assets")
-    public ResponseEntity<ApiResponse<PageResponse<InventoryAssetResponseDto>>> findAssetsByLocation(
-            @PathVariable UUID locationId,
-            @RequestParam(required = false) String search,
-            @RequestParam(defaultValue = DEFAULT_PAGE) int page,
-            @RequestParam(defaultValue = DEFAULT_SIZE) int size) {
+        @GetMapping("/locations/{locationId}/assets")
+        public ResponseEntity<ApiResponse<PageResponse<InventoryAssetResponseDto>>> findAssetsByLocation(
+                        @PathVariable UUID locationId,
+                        @RequestParam(required = false) String search,
+                        @RequestParam(defaultValue = DEFAULT_PAGE) int page,
+                        @RequestParam(defaultValue = DEFAULT_SIZE) int size) {
 
-        Pageable pageable = PageRequest.of(page, size);
+                Pageable pageable = PageRequest.of(page, size);
 
-        return ApiResponseBuilder.ok(
-                PageMapper.from(maintenanceLocationService.findAssetsByLocation(locationId, search, pageable)),
-                "Activos de la ubicación"
-        );
-    }
+                return ApiResponseBuilder.ok(
+                                PageMapper.from(maintenanceLocationService.findAssetsByLocation(locationId, search,
+                                                pageable)),
+                                "Activos de la ubicación");
+        }
 
         @GetMapping("/buildings/{buildingId}/assets")
         public ResponseEntity<ApiResponse<PageResponse<InventoryAssetResponseDto>>> findAssetsByBuilding(
@@ -160,36 +152,34 @@ public class MaintenanceLocationController {
                 Pageable pageable = PageRequest.of(page, size);
 
                 return ApiResponseBuilder.ok(
-                                PageMapper.from(maintenanceLocationService.findAssetsByBuilding(buildingId, search, pageable)),
-                                "Activos del edificio"
-                );
+                                PageMapper.from(maintenanceLocationService.findAssetsByBuilding(buildingId, search,
+                                                pageable)),
+                                "Activos del edificio");
         }
 
-    @GetMapping("/buildings/{id}/emails")
-    public ResponseEntity<ApiResponse<List<String>>> findBuildingEmails(
-            @PathVariable UUID id,
-            @RequestParam(defaultValue = DEFAULT_PAGE) int page,
-            @RequestParam(defaultValue = DEFAULT_SIZE) int size) {
+        @GetMapping("/buildings/{id}/emails")
+        public ResponseEntity<ApiResponse<List<String>>> findBuildingEmails(
+                        @PathVariable UUID id,
+                        @RequestParam(defaultValue = DEFAULT_PAGE) int page,
+                        @RequestParam(defaultValue = DEFAULT_SIZE) int size) {
 
-        Pageable pageable = PageRequest.of(page, size);
+                Pageable pageable = PageRequest.of(page, size);
 
-        return ApiResponseBuilder.ok(
-                maintenanceLocationService.findBuildingEmails(id, pageable),
-                "Correos electrónicos del edificio obtenidos correctamente"
-        );
-    }
+                return ApiResponseBuilder.ok(
+                                maintenanceLocationService.findBuildingEmails(id, pageable),
+                                "Correos electrónicos del edificio obtenidos correctamente");
+        }
 
-    @GetMapping("/campuses/{id}/emails")
-    public ResponseEntity<ApiResponse<List<String>>> findCampusEmails(
-            @PathVariable UUID id,
-            @RequestParam(defaultValue = DEFAULT_PAGE) int page,
-            @RequestParam(defaultValue = DEFAULT_SIZE) int size) {
+        @GetMapping("/campuses/{id}/emails")
+        public ResponseEntity<ApiResponse<List<String>>> findCampusEmails(
+                        @PathVariable UUID id,
+                        @RequestParam(defaultValue = DEFAULT_PAGE) int page,
+                        @RequestParam(defaultValue = DEFAULT_SIZE) int size) {
 
-        Pageable pageable = PageRequest.of(page, size);
+                Pageable pageable = PageRequest.of(page, size);
 
-        return ApiResponseBuilder.ok(
-                maintenanceLocationService.findCampusEmails(id, pageable),
-                "Correos electrónicos del campus obtenidos correctamente"
-        );
-    }
+                return ApiResponseBuilder.ok(
+                                maintenanceLocationService.findCampusEmails(id, pageable),
+                                "Correos electrónicos del campus obtenidos correctamente");
+        }
 }

@@ -88,4 +88,52 @@ public class TicketException extends BaseException {
                 "No hay autenticación para solicitar el archivo."
         );
     }
+
+    public static TicketException relatedCampusUnavailable(String campusId) {
+        return new TicketException(
+                HttpStatus.BAD_GATEWAY,
+                "TICKET_RELATED_CAMPUS_UNAVAILABLE",
+                "No se pudo obtener el recinto asociado al ticket: " + campusId
+        );
+    }
+
+    public static TicketException relatedBuildingUnavailable(String buildingId) {
+        return new TicketException(
+                HttpStatus.BAD_GATEWAY,
+                "TICKET_RELATED_BUILDING_UNAVAILABLE",
+                "No se pudo obtener el edificio asociado al ticket: " + buildingId
+        );
+    }
+
+    public static TicketException relatedFloorUnavailable(String floorId) {
+        return new TicketException(
+                HttpStatus.BAD_GATEWAY,
+                "TICKET_RELATED_FLOOR_UNAVAILABLE",
+                "No se pudo obtener el piso asociado al ticket: " + floorId
+        );
+    }
+
+    public static TicketException relatedLocationUnavailable(String locationId) {
+        return new TicketException(
+                HttpStatus.BAD_GATEWAY,
+                "TICKET_RELATED_LOCATION_UNAVAILABLE",
+                "No se pudo obtener la ubicación asociada al ticket: " + locationId
+        );
+    }
+
+    public static TicketException relatedAssetUnavailable(String assetId) {
+        return new TicketException(
+                HttpStatus.BAD_GATEWAY,
+                "TICKET_RELATED_ASSET_UNAVAILABLE",
+                "No se pudo obtener el activo asociado al ticket: " + assetId
+        );
+    }
+
+    public static TicketException relatedPhotoUnavailable(String objectName) {
+        return new TicketException(
+                HttpStatus.BAD_GATEWAY,
+                "TICKET_RELATED_PHOTO_UNAVAILABLE",
+                "No se pudo obtener la URL del adjunto asociado al ticket: " + objectName
+        );
+    }
 }
