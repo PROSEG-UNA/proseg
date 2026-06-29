@@ -93,10 +93,6 @@ public class DocumentImportService {
         if (response.getErrors() != null) {
             errors.addAll(response.getErrors());
         }
-        List<RowIssueDto> warnings = new ArrayList<>();
-        if (response.getWarnings() != null) {
-            warnings.addAll(response.getWarnings());
-        }
 
         int totalRows = request.getRows() != null ? request.getRows().size() : 0;
 
@@ -105,7 +101,6 @@ public class DocumentImportService {
                 .created(response.getCreated())
                 .cancelled(response.isCancelled())
                 .errors(sortByRow(errors))
-                .warnings(sortByRow(warnings))
                 .build();
     }
 

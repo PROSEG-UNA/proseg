@@ -17,6 +17,4 @@ public class ImportConfirmDto {
     private boolean cancelled;
 
     private List<RowIssueDto> errors;
-
-    private List<RowIssueDto> warnings;
 }

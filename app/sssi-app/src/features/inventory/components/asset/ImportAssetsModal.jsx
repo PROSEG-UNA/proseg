@@ -78,7 +78,6 @@ export default function ImportAssetsModal({ open, onClose, onImported }) {
                     created: 0,
                     cancelled: false,
                     errors: summary.errors,
-                    warnings: [],
                 });
             } else if ((summary.pendingCreations?.length ?? 0) === 0) {
                 const final = await confirmAssetsImport(summary.rows, []);
@@ -403,7 +402,6 @@ export default function ImportAssetsModal({ open, onClose, onImported }) {
                 {summaryChip('Total', result.totalRows ?? 0, 'default')}
                 {summaryChip('Creados', result.created ?? 0, 'success')}
                 {summaryChip('Errores', result.errors?.length ?? 0, 'error')}
-                {summaryChip('Avisos', result.warnings?.length ?? 0, 'warning')}
             </Box>
             {(result.errors?.length ?? 0) > MAX_INLINE_ERRORS ? (
                 <Box sx={{ mt: 2 }}>
@@ -423,8 +421,7 @@ export default function ImportAssetsModal({ open, onClose, onImported }) {
             ) : (
                 messageList('Errores', result.errors, 'error.main')
             )}
-            {messageList('Avisos', result.warnings, 'warning.main')}
-            {!result.cancelled && (result.errors?.length ?? 0) === 0 && (result.warnings?.length ?? 0) === 0 && (
+            {!result.cancelled && (result.errors?.length ?? 0) === 0 && (
                 <Typography sx={{ mt: 2, fontSize: 13.5, color: 'text.secondary' }}>
                     Todos los activos se importaron correctamente.
                 </Typography>

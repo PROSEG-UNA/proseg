@@ -67,7 +67,6 @@ public class AssetImportServiceImpl implements AssetImportService {
                     .created(0)
                     .cancelled(false)
                     .errors(errors)
-                    .warnings(List.of())
                     .build();
         }
 
@@ -81,18 +80,16 @@ public class AssetImportServiceImpl implements AssetImportService {
                     .created(0)
                     .cancelled(true)
                     .errors(List.of())
-                    .warnings(List.of())
                     .build();
         }
 
-        List<AssetImportRowIssueDto> warnings = rowProcessor.persistRows(rows);
+        rowProcessor.persistRows(rows);
 
         return AssetImportResponseDto.builder()
                 .received(rows.size())
                 .created(rows.size())
                 .cancelled(false)
                 .errors(List.of())
-                .warnings(warnings)
                 .build();
     }
 
@@ -114,11 +111,14 @@ public class AssetImportServiceImpl implements AssetImportService {
     private List<AssetImportRowIssueDto> validateAll(List<AssetImportRowDto> rows) {
         Set<String> duplicateAssetNumbers = findDuplicatesInFile(rows, AssetImportRowDto::getAssetNumber);
         Set<String> duplicateSerials = findDuplicatesInFile(rows, AssetImportRowDto::getSerialNumber);
+        Set<String> duplicateIpsInFile = findDuplicatesInFile(rows, AssetImportRowDto::getIpAddress);
+        Set<String> duplicateMacsInFile = findDuplicatesInFile(rows, AssetImportRowDto::getMacAddress);
 
         List<AssetImportRowIssueDto> errors = new ArrayList<>();
         for (AssetImportRowDto row : rows) {
             try {
-                rowProcessor.validateRow(row, duplicateAssetNumbers, duplicateSerials);
+                rowProcessor.validateRow(row, duplicateAssetNumbers, duplicateSerials,
+                        duplicateIpsInFile, duplicateMacsInFile);
             } catch (BaseException e) {
                 errors.add(AssetImportRowIssueDto.builder()
                         .row(row.getRowNumber())

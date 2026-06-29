@@ -17,6 +17,4 @@ public class SummaryDto {
     private boolean cancelled;
 
     private List<RowIssueDto> errors;
-
-    private List<RowIssueDto> warnings;
 }

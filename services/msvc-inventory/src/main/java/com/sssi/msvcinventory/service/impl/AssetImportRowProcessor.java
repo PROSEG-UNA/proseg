@@ -2,7 +2,6 @@ package com.sssi.msvcinventory.service.impl;
 
 import com.sssi.msvcinventory.dto.request.AssetImportRowDto;
 import com.sssi.msvcinventory.dto.request.AssetRequestDto;
-import com.sssi.msvcinventory.dto.response.AssetImportRowIssueDto;
 import com.sssi.msvcinventory.dto.response.PendingCreationDto;
 import com.sssi.msvcinventory.entity.*;
 import com.sssi.msvcinventory.entity.enums.AssetStatus;
@@ -52,7 +51,9 @@ public class AssetImportRowProcessor {
 
     public void validateRow(AssetImportRowDto row,
                             Set<String> duplicateAssetNumbers,
-                            Set<String> duplicateSerials) {
+                            Set<String> duplicateSerials,
+                            Set<String> duplicateIpsInFile,
+                            Set<String> duplicateMacsInFile) {
         requireNonBlank(row.getStatus(), "Estado");
 
         AssetStatus status = AssetStatusResolver.resolve(row.getStatus())
@@ -60,6 +61,7 @@ public class AssetImportRowProcessor {
 
         validateModel(row);
         validateLocation(row);
+        validateNetworkInterface(row, duplicateIpsInFile, duplicateMacsInFile);
 
         validateFieldRules(row, status);
 
@@ -82,30 +84,24 @@ public class AssetImportRowProcessor {
         }
     }
 
-    public List<AssetImportRowIssueDto> persistRows(List<AssetImportRowDto> rows) {
+    public void persistRows(List<AssetImportRowDto> rows) {
         LocationMatchCache cache = new LocationMatchCache();
-        List<AssetImportRowIssueDto> warnings = new ArrayList<>();
         for (AssetImportRowDto row : rows) {
-            warnings.addAll(persistRow(row, cache));
+            persistRow(row, cache);
         }
-        return warnings;
     }
 
-    private List<AssetImportRowIssueDto> persistRow(AssetImportRowDto row, LocationMatchCache cache) {
-        List<AssetImportRowIssueDto> warnings = new ArrayList<>();
-
+    private void persistRow(AssetImportRowDto row, LocationMatchCache cache) {
         AssetStatus status = AssetStatusResolver.resolve(row.getStatus())
                 .orElseThrow(AssetImportException::invalidStatus);
 
-        Model model = resolveModel(row, warnings);
+        Model model = resolveModel(row);
         Location location = resolveLocation(row, cache);
 
         Asset asset = buildAsset(row, model, location, status);
         Asset saved = assetRepository.save(asset);
 
-        resolveNetworkInterface(row, saved, warnings);
-
-        return warnings;
+        resolveNetworkInterface(row, saved);
     }
 
     private void requireNonBlank(String value, String fieldLabel) {
@@ -234,7 +230,7 @@ public class AssetImportRowProcessor {
         return sb.toString();
     }
 
-    private Model resolveModel(AssetImportRowDto row, List<AssetImportRowIssueDto> warnings) {
+    private Model resolveModel(AssetImportRowDto row) {
         if (isBlank(row.getModelName())) {
             throw AssetImportException.modelRequired();
         }
@@ -242,7 +238,7 @@ public class AssetImportRowProcessor {
         boolean hasBrand = !isBlank(row.getBrandName());
 
         if (hasBrand && hasType) {
-            return resolveModelCreating(row, warnings);
+            return resolveModelCreating(row);
         }
         if (hasBrand) {
             return resolveModelFromBrand(row);
@@ -250,21 +246,12 @@ public class AssetImportRowProcessor {
         return resolveModelGlobally(row);
     }
 
-    private Model resolveModelCreating(AssetImportRowDto row, List<AssetImportRowIssueDto> warnings) {
+    private Model resolveModelCreating(AssetImportRowDto row) {
         String modelName = row.getModelName().trim();
         Type type = findOrCreateType(row.getTypeName().trim(), hasNetworkInfo(row));
         Brand brand = findOrCreateBrand(row.getBrandName().trim());
 
         return modelRepository.findFirstByNameIgnoreCaseAndBrandId(modelName, brand.getId())
-                .map(existing -> {
-                    if (!existing.getType().getId().equals(type.getId())) {
-                        warnings.add(AssetImportRowIssueDto.builder()
-                                .row(row.getRowNumber())
-                                .reason("El modelo ya existe con un tipo distinto; se reutilizó el modelo existente")
-                                .build());
-                    }
-                    return existing;
-                })
                 .orElseGet(() -> modelRepository.save(Model.builder()
                         .name(modelName)
                         .brand(brand)
@@ -323,6 +310,7 @@ public class AssetImportRowProcessor {
         boolean hasBrand = !isBlank(row.getBrandName());
 
         if (hasBrand && hasType) {
+            validateModelType(row);
             return;
         }
         if (hasBrand) {
@@ -338,6 +326,43 @@ public class AssetImportRowProcessor {
         }
         if (matches.size() > 1) {
             throw AssetImportException.ambiguousModel();
+        }
+    }
+
+    private void validateModelType(AssetImportRowDto row) {
+        Optional<Brand> brand = brandRepository.findFirstByNameIgnoreCase(row.getBrandName().trim());
+        if (brand.isEmpty()) {
+            return;
+        }
+        modelRepository.findFirstByNameIgnoreCaseAndBrandId(row.getModelName().trim(), brand.get().getId())
+                .filter(existing -> !existing.getType().getName().equalsIgnoreCase(row.getTypeName().trim()))
+                .ifPresent(existing -> {
+                    throw AssetImportException.modelTypeMismatch();
+                });
+    }
+
+    private void validateNetworkInterface(AssetImportRowDto row, Set<String> duplicateIpsInFile,
+                                          Set<String> duplicateMacsInFile) {
+        String ip = trimToNull(row.getIpAddress());
+        String mac = trimToNull(row.getMacAddress());
+
+        if (ip == null && mac == null) {
+            return;
+        }
+        if (ip == null || mac == null) {
+            throw AssetImportException.networkInterfaceIncomplete();
+        }
+        if (duplicateIpsInFile.contains(ip)) {
+            throw AssetImportException.duplicateIpAddressInFile();
+        }
+        if (networkInterfaceRepository.existsByIpAddress(ip)) {
+            throw AssetImportException.duplicateIpAddress();
+        }
+        if (duplicateMacsInFile.contains(mac)) {
+            throw AssetImportException.duplicateMacAddressInFile();
+        }
+        if (networkInterfaceRepository.existsByMacAddress(mac)) {
+            throw AssetImportException.duplicateMacAddress();
         }
     }
 
@@ -553,32 +578,11 @@ public class AssetImportRowProcessor {
         return asset;
     }
 
-    private void resolveNetworkInterface(AssetImportRowDto row, Asset asset, List<AssetImportRowIssueDto> warnings) {
+    private void resolveNetworkInterface(AssetImportRowDto row, Asset asset) {
         String ip = trimToNull(row.getIpAddress());
         String mac = trimToNull(row.getMacAddress());
 
         if (ip == null && mac == null) {
-            return;
-        }
-        if (ip == null || mac == null) {
-            warnings.add(AssetImportRowIssueDto.builder()
-                    .row(row.getRowNumber())
-                    .reason("Interfaz de red no creada: se requieren IP y MAC")
-                    .build());
-            return;
-        }
-        if (networkInterfaceRepository.existsByIpAddress(ip)) {
-            warnings.add(AssetImportRowIssueDto.builder()
-                    .row(row.getRowNumber())
-                    .reason("Interfaz de red no creada: la IP ya está registrada")
-                    .build());
-            return;
-        }
-        if (networkInterfaceRepository.existsByMacAddress(mac)) {
-            warnings.add(AssetImportRowIssueDto.builder()
-                    .row(row.getRowNumber())
-                    .reason("Interfaz de red no creada: la MAC ya está registrada")
-                    .build());
             return;
         }
         networkInterfaceRepository.save(NetworkInterface.builder()

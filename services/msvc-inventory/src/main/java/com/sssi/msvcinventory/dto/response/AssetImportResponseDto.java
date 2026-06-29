@@ -18,6 +18,4 @@ public class AssetImportResponseDto {
     private boolean cancelled;
 
     private List<AssetImportRowIssueDto> errors;
-
-    private List<AssetImportRowIssueDto> warnings;
 }

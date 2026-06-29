@@ -144,4 +144,52 @@ public class AssetImportException extends BaseException {
                 "La importación supera el máximo de " + max + " filas"
         );
     }
+
+    public static AssetImportException modelTypeMismatch() {
+        return new AssetImportException(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "IMPORT_MODEL_TYPE_MISMATCH",
+                "El modelo ya existe con un tipo distinto al indicado"
+        );
+    }
+
+    public static AssetImportException networkInterfaceIncomplete() {
+        return new AssetImportException(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "IMPORT_NETWORK_INTERFACE_INCOMPLETE",
+                "Se requiere indicar tanto la IP como la MAC para crear la interfaz de red"
+        );
+    }
+
+    public static AssetImportException duplicateIpAddress() {
+        return new AssetImportException(
+                HttpStatus.CONFLICT,
+                "IMPORT_DUPLICATE_IP_ADDRESS",
+                "La IP indicada ya está registrada en el sistema"
+        );
+    }
+
+    public static AssetImportException duplicateIpAddressInFile() {
+        return new AssetImportException(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "IMPORT_DUPLICATE_IP_ADDRESS_IN_FILE",
+                "La IP está duplicada dentro del archivo"
+        );
+    }
+
+    public static AssetImportException duplicateMacAddress() {
+        return new AssetImportException(
+                HttpStatus.CONFLICT,
+                "IMPORT_DUPLICATE_MAC_ADDRESS",
+                "La MAC indicada ya está registrada en el sistema"
+        );
+    }
+
+    public static AssetImportException duplicateMacAddressInFile() {
+        return new AssetImportException(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "IMPORT_DUPLICATE_MAC_ADDRESS_IN_FILE",
+                "La MAC está duplicada dentro del archivo"
+        );
+    }
 }
