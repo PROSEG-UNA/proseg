@@ -691,11 +691,12 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         }
 
         if (key === 'floorId') {
-            const nextValues = { ...formValues, floorId: value };
+            const nextValues = { ...formValues, floorId: value, locationId: '' };
 
             setFormValues(nextValues);
 
             if (touched.floorId) validateField('floorId', value, nextValues);
+            if (touched.locationId) validateField('locationId', '', nextValues);
             return;
         }
 
