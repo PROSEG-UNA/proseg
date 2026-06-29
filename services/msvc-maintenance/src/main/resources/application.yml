@@ -17,3 +17,7 @@ routes:
   requests: ${api.prefix}/requests
   technicians: ${api.prefix}/technicians
   maintenance-locations: ${api.prefix}/locations
+
+maintenance:
+  notification:
+    extra-emails: ${MAINTENANCE_EXTRA_EMAILS:}

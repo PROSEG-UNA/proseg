@@ -28,7 +28,7 @@ public class MaintenanceRequestResponseDto {
     private UUID campusId;
     private UUID buildingId;
     private List<UserCompanyResponseDto> assignedTechnicians;
-    private UserCompanyResponseDto leaderUserCompany;
+    private UserCompanyResponseDto responsibleUserCompany;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

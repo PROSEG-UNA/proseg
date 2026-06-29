@@ -332,6 +332,8 @@ services:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:-http://msvc-eureka:8761/eureka/}
       - EUREKA_INSTANCE_HOSTNAME=${EUREKA_INSTANCE_HOSTNAME:-msvc-maintenance}
       - GATEWAY_BASE_URL=${GATEWAY_BASE_URL:-http://msvc-gateway:8081}
+# Descomentar en producción real para enviar notificaciones a destinatarios adicionales (separados por comas)
+#      - MAINTENANCE_EXTRA_EMAILS=${MAINTENANCE_EXTRA_EMAILS:-seguridad@una.cr}
     depends_on:
       msvc-config:
         condition: service_healthy

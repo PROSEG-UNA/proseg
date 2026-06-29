@@ -181,7 +181,7 @@ export default function RegisterFormModal({ open, onClose, onSaved, requestId, c
     const request = register?.request;
     const isPending = request?.status === 'PENDING';
     const canRegister = canManage && isPending;
-    const leaderName = request?.leaderUserCompany?.userEmail ?? request?.leaderUserCompany?.keycloakUserId ?? '—';
+    const responsibleName = request?.responsibleUserCompany?.userEmail ?? request?.responsibleUserCompany?.keycloakUserId ?? '—';
 
     const fieldSx = {
         '& .MuiOutlinedInput-root': {
@@ -249,7 +249,7 @@ export default function RegisterFormModal({ open, onClose, onSaved, requestId, c
                                     color={register?.status === 'COMPLETED' ? 'success' : 'warning'}
                                 />
                             </Box>
-                            <InfoRow label="Encargado" value={leaderName} />
+                            <InfoRow label="Responsable" value={responsibleName} />
                             <InfoRow label="Campus" value={locationNames.campus} />
                             <InfoRow label="Edificio" value={locationNames.building} />
                         </Box>

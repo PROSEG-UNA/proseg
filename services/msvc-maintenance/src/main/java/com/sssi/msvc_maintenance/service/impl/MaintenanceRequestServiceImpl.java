@@ -73,7 +73,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         maintenanceRequest.setCampusId(parseUuid(request.getCampusId(), "campusId"));
         maintenanceRequest.setBuildingId(request.getBuildingId());
         maintenanceRequest.setAssignedTechnicians(technicians);
-        maintenanceRequest.setLeaderUserCompany(resolveLeader(request.getLeaderUserCompanyId(), technicians));
+        maintenanceRequest.setResponsibleUserCompany(resolveResponsible(request.getResponsibleUserCompanyId(), technicians));
         maintenanceRequest.setEmails(resolveEmails(request.getEmails()));
 
         MaintenanceRequest saved = maintenanceRequestRepository.save(maintenanceRequest);
@@ -90,8 +90,8 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                         .map(UserCompany::getKeycloakUserId)
                         .toList();
 
-        String leaderKeycloakId = saved.getLeaderUserCompany() != null
-                ? saved.getLeaderUserCompany().getKeycloakUserId()
+        String responsibleKeycloakId = saved.getResponsibleUserCompany() != null
+                ? saved.getResponsibleUserCompany().getKeycloakUserId()
                 : null;
 
         List<String> emails = saved.getEmails() == null
@@ -113,7 +113,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                 saved.getCampusId(),
                 saved.getBuildingId(),
                 technicianKeycloakIds,
-                leaderKeycloakId
+                responsibleKeycloakId
         ));
     }
 
@@ -172,7 +172,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         maintenanceRequest.setCampusId(parseUuid(request.getCampusId(), "campusId"));
         maintenanceRequest.setBuildingId(request.getBuildingId());
         maintenanceRequest.setAssignedTechnicians(technicians);
-        maintenanceRequest.setLeaderUserCompany(resolveLeader(request.getLeaderUserCompanyId(), technicians));
+        maintenanceRequest.setResponsibleUserCompany(resolveResponsible(request.getResponsibleUserCompanyId(), technicians));
         maintenanceRequest.setEmails(resolveEmails(request.getEmails()));
 
         return maintenanceRequestMapper.toResponse(maintenanceRequestRepository.save(maintenanceRequest));
@@ -269,14 +269,14 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                 .toList();
     }
 
-    private UserCompany resolveLeader(UUID leaderId, List<UserCompany> technicians) {
-        if (leaderId == null) {
+    private UserCompany resolveResponsible(UUID responsibleId, List<UserCompany> technicians) {
+        if (responsibleId == null) {
             return null;
         }
         return technicians.stream()
-                .filter(uc -> uc.getId().equals(leaderId))
+                .filter(uc -> uc.getId().equals(responsibleId))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("El técnico encargado debe estar en la lista de técnicos asignados"));
+                .orElseThrow(() -> new IllegalArgumentException("El técnico responsable debe estar en la lista de técnicos asignados"));
     }
 
     private UUID parseUuid(String value, String fieldName) {

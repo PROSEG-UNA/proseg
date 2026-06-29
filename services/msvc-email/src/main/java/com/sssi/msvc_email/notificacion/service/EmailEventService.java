@@ -399,15 +399,17 @@ public class EmailEventService {
     }
 
     public void sendMaintenanceRequestCreatedEmail(MaintenanceRequestCreatedEvent event) {
-        List<String> recipients = event.getEmails() == null
-                ? List.of()
-                : event.getEmails().stream()
-                        .filter(email -> email != null && !email.isBlank())
-                        .map(String::trim)
-                        .distinct()
-                        .toList();
+        List<String> toRecipients = cleanEmails(event.getEmails());
 
-        if (recipients.isEmpty()) {
+        List<String> ccRecipients = cleanEmails(event.getExtraEmails()).stream()
+                .filter(email -> !toRecipients.contains(email))
+                .toList();
+
+        List<String> bccRecipients = cleanEmails(resolveSuperAdminEmails()).stream()
+                .filter(email -> !toRecipients.contains(email) && !ccRecipients.contains(email))
+                .toList();
+
+        if (toRecipients.isEmpty() && ccRecipients.isEmpty() && bccRecipients.isEmpty()) {
             log.warn("MaintenanceRequestCreatedEvent sin email destinatario, se omite envío");
             return;
         }
@@ -424,18 +426,49 @@ public class EmailEventService {
                 .campusName(event.getCampusName())
                 .buildingName(event.getBuildingName())
                 .technicianNames(event.getTechnicianNames())
-                .leaderName(event.getLeaderName())
+                .responsibleName(event.getResponsibleName())
                 .timestamp(event.getTimestamp() != null ? event.getTimestamp() : System.currentTimeMillis())
                 .build();
 
         emailService.sendEmail(
                 Email.builder()
-                        .to(recipients)
+                        .to(toRecipients)
+                        .cc(ccRecipients)
+                        .bcc(bccRecipients)
                         .subject("Nueva solicitud de mantenimiento registrada - PROSEG")
                         .templateDefinition(template)
                         .build()
         );
 
-        log.info("Email de solicitud de mantenimiento enviado a: {}", recipients);
+        log.info("Email de solicitud de mantenimiento enviado a to={} cc={} bcc={}", toRecipients, ccRecipients, bccRecipients);
+    }
+
+    private List<String> cleanEmails(List<String> emails) {
+        if (emails == null) {
+            return List.of();
+        }
+        return emails.stream()
+                .filter(email -> email != null && !email.isBlank())
+                .map(String::trim)
+                .distinct()
+                .toList();
+    }
+
+    private List<String> resolveSuperAdminEmails() {
+        try {
+            ApiResponse<List<KeycloakUserResponseDto>> response = authClient.getUsersByRole("SUPER_ADMINISTRADOR");
+            List<KeycloakUserResponseDto> superAdmins = response != null ? response.getData() : null;
+            if (superAdmins == null || superAdmins.isEmpty()) {
+                return List.of();
+            }
+            return superAdmins.stream()
+                    .filter(admin -> admin.getUsername() != null && !admin.getUsername().startsWith("service-account"))
+                    .map(KeycloakUserResponseDto::getEmail)
+                    .filter(email -> email != null && !email.isBlank())
+                    .toList();
+        } catch (Exception e) {
+            log.error("No se pudieron resolver los SUPER_ADMINISTRADOR para la solicitud de mantenimiento: {}", e.getMessage(), e);
+            return List.of();
+        }
     }
 }

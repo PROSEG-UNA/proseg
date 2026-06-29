@@ -32,11 +32,17 @@ public class EmailService {
     public void sendEmail(Email email) {
         emailValidator.validate(sender);
 
-        if (email.getTo() == null || email.getTo().isEmpty()) {
+        List<String> to = email.getTo() == null ? List.of() : email.getTo();
+        List<String> cc = email.getCc() == null ? List.of() : email.getCc();
+        List<String> bcc = email.getBcc() == null ? List.of() : email.getBcc();
+
+        if (to.isEmpty() && cc.isEmpty() && bcc.isEmpty()) {
             throw new EmailSendingException("Email debe tener al menos un destinatario");
         }
 
-        email.getTo().forEach(emailValidator::validate);
+        to.forEach(emailValidator::validate);
+        cc.forEach(emailValidator::validate);
+        bcc.forEach(emailValidator::validate);
 
         EmailTemplateDefinition template = email.getTemplateDefinition();
 
@@ -49,7 +55,13 @@ public class EmailService {
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
             helper.setFrom(sender);
-            helper.setTo(email.getTo().toArray(new String[0]));
+            helper.setTo(to.isEmpty() ? new String[]{sender} : to.toArray(new String[0]));
+            if (!cc.isEmpty()) {
+                helper.setCc(cc.toArray(new String[0]));
+            }
+            if (!bcc.isEmpty()) {
+                helper.setBcc(bcc.toArray(new String[0]));
+            }
             helper.setSubject(email.getSubject());
             helper.setText(html, true);
 
@@ -57,13 +69,12 @@ public class EmailService {
 
             mailSender.send(message);
 
-            log.info("Email enviado a {} usando template {}",
-                    String.join(", ", email.getTo()),
-                    template.getTemplateName());
+            log.info("Email enviado a to={} cc={} bcc={} usando template {}",
+                    to, cc, bcc, template.getTemplateName());
 
         } catch (Exception e) {
             throw new EmailSendingException(
-                    "Error enviando email a " + email.getTo(), e);
+                    "Error enviando email a to=" + to + " cc=" + cc + " bcc=" + bcc, e);
         }
     }
 

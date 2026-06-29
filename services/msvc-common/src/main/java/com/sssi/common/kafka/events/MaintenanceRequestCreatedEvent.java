@@ -16,6 +16,7 @@ import java.util.List;
 public class MaintenanceRequestCreatedEvent {
 
     private List<String> emails;
+    private List<String> extraEmails;
     private String companyName;
     private String legalId;
     private String description;
@@ -27,6 +28,6 @@ public class MaintenanceRequestCreatedEvent {
     private String campusName;
     private String buildingName;
     private List<String> technicianNames;
-    private String leaderName;
+    private String responsibleName;
     private Long timestamp;
 }

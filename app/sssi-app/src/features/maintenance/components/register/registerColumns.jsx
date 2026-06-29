@@ -27,8 +27,8 @@ export function getRegisterColumns() {
             ),
         },
         {
-            accessorKey: 'leaderName',
-            header: 'Encargado',
+            accessorKey: 'responsibleName',
+            header: 'Responsable',
             size: 200,
             grow: true,
             enableColumnFilter: false,
