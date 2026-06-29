@@ -74,7 +74,14 @@ const INITIAL_VALUES = {
 
 const LOCATION_PAGE_OPTIONS = { page: 0, size: 100 };
 const ASSET_PAGE_OPTIONS = { page: 0, size: 100 };
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const readAsDataUrl = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+});
+
+const isImageType = (type) => typeof type === 'string' && type.startsWith('image/');
 
 const buildAssetLabel = (asset) => {
     const assetNumber = asset.assetNumber ?? asset.id;
@@ -218,14 +225,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             setLocations([]);
             setAssets([]);
             setSelectedAssets([]);
-            setPhotos((prev) => {
-                prev.forEach((photo) => {
-                    if (photo.preview) {
-                        URL.revokeObjectURL(photo.preview);
-                    }
-                });
-                return [];
-            });
+            setPhotos([]);
             setRemovedPhotoIds([]);
             setTicketComments([]);
             setPendingComments([]);
@@ -252,14 +252,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         setTicketHistory([]);
         setTicketComments(ticket?.comments ?? []);
         setPendingComments([]);
-        setPhotos((prev) => {
-            prev.forEach((photo) => {
-                if (photo.preview) {
-                    URL.revokeObjectURL(photo.preview);
-                }
-            });
-            return [];
-        });
+        setPhotos([]);
         setRemovedPhotoIds([]);
         setErrors({});
         setTouched({});
@@ -353,14 +346,6 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             cancelled = true;
         };
     }, [open, isEditing, canAssignTicket, ticket?.assignedTo, ticket?.assignedToName]);
-
-    useEffect(() => () => {
-        photos.forEach((photo) => {
-            if (photo.preview) {
-                URL.revokeObjectURL(photo.preview);
-            }
-        });
-    }, [photos]);
 
     useEffect(() => {
         if (!open || formValues.requiresLocation !== 'true') {
@@ -882,27 +867,21 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         ));
     };
 
-    const handleFileSelect = (files) => {
+    const handleFileSelect = async (files) => {
         const allFiles = Array.from(files ?? []);
-        const validFiles = allFiles.filter((file) => ALLOWED_IMAGE_TYPES.includes(file.type));
-        const invalidFiles = allFiles.filter((file) => !ALLOWED_IMAGE_TYPES.includes(file.type));
 
-        if (invalidFiles.length > 0) {
-            setAlert({
-                type: 'warning',
-                message: `Se omitieron ${invalidFiles.length} archivo(s). Solo se permiten JPG, PNG y WEBP.`,
-            });
-        }
-
-        if (validFiles.length === 0) {
+        if (allFiles.length === 0) {
             return;
         }
 
-        const nextPhotos = validFiles.map((file) => ({
-            file,
-            name: file.name,
-            preview: URL.createObjectURL(file),
-        }));
+        const nextPhotos = await Promise.all(
+            allFiles.map(async (file) => ({
+                file,
+                name: file.name,
+                contentType: file.type,
+                preview: isImageType(file.type) ? await readAsDataUrl(file) : null,
+            }))
+        );
 
         setPhotos((prev) => [...prev, ...nextPhotos]);
     };
@@ -910,10 +889,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
     const handleRemovePhoto = (index) => {
         setPhotos((prev) => {
             const next = [...prev];
-            const removed = next.splice(index, 1)[0];
-            if (removed?.preview) {
-                URL.revokeObjectURL(removed.preview);
-            }
+            next.splice(index, 1);
             return next;
         });
     };
@@ -1101,6 +1077,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                 open={open}
                 onClose={onClose}
                 maxWidth="lg"
+                fillHeight
                 icon={ConstructionIcon}
                 title={isReadOnly ? 'Detalle de ticket de mantenimiento' : isEditing ? 'Editar ticket de mantenimiento' : 'Crear ticket de mantenimiento'}
                 subtitle={isReadOnly ? 'Visualiza los datos del ticket' : isEditing ? 'Actualiza la información del ticket' : 'Registra una incidencia en el ticket'}
@@ -1644,20 +1621,19 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                     >
                                         <CloudUploadIcon sx={{ fontSize: 32, color: isDragOver ? accentColor : 'text.secondary' }} />
                                         <Typography sx={{ fontSize: 13.5, color: 'text.secondary', textAlign: 'center' }}>
-                                            Arrastra imágenes aquí o{' '}
+                                            Arrastra archivos aquí o{' '}
                                             <Typography component="span" sx={{ color: accentColor, fontWeight: 600 }}>
                                                 selecciona archivos
                                             </Typography>
                                         </Typography>
                                         <Typography sx={{ fontSize: 11.5, color: 'text.disabled' }}>
-                                            JPG, PNG, WEBP
+                                            Cualquier tipo de archivo
                                         </Typography>
                                     </Box>
 
                                     <input
                                         ref={fileInputRef}
                                         type="file"
-                                        accept="image/jpeg,image/png,image/webp"
                                         multiple
                                         style={{ display: 'none' }}
                                         onChange={(event) => {
@@ -1681,13 +1657,34 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                         borderColor: 'divider',
                                                     }}
                                                 >
-                                                    <Box
-                                                        component="img"
-                                                        src={photo.preview}
-                                                        alt={photo.name}
-                                                        loading="lazy"
-                                                        sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                    />
+                                                    {photo.preview ? (
+                                                        <Box
+                                                            component="img"
+                                                            src={photo.preview}
+                                                            alt={photo.name}
+                                                            loading="lazy"
+                                                            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                        />
+                                                    ) : (
+                                                        <Box
+                                                            sx={{
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                display: 'flex',
+                                                                flexDirection: 'column',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                gap: 0.5,
+                                                                p: 0.5,
+                                                                bgcolor: 'action.hover',
+                                                            }}
+                                                        >
+                                                            <DescriptionOutlinedIcon sx={{ fontSize: 28, color: 'text.secondary' }} />
+                                                            <Typography sx={{ fontSize: 10, color: 'text.secondary', textAlign: 'center', wordBreak: 'break-word', lineHeight: 1.1 }} noWrap>
+                                                                {photo.name}
+                                                            </Typography>
+                                                        </Box>
+                                                    )}
                                                     <IconButton
                                                         size="small"
                                                         onClick={(event) => {
@@ -1736,9 +1733,6 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                             <Typography sx={{ fontWeight: 700, fontSize: 13.5 }}>
                                                 {photo.fileName ?? photo.objectName}
                                             </Typography>
-                                            <Typography sx={{ color: 'text.secondary', fontSize: 13 }}>
-                                                {photo.contentType ?? 'Archivo'}
-                                            </Typography>
                                             {!isReadOnly && isEditing ? (
                                                 <Box sx={{ mt: 1 }}>
                                                     <Button
@@ -1752,7 +1746,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                     </Button>
                                                 </Box>
                                             ) : null}
-                                            {photo.imageUrl ? (
+                                            {photo.imageUrl && isImageType(photo.contentType) ? (
                                                 <Box
                                                     component="img"
                                                     src={photo.imageUrl}
@@ -1770,6 +1764,19 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                         cursor: 'zoom-in',
                                                     }}
                                                 />
+                                            ) : photo.imageUrl ? (
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    startIcon={<DescriptionOutlinedIcon />}
+                                                    component="a"
+                                                    href={photo.imageUrl}
+                                                    target="_blank"
+                                                    rel="noopener"
+                                                    sx={{ mt: 1, alignSelf: 'flex-start' }}
+                                                >
+                                                    Descargar
+                                                </Button>
                                             ) : null}
                                         </Box>
                                     ))}

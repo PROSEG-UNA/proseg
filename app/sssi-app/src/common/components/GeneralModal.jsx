@@ -10,6 +10,7 @@ export default function GeneralModal({
     onClose,
     maxWidth = 'sm',
     fullScreenAt = 'sm',
+    fillHeight = false,
     icon: Icon,
     title,
     subtitle,
@@ -43,7 +44,7 @@ export default function GeneralModal({
                 paper: {
                     sx: {
                         maxHeight: isSmall ? '100dvh' : '92dvh',
-                        height: isSmall ? '100dvh' : 'auto',
+                        height: isSmall ? '100dvh' : (fillHeight ? '92dvh' : 'auto'),
                         borderRadius: isSmall ? 0 : '16px',
                         overflow: 'hidden',
                         display: 'flex',

@@ -37,7 +37,12 @@ const INIT = {
     latitude: '', longitude: '',
 };
 
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const readAsDataUrl = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+});
 
 export default function AssetFormModal({ open, onClose, onSaved, assetId = null }) {
     const theme = useTheme();
@@ -92,7 +97,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
 
     useEffect(() => {
         if (!open) return;
-        setPhotos(prev => { prev.forEach(p => URL.revokeObjectURL(p.preview)); return []; });
+        setPhotos([]);
         setExistingPhotos([]);
         setPhotosToDelete([]);
         setFormValues(INIT);
@@ -604,10 +609,10 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         await doSave();
     };
 
-    const handleFileSelect = (files) => {
+    const handleFileSelect = async (files) => {
         const all     = Array.from(files);
-        const valid   = all.filter(f => ALLOWED_IMAGE_TYPES.includes(f.type));
-        const invalid = all.filter(f => !ALLOWED_IMAGE_TYPES.includes(f.type));
+        const valid   = all.filter(f => f.type.startsWith('image/'));
+        const invalid = all.filter(f => !f.type.startsWith('image/'));
 
         if (invalid.length > 0) {
             setAlert({
@@ -617,15 +622,14 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         }
 
         if (valid.length === 0) return;
-        const next = valid.map(f => ({ file: f, preview: URL.createObjectURL(f), name: f.name }));
+        const next = await Promise.all(
+            valid.map(async f => ({ file: f, preview: await readAsDataUrl(f), name: f.name }))
+        );
         setPhotos(prev => [...prev, ...next]);
     };
 
     const handleRemovePhoto = (index) => {
-        setPhotos(prev => {
-            URL.revokeObjectURL(prev[index].preview);
-            return prev.filter((_, i) => i !== index);
-        });
+        setPhotos(prev => prev.filter((_, i) => i !== index));
     };
 
     const handleRemoveExistingPhoto = (archiveId) => {
@@ -1066,7 +1070,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                         <input
                             ref={fileInputRef}
                             type="file"
-                            accept="image/jpeg,image/png,image/webp"
+                            accept="image/*"
                             multiple
                             style={{ display: 'none' }}
                             onChange={e => { handleFileSelect(e.target.files); e.target.value = ''; }}
