@@ -47,6 +47,8 @@ import com.sssi.msvc_maintenance.websocket.TicketWebSocketEventDto;
 import com.sssi.msvc_maintenance.websocket.TicketWebSocketManager;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Page;
@@ -94,6 +96,7 @@ public class TicketServiceImpl implements TicketService {
     private final RestTemplate restTemplate;
     private final TicketWebSocketManager webSocketManager;
     private final AuthClient authClient;
+    private static final Logger log = LoggerFactory.getLogger(TicketServiceImpl.class);
 
     private final String archiveBaseUrl = System.getProperty("archive.base-url", "http://localhost:8081");
 
@@ -919,11 +922,11 @@ public class TicketServiceImpl implements TicketService {
 
                     return TicketAssetResponseDto.builder()
                             .id(ticketAsset.getId())
-                            .assetId(asset.getId())
-                            .assetNumber(asset.getAssetNumber())
-                            .serialNumber(asset.getSerialNumber())
-                            .assetName(asset.getModel() != null ? asset.getModel().getName() : null)
-                            .locationDescription(asset.getLocation() != null ? asset.getLocation().getDescription() : null)
+                            .assetId(ticketAsset.getAssetId())
+                            .assetNumber(asset != null ? asset.getAssetNumber() : null)
+                            .serialNumber(asset != null ? asset.getSerialNumber() : null)
+                            .assetName(asset != null && asset.getModel() != null ? asset.getModel().getName() : null)
+                            .locationDescription(asset != null && asset.getLocation() != null ? asset.getLocation().getDescription() : null)
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -1017,7 +1020,8 @@ public class TicketServiceImpl implements TicketService {
         try {
             return requireCampus(id);
         } catch (Exception exception) {
-            throw TicketException.relatedCampusUnavailable(id.toString());
+            log.warn("No se pudo resolver el campus asociado al ticket. campusId={}", id, exception);
+            return null;
         }
     }
 
@@ -1029,7 +1033,8 @@ public class TicketServiceImpl implements TicketService {
         try {
             return requireBuilding(id);
         } catch (Exception exception) {
-            throw TicketException.relatedBuildingUnavailable(id.toString());
+            log.warn("No se pudo resolver el edificio asociado al ticket. buildingId={}", id, exception);
+            return null;
         }
     }
 
@@ -1041,7 +1046,8 @@ public class TicketServiceImpl implements TicketService {
         try {
             return requireFloor(id);
         } catch (Exception exception) {
-            throw TicketException.relatedFloorUnavailable(id.toString());
+            log.warn("No se pudo resolver el piso asociado al ticket. floorId={}", id, exception);
+            return null;
         }
     }
 
@@ -1053,19 +1059,21 @@ public class TicketServiceImpl implements TicketService {
         try {
             return requireLocation(id);
         } catch (Exception exception) {
-            throw TicketException.relatedLocationUnavailable(id.toString());
+            log.warn("No se pudo resolver la ubicación asociada al ticket. locationId={}", id, exception);
+            return null;
         }
     }
 
     private InventoryAssetResponseDto resolveAssetForResponse(UUID id) {
         if (id == null) {
-            throw TicketException.relatedAssetUnavailable(null);
+            return null;
         }
 
         try {
             return requireAsset(id);
         } catch (Exception exception) {
-            throw TicketException.relatedAssetUnavailable(id.toString());
+            log.warn("No se pudo resolver el activo asociado al ticket. assetId={}", id, exception);
+            return null;
         }
     }
 
