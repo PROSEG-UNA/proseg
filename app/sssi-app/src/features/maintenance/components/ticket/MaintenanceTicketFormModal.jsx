@@ -74,7 +74,12 @@ const INITIAL_VALUES = {
 
 const LOCATION_PAGE_OPTIONS = { page: 0, size: 100 };
 const ASSET_PAGE_OPTIONS = { page: 0, size: 100 };
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const readAsDataUrl = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+});
 
 const buildAssetLabel = (asset) => {
     const assetNumber = asset.assetNumber ?? asset.id;
@@ -218,14 +223,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             setLocations([]);
             setAssets([]);
             setSelectedAssets([]);
-            setPhotos((prev) => {
-                prev.forEach((photo) => {
-                    if (photo.preview) {
-                        URL.revokeObjectURL(photo.preview);
-                    }
-                });
-                return [];
-            });
+            setPhotos([]);
             setRemovedPhotoIds([]);
             setTicketComments([]);
             setPendingComments([]);
@@ -252,14 +250,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         setTicketHistory([]);
         setTicketComments(ticket?.comments ?? []);
         setPendingComments([]);
-        setPhotos((prev) => {
-            prev.forEach((photo) => {
-                if (photo.preview) {
-                    URL.revokeObjectURL(photo.preview);
-                }
-            });
-            return [];
-        });
+        setPhotos([]);
         setRemovedPhotoIds([]);
         setErrors({});
         setTouched({});
@@ -353,14 +344,6 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             cancelled = true;
         };
     }, [open, isEditing, canAssignTicket, ticket?.assignedTo, ticket?.assignedToName]);
-
-    useEffect(() => () => {
-        photos.forEach((photo) => {
-            if (photo.preview) {
-                URL.revokeObjectURL(photo.preview);
-            }
-        });
-    }, [photos]);
 
     useEffect(() => {
         if (!open || formValues.requiresLocation !== 'true') {
@@ -882,10 +865,10 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         ));
     };
 
-    const handleFileSelect = (files) => {
+    const handleFileSelect = async (files) => {
         const allFiles = Array.from(files ?? []);
-        const validFiles = allFiles.filter((file) => ALLOWED_IMAGE_TYPES.includes(file.type));
-        const invalidFiles = allFiles.filter((file) => !ALLOWED_IMAGE_TYPES.includes(file.type));
+        const validFiles = allFiles.filter((file) => file.type.startsWith('image/'));
+        const invalidFiles = allFiles.filter((file) => !file.type.startsWith('image/'));
 
         if (invalidFiles.length > 0) {
             setAlert({
@@ -898,11 +881,13 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             return;
         }
 
-        const nextPhotos = validFiles.map((file) => ({
-            file,
-            name: file.name,
-            preview: URL.createObjectURL(file),
-        }));
+        const nextPhotos = await Promise.all(
+            validFiles.map(async (file) => ({
+                file,
+                name: file.name,
+                preview: await readAsDataUrl(file),
+            }))
+        );
 
         setPhotos((prev) => [...prev, ...nextPhotos]);
     };
@@ -910,10 +895,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
     const handleRemovePhoto = (index) => {
         setPhotos((prev) => {
             const next = [...prev];
-            const removed = next.splice(index, 1)[0];
-            if (removed?.preview) {
-                URL.revokeObjectURL(removed.preview);
-            }
+            next.splice(index, 1);
             return next;
         });
     };
@@ -1657,7 +1639,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                     <input
                                         ref={fileInputRef}
                                         type="file"
-                                        accept="image/jpeg,image/png,image/webp"
+                                        accept="image/*"
                                         multiple
                                         style={{ display: 'none' }}
                                         onChange={(event) => {
