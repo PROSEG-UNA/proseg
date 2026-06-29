@@ -98,6 +98,8 @@ public class TicketServiceImpl implements TicketService {
     private final AuthClient authClient;
     private static final Logger log = LoggerFactory.getLogger(TicketServiceImpl.class);
 
+    private static final int ARCHIVE_CHUNK_SIZE_BYTES = 5 * 1024 * 1024;
+
     @org.springframework.beans.factory.annotation.Value("${GATEWAY_BASE_URL:http://localhost:8081}")
     private String archiveBaseUrl;
 
@@ -1382,28 +1384,36 @@ public class TicketServiceImpl implements TicketService {
             throw TicketException.archiveUploadFailed();
         }
 
-        MultiValueMap<String, Object> multipart = new LinkedMultiValueMap<>();
-        multipart.add("uploadId", init.getUploadId());
-        multipart.add("objectName", init.getObjectName());
-        multipart.add("partNumber", "1");
-        multipart.add("file", new ByteArrayResource(file.getBytes()) {
-            @Override
-            public String getFilename() {
-                return file.getOriginalFilename();
-            }
-        });
-
-        HttpHeaders uploadHeaders = new HttpHeaders();
-        uploadHeaders.setBearerAuth(resolveBearerToken(authentication));
-        uploadHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
-
-        HttpEntity<MultiValueMap<String, Object>> uploadEntity = new HttpEntity<>(multipart, uploadHeaders);
-
         String partUrl = UriComponentsBuilder.fromHttpUrl(archiveBaseUrl)
                 .path("/api/v1/archive/files/part")
                 .toUriString();
 
-        restTemplate.exchange(partUrl, HttpMethod.POST, uploadEntity, String.class);
+        byte[] bytes = file.getBytes();
+        int totalParts = Math.max(1, (int) Math.ceil((double) bytes.length / ARCHIVE_CHUNK_SIZE_BYTES));
+
+        for (int partNumber = 1; partNumber <= totalParts; partNumber++) {
+            int start = (partNumber - 1) * ARCHIVE_CHUNK_SIZE_BYTES;
+            int end = Math.min(start + ARCHIVE_CHUNK_SIZE_BYTES, bytes.length);
+            byte[] chunkBytes = java.util.Arrays.copyOfRange(bytes, start, end);
+
+            MultiValueMap<String, Object> multipart = new LinkedMultiValueMap<>();
+            multipart.add("uploadId", init.getUploadId());
+            multipart.add("objectName", init.getObjectName());
+            multipart.add("partNumber", String.valueOf(partNumber));
+            multipart.add("file", new ByteArrayResource(chunkBytes) {
+                @Override
+                public String getFilename() {
+                    return file.getOriginalFilename();
+                }
+            });
+
+            HttpHeaders uploadHeaders = new HttpHeaders();
+            uploadHeaders.setBearerAuth(resolveBearerToken(authentication));
+            uploadHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+            HttpEntity<MultiValueMap<String, Object>> uploadEntity = new HttpEntity<>(multipart, uploadHeaders);
+            restTemplate.exchange(partUrl, HttpMethod.POST, uploadEntity, String.class);
+        }
 
         String completeUrl = UriComponentsBuilder.fromHttpUrl(archiveBaseUrl)
                 .path("/api/v1/archive/files/complete")
