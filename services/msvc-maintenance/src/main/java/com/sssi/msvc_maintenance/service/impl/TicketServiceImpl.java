@@ -1085,7 +1085,8 @@ public class TicketServiceImpl implements TicketService {
         try {
             return getPresignedUrl(objectName);
         } catch (Exception exception) {
-            throw TicketException.relatedPhotoUnavailable(objectName);
+            log.warn("No se pudo obtener la URL del adjunto asociado al ticket. objectName={}", objectName, exception);
+            return null;
         }
     }
 
