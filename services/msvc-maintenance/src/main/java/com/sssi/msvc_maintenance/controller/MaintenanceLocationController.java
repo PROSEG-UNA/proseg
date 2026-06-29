@@ -150,6 +150,21 @@ public class MaintenanceLocationController {
         );
     }
 
+        @GetMapping("/buildings/{buildingId}/assets")
+        public ResponseEntity<ApiResponse<PageResponse<InventoryAssetResponseDto>>> findAssetsByBuilding(
+                        @PathVariable UUID buildingId,
+                        @RequestParam(required = false) String search,
+                        @RequestParam(defaultValue = DEFAULT_PAGE) int page,
+                        @RequestParam(defaultValue = DEFAULT_SIZE) int size) {
+
+                Pageable pageable = PageRequest.of(page, size);
+
+                return ApiResponseBuilder.ok(
+                                PageMapper.from(maintenanceLocationService.findAssetsByBuilding(buildingId, search, pageable)),
+                                "Activos del edificio"
+                );
+        }
+
     @GetMapping("/buildings/{id}/emails")
     public ResponseEntity<ApiResponse<List<String>>> findBuildingEmails(
             @PathVariable UUID id,

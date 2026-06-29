@@ -14,7 +14,7 @@ import { useDebounce } from '../../../../common/hooks/useDebounce.js';
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { useMaintenanceTicketsData } from '../../hooks/useMaintenanceTicketsData';
-import { MAINTENANCE_PRIORITY_OPTIONS, MAINTENANCE_TICKET_STATUS_OPTIONS } from '../../maintenanceUtils';
+import { MAINTENANCE_PRIORITY_OPTIONS, MAINTENANCE_TICKET_STATUS_OPTIONS, formatDateHourMinute } from '../../maintenanceUtils';
 
 const ALL_TAB_VALUE = 'ALL';
 
@@ -41,11 +41,9 @@ const STATUS_TABS = [ALL_TAB_VALUE, ...MAINTENANCE_TICKET_STATUS_OPTIONS.map((o)
 const COLUMN_TO_BACKEND_KEY = {
     title: 'title',
     description: 'description',
-    assignedToName: 'assignedTo',
     statusRaw: 'status',
-    priorityRaw: 'priority',
     createdByName: 'createdBy',
-    updatedBy: 'updatedBy',
+    updatedAt: 'updatedAt',
 };
 
 function statusColor(status) {
@@ -133,21 +131,6 @@ export default function MaintenanceTicketTable({ refreshKey = 0, onRefresh, onEd
             enableColumnFilter: true,
         },
         {
-            accessorKey: 'assignedToName',
-            header: 'Asignado',
-            enableColumnFilter: true,
-            Cell: ({ row }) => {
-                const value = row.original.assignedToName;
-                return (typeof value === 'string' && value.trim()) ? value : '';
-            },
-        },
-        {
-            accessorKey: 'priorityRaw',
-            header: 'Prioridad',
-            enableColumnFilter: true,
-            Cell: ({ row }) => PRIORITY_LABELS[row.original.priorityRaw] ?? row.original.priority ?? row.original.priorityRaw,
-        },
-        {
             accessorKey: 'statusRaw',
             header: 'Estado',
             enableColumnFilter: true,
@@ -170,7 +153,7 @@ export default function MaintenanceTicketTable({ refreshKey = 0, onRefresh, onEd
             accessorKey: 'updatedAt',
             header: 'Modificado',
             enableColumnFilter: true,
-            Cell: ({ row }) => (row.original.updatedAt ? new Date(row.original.updatedAt).toLocaleDateString('es-CR') : '—'),
+            Cell: ({ row }) => formatDateHourMinute(row.original.updatedAt) || '—',
         }
     ], []);
 

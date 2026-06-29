@@ -3,6 +3,7 @@ package com.sssi.msvc_maintenance.service.impl;
 import com.sssi.common.api.response.ApiResponse;
 import com.sssi.common.api.response.ArchiveUploadInitResponseDto;
 import com.sssi.common.api.response.PageResponse;
+import com.sssi.common.api.response.PagedResponse;
 import com.sssi.common.api.response.PresignedUrlResponseDto;
 import com.sssi.common.api.exception.AssetException;
 import com.sssi.common.api.exception.BuildingException;
@@ -82,6 +83,7 @@ import java.util.stream.Collectors;
 public class TicketServiceImpl implements TicketService {
 
     private static final ZoneId TICKET_TIME_ZONE = ZoneId.of("America/Costa_Rica");
+    private static final int ASSIGNEE_PAGE_SIZE = 200;
 
     private final TicketRepository ticketRepository;
     private final TicketAssetRepository ticketAssetRepository;
@@ -99,11 +101,22 @@ public class TicketServiceImpl implements TicketService {
     @Transactional
     public TicketResponseDto create(TicketCreateRequestDto request, List<MultipartFile> photos,
                                     Authentication authentication) {
-        InventoryCampusResponseDto site = requireCampus(request.getSiteId());
+        InventoryCampusResponseDto site = null;
+        if (request.getSiteId() != null) {
+            site = requireCampus(request.getSiteId());
+        }
 
         InventoryBuildingResponseDto building = null;
         if (request.getBuildingId() != null) {
             building = requireBuilding(request.getBuildingId());
+
+            if (site == null) {
+                throw new BuildingException(
+                        HttpStatus.BAD_REQUEST,
+                        "BUILDING_CAMPUS_REQUIRED",
+                        "Debe seleccionar un recinto para indicar un edificio");
+            }
+
             if (!belongsToCampus(building.getId(), site.getId())) {
                 throw BuildingException.campusDoesNotMatch(building.getId(), site.getId());
             }
@@ -150,7 +163,7 @@ public class TicketServiceImpl implements TicketService {
                 .description(request.getDescription().trim())
                 .priority(effectivePriority)
                 .status(TicketStatus.OPEN)
-                .siteId(site.getId())
+                .siteId(site != null ? site.getId() : null)
                 .buildingId(building != null ? building.getId() : null)
                 .floorId(floor != null ? floor.getId() : null)
                 .locationId(location != null ? location.getId() : null)
@@ -186,7 +199,7 @@ public class TicketServiceImpl implements TicketService {
                 .orElseThrow(TicketException::notFound);
 
         if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
-                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            && !Objects.equals(ticket.getCreatedBy(), extractUserId(authentication))) {
             throw TicketException.accessDenied();
         }
 
@@ -206,11 +219,22 @@ public class TicketServiceImpl implements TicketService {
         Map<UUID, TicketPhoto> currentPhotosById = currentPhotos.stream()
                 .collect(Collectors.toMap(TicketPhoto::getId, Function.identity()));
 
-        InventoryCampusResponseDto site = requireCampus(request.getSiteId());
+        InventoryCampusResponseDto site = null;
+        if (request.getSiteId() != null) {
+            site = requireCampus(request.getSiteId());
+        }
 
         InventoryBuildingResponseDto building = null;
         if (request.getBuildingId() != null) {
             building = requireBuilding(request.getBuildingId());
+
+            if (site == null) {
+                throw new BuildingException(
+                        HttpStatus.BAD_REQUEST,
+                        "BUILDING_CAMPUS_REQUIRED",
+                        "Debe seleccionar un recinto para indicar un edificio");
+            }
+
             if (!belongsToCampus(building.getId(), site.getId())) {
                 throw BuildingException.campusDoesNotMatch(building.getId(), site.getId());
             }
@@ -270,7 +294,7 @@ public class TicketServiceImpl implements TicketService {
 
         ticket.setTitle(request.getTitle().trim());
         ticket.setDescription(request.getDescription().trim());
-        ticket.setSiteId(site.getId());
+        ticket.setSiteId(site != null ? site.getId() : null);
         ticket.setBuildingId(building != null ? building.getId() : null);
         ticket.setFloorId(floor != null ? floor.getId() : null);
         ticket.setLocationId(location != null ? location.getId() : null);
@@ -309,7 +333,7 @@ public class TicketServiceImpl implements TicketService {
 
         if (!Objects.equals(oldSiteId, saved.getSiteId())) {
             saveHistory(saved, TicketHistoryChangeType.EDITED, "site",
-                    oldSiteName, site.getName(), actorId, null);
+                    oldSiteName, site != null ? site.getName() : null, actorId, null);
         }
 
         if (!Objects.equals(oldBuildingId, saved.getBuildingId())) {
@@ -372,21 +396,23 @@ public class TicketServiceImpl implements TicketService {
                 Sort.by(Sort.Order.desc("createdAt"))
         );
 
+        Page<Ticket> tickets;
+
         if (isAdmin(authentication) || hasViewAllTickets(authentication)) {
-            if (status != null) {
-                return ticketRepository.findByStatus(status, sortedPageable).map(this::toListResponse);
-            }
+            tickets = status != null
+                    ? ticketRepository.findByStatus(status, sortedPageable)
+                    : ticketRepository.findAll(sortedPageable);
+        } else {
+            String userId = extractUserId(authentication);
 
-            return ticketRepository.findAll(sortedPageable).map(this::toListResponse);
+            tickets = status != null
+                    ? ticketRepository.findByCreatedByAndStatus(userId, status, sortedPageable)
+                    : ticketRepository.findByCreatedBy(userId, sortedPageable);
         }
 
-        String userId = extractUserId(authentication);
+        Map<String, String> authorNames = resolveTicketAuthorNames(tickets);
 
-        if (status != null) {
-            return ticketRepository.findByCreatedByAndStatus(userId, status, sortedPageable).map(this::toListResponse);
-        }
-
-        return ticketRepository.findByCreatedBy(userId, sortedPageable).map(this::toListResponse);
+        return tickets.map(ticket -> toListResponse(ticket, authorNames));
     }
 
     @Override
@@ -396,7 +422,7 @@ public class TicketServiceImpl implements TicketService {
                 .orElseThrow(TicketException::notFound);
 
         if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
-                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            && !Objects.equals(ticket.getCreatedBy(), extractUserId(authentication))) {
             throw TicketException.accessDenied();
         }
 
@@ -445,13 +471,43 @@ public class TicketServiceImpl implements TicketService {
             throw TicketException.assignableUsersForbidden();
         }
 
-        ApiResponse<PageResponse<KeycloakUserResponse>> response = authClient.findUsers(0, 200, null);
-        PageResponse<KeycloakUserResponse> page = response != null ? response.getData() : null;
-        List<KeycloakUserResponse> users = page != null && page.getContent() != null ? page.getContent() : List.of();
+        List<KeycloakUserResponse> users = fetchAllUsersFromAuth();
 
-        return users.stream()
-                .filter(user -> user != null && user.status() != null && "APPROVED".equalsIgnoreCase(user.status()))
+        Map<String, KeycloakUserResponse> uniqueUsers = new LinkedHashMap<>();
+        users.stream()
+                .filter(user -> user != null && user.id() != null && !user.id().isBlank())
+                .forEach(user -> uniqueUsers.putIfAbsent(user.id(), user));
+
+        return uniqueUsers.values().stream()
+                .sorted(Comparator.comparing(user -> buildAuthorName(user, user.id()), String.CASE_INSENSITIVE_ORDER))
                 .collect(Collectors.toList());
+    }
+
+    private List<KeycloakUserResponse> fetchAllUsersFromAuth() {
+        List<KeycloakUserResponse> users = new ArrayList<>();
+        int pageNumber = 0;
+
+        while (true) {
+            ApiResponse<PagedResponse<KeycloakUserResponse>> response = authClient.findUsers(pageNumber, ASSIGNEE_PAGE_SIZE);
+            PagedResponse<KeycloakUserResponse> page = response != null ? response.getData() : null;
+            List<KeycloakUserResponse> pageContent = page != null && page.content() != null
+                ? page.content()
+                    : List.of();
+
+            if (pageContent.isEmpty()) {
+                break;
+            }
+
+            users.addAll(pageContent);
+
+            if (page.totalPages() <= 0 || pageNumber + 1 >= page.totalPages()) {
+                break;
+            }
+
+            pageNumber++;
+        }
+
+        return users;
     }
 
     @Override
@@ -503,7 +559,7 @@ public class TicketServiceImpl implements TicketService {
                 .orElseThrow(TicketException::notFound);
 
         if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
-                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            && !Objects.equals(ticket.getCreatedBy(), extractUserId(authentication))) {
             throw TicketException.accessDenied();
         }
 
@@ -530,7 +586,7 @@ public class TicketServiceImpl implements TicketService {
                 .orElseThrow(TicketException::notFound);
 
         if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
-                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            && !Objects.equals(ticket.getCreatedBy(), extractUserId(authentication))) {
             throw TicketException.accessDenied();
         }
 
@@ -558,9 +614,9 @@ public class TicketServiceImpl implements TicketService {
     public void deleteComment(UUID ticketId, UUID commentId, Authentication authentication) {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(TicketException::notFound);
-        
+
         if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
-                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            && !Objects.equals(ticket.getCreatedBy(), extractUserId(authentication))) {
             throw TicketException.accessDenied();
         }
 
@@ -586,7 +642,7 @@ public class TicketServiceImpl implements TicketService {
                 .orElseThrow(TicketException::notFound);
 
         if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
-                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            && !Objects.equals(ticket.getCreatedBy(), extractUserId(authentication))) {
             throw TicketException.accessDenied();
         }
 
@@ -623,7 +679,7 @@ public class TicketServiceImpl implements TicketService {
                 .orElseThrow(TicketException::notFound);
 
         if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
-                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            && !Objects.equals(ticket.getCreatedBy(), extractUserId(authentication))) {
             throw TicketException.accessDenied();
         }
 
@@ -653,7 +709,7 @@ public class TicketServiceImpl implements TicketService {
                 .orElseThrow(TicketException::notFound);
 
         if (!isAdmin(authentication) && !hasViewAllTickets(authentication)
-                && !ticket.getCreatedBy().equals(extractUserId(authentication))) {
+            && !Objects.equals(ticket.getCreatedBy(), extractUserId(authentication))) {
             throw TicketException.accessDenied();
         }
 
@@ -838,33 +894,70 @@ public class TicketServiceImpl implements TicketService {
         return assetIds;
     }
 
-    private TicketListResponseDto toListResponse(Ticket ticket) {
+    private TicketListResponseDto toListResponse(Ticket ticket, Map<String, String> authorNames) {
         return TicketListResponseDto.builder()
                 .id(ticket.getId())
                 .title(ticket.getTitle())
                 .description(ticket.getDescription())
                 .status(ticket.getStatus())
-                .priority(ticket.getPriority())
-                .assignedToName(resolveAuthorName(String.valueOf(ticket.getAssignedTo())))
                 .createdBy(ticket.getCreatedBy())
-                .createdByName(resolveAuthorName(ticket.getCreatedBy()))
+                .createdByName(getAuthorName(authorNames, ticket.getCreatedBy(), ticket.getCreatedBy()))
                 .createdAt(toOffsetDateTime(ticket.getCreatedAt()))
                 .updatedAt(toOffsetDateTime(ticket.getUpdatedAt()))
                 .build();
     }
 
     private TicketResponseDto toResponse(Ticket ticket) {
-        InventoryCampusResponseDto site = ticket.getSiteId() != null ? requireCampus(ticket.getSiteId()) : null;
-        InventoryBuildingResponseDto building = ticket.getBuildingId() != null ? requireBuilding(ticket.getBuildingId())
-                : null;
-        InventoryAssetFloorResponseDto floor = ticket.getFloorId() != null ? requireFloor(ticket.getFloorId()) : null;
-        InventoryAssetLocationResponseDto location = ticket.getLocationId() != null
-                ? requireLocation(ticket.getLocationId())
-                : null;
+        InventoryCampusResponseDto site = null;
+        if (ticket.getSiteId() != null) {
+            try {
+                site = requireCampus(ticket.getSiteId());
+            } catch (Exception ignored) {
+            }
+        }
+
+        InventoryBuildingResponseDto building = null;
+        if (ticket.getBuildingId() != null) {
+            try {
+                building = requireBuilding(ticket.getBuildingId());
+            } catch (Exception ignored) {
+            }
+        }
+
+        InventoryAssetFloorResponseDto floor = null;
+        if (ticket.getFloorId() != null) {
+            try {
+                floor = requireFloor(ticket.getFloorId());
+            } catch (Exception ignored) {
+            }
+        }
+
+        InventoryAssetLocationResponseDto location = null;
+        if (ticket.getLocationId() != null) {
+            try {
+                location = requireLocation(ticket.getLocationId());
+            } catch (Exception ignored) {
+            }
+        }
 
         List<TicketAssetResponseDto> assets = ticket.getTicketAssets().stream()
                 .map(ticketAsset -> {
-                    InventoryAssetResponseDto asset = requireAsset(ticketAsset.getAssetId());
+                    InventoryAssetResponseDto asset = null;
+                    try {
+                        asset = requireAsset(ticketAsset.getAssetId());
+                    } catch (Exception ignored) {
+                    }
+
+                    if (asset == null) {
+                        return TicketAssetResponseDto.builder()
+                                .id(ticketAsset.getId())
+                                .assetId(ticketAsset.getAssetId())
+                                .assetNumber(ticketAsset.getAssetId() != null ? ticketAsset.getAssetId().toString() : null)
+                                .serialNumber(null)
+                                .assetName(null)
+                                .locationDescription(null)
+                                .build();
+                    }
 
                     return TicketAssetResponseDto.builder()
                             .id(ticketAsset.getId())
@@ -872,8 +965,7 @@ public class TicketServiceImpl implements TicketService {
                             .assetNumber(asset.getAssetNumber())
                             .serialNumber(asset.getSerialNumber())
                             .assetName(asset.getModel() != null ? asset.getModel().getName() : null)
-                            .locationDescription(
-                                    asset.getLocation() != null ? asset.getLocation().getDescription() : null)
+                            .locationDescription(asset.getLocation() != null ? asset.getLocation().getDescription() : null)
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -902,22 +994,43 @@ public class TicketServiceImpl implements TicketService {
                     LocalDateTime aDate = a.getCreatedAt();
                     LocalDateTime bDate = b.getCreatedAt();
 
-                    if (aDate == null && bDate == null)
+                    if (aDate == null && bDate == null) {
                         return 0;
-                    if (aDate == null)
+                    }
+                    if (aDate == null) {
                         return 1;
-                    if (bDate == null)
+                    }
+                    if (bDate == null) {
                         return -1;
+                    }
 
                     return bDate.compareTo(aDate);
                 })
                 .collect(Collectors.toList());
 
-        Map<String, String> authorNames = resolveAuthorNames(sortedTicketComments);
+        Set<String> authorIds = new HashSet<>();
+        addAuthorId(authorIds, ticket.getCreatedBy());
+
+        if (ticket.getAssignedTo() != null) {
+            authorIds.add(ticket.getAssignedTo().toString());
+        }
+
+        if (ticket.getAssignedBy() != null) {
+            authorIds.add(ticket.getAssignedBy().toString());
+        }
+
+        sortedTicketComments.stream()
+                .map(TicketComment::getAuthorId)
+                .forEach(authorId -> addAuthorId(authorIds, authorId));
+
+        Map<String, String> authorNames = resolveAuthorNames(authorIds);
 
         List<TicketCommentResponseDto> comments = sortedTicketComments.stream()
                 .map(comment -> toCommentResponse(comment, authorNames))
                 .collect(Collectors.toList());
+
+        String assignedTo = ticket.getAssignedTo() != null ? ticket.getAssignedTo().toString() : null;
+        String assignedBy = ticket.getAssignedBy() != null ? ticket.getAssignedBy().toString() : null;
 
         return TicketResponseDto.builder()
                 .id(ticket.getId())
@@ -926,11 +1039,11 @@ public class TicketServiceImpl implements TicketService {
                 .status(ticket.getStatus())
                 .priority(ticket.getPriority())
                 .createdBy(ticket.getCreatedBy())
-                .createdByName(resolveAuthorName(ticket.getCreatedBy()))
+                .createdByName(getAuthorName(authorNames, ticket.getCreatedBy(), ticket.getCreatedBy()))
                 .assignedTo(ticket.getAssignedTo())
                 .assignedBy(ticket.getAssignedBy())
-                .assignedToName(ticket.getAssignedTo() != null ? resolveAuthorName(ticket.getAssignedTo().toString()) : null)
-                .assignedByName(ticket.getAssignedBy() != null ? resolveAuthorName(ticket.getAssignedBy().toString()) : null)
+                .assignedToName(assignedTo != null ? getAuthorName(authorNames, assignedTo, assignedTo) : null)
+                .assignedByName(assignedBy != null ? getAuthorName(authorNames, assignedBy, assignedBy) : null)
                 .siteId(ticket.getSiteId())
                 .siteName(site != null ? site.getName() : null)
                 .buildingId(ticket.getBuildingId())
@@ -948,14 +1061,16 @@ public class TicketServiceImpl implements TicketService {
     }
 
     private TicketCommentResponseDto toCommentResponse(TicketComment comment) {
-        return toCommentResponse(comment, Map.of(comment.getAuthorId(), resolveAuthorName(comment.getAuthorId())));
+        Set<String> authorIds = new HashSet<>();
+        addAuthorId(authorIds, comment.getAuthorId());
+        return toCommentResponse(comment, resolveAuthorNames(authorIds));
     }
 
     private TicketCommentResponseDto toCommentResponse(TicketComment comment, Map<String, String> authorNames) {
         return TicketCommentResponseDto.builder()
                 .id(comment.getId())
                 .authorId(comment.getAuthorId())
-                .authorName(authorNames.getOrDefault(comment.getAuthorId(), comment.getAuthorId()))
+                .authorName(getAuthorName(authorNames, comment.getAuthorId(), comment.getAuthorId()))
                 .content(comment.getContent())
                 .createdAt(toOffsetDateTime(comment.getCreatedAt()))
                 .updatedAt(toOffsetDateTime(comment.getUpdatedAt()))
@@ -969,53 +1084,94 @@ public class TicketServiceImpl implements TicketService {
                 .orElseThrow(TicketException::commentNotFound);
     }
 
-    private Map<String, String> resolveAuthorNames(List<TicketComment> comments) {
-        Set<String> authorIds = comments.stream()
-                .map(TicketComment::getAuthorId)
-                .filter(authorId -> authorId != null && !authorId.isBlank())
-                .collect(Collectors.toSet());
+    private Map<String, String> resolveTicketAuthorNames(Page<Ticket> tickets) {
+        Set<String> authorIds = new HashSet<>();
 
-        return authorIds.stream()
-                .collect(Collectors.toMap(
-                        Function.identity(),
-                        authorId -> {
-                            String authorName = resolveAuthorName(authorId);
-                            return authorName != null && !authorName.isBlank() ? authorName : authorId;
-                        }));
+        tickets.getContent().forEach(ticket -> {
+            addAuthorId(authorIds, ticket.getCreatedBy());
+
+            if (ticket.getAssignedTo() != null) {
+                authorIds.add(ticket.getAssignedTo().toString());
+            }
+        });
+
+        return resolveAuthorNames(authorIds);
     }
 
-    private String resolveAuthorName(String authorId) {
-        if (authorId == null || authorId.isBlank()) {
-            return "Usuario";
+    private Map<String, String> resolveAuthorNames(Collection<String> authorIds) {
+        Set<String> ids = authorIds.stream()
+                .filter(authorId -> authorId != null && !authorId.isBlank() && !"null".equals(authorId))
+                .collect(Collectors.toSet());
+
+        if (ids.isEmpty()) {
+            return Map.of();
         }
 
         try {
-            ApiResponse<KeycloakUserResponse> response = authClient.findUserByKeycloakId(authorId);
-            KeycloakUserResponse user = response != null ? response.getData() : null;
+            ApiResponse<List<KeycloakUserResponse>> response = authClient.findUsersByKeycloakIds(new ArrayList<>(ids));
+            List<KeycloakUserResponse> users = response != null && response.getData() != null
+                    ? response.getData()
+                    : List.of();
 
-            if (user == null) {
-                return authorId;
-            }
+            Map<String, String> names = users.stream()
+                    .filter(user -> user != null && user.id() != null && !user.id().isBlank())
+                    .collect(Collectors.toMap(
+                            KeycloakUserResponse::id,
+                            user -> buildAuthorName(user, user.id()),
+                            (current, replacement) -> current,
+                            HashMap::new
+                    ));
 
-            String fullName = ((user.firstName() != null ? user.firstName() : "") + " "
-                    + (user.lastName() != null ? user.lastName() : "")).trim();
+            ids.forEach(id -> names.putIfAbsent(id, id));
 
-            if (!fullName.isBlank()) {
-                return fullName;
-            }
-
-            if (user.username() != null && !user.username().isBlank()) {
-                return user.username();
-            }
-
-            if (user.email() != null && !user.email().isBlank()) {
-                return user.email();
-            }
-
-            return authorId;
+            return names;
         } catch (Exception exception) {
-            return authorId;
+            return ids.stream().collect(Collectors.toMap(
+                    Function.identity(),
+                    Function.identity()
+            ));
         }
+    }
+
+    private String resolveAuthorName(String authorId) {
+        if (authorId == null || authorId.isBlank() || "null".equals(authorId)) {
+            return "Usuario";
+        }
+
+        return resolveAuthorNames(List.of(authorId)).getOrDefault(authorId, authorId);
+    }
+
+    private String buildAuthorName(KeycloakUserResponse user, String fallback) {
+        String fullName = ((user.firstName() != null ? user.firstName() : "") + " "
+                + (user.lastName() != null ? user.lastName() : "")).trim();
+
+        if (!fullName.isBlank()) {
+            return fullName;
+        }
+
+        if (user.username() != null && !user.username().isBlank()) {
+            return user.username();
+        }
+
+        if (user.email() != null && !user.email().isBlank()) {
+            return user.email();
+        }
+
+        return fallback;
+    }
+
+    private void addAuthorId(Set<String> authorIds, String authorId) {
+        if (authorId != null && !authorId.isBlank() && !"null".equals(authorId)) {
+            authorIds.add(authorId);
+        }
+    }
+
+    private String getAuthorName(Map<String, String> authorNames, String authorId, String fallback) {
+        if (authorId == null || authorId.isBlank() || "null".equals(authorId)) {
+            return fallback;
+        }
+
+        return authorNames.getOrDefault(authorId, fallback);
     }
 
     private InventoryCampusResponseDto requireCampus(UUID id) {

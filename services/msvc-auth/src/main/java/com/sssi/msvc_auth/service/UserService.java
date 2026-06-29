@@ -254,4 +254,9 @@ public class UserService {
                 .map(Enum::name)
                 .toList();
     }
+
+    @Transactional(readOnly = true)
+    public List<KeycloakUserResponseDto> getKeycloakUsersByIds(List<String> ids) {
+        return keycloakAdminService.getUsersByIds(ids);
+    }
 }

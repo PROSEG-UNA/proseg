@@ -45,6 +45,7 @@ import {
 } from '../../services/ticketsService';
 import MaintenanceTicketHistoryTab from './MaintenanceTicketHistoryTab';
 import {
+    fetchAssetsByBuilding,
     fetchAssetsByLocation,
     fetchBuildingsByCampus,
     fetchCampuses,
@@ -54,7 +55,7 @@ import {
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { AuthContext } from '../../../../common/context/AuthContext';
-import { MAINTENANCE_PRIORITY_OPTIONS, MAINTENANCE_TICKET_STATUS_OPTIONS } from '../../maintenanceUtils';
+import { MAINTENANCE_PRIORITY_OPTIONS, MAINTENANCE_TICKET_STATUS_OPTIONS, formatDateHourMinute } from '../../maintenanceUtils';
 
 const INITIAL_VALUES = {
     title: '',
@@ -63,6 +64,7 @@ const INITIAL_VALUES = {
     priority: 'LOW',
     status: 'OPEN',
     assignedTo: '',
+    requiresLocation: 'false',
     siteId: '',
     buildingId: '',
     floorId: '',
@@ -81,18 +83,6 @@ const buildAssetLabel = (asset) => {
     const location = asset.location?.description ?? asset.locationDescription ?? 'Sin ubicación';
 
     return `${assetNumber}${serialNumber} - ${model} - ${location}`;
-};
-
-const formatCommentDate = (value) => {
-    if (!value) return '';
-
-    return new Date(value).toLocaleString('es-CR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
 };
 
 const getCommentDateValue = (comment) => {
@@ -289,6 +279,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
 
         if (ticket) {
             const ticketAssets = ticket.assets ?? [];
+            const ticketSiteId = getTicketCampusId(ticket);
 
             setFormValues({
                 title: ticket.title ?? '',
@@ -297,7 +288,8 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                 priority: ticket.priority ?? 'LOW',
                 status: ticket.status ?? 'OPEN',
                 assignedTo: ticket.assignedTo ?? '',
-                siteId: getTicketCampusId(ticket),
+                requiresLocation: ticketSiteId ? 'true' : 'false',
+                siteId: ticketSiteId,
                 buildingId: getTicketBuildingId(ticket),
                 floorId: getTicketFloorId(ticket),
                 locationId: getTicketLocationId(ticket),
@@ -315,31 +307,6 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             setFormValues(INITIAL_VALUES);
             setSelectedAssets([]);
         }
-
-        let cancelled = false;
-
-        async function loadCampuses() {
-            setLoadingOptions(true);
-
-            try {
-                const campusPage = await fetchCampuses(LOCATION_PAGE_OPTIONS);
-                if (cancelled) return;
-
-                setCampuses(campusPage?.content ?? []);
-            } catch (error) {
-                if (!cancelled) {
-                    setAlert({ type: 'error', message: error?.response?.data?.message ?? error?.message ?? 'No se pudieron cargar las sedes' });
-                }
-            } finally {
-                if (!cancelled) setLoadingOptions(false);
-            }
-        }
-
-        loadCampuses();
-
-        return () => {
-            cancelled = true;
-        };
     }, [open, ticket]);
 
     useEffect(() => {
@@ -353,8 +320,10 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         async function loadAssignees() {
             setLoadingAssignees(true);
             try {
-                const users = await fetchMaintenanceTicketAssignees();
+                const usersResponse = await fetchMaintenanceTicketAssignees();
                 if (cancelled) return;
+
+                const users = Array.isArray(usersResponse) ? usersResponse : [];
 
                 const normalizedAssignedTo = ticket?.assignedTo ? String(ticket.assignedTo) : '';
                 const alreadyIncluded = normalizedAssignedTo
@@ -394,7 +363,39 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
     }, [photos]);
 
     useEffect(() => {
-        if (!open || !formValues.siteId) {
+        if (!open || formValues.requiresLocation !== 'true') {
+            setCampuses([]);
+            return;
+        }
+
+        let cancelled = false;
+
+        async function loadCampuses() {
+            setLoadingOptions(true);
+
+            try {
+                const campusPage = await fetchCampuses(LOCATION_PAGE_OPTIONS);
+                if (cancelled) return;
+
+                setCampuses(campusPage?.content ?? []);
+            } catch (error) {
+                if (!cancelled) {
+                    setAlert({ type: 'error', message: error?.response?.data?.message ?? error?.message ?? 'No se pudieron cargar las sedes' });
+                }
+            } finally {
+                if (!cancelled) setLoadingOptions(false);
+            }
+        }
+
+        loadCampuses();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [open, formValues.requiresLocation]);
+
+    useEffect(() => {
+        if (!open || formValues.requiresLocation !== 'true' || !formValues.siteId) {
             setBuildings([]);
             return;
         }
@@ -423,10 +424,10 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         return () => {
             cancelled = true;
         };
-    }, [open, formValues.siteId]);
+    }, [open, formValues.requiresLocation, formValues.siteId]);
 
     useEffect(() => {
-        if (!open || !formValues.buildingId) {
+        if (!open || formValues.requiresLocation !== 'true' || !formValues.buildingId) {
             setFloors([]);
             setLocations([]);
             return;
@@ -465,10 +466,10 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         return () => {
             cancelled = true;
         };
-    }, [open, formValues.buildingId]);
+    }, [open, formValues.requiresLocation, formValues.buildingId]);
 
     useEffect(() => {
-        if (!open || formValues.requiresAsset !== 'true' || !formValues.locationId) {
+        if (!open || formValues.requiresAsset !== 'true' || formValues.requiresLocation !== 'true' || !formValues.buildingId) {
             setAssets([]);
             return;
         }
@@ -479,7 +480,9 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             setLoadingAssets(true);
 
             try {
-                const assetPage = await fetchAssetsByLocation(formValues.locationId, ASSET_PAGE_OPTIONS);
+                const assetPage = formValues.locationId
+                    ? await fetchAssetsByLocation(formValues.locationId, ASSET_PAGE_OPTIONS)
+                    : await fetchAssetsByBuilding(formValues.buildingId, ASSET_PAGE_OPTIONS);
                 if (cancelled) return;
 
                 const assetItems = assetPage?.content ?? [];
@@ -499,7 +502,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         return () => {
             cancelled = true;
         };
-    }, [open, formValues.requiresAsset, formValues.locationId]);
+    }, [open, formValues.requiresAsset, formValues.requiresLocation, formValues.buildingId, formValues.locationId]);
 
     useEffect(() => {
         if (!open || !ticket?.id || rightTab !== 'history') return;
@@ -557,6 +560,28 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         [ticketComments, pendingComments]
     );
 
+    const assignedToDisplayName = useMemo(() => {
+        if (!isEditing) {
+            return 'Sin asignar';
+        }
+
+        const assignedValue = formValues.assignedTo ? String(formValues.assignedTo) : '';
+        if (!assignedValue) {
+            return 'Sin asignar';
+        }
+
+        const selectedOption = assigneeOptions.find((option) => String(option.id) === assignedValue);
+        if (selectedOption) {
+            return buildAssigneeLabel(selectedOption);
+        }
+
+        if (ticket?.assignedTo && String(ticket.assignedTo) === assignedValue && ticket?.assignedToName) {
+            return ticket.assignedToName;
+        }
+
+        return assignedValue;
+    }, [isEditing, formValues.assignedTo, assigneeOptions, ticket?.assignedTo, ticket?.assignedToName]);
+
     const canManageComment = (comment) => {
         if (isReadOnly) {
             return false;
@@ -576,14 +601,14 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
     const validateField = (key, value, values = formValues) => {
         let error = '';
         const trimmed = typeof value === 'string' ? value.trim() : value;
-        const requiredKeys = ['title', 'description', 'siteId', ...(canSetPriority ? ['priority'] : [])];
+        const requiredKeys = ['title', 'description', ...(canSetPriority ? ['priority'] : [])];
 
         if (requiredKeys.includes(key) && !trimmed) {
             error = 'Este campo es requerido';
         }
 
-        if (!error && key === 'locationId' && values.requiresAsset === 'true' && !trimmed) {
-            error = 'Debes seleccionar una ubicación para vincular activos';
+        if (!error && key === 'siteId' && values.requiresLocation === 'true' && !trimmed) {
+            error = 'Este campo es requerido';
         }
 
         if (!error && key === 'title' && trimmed && trimmed.length > 120) {
@@ -603,7 +628,35 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
     };
 
     const handleChange = (key, value) => {
-        if (isRestrictedEditor && ['title', 'description', 'siteId', 'buildingId', 'floorId', 'locationId', 'requiresAsset'].includes(key)) {
+        if (isRestrictedEditor && ['title', 'description', 'requiresLocation', 'siteId', 'buildingId', 'floorId', 'locationId', 'requiresAsset'].includes(key)) {
+            return;
+        }
+
+        if (key === 'requiresLocation') {
+            const nextValues = {
+                ...formValues,
+                requiresLocation: value,
+                ...(value !== 'true' ? {
+                    siteId: '',
+                    buildingId: '',
+                    floorId: '',
+                    locationId: '',
+                    requiresAsset: 'false',
+                } : {}),
+            };
+
+            setFormValues(nextValues);
+
+            if (value !== 'true') {
+                setCampuses([]);
+                setBuildings([]);
+                setFloors([]);
+                setLocations([]);
+                setAssets([]);
+                setSelectedAssets([]);
+                setErrors((prev) => ({ ...prev, siteId: '', buildingId: '', locationId: '' }));
+            }
+
             return;
         }
 
@@ -638,14 +691,11 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         }
 
         if (key === 'floorId') {
-            const nextValues = { ...formValues, floorId: value, locationId: '' };
+            const nextValues = { ...formValues, floorId: value };
 
             setFormValues(nextValues);
-            setAssets([]);
-            setSelectedAssets([]);
 
             if (touched.floorId) validateField('floorId', value, nextValues);
-            if (touched.locationId) validateField('locationId', '', nextValues);
             return;
         }
 
@@ -873,7 +923,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             return;
         }
 
-        const requiredFields = ['title', 'description', 'siteId', ...(canSetPriority ? ['priority'] : [])];
+        const requiredFields = ['title', 'description', ...(canSetPriority ? ['priority'] : [])];
         const nextTouched = {};
         const nextErrors = {};
 
@@ -884,9 +934,9 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             }
         });
 
-        if (formValues.requiresAsset === 'true' && !formValues.locationId?.trim()) {
-            nextTouched.locationId = true;
-            nextErrors.locationId = 'Debes seleccionar una ubicación para vincular activos';
+        if (formValues.requiresLocation === 'true' && !formValues.siteId?.trim()) {
+            nextTouched.siteId = true;
+            nextErrors.siteId = 'Este campo es requerido';
         }
 
         if (formValues.title?.trim()?.length > 120) {
@@ -916,22 +966,22 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
 
         try {
             const existingAssetIds = (ticket?.assets ?? []).map((asset) => asset.assetId ?? asset.id).filter(Boolean);
-            const protectedSiteId = ticket ? getTicketCampusId(ticket) : formValues.siteId;
-            const protectedBuildingId = ticket ? (getTicketBuildingId(ticket) || null) : (formValues.buildingId || null);
-            const protectedFloorId = ticket ? (getTicketFloorId(ticket) || null) : (formValues.floorId || null);
-            const protectedLocationId = ticket ? (getTicketLocationId(ticket) || null) : (formValues.locationId || null);
+            const protectedSiteId = ticket ? getTicketCampusId(ticket) : (formValues.requiresLocation === 'true' ? formValues.siteId : null);
+            const protectedBuildingId = ticket ? (getTicketBuildingId(ticket) || null) : (formValues.requiresLocation === 'true' ? (formValues.buildingId || null) : null);
+            const protectedFloorId = ticket ? (getTicketFloorId(ticket) || null) : (formValues.requiresLocation === 'true' ? (formValues.floorId || null) : null);
+            const protectedLocationId = ticket ? (getTicketLocationId(ticket) || null) : (formValues.requiresLocation === 'true' ? (formValues.locationId || null) : null);
 
             const payload = {
                 title: isRestrictedEditor ? (ticket?.title ?? formValues.title.trim()) : formValues.title.trim(),
                 description: isRestrictedEditor ? (ticket?.description ?? formValues.description.trim()) : formValues.description.trim(),
                 ...(canSetPriority ? { priority: formValues.priority } : {}),
-                siteId: isRestrictedEditor ? protectedSiteId : formValues.siteId,
-                buildingId: isRestrictedEditor ? protectedBuildingId : (formValues.buildingId || null),
-                floorId: isRestrictedEditor ? protectedFloorId : (formValues.floorId || null),
-                locationId: isRestrictedEditor ? protectedLocationId : (formValues.locationId || null),
+                siteId: isRestrictedEditor ? protectedSiteId : (formValues.requiresLocation === 'true' ? formValues.siteId : null),
+                buildingId: isRestrictedEditor ? protectedBuildingId : (formValues.requiresLocation === 'true' ? (formValues.buildingId || null) : null),
+                floorId: isRestrictedEditor ? protectedFloorId : (formValues.requiresLocation === 'true' ? (formValues.floorId || null) : null),
+                locationId: isRestrictedEditor ? protectedLocationId : (formValues.requiresLocation === 'true' ? (formValues.locationId || null) : null),
                 assetIds: isRestrictedEditor
                     ? existingAssetIds
-                    : (formValues.requiresAsset === 'true' ? selectedAssets.map((asset) => asset.id) : []),
+                    : (formValues.requiresLocation === 'true' && formValues.requiresAsset === 'true' ? selectedAssets.map((asset) => asset.id) : []),
                 ...(isEditing && !isRestrictedEditor && removedPhotoIds.length > 0 ? { removedPhotoIds } : {}),
             };
 
@@ -943,8 +993,8 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                 await updateMaintenanceTicketStatus(ticket.id, formValues.status);
             }
 
-            if (isEditing && canAssignTicket && formValues.assignedTo
-                && String(formValues.assignedTo) !== String(ticket?.assignedTo ?? '')) {
+            if (isEditing && canAssignTicket
+                && String(formValues.assignedTo ?? '') !== String(ticket?.assignedTo ?? '')) {
                 await updateMaintenanceTicketAssignedTo(ticket.id, formValues.assignedTo);
             }
 
@@ -977,8 +1027,21 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             '& fieldset': { borderColor: 'divider' },
             '&:hover fieldset': { borderColor: `color-mix(in srgb, ${accentColor} 50%, transparent)` },
             '&.Mui-focused fieldset': { borderColor: accentColor },
+            '&.Mui-disabled': {
+                backgroundColor: 'color-mix(in srgb, #000 2%, #fff)',
+            },
+            '&.Mui-disabled .MuiInputBase-input': {
+                WebkitTextFillColor: 'rgba(0, 0, 0, 0.82)',
+                color: 'rgba(0, 0, 0, 0.82)',
+            },
         },
         '& .MuiInputLabel-root.Mui-focused': { color: accentColor },
+        '& .MuiInputLabel-root.Mui-disabled': {
+            color: 'rgba(0, 0, 0, 0.68)',
+        },
+        '& .MuiFormHelperText-root.Mui-disabled': {
+            color: 'rgba(0, 0, 0, 0.62)',
+        },
     };
 
     const contentSx = {
@@ -1174,7 +1237,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                                     {comment.authorName ?? 'Usuario'}
                                                                 </Typography>
                                                                 <Typography sx={{ color: 'text.secondary', fontSize: 12.5 }}>
-                                                                    {formatCommentDate(comment.createdAt) || 'Pendiente de guardar'}
+                                                                    {formatDateHourMinute(comment.createdAt) || 'Pendiente de guardar'}
                                                                     {!comment.pending && isCommentEdited(comment) ? ' (editado)' : ''}
                                                                 </Typography>
                                                             </Box>
@@ -1285,7 +1348,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
 
                                 {rightTab === 'details' ? (
                                     <Box sx={{ pt: 2, pl: { xs: 0, md: 3 } }}>
-                                        {showPlanningTitle ? <Typography sx={sectionTitleSx}>Planeación</Typography> : null}
+                                        {showPlanningTitle ? <Typography sx={sectionTitleSx}>Gestión</Typography> : null}
 
                                         <Stack spacing={2}>
                                             {isEditing ? (
@@ -1316,7 +1379,6 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                     items={assigneeOptions}
                                                     getItemLabel={buildAssigneeLabel}
                                                     getItemValue={(assignee) => assignee.id}
-                                                    clearable
                                                     fullWidth
                                                     size="small"
                                                     disabled={saving || loadingCatalogs || loadingAssignees || isReadOnly}
@@ -1325,6 +1387,18 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                         : (typeof formValues.assignedTo === 'string' && formValues.assignedTo.trim())
                                                             ? ' '
                                                             : 'Sin asignar'}
+                                                    sx={fieldSx}
+                                                />
+                                            ) : null}
+
+                                            {isEditing && !canAssignTicket ? (
+                                                <TextField
+                                                    label="Asignado a"
+                                                    value={assignedToDisplayName}
+                                                    fullWidth
+                                                    size="small"
+                                                    disabled
+                                                    helperText=" "
                                                     sx={fieldSx}
                                                 />
                                             ) : null}
@@ -1355,141 +1429,160 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
 
                                         <Divider sx={{ my: 2.5 }} />
 
-                                        <Typography sx={sectionTitleSx}>Ubicación</Typography>
-
-                                        <Stack spacing={2}>
-                                            <SearchableSelect
-                                                label="Sede"
-                                                value={formValues.siteId}
-                                                onChange={(value) => handleChange('siteId', value)}
-                                                onBlur={() => handleBlur('siteId')}
-                                                items={campuses}
-                                                getItemLabel={(campus) => campus.name}
-                                                getItemValue={(campus) => campus.id}
-                                                required
-                                                fullWidth
-                                                size="small"
-                                                disabled={saving || loadingOptions || !canEditCoreFields}
-                                                error={touched.siteId && !!errors.siteId}
-                                                helperText={touched.siteId ? (errors.siteId || ' ') : ' '}
-                                                sx={fieldSx}
-                                            />
-
-                                            <SearchableSelect
-                                                label="Edificio"
-                                                value={formValues.buildingId}
-                                                onChange={(value) => handleChange('buildingId', value)}
-                                                onBlur={() => handleBlur('buildingId')}
-                                                items={buildings}
-                                                getItemLabel={(building) => building.name}
-                                                getItemValue={(building) => building.id}
-                                                clearable
-                                                fullWidth
-                                                size="small"
-                                                disabled={saving || loadingBuildings || !canEditCoreFields || !formValues.siteId}
-                                                error={touched.buildingId && !!errors.buildingId}
-                                                helperText={touched.buildingId ? (errors.buildingId || ' ') : ' '}
-                                                sx={fieldSx}
-                                            />
-
-                                            <SearchableSelect
-                                                label="Piso"
-                                                value={formValues.floorId}
-                                                onChange={(value) => handleChange('floorId', value)}
-                                                onBlur={() => handleBlur('floorId')}
-                                                items={floors}
-                                                getItemLabel={(floor) => floor.name}
-                                                getItemValue={(floor) => floor.id}
-                                                clearable
-                                                fullWidth
-                                                size="small"
-                                                disabled={saving || loadingFloors || !canEditCoreFields || !formValues.buildingId}
-                                                helperText={touched.floorId ? (errors.floorId || ' ') : ' '}
-                                                sx={fieldSx}
-                                            />
-
-                                            <SearchableSelect
-                                                label="Ubicación"
-                                                value={formValues.locationId}
-                                                onChange={(value) => handleChange('locationId', value)}
-                                                onBlur={() => handleBlur('locationId')}
-                                                items={filteredLocations}
-                                                getItemLabel={(location) => location.description ?? location.name}
-                                                getItemValue={(location) => location.id}
-                                                clearable
-                                                fullWidth
-                                                size="small"
-                                                disabled={saving || loadingLocations || !canEditCoreFields || !formValues.buildingId}
-                                                error={touched.locationId && !!errors.locationId}
-                                                helperText={touched.locationId ? (errors.locationId || ' ') : ' '}
-                                                sx={fieldSx}
-                                            />
-                                        </Stack>
-
-                                        <Divider sx={{ my: 2.5 }} />
-
-                                        <Typography sx={sectionTitleSx}>¿Se requiere activo?</Typography>
+                                        <Typography sx={sectionTitleSx}>¿Se requiere ubicación?</Typography>
 
                                         <FormControl disabled={saving || loadingCatalogs || !canEditCoreFields}>
                                             <RadioGroup
                                                 row
-                                                value={formValues.requiresAsset}
-                                                onChange={(event) => handleChange('requiresAsset', event.target.value)}
+                                                value={formValues.requiresLocation}
+                                                onChange={(event) => handleChange('requiresLocation', event.target.value)}
                                             >
                                                 <FormControlLabel value="true" control={<Radio />} label="Sí" />
                                                 <FormControlLabel value="false" control={<Radio />} label="No" />
                                             </RadioGroup>
                                         </FormControl>
 
-                                        {formValues.requiresAsset === 'true' ? (
-                                            <Box sx={{ mt: 1.5 }}>
-                                                <Typography sx={{ fontWeight: 700, fontSize: 13.5, mb: 1 }}>
-                                                    Activos
-                                                </Typography>
+                                        {formValues.requiresLocation === 'true' ? (
+                                            <>
+                                                <Stack spacing={2} sx={{ mt: 1.5 }}>
+                                                    <SearchableSelect
+                                                        label="Sede"
+                                                        value={formValues.siteId}
+                                                        onChange={(value) => handleChange('siteId', value)}
+                                                        onBlur={() => handleBlur('siteId')}
+                                                        items={campuses}
+                                                        getItemLabel={(campus) => campus.name}
+                                                        getItemValue={(campus) => campus.id}
+                                                        required
+                                                        fullWidth
+                                                        size="small"
+                                                        disabled={saving || loadingOptions || !canEditCoreFields}
+                                                        error={touched.siteId && !!errors.siteId}
+                                                        helperText={touched.siteId ? (errors.siteId || ' ') : ' '}
+                                                        sx={fieldSx}
+                                                    />
 
-                                                <Autocomplete
-                                                    multiple
-                                                    options={assets}
-                                                    value={selectedAssets}
-                                                    onChange={(_, value) => setSelectedAssets(value)}
-                                                    getOptionLabel={buildAssetLabel}
-                                                    isOptionEqualToValue={(option, value) => option.id === value.id}
-                                                    loading={loadingAssets}
-                                                    disabled={!canEditCoreFields || !formValues.locationId || loadingAssets}
-                                                    renderTags={(value, getTagProps) => value.map((option, index) => (
-                                                        <Chip
-                                                            {...getTagProps({ index })}
-                                                            key={option.id}
-                                                            label={buildAssetLabel(option)}
-                                                            size="small"
-                                                            sx={chipSx}
-                                                        />
-                                                    ))}
-                                                    renderInput={(params) => (
-                                                        <TextField
-                                                            {...params}
-                                                            placeholder={formValues.locationId ? 'Busca y selecciona activos' : 'Selecciona una ubicación primero'}
-                                                            size="small"
-                                                            sx={fieldSx}
-                                                            helperText={formValues.locationId ? 'Opcional' : 'Debes seleccionar una ubicación para ver activos'}
-                                                        />
-                                                    )}
-                                                />
+                                                    <SearchableSelect
+                                                        label="Edificio"
+                                                        value={formValues.buildingId}
+                                                        onChange={(value) => handleChange('buildingId', value)}
+                                                        onBlur={() => handleBlur('buildingId')}
+                                                        items={buildings}
+                                                        getItemLabel={(building) => building.name}
+                                                        getItemValue={(building) => building.id}
+                                                        clearable
+                                                        fullWidth
+                                                        size="small"
+                                                        disabled={saving || loadingBuildings || !canEditCoreFields || !formValues.siteId}
+                                                        error={touched.buildingId && !!errors.buildingId}
+                                                        helperText={touched.buildingId ? (errors.buildingId || ' ') : ' '}
+                                                        sx={fieldSx}
+                                                    />
 
-                                                {selectedAssets.length > 0 ? (
-                                                    <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                                                        {selectedAssets.map((asset) => (
-                                                            <Chip
-                                                                key={asset.id}
-                                                                label={buildAssetLabel(asset)}
-                                                                size="small"
-                                                                variant="outlined"
-                                                                sx={chipSx}
-                                                            />
-                                                        ))}
+                                                    <SearchableSelect
+                                                        label="Locación"
+                                                        value={formValues.locationId}
+                                                        onChange={(value) => handleChange('locationId', value)}
+                                                        onBlur={() => handleBlur('locationId')}
+                                                        items={filteredLocations}
+                                                        getItemLabel={(location) => location.description ?? location.name}
+                                                        getItemValue={(location) => location.id}
+                                                        clearable
+                                                        fullWidth
+                                                        size="small"
+                                                        disabled={saving || loadingLocations || !canEditCoreFields || !formValues.buildingId}
+                                                        error={touched.locationId && !!errors.locationId}
+                                                        helperText={touched.locationId ? (errors.locationId || ' ') : 'Opcional'}
+                                                        sx={fieldSx}
+                                                    />
+
+                                                    <SearchableSelect
+                                                        label="Piso"
+                                                        value={formValues.floorId}
+                                                        onChange={(value) => handleChange('floorId', value)}
+                                                        onBlur={() => handleBlur('floorId')}
+                                                        items={floors}
+                                                        getItemLabel={(floor) => floor.name}
+                                                        getItemValue={(floor) => floor.id}
+                                                        clearable
+                                                        fullWidth
+                                                        size="small"
+                                                        disabled={saving || loadingFloors || !canEditCoreFields || !formValues.buildingId}
+                                                        helperText={touched.floorId ? (errors.floorId || ' ') : 'Opcional'}
+                                                        sx={fieldSx}
+                                                    />
+                                                </Stack>
+
+                                                <Divider sx={{ my: 2.5 }} />
+
+                                                <Typography sx={sectionTitleSx}>¿Se requiere activo?</Typography>
+
+                                                <FormControl disabled={saving || loadingCatalogs || !canEditCoreFields}>
+                                                    <RadioGroup
+                                                        row
+                                                        value={formValues.requiresAsset}
+                                                        onChange={(event) => handleChange('requiresAsset', event.target.value)}
+                                                    >
+                                                        <FormControlLabel value="true" control={<Radio />} label="Sí" />
+                                                        <FormControlLabel value="false" control={<Radio />} label="No" />
+                                                    </RadioGroup>
+                                                </FormControl>
+
+                                                {formValues.requiresAsset === 'true' ? (
+                                                    <Box sx={{ mt: 1.5 }}>
+                                                        <Typography sx={{ fontWeight: 700, fontSize: 13.5, mb: 1 }}>
+                                                            Activos
+                                                        </Typography>
+
+                                                        <Autocomplete
+                                                            multiple
+                                                            options={assets}
+                                                            value={selectedAssets}
+                                                            onChange={(_, value) => setSelectedAssets(value)}
+                                                            getOptionLabel={buildAssetLabel}
+                                                            isOptionEqualToValue={(option, value) => option.id === value.id}
+                                                            loading={loadingAssets}
+                                                            disabled={!canEditCoreFields || !formValues.buildingId || loadingAssets}
+                                                            renderTags={(value, getTagProps) => value.map((option, index) => (
+                                                                <Chip
+                                                                    {...getTagProps({ index })}
+                                                                    key={option.id}
+                                                                    label={buildAssetLabel(option)}
+                                                                    size="small"
+                                                                    sx={chipSx}
+                                                                />
+                                                            ))}
+                                                            renderInput={(params) => (
+                                                                <TextField
+                                                                    {...params}
+                                                                    placeholder={formValues.buildingId ? 'Busca y selecciona activos' : 'Selecciona un edificio primero'}
+                                                                    size="small"
+                                                                    sx={fieldSx}
+                                                                    helperText={formValues.locationId
+                                                                        ? 'Activos filtrados por locación seleccionada'
+                                                                        : (formValues.buildingId
+                                                                            ? 'Activos del edificio (sin locación)'
+                                                                            : 'Debes seleccionar un edificio para ver activos')}
+                                                                />
+                                                            )}
+                                                        />
+
+                                                        {selectedAssets.length > 0 ? (
+                                                            <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                                                                {selectedAssets.map((asset) => (
+                                                                    <Chip
+                                                                        key={asset.id}
+                                                                        label={buildAssetLabel(asset)}
+                                                                        size="small"
+                                                                        variant="outlined"
+                                                                        sx={chipSx}
+                                                                    />
+                                                                ))}
+                                                            </Box>
+                                                        ) : null}
                                                     </Box>
                                                 ) : null}
-                                            </Box>
+                                            </>
                                         ) : null}
                                     </Box>
                                 ) : null}

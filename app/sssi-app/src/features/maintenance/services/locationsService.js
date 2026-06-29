@@ -22,6 +22,10 @@ export async function fetchLocationsByCampus(campusId, options = {}) {
     return fetchPage(`${MAINTENANCE_ENDPOINTS.locations}/campuses/${campusId}/locations`, options);
 }
 
+export async function fetchAssetsByBuilding(buildingId, options = {}) {
+    return fetchPage(`${MAINTENANCE_ENDPOINTS.locations}/buildings/${buildingId}/assets`, options);
+}
+
 export async function fetchAssetsByLocation(locationId, options = {}) {
     return fetchPage(`${MAINTENANCE_ENDPOINTS.locations}/locations/${locationId}/assets`, options);
 }

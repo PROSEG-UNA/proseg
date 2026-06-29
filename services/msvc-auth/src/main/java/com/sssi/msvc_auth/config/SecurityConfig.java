@@ -59,7 +59,7 @@ public class SecurityConfig {
                         .hasAuthority(Privileges.Role.READ_USERS_BY_ROLE)
 
                         .requestMatchers(HttpMethod.GET, "/api/user")
-                        .hasAuthority(Privileges.User.READ_ALL)
+                        .hasAnyAuthority(Privileges.User.READ_ALL, Privileges.User.READ)
 
                         .requestMatchers(HttpMethod.POST, "/api/user")
                         .hasAuthority(Privileges.User.CREATE)

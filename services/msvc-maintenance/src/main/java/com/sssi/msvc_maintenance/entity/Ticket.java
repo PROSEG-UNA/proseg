@@ -56,7 +56,7 @@ public class Ticket extends BaseEntity {
     @Column(name = "assigned_by")
     private UUID assignedBy;
 
-    @Column(name = "site_id", nullable = false)
+    @Column(name = "site_id")
     private UUID siteId;
 
     @Column(name = "building_id")

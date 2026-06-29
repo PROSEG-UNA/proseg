@@ -38,7 +38,6 @@ public class TicketCreateRequestDto {
 
     private TicketPriority priority;
 
-    @NotNull(message = "La sede es requerida")
     private UUID siteId;
 
     private UUID buildingId;

@@ -1,7 +1,7 @@
 package com.sssi.msvc_maintenance.client;
 
 import com.sssi.common.api.response.ApiResponse;
-import com.sssi.common.api.response.PageResponse;
+import com.sssi.common.api.response.PagedResponse;
 import com.sssi.msvc_maintenance.config.FeignConfig;
 import com.sssi.msvc_maintenance.dto.request.CreateManagedUserRequestDto;
 import com.sssi.msvc_maintenance.dto.response.CreateManagedUserResponseDto;
@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
 
 @FeignClient(
         name = "msvc-auth",
@@ -29,14 +31,16 @@ public interface AuthClient {
             @PathVariable String id
     );
 
+    @PostMapping("/user/keycloak/batch")
+    ApiResponse<List<KeycloakUserResponse>> findUsersByKeycloakIds(@RequestBody List<String> ids);
+
     @PostMapping("/user")
     ApiResponse<CreateManagedUserResponseDto> createManagedUser(@RequestBody CreateManagedUserRequestDto request);
 
-        @GetMapping("/user")
-        ApiResponse<PageResponse<KeycloakUserResponse>> findUsers(
-                        @RequestParam("page") int page,
-                        @RequestParam("size") int size,
-                        @RequestParam(value = "search", required = false) String search
-        );
+    @GetMapping("/user")
+        ApiResponse<PagedResponse<KeycloakUserResponse>> findUsers(
+            @RequestParam("page") int page,
+            @RequestParam("size") int size
+    );
 }
 

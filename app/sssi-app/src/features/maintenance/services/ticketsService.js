@@ -23,6 +23,12 @@ function appendPhotos(form, photos = []) {
         });
 }
 
+function normalizeAssignedToUuid(assignedTo) {
+    if (assignedTo === null || assignedTo === undefined) return null;
+    const normalized = String(assignedTo).trim();
+    return normalized || null;
+}
+
 export async function fetchMaintenanceTickets(options = {}) {
     return fetchPage(TICKETS_BASE, options);
 }
@@ -63,7 +69,12 @@ export async function fetchMaintenanceTicketAssignees() {
 }
 
 export async function updateMaintenanceTicketAssignedTo(ticketId, assignedTo) {
-    const { data } = await axios.patch(`${TICKETS_BASE}/${ticketId}/assigned-to`, { assignedTo }, maintenanceConfig);
+    const normalizedAssignedTo = normalizeAssignedToUuid(assignedTo);
+    const { data } = await axios.patch(
+        `${TICKETS_BASE}/${ticketId}/assigned-to`,
+        { assignedTo: normalizedAssignedTo },
+        maintenanceConfig
+    );
     return data?.data;
 }
 
