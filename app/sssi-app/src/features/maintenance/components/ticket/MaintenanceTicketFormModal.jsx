@@ -1101,7 +1101,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                 onClose={onClose}
                 maxWidth="lg"
                 icon={ConstructionIcon}
-                title={isReadOnly ? 'Detalle de ticket de mantenimiento' : isEditing ? 'Editar ticket de mantenimiento' : 'Nuevo ticket de mantenimiento'}
+                title={isReadOnly ? 'Detalle de ticket de mantenimiento' : isEditing ? 'Editar ticket de mantenimiento' : 'Crear ticket de mantenimiento'}
                 subtitle={isReadOnly ? 'Visualiza los datos del ticket' : isEditing ? 'Actualiza la información del ticket' : 'Registra una incidencia en el ticket'}
                 loading={saving || loadingCatalogs || loadingDetail}
                 secondaryButton={isReadOnly ? undefined : { label: 'Cancelar', onClick: onClose, disabled: saving }}
