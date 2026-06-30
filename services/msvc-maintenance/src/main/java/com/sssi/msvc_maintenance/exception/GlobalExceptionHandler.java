@@ -3,6 +3,7 @@ package com.sssi.msvc_maintenance.exception;
 import com.sssi.common.api.exception.BaseException;
 import com.sssi.common.api.response.ApiErrorResponse;
 import com.sssi.common.api.util.ApiResponseBuilder;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -13,6 +14,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -69,6 +71,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGeneric(Exception ex) {
 
+        log.error("Excepción no controlada", ex);
+
         HttpStatus status;
 
         if (ex instanceof ResponseStatusException rse) {
@@ -102,7 +106,7 @@ public class GlobalExceptionHandler {
         }
 
         return ApiResponseBuilder.error(
-                ex.getMessage(),
+                ex.getMessage() != null ? ex.getMessage() : ex.getClass().getName(),
                 List.of("SPRING_ERROR"),
                 HttpStatus.INTERNAL_SERVER_ERROR
         );
