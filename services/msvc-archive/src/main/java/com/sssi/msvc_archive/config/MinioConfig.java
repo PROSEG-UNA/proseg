@@ -69,7 +69,6 @@ public class MinioConfig {
             client.makeBucket(makeBucket.build());
             log.info("Bucket MinIO creado: {}", bucket);
         } catch (Exception exception) {
-            // No tumbamos el arranque: dejamos el motivo explícito en logs para diagnóstico.
             log.error("No fue posible verificar/crear el bucket MinIO '{}'. "
                     + "Créalo manualmente o concede permisos al usuario configurado; "
                     + "las subidas fallarán con ARCHIVE_UPLOAD_PART_ERROR hasta resolverlo.",

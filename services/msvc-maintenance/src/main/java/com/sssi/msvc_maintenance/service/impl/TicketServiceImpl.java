@@ -1449,28 +1449,10 @@ public class TicketServiceImpl implements TicketService {
     }
 
     private String getPresignedUrl(String objectName) {
-        String url = archiveBaseUrl + "/api/v1/archive/files/presigned";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(resolveBearerToken());
-
-        ResponseEntity<ApiResponse<PresignedUrlResponseDto>> response = restTemplate.exchange(
-                UriComponentsBuilder.fromHttpUrl(url)
-                        .queryParam("objectName",
-                                UriUtils.encodePath(objectName, java.nio.charset.StandardCharsets.UTF_8))
-                        .toUriString(),
-                HttpMethod.GET,
-                new HttpEntity<>(headers),
-                new ParameterizedTypeReference<>() {
-                });
-
-        ApiResponse<PresignedUrlResponseDto> body = response.getBody();
-
-        if (body == null || body.getData() == null) {
+        if (objectName == null || objectName.isBlank()) {
             return null;
         }
-
-        return body.getData().getUrl();
+        return "/api/v1/archive/files/" + objectName;
     }
 
     private OffsetDateTime toOffsetDateTime(LocalDateTime value) {

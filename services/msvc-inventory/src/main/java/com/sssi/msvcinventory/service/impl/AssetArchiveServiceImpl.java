@@ -1,9 +1,7 @@
 package com.sssi.msvcinventory.service.impl;
 
-import com.sssi.common.api.response.ApiResponse;
 import com.sssi.msvcinventory.dto.request.AssetArchiveRequestDto;
 import com.sssi.msvcinventory.dto.response.AssetArchiveResponseDto;
-import com.sssi.msvcinventory.dto.response.PresignedUrlResponseDto;
 import com.sssi.msvcinventory.entity.Asset;
 import com.sssi.msvcinventory.entity.AssetArchive;
 import com.sssi.msvcinventory.exception.AssetArchiveException;
@@ -13,23 +11,11 @@ import com.sssi.msvcinventory.repository.AssetArchiveRepository;
 import com.sssi.msvcinventory.repository.AssetRepository;
 import com.sssi.msvcinventory.service.AssetArchiveService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriUtils;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -41,10 +27,6 @@ public class AssetArchiveServiceImpl implements AssetArchiveService {
     private final AssetArchiveRepository assetArchiveRepository;
     private final AssetRepository assetRepository;
     private final AssetArchiveMapper assetArchiveMapper;
-    private final RestTemplate restTemplate;
-
-    @Value("${archive.base-url:http://localhost:8081}")
-    private String archiveBaseUrl;
 
     @Override
     @Transactional
@@ -106,45 +88,17 @@ public class AssetArchiveServiceImpl implements AssetArchiveService {
     }
 
     public String getPresignedGetUrl(String objectName) {
-        String url = archiveBaseUrl + "/api/v1/archive/files/presigned?objectName="
-                + UriUtils.encodePath(objectName, StandardCharsets.UTF_8);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(resolveBearerToken());
-
-        ResponseEntity<ApiResponse<PresignedUrlResponseDto>> response = restTemplate.exchange(
-                url,
-                HttpMethod.GET,
-                new HttpEntity<>(headers),
-                new ParameterizedTypeReference<>() {
-                }
-        );
-
-        ApiResponse<PresignedUrlResponseDto> body = response.getBody();
-        if (body == null || body.getData() == null || body.getData().getUrl() == null) {
-            throw new RuntimeException("No fue posible obtener la URL firmada");
+        if (objectName == null || objectName.isBlank()) {
+            return null;
         }
-
-        return body.getData().getUrl();
+        return "/api/v1/archive/files/" + objectName;
     }
 
     private AssetArchiveResponseDto toResponse(AssetArchive assetArchive) {
-        String presignedUrl = null;
-        try {
-            presignedUrl = getPresignedGetUrl(assetArchive.getObjectName());
-        } catch (Exception ignored) {}
         return AssetArchiveResponseDto.builder()
                 .id(assetArchive.getId())
                 .caption(assetArchive.getCaption())
-                .imageUrl(presignedUrl)
+                .imageUrl(getPresignedGetUrl(assetArchive.getObjectName()))
                 .build();
-    }
-
-    private String resolveBearerToken() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication instanceof JwtAuthenticationToken jwtAuthenticationToken) {
-            return jwtAuthenticationToken.getToken().getTokenValue();
-        }
-        throw new RuntimeException("No hay token de autenticacion para solicitar URL firmada");
     }
 }

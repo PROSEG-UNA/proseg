@@ -59,7 +59,7 @@ public class NetworkInterfaceServiceImpl implements NetworkInterfaceService {
     public NetworkInterfaceResponseDto findByAssetId(UUID assetId) {
         return networkInterfaceRepository.findByAssetId(assetId)
                 .map(networkInterfaceMapper::toResponse)
-                .orElseThrow(() -> NetworkInterfaceException.notFound(assetId.toString()));
+                .orElse(null);
     }
 
     @Override
