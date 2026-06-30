@@ -37,6 +37,9 @@ public class EmailEventService {
     @Value("${app.urls.reset-password:http://localhost:5173/reset-password}")
     private String resetPasswordBaseUrl;
 
+    @Value("${app.urls.maintenance-action:http://localhost:5173/mantenimiento/solicitudes}")
+    private String maintenanceActionBaseUrl;
+
     public void sendLoginEmail(UserLoginEvent event) {
         ApiResponse<KeycloakUserResponseDto> apiResponse = authClient.getUserById(event.getKeycloakUserId());
         KeycloakUserResponseDto user = apiResponse.getData();
@@ -414,6 +417,13 @@ public class EmailEventService {
             return;
         }
 
+        String acceptUrl = event.getRequestId() != null
+                ? maintenanceActionBaseUrl + "/" + event.getRequestId() + "/aceptar"
+                : null;
+        String cancelUrl = event.getRequestId() != null
+                ? maintenanceActionBaseUrl + "/" + event.getRequestId() + "/cancelar"
+                : null;
+
         MaintenanceRequestCreatedEmailTemplate template = MaintenanceRequestCreatedEmailTemplate.builder()
                 .companyName(event.getCompanyName())
                 .legalId(event.getLegalId())
@@ -428,6 +438,8 @@ public class EmailEventService {
                 .technicianNames(event.getTechnicianNames())
                 .responsibleName(event.getResponsibleName())
                 .timestamp(event.getTimestamp() != null ? event.getTimestamp() : System.currentTimeMillis())
+                .acceptUrl(acceptUrl)
+                .cancelUrl(cancelUrl)
                 .build();
 
         emailService.sendEmail(

@@ -27,7 +27,6 @@ export default function RegisterPage() {
 
     const { rows: cards, loading: loadingCards } = useMaintenanceRegisterData({
         mode: 'assigned',
-        status: 'PENDING',
         pageSize: 50,
         refreshKey: refresh,
     });

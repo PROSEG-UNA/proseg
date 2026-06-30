@@ -1,11 +1,12 @@
 import { useState, useContext } from 'react';
 import { login, register, logout } from '../services/authService';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AuthContext } from '../../../common/context/AuthContext';
-import { getFriendlyApiErrorMessage } from '../../../common/utils';
+import { getFriendlyApiErrorMessage, resolveRedirectTarget } from '../../../common/utils';
 
 export function useAuth() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { logout: logoutAuth, refreshAuth } = useContext(AuthContext);
     const [loading, setLoading] = useState(false);
     const [alert, setAlert] = useState(null);
@@ -20,7 +21,7 @@ export function useAuth() {
         try {
             await login(identifier, password);
             const userData = await refreshAuth();
-            navigate('/home');
+            navigate(resolveRedirectTarget(searchParams.get('redirect')));
         } catch (err) {
             const message = getFriendlyApiErrorMessage(err, 'Error al iniciar sesión');
             setAlert({ type: 'error', message });

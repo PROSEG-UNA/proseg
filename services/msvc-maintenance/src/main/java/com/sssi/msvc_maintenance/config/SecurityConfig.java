@@ -72,6 +72,14 @@ public class SecurityConfig {
                                 "/api/v1/maintenance/requests"
                         ).hasAuthority(Privileges.SolicitudesMantenimiento.SOLICITAR)
 
+                        .requestMatchers(HttpMethod.PATCH,
+                                "/api/v1/maintenance/requests/*/accept"
+                        ).hasAuthority(Privileges.SolicitudesMantenimiento.ACEPTAR)
+
+                        .requestMatchers(HttpMethod.PATCH,
+                                "/api/v1/maintenance/requests/*/cancel"
+                        ).hasAuthority(Privileges.SolicitudesMantenimiento.CANCELAR)
+
                         .requestMatchers(HttpMethod.PUT,
                                 "/api/v1/maintenance/requests/**"
                         ).hasAuthority(Privileges.SolicitudesMantenimiento.EDITAR)

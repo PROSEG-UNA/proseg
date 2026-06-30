@@ -2,8 +2,7 @@ package com.sssi.msvc_maintenance.entity.enums;
 
 public enum MaintenanceStatus {
     PENDING,
-    IN_PROGRESS,
+    ACCEPTED,
     COMPLETED,
-    REOPENED,
     CANCELLED
 }

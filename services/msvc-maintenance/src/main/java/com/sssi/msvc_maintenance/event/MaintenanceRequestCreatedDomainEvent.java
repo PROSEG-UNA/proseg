@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.UUID;
 
 public record MaintenanceRequestCreatedDomainEvent(
+        UUID requestId,
         List<String> emails,
         String companyName,
         String legalId,

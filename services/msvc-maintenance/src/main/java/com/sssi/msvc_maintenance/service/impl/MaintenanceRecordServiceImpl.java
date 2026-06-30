@@ -38,7 +38,8 @@ public class MaintenanceRecordServiceImpl implements MaintenanceRecordService {
 
         MaintenanceRequest maintenanceRequest = register.getMaintenanceRequest();
 
-        if (maintenanceRequest.getStatus() != MaintenanceStatus.PENDING) {
+        if (maintenanceRequest.getStatus() != MaintenanceStatus.PENDING
+                && maintenanceRequest.getStatus() != MaintenanceStatus.ACCEPTED) {
             throw MaintenanceRegisterException.notPending();
         }
 

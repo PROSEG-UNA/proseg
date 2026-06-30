@@ -23,6 +23,10 @@ public interface MaintenanceRequestService {
 
     MaintenanceRequestResponseDto update(UUID id, MaintenanceRequestRequestDto request);
 
+    MaintenanceRequestResponseDto accept(UUID id);
+
+    MaintenanceRequestResponseDto cancel(UUID id, String reason);
+
     void delete(UUID id);
 }
 

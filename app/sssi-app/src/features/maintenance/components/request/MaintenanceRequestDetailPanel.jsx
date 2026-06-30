@@ -95,6 +95,9 @@ export default function MaintenanceRequestDetailPanel({ requestId }) {
                     <InfoRow label="Cédula" value={request.company?.legalId} />
                     <InfoRow label="Estado" value={statusLabel(request.status)} />
                     <InfoRow label="Descripción" value={request.description} />
+                    {request.status === 'CANCELLED' && (
+                        <InfoRow label="Motivo cancelación" value={request.cancellationReason} />
+                    )}
                 </Box>
             </Box>
             <Box>

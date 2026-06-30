@@ -11,7 +11,9 @@ import com.sssi.msvc_maintenance.entity.Company;
 import com.sssi.msvc_maintenance.entity.MaintenanceEmail;
 import com.sssi.msvc_maintenance.entity.MaintenanceRequest;
 import com.sssi.msvc_maintenance.entity.UserCompany;
+import com.sssi.msvc_maintenance.entity.MaintenanceRegister;
 import com.sssi.msvc_maintenance.entity.enums.MaintenanceStatus;
+import com.sssi.msvc_maintenance.entity.enums.MaintenanceStatusTransitions;
 import com.sssi.msvc_maintenance.event.MaintenanceRequestCreatedDomainEvent;
 import com.sssi.msvc_maintenance.exception.CompanyException;
 import com.sssi.msvc_maintenance.exception.MaintenanceRequestException;
@@ -19,6 +21,7 @@ import com.sssi.msvc_maintenance.mapper.MaintenanceAssetOptionMapper;
 import com.sssi.msvc_maintenance.mapper.MaintenanceRequestMapper;
 import com.sssi.msvc_maintenance.repository.CompanyRepository;
 import com.sssi.msvc_maintenance.repository.MaintenanceEmailRepository;
+import com.sssi.msvc_maintenance.repository.MaintenanceRegisterRepository;
 import com.sssi.msvc_maintenance.repository.MaintenanceRequestRepository;
 import com.sssi.msvc_maintenance.repository.UserCompanyRepository;
 import com.sssi.msvc_maintenance.security.Privileges;
@@ -38,15 +41,18 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.UUID;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class MaintenanceRequestServiceImpl implements MaintenanceRequestService {
 
     private final MaintenanceRequestRepository maintenanceRequestRepository;
+    private final MaintenanceRegisterRepository maintenanceRegisterRepository;
     private final CompanyRepository companyRepository;
     private final UserCompanyRepository userCompanyRepository;
     private final MaintenanceEmailRepository maintenanceEmailRepository;
@@ -101,6 +107,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                         .toList();
 
         eventPublisher.publishEvent(new MaintenanceRequestCreatedDomainEvent(
+                saved.getId(),
                 emails,
                 saved.getCompany().getName(),
                 saved.getCompany().getLegalId(),
@@ -167,6 +174,10 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
 
         List<UserCompany> technicians = resolveAssignedTechnicians(request.getAssignedTechnicianIds(), company);
 
+        if (request.getStatus() != null && request.getStatus() != maintenanceRequest.getStatus()) {
+            MaintenanceStatusTransitions.validateOrThrow(maintenanceRequest.getStatus(), request.getStatus());
+        }
+
         maintenanceRequestMapper.updateEntityFromRequest(request, maintenanceRequest);
         maintenanceRequest.setCompany(company);
         maintenanceRequest.setCampusId(parseUuid(request.getCampusId(), "campusId"));
@@ -175,7 +186,57 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         maintenanceRequest.setResponsibleUserCompany(resolveResponsible(request.getResponsibleUserCompanyId(), technicians));
         maintenanceRequest.setEmails(resolveEmails(request.getEmails()));
 
+        if (maintenanceRequest.getStatus() != MaintenanceStatus.CANCELLED) {
+            maintenanceRequest.setCancellationReason(null);
+        }
+
         return maintenanceRequestMapper.toResponse(maintenanceRequestRepository.save(maintenanceRequest));
+    }
+
+    @Override
+    @Transactional
+    public MaintenanceRequestResponseDto accept(UUID id) {
+        MaintenanceRequest maintenanceRequest = maintenanceRequestRepository.findById(id)
+                .orElseThrow(MaintenanceRequestException::notFound);
+
+        if (maintenanceRequest.getStatus() == MaintenanceStatus.CANCELLED) {
+            throw MaintenanceRequestException.cannotAcceptCancelled();
+        }
+
+        MaintenanceStatusTransitions.validateOrThrow(maintenanceRequest.getStatus(), MaintenanceStatus.ACCEPTED);
+
+        maintenanceRequest.setStatus(MaintenanceStatus.ACCEPTED);
+        maintenanceRequest.setCancellationReason(null);
+        syncRegisterStatus(id, MaintenanceStatus.ACCEPTED);
+
+        return maintenanceRequestMapper.toResponse(maintenanceRequestRepository.save(maintenanceRequest));
+    }
+
+    @Override
+    @Transactional
+    public MaintenanceRequestResponseDto cancel(UUID id, String reason) {
+        MaintenanceRequest maintenanceRequest = maintenanceRequestRepository.findById(id)
+                .orElseThrow(MaintenanceRequestException::notFound);
+
+        MaintenanceStatusTransitions.validateOrThrow(maintenanceRequest.getStatus(), MaintenanceStatus.CANCELLED);
+
+        maintenanceRequest.setStatus(MaintenanceStatus.CANCELLED);
+        maintenanceRequest.setCancellationReason(normalizeReason(reason));
+        syncRegisterStatus(id, MaintenanceStatus.CANCELLED);
+
+        return maintenanceRequestMapper.toResponse(maintenanceRequestRepository.save(maintenanceRequest));
+    }
+
+    private void syncRegisterStatus(UUID requestId, MaintenanceStatus status) {
+        maintenanceRegisterRepository.findByMaintenanceRequestId(requestId)
+                .ifPresent(register -> register.setStatus(status));
+    }
+
+    private String normalizeReason(String reason) {
+        if (reason == null || reason.isBlank()) {
+            return null;
+        }
+        return reason.trim();
     }
 
     @Override
@@ -244,9 +305,9 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
 
     private List<UserCompany> resolveAssignedTechnicians(List<UUID> ids, Company company) {
         if (ids == null || ids.isEmpty()) {
-            return List.of();
+            return new ArrayList<>();
         }
-        List<UserCompany> found = userCompanyRepository.findAllById(ids);
+        List<UserCompany> found = new ArrayList<>(userCompanyRepository.findAllById(ids));
         boolean allBelongToCompany = found.stream()
                 .allMatch(uc -> uc.getCompany().getId().equals(company.getId()));
         if (!allBelongToCompany) {
@@ -257,7 +318,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
 
     private List<MaintenanceEmail> resolveEmails(List<String> rawEmails) {
         if (rawEmails == null || rawEmails.isEmpty()) {
-            return List.of();
+            return new ArrayList<>();
         }
         return rawEmails.stream()
                 .filter(email -> email != null && !email.isBlank())
@@ -266,7 +327,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                 .map(email -> maintenanceEmailRepository.findByEmail(email)
                         .orElseGet(() -> maintenanceEmailRepository.save(
                                 MaintenanceEmail.builder().email(email).build())))
-                .toList();
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     private UserCompany resolveResponsible(UUID responsibleId, List<UserCompany> technicians) {

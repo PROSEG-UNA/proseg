@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import TableBase from '../../../../common/components/TablaBase.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
+import CancelWithReasonModal from '../../../../common/components/CancelWithReasonModal.jsx';
 import { useDebounce } from '../../../../common/hooks/useDebounce.js';
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
-import { deleteMaintenanceRequest } from '../../services/request/requestsService';
+import {
+    acceptMaintenanceRequest,
+    cancelMaintenanceRequest,
+    deleteMaintenanceRequest,
+} from '../../services/request/requestsService';
 import { useMaintenanceRequestsData } from '../../hooks/request/useMaintenanceRequestsData';
+import { formatDate } from '../../maintenanceUtils';
 import { getMaintenanceRequestColumns, renderMaintenanceRequestActions } from './requestColumns.jsx';
 import MaintenanceRequestDetailPanel from './MaintenanceRequestDetailPanel.jsx';
 
@@ -24,10 +30,16 @@ export default function MaintenanceRequestTable({ refreshKey = 0, onRefresh, onE
     const [alert, setAlert] = useState(null);
     const [requestToDelete, setRequestToDelete] = useState(null);
     const [deleting, setDeleting] = useState(false);
+    const [requestToAccept, setRequestToAccept] = useState(null);
+    const [accepting, setAccepting] = useState(false);
+    const [requestToCancel, setRequestToCancel] = useState(null);
+    const [cancelling, setCancelling] = useState(false);
     const { hasPermission } = usePermissions();
 
     const canEdit = hasPermission(PERMISSIONS.MAINTENANCE.REQUESTS.UPDATE);
     const canDelete = hasPermission(PERMISSIONS.MAINTENANCE.REQUESTS.DELETE);
+    const canAccept = hasPermission(PERMISSIONS.MAINTENANCE.REQUESTS.ACCEPT);
+    const canCancel = hasPermission(PERMISSIONS.MAINTENANCE.REQUESTS.CANCEL);
 
     const debouncedGlobalFilter = useDebounce(globalFilter, 350);
     const debouncedColumnFilters = useDebounce(columnFilters, 350);
@@ -90,6 +102,48 @@ export default function MaintenanceRequestTable({ refreshKey = 0, onRefresh, onE
         }
     }, [requestToDelete, onRefresh]);
 
+    const handleAccept = useCallback((row) => setRequestToAccept(row), []);
+    const handleAcceptClose = useCallback(() => {
+        if (accepting) return;
+        setRequestToAccept(null);
+    }, [accepting]);
+
+    const handleAcceptConfirm = useCallback(async () => {
+        if (!requestToAccept) return;
+        setAccepting(true);
+        try {
+            await acceptMaintenanceRequest(requestToAccept.id);
+            setRequestToAccept(null);
+            setAlert({ type: 'success', message: 'Solicitud aceptada correctamente' });
+            onRefresh?.();
+        } catch (error) {
+            setAlert({ type: 'error', message: error?.response?.data?.message ?? error?.message ?? 'No se pudo aceptar la solicitud' });
+        } finally {
+            setAccepting(false);
+        }
+    }, [requestToAccept, onRefresh]);
+
+    const handleCancel = useCallback((row) => setRequestToCancel(row), []);
+    const handleCancelClose = useCallback(() => {
+        if (cancelling) return;
+        setRequestToCancel(null);
+    }, [cancelling]);
+
+    const handleCancelConfirm = useCallback(async (reason) => {
+        if (!requestToCancel) return;
+        setCancelling(true);
+        try {
+            await cancelMaintenanceRequest(requestToCancel.id, reason);
+            setRequestToCancel(null);
+            setAlert({ type: 'success', message: 'Solicitud cancelada correctamente' });
+            onRefresh?.();
+        } catch (error) {
+            setAlert({ type: 'error', message: error?.response?.data?.message ?? error?.message ?? 'No se pudo cancelar la solicitud' });
+        } finally {
+            setCancelling(false);
+        }
+    }, [requestToCancel, onRefresh]);
+
     return (
         <>
             <TableBase
@@ -97,12 +151,16 @@ export default function MaintenanceRequestTable({ refreshKey = 0, onRefresh, onE
                 data={rows}
                 loading={loading}
                 error={error}
-                enableRowActions={canEdit || canDelete}
+                enableRowActions={canEdit || canDelete || canAccept || canCancel}
                 renderRowActions={renderMaintenanceRequestActions({
                     onEdit: onEditRequest,
                     onDelete: handleDelete,
+                    onAccept: handleAccept,
+                    onCancel: handleCancel,
                     canEdit,
                     canDelete,
+                    canAccept,
+                    canCancel,
                 })}
                 renderDetailPanel={({ row }) => (
                     <MaintenanceRequestDetailPanel
@@ -138,6 +196,32 @@ export default function MaintenanceRequestTable({ refreshKey = 0, onRefresh, onE
                 onClose={handleDeleteCancel}
                 onConfirm={handleDeleteConfirm}
                 confirmLabel="Eliminar"
+            />
+
+            <DialogModal
+                type="success"
+                open={!!requestToAccept}
+                title="Aceptar solicitud"
+                message={`¿Deseas marcar como aceptada la solicitud de ${requestToAccept?.companyName ?? 'la empresa'}?`}
+                onClose={handleAcceptClose}
+                onConfirm={handleAcceptConfirm}
+                confirmLabel="Aceptar"
+            />
+
+            <CancelWithReasonModal
+                open={!!requestToCancel}
+                onClose={handleCancelClose}
+                onConfirm={handleCancelConfirm}
+                loading={cancelling}
+                title="Cancelar solicitud"
+                subtitle={requestToCancel?.companyName}
+                details={[
+                    { label: 'Empresa', value: requestToCancel?.companyName },
+                    { label: 'Estado actual', value: requestToCancel?.status },
+                    { label: 'Inicio', value: formatDate(requestToCancel?.startDate) },
+                    { label: 'Fin', value: formatDate(requestToCancel?.endDate) },
+                ]}
+                confirmLabel="Cancelar solicitud"
             />
 
             <DialogModal
