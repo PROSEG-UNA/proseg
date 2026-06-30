@@ -50,7 +50,7 @@ public class MaintenanceRegister extends BaseEntity {
     private LocalTime endTime;
 
     @Filterable(type = FilterType.ENUM)
-    @Enumerated(EnumType.ORDINAL)
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
     private MaintenanceStatus status = MaintenanceStatus.PENDING;

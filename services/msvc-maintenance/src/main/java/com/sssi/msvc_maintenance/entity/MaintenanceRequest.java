@@ -44,6 +44,10 @@ public class MaintenanceRequest extends BaseEntity {
     @Pattern(regexp = ValidationUtils.SAFE_TEXT_REGEX, message = "La descripción contiene caracteres inválidos")
     private String description;
 
+    @Column(name = "cancellation_reason", columnDefinition = "TEXT")
+    @Pattern(regexp = ValidationUtils.SAFE_TEXT_REGEX, message = "El motivo de cancelación contiene caracteres inválidos")
+    private String cancellationReason;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "maintenance_request_email",
@@ -53,7 +57,7 @@ public class MaintenanceRequest extends BaseEntity {
     private List<MaintenanceEmail> emails;
 
     @Filterable(type = FilterType.ENUM)
-    @Enumerated(EnumType.ORDINAL)
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
     private MaintenanceStatus status = MaintenanceStatus.PENDING;

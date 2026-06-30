@@ -12,6 +12,7 @@ import com.sssi.msvc_maintenance.entity.MaintenanceRegister;
 import com.sssi.msvc_maintenance.entity.MaintenanceRequest;
 import com.sssi.msvc_maintenance.entity.UserCompany;
 import com.sssi.msvc_maintenance.entity.enums.MaintenanceStatus;
+import com.sssi.msvc_maintenance.entity.enums.MaintenanceStatusTransitions;
 import com.sssi.msvc_maintenance.exception.MaintenanceRegisterException;
 import com.sssi.msvc_maintenance.exception.MaintenanceRequestException;
 import com.sssi.msvc_maintenance.mapper.MaintenanceAssetOptionMapper;
@@ -48,7 +49,8 @@ public class MaintenanceRegisterServiceImpl implements MaintenanceRegisterServic
     public Page<MaintenanceRequestResponseDto> findAssigned(String keycloakUserId, MaintenanceStatus status, Pageable pageable) {
         Page<MaintenanceRequest> requests = status != null
                 ? maintenanceRequestRepository.findByAssignedTechnicians_KeycloakUserIdAndStatus(keycloakUserId, status, pageable)
-                : maintenanceRequestRepository.findByAssignedTechnicians_KeycloakUserId(keycloakUserId, pageable);
+                : maintenanceRequestRepository.findByAssignedTechnicians_KeycloakUserIdAndStatusIn(
+                        keycloakUserId, List.of(MaintenanceStatus.PENDING, MaintenanceStatus.ACCEPTED), pageable);
         return requests.map(maintenanceRequestMapper::toResponse);
     }
 
@@ -100,6 +102,7 @@ public class MaintenanceRegisterServiceImpl implements MaintenanceRegisterServic
     @Transactional
     public MaintenanceRegisterResponseDto finalizeRegister(UUID id) {
         MaintenanceRegister register = findRegister(id);
+        MaintenanceStatusTransitions.validateOrThrow(register.getMaintenanceRequest().getStatus(), MaintenanceStatus.COMPLETED);
         register.setStatus(MaintenanceStatus.COMPLETED);
         register.getMaintenanceRequest().setStatus(MaintenanceStatus.COMPLETED);
         return maintenanceRegisterMapper.toResponse(maintenanceRegisterRepository.save(register));

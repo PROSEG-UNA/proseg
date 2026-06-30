@@ -1,9 +1,28 @@
 export const MAINTENANCE_STATUS_OPTIONS = [
     { value: 'PENDING', label: 'Pendiente' },
-    { value: 'IN_PROGRESS', label: 'En Progreso' },
+    { value: 'ACCEPTED', label: 'Aceptada' },
     { value: 'COMPLETED', label: 'Completada' },
     { value: 'CANCELLED', label: 'Cancelada' },
 ];
+
+export const MAINTENANCE_STATUS_TRANSITIONS = {
+    PENDING: ['ACCEPTED', 'COMPLETED', 'CANCELLED'],
+    ACCEPTED: ['COMPLETED', 'CANCELLED'],
+    COMPLETED: [],
+    CANCELLED: [],
+};
+
+export function canTransitionMaintenanceStatus(from, to) {
+    if (!from || !to) return false;
+    if (from === to) return true;
+    return (MAINTENANCE_STATUS_TRANSITIONS[from] ?? []).includes(to);
+}
+
+export function maintenanceStatusOptionsFor(currentStatus) {
+    return MAINTENANCE_STATUS_OPTIONS.filter(
+        (option) => canTransitionMaintenanceStatus(currentStatus, option.value)
+    );
+}
 
 export const MAINTENANCE_TICKET_STATUS_OPTIONS = [
     { value: 'OPEN', label: 'Abierto' },
