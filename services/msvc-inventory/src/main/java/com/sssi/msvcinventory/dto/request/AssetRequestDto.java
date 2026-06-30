@@ -50,7 +50,6 @@ public class AssetRequestDto {
     @Size(max = 100, message = "El número de activo no puede superar los 100 caracteres")
     private String assetNumber;
 
-    @NotBlank(message = "El número de serie es obligatorio")
     @Size(max = 100, message = "El número de serie no puede superar los 100 caracteres")
     private String serialNumber;
 
