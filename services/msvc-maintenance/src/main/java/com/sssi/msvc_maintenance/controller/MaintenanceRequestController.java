@@ -6,6 +6,7 @@ import com.sssi.common.api.util.ApiResponseBuilder;
 import com.sssi.common.api.util.PageMapper;
 import com.sssi.common.specification.FilterConstants;
 import com.sssi.msvc_maintenance.dto.response.MaintenanceAssetOptionDto;
+import com.sssi.msvc_maintenance.dto.request.MaintenanceRequestCancelRequestDto;
 import com.sssi.msvc_maintenance.dto.request.MaintenanceRequestRequestDto;
 import com.sssi.msvc_maintenance.dto.response.MaintenanceRequestResponseDto;
 import com.sssi.msvc_maintenance.service.MaintenanceRequestService;
@@ -16,6 +17,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -98,6 +100,26 @@ public class MaintenanceRequestController {
         return ApiResponseBuilder.ok(
                 maintenanceRequestService.update(id, request),
                 "Solicitud de mantenimiento actualizada correctamente"
+        );
+    }
+
+    @PatchMapping("/{id}/accept")
+    public ResponseEntity<ApiResponse<MaintenanceRequestResponseDto>> accept(@PathVariable UUID id) {
+        return ApiResponseBuilder.ok(
+                maintenanceRequestService.accept(id),
+                "Solicitud de mantenimiento aceptada correctamente"
+        );
+    }
+
+    @PatchMapping("/{id}/cancel")
+    public ResponseEntity<ApiResponse<MaintenanceRequestResponseDto>> cancel(
+            @PathVariable UUID id,
+            @Valid @RequestBody(required = false) MaintenanceRequestCancelRequestDto request) {
+
+        String reason = request != null ? request.getReason() : null;
+        return ApiResponseBuilder.ok(
+                maintenanceRequestService.cancel(id, reason),
+                "Solicitud de mantenimiento cancelada correctamente"
         );
     }
 

@@ -1,12 +1,29 @@
 package com.sssi.msvc_maintenance.exception;
 
 import com.sssi.common.api.exception.BaseException;
+import com.sssi.msvc_maintenance.entity.enums.MaintenanceStatus;
 import org.springframework.http.HttpStatus;
 
 public class MaintenanceRequestException extends BaseException {
 
     public MaintenanceRequestException(HttpStatus status, String errorCode, String message) {
         super(status, errorCode, message);
+    }
+
+    public static MaintenanceRequestException invalidStatusTransition(MaintenanceStatus from, MaintenanceStatus to) {
+        return new MaintenanceRequestException(
+                HttpStatus.CONFLICT,
+                "MAINTENANCE_REQUEST_INVALID_STATUS_TRANSITION",
+                "No es posible cambiar el estado de la solicitud de " + from + " a " + to + "."
+        );
+    }
+
+    public static MaintenanceRequestException cannotAcceptCancelled() {
+        return new MaintenanceRequestException(
+                HttpStatus.CONFLICT,
+                "MAINTENANCE_REQUEST_ALREADY_CANCELLED",
+                "No es posible aceptar la solicitud porque ya fue cancelada."
+        );
     }
 
     public static MaintenanceRequestException notFound() {

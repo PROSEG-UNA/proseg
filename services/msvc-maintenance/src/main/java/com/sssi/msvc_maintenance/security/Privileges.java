@@ -16,6 +16,8 @@ public final class Privileges {
         public static final String EDITAR              = "EDITAR_SOLICITUDES_MANTENIMIENTO";
         public static final String SELECCIONAR_EMPRESA = "SELECCIONAR_EMPRESA_EN_SOLICITUD_MANTENIMIENTO";
         public static final String ELIMINAR            = "ELIMINAR_SOLICITUDES_MANTENIMIENTO";
+        public static final String ACEPTAR            = "ACEPTAR_SOLICITUDES_MANTENIMIENTO";
+        public static final String CANCELAR           = "CANCELAR_SOLICITUDES_MANTENIMIENTO";
     }
 
     public static final class TecnicosMantenimiento {
