@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -15,6 +16,7 @@ import java.util.List;
 @AllArgsConstructor
 public class MaintenanceRequestCreatedEvent {
 
+    private UUID requestId;
     private List<String> emails;
     private List<String> extraEmails;
     private String companyName;

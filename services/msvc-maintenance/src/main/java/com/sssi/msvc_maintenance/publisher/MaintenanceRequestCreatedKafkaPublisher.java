@@ -37,6 +37,7 @@ public class MaintenanceRequestCreatedKafkaPublisher {
             kafkaTemplate.send(
                     KafkaTopics.MAINTENANCE_REQUEST_CREATED_TOPIC,
                     MaintenanceRequestCreatedEvent.builder()
+                            .requestId(event.requestId())
                             .emails(cleanEmails(event.emails()))
                             .extraEmails(cleanEmails(notificationProperties.getExtraEmails()))
                             .companyName(event.companyName())
@@ -76,9 +77,8 @@ public class MaintenanceRequestCreatedKafkaPublisher {
         }
         return switch (status) {
             case PENDING -> "Pendiente";
-            case IN_PROGRESS -> "En Progreso";
+            case ACCEPTED -> "Aceptada";
             case COMPLETED -> "Completado";
-            case REOPENED -> "Reabierto";
             case CANCELLED -> "Cancelado";
         };
     }

@@ -184,6 +184,24 @@
                             </tr>
                         </table>
 
+                        <!-- ACCIONES -->
+                        <p th:if="${acceptUrl != null}" style="margin:0 0 24px 0;text-align:center;">
+                            <a th:href="${acceptUrl}"
+                               style="display:inline-block;background:#15803d;color:#ffffff;
+                                      text-decoration:none;padding:12px 28px;border-radius:8px;
+                                      font-size:15px;font-weight:600;letter-spacing:0.3px;
+                                      margin:0 6px 8px 6px;">
+                                Aceptar solicitud
+                            </a>
+                            <a th:href="${cancelUrl}"
+                               style="display:inline-block;background:#b91c1c;color:#ffffff;
+                                      text-decoration:none;padding:12px 28px;border-radius:8px;
+                                      font-size:15px;font-weight:600;letter-spacing:0.3px;
+                                      margin:0 6px 8px 6px;">
+                                Cancelar solicitud
+                            </a>
+                        </p>
+
                         <!-- TIMESTAMP -->
                         <p style="margin:0;font-size:12px;color:#6b7280;">
                             Solicitud registrada el:

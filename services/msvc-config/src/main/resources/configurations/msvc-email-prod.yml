@@ -54,3 +54,4 @@ app:
     approvals: ${APP_URLS_APPROVALS:https://app.example.com/login}
     set-password: ${APP_URLS_SET_PASSWORD:https://app.example.com/set-password}
     reset-password: ${APP_URLS_RESET_PASSWORD:https://app.example.com/reset-password}
+    maintenance-action: ${APP_URLS_MAINTENANCE_ACTION:https://app.example.com/mantenimiento/solicitudes}
