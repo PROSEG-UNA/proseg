@@ -4,6 +4,7 @@ import StorageIcon from '@mui/icons-material/Storage';
 import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import { FeatureCard } from '../../../common/components/FeatureCard.jsx';
+import {APP_CONFIG} from "../../../config/appConfig.js";
 
 export function HomePage() {
     const navigate = useNavigate();
@@ -23,13 +24,14 @@ export function HomePage() {
                             mb: 2,
                         }}
                     >
-                        Bienvenido al{' '}
+                        ¡Bienvenido a{' '}
                         <Box
                             component="span"
                             sx={(t) => ({ color: t.vars.palette.tones.rose.fg })}
                         >
-                            SPSG
+                            {APP_CONFIG.name}
                         </Box>
+                        !
                     </Typography>
                     <Typography
                         sx={{
@@ -40,7 +42,7 @@ export function HomePage() {
                         }}
                     >
                         Plataforma institucional para digitalizar la gestión de activos y seguridad
-                        de la UNA, centralizando usuarios, roles y trazabilidad de movimientos para
+                        de la Universidad Nacional, centralizando usuarios, roles y trazabilidad de movimientos para
                         mejorar el control operativo y la toma de decisiones.
                     </Typography>
                 </Box>
