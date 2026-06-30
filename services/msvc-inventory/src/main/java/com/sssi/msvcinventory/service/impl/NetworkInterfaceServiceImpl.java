@@ -33,10 +33,10 @@ public class NetworkInterfaceServiceImpl implements NetworkInterfaceService {
         if (networkInterfaceRepository.existsByAssetId(request.getAssetId())) {
             throw NetworkInterfaceException.assetAlreadyHasInterface(asset.getAssetNumber());
         }
-        if (networkInterfaceRepository.existsByIpAddress(request.getIpAddress())) {
+        if (request.getIpAddress() != null && networkInterfaceRepository.existsByIpAddress(request.getIpAddress())) {
             throw NetworkInterfaceException.duplicateIp(request.getIpAddress());
         }
-        if (networkInterfaceRepository.existsByMacAddress(request.getMacAddress())) {
+        if (request.getMacAddress() != null && networkInterfaceRepository.existsByMacAddress(request.getMacAddress())) {
             throw NetworkInterfaceException.duplicateMac(request.getMacAddress());
         }
 
@@ -68,10 +68,10 @@ public class NetworkInterfaceServiceImpl implements NetworkInterfaceService {
         NetworkInterface networkInterface = networkInterfaceRepository.findById(id)
                 .orElseThrow(() -> NetworkInterfaceException.notFound(id.toString()));
 
-        if (networkInterfaceRepository.existsByIpAddressAndIdNot(request.getIpAddress(), id)) {
+        if (request.getIpAddress() != null && networkInterfaceRepository.existsByIpAddressAndIdNot(request.getIpAddress(), id)) {
             throw NetworkInterfaceException.duplicateIp(request.getIpAddress());
         }
-        if (networkInterfaceRepository.existsByMacAddressAndIdNot(request.getMacAddress(), id)) {
+        if (request.getMacAddress() != null && networkInterfaceRepository.existsByMacAddressAndIdNot(request.getMacAddress(), id)) {
             throw NetworkInterfaceException.duplicateMac(request.getMacAddress());
         }
 
@@ -85,12 +85,6 @@ public class NetworkInterfaceServiceImpl implements NetworkInterfaceService {
     public void delete(UUID id) {
         NetworkInterface networkInterface = networkInterfaceRepository.findById(id)
                 .orElseThrow(() -> NetworkInterfaceException.notFound(id.toString()));
-
-        if (networkInterface.getAsset().getModel().getType().isRequiresNetworkInterface()) {
-            throw NetworkInterfaceException.requiredByAssetType(
-                    networkInterface.getAsset().getModel().getType().getName()
-            );
-        }
 
         networkInterfaceRepository.delete(networkInterface);
     }

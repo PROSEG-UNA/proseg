@@ -47,6 +47,11 @@ public class AssetServiceImpl implements AssetService {
     @Override
     @Transactional
     public AssetResponseDto create(AssetRequestDto request) {
+        if (assetRepository.existsByAssetNumber(request.getAssetNumber())) {
+            throw AssetException.duplicateAssetNumber(request.getAssetNumber());
+        }
+
+        request.setSerialNumber(trimToNull(request.getSerialNumber()));
         if (request.getSerialNumber() != null && !request.getSerialNumber().isBlank()
                 && assetRepository.existsBySerialNumber(request.getSerialNumber())) {
             throw AssetException.duplicateSerialNumber(request.getSerialNumber());
@@ -65,7 +70,7 @@ public class AssetServiceImpl implements AssetService {
         asset.setLocation(location);
         Asset saved = assetRepository.save(asset);
 
-        if (request.getNetworkInterface() != null) {
+        if (hasNetworkData(request.getNetworkInterface())) {
             saveNetworkInterface(request.getNetworkInterface(), saved);
         }
 
@@ -158,6 +163,11 @@ public class AssetServiceImpl implements AssetService {
         Asset asset = assetRepository.findById(id)
                 .orElseThrow(() -> AssetException.notFound(id.toString()));
 
+        if (assetRepository.existsByAssetNumberAndIdNot(request.getAssetNumber(), id)) {
+            throw AssetException.duplicateAssetNumber(request.getAssetNumber());
+        }
+
+        request.setSerialNumber(trimToNull(request.getSerialNumber()));
         if (request.getSerialNumber() != null && !request.getSerialNumber().isBlank()
                 && assetRepository.existsBySerialNumberAndIdNot(request.getSerialNumber(), id)) {
             throw AssetException.duplicateSerialNumber(request.getSerialNumber());
@@ -179,7 +189,7 @@ public class AssetServiceImpl implements AssetService {
         asset.setLocation(location);
         assetRepository.save(asset);
 
-        if (!type.isRequiresNetworkInterface()) {
+        if (!type.isRequiresNetworkInterface() || !hasNetworkData(request.getNetworkInterface())) {
             if (hasExistingNi) {
                 NetworkInterface ni = asset.getNetworkInterface();
                 asset.setNetworkInterface(null);
@@ -188,7 +198,7 @@ public class AssetServiceImpl implements AssetService {
                     networkInterfaceRepository.delete(ni);
                 }
             }
-        } else if (request.getNetworkInterface() != null) {
+        } else {
             Optional<NetworkInterface> active = networkInterfaceRepository.findByAssetId(id);
             if (active.isPresent()) {
                 updateNetworkInterface(request.getNetworkInterface(), active.get());
@@ -201,6 +211,12 @@ public class AssetServiceImpl implements AssetService {
         }
 
         return toPolymorphicResponse(assetRepository.findById(id).orElseThrow());
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     @Override
@@ -223,40 +239,60 @@ public class AssetServiceImpl implements AssetService {
     }
 
     private void saveNetworkInterface(NetworkInterfaceEmbeddedRequestDto dto, Asset asset) {
-        if (networkInterfaceRepository.existsByIpAddress(dto.getIpAddress())) {
-            throw NetworkInterfaceException.duplicateIp(dto.getIpAddress());
+        String ip = normalizeBlankToNull(dto.getIpAddress());
+        String mac = normalizeBlankToNull(dto.getMacAddress());
+        if (ip != null && networkInterfaceRepository.existsByIpAddress(ip)) {
+            throw NetworkInterfaceException.duplicateIp(ip);
         }
-        if (networkInterfaceRepository.existsByMacAddress(dto.getMacAddress())) {
-            throw NetworkInterfaceException.duplicateMac(dto.getMacAddress());
+        if (mac != null && networkInterfaceRepository.existsByMacAddress(mac)) {
+            throw NetworkInterfaceException.duplicateMac(mac);
         }
         NetworkInterface ni = networkInterfaceMapper.fromEmbedded(dto);
+        ni.setIpAddress(ip);
+        ni.setMacAddress(mac);
         ni.setAsset(asset);
         networkInterfaceRepository.save(ni);
     }
 
     private void updateNetworkInterface(NetworkInterfaceEmbeddedRequestDto dto, NetworkInterface existing) {
-        if (networkInterfaceRepository.existsByIpAddressAndIdNot(dto.getIpAddress(), existing.getId())) {
-            throw NetworkInterfaceException.duplicateIp(dto.getIpAddress());
+        String ip = normalizeBlankToNull(dto.getIpAddress());
+        String mac = normalizeBlankToNull(dto.getMacAddress());
+        if (ip != null && networkInterfaceRepository.existsByIpAddressAndIdNot(ip, existing.getId())) {
+            throw NetworkInterfaceException.duplicateIp(ip);
         }
-        if (networkInterfaceRepository.existsByMacAddressAndIdNot(dto.getMacAddress(), existing.getId())) {
-            throw NetworkInterfaceException.duplicateMac(dto.getMacAddress());
+        if (mac != null && networkInterfaceRepository.existsByMacAddressAndIdNot(mac, existing.getId())) {
+            throw NetworkInterfaceException.duplicateMac(mac);
         }
-        existing.setIpAddress(dto.getIpAddress());
-        existing.setMacAddress(dto.getMacAddress());
+        existing.setIpAddress(ip);
+        existing.setMacAddress(mac);
         networkInterfaceRepository.save(existing);
     }
 
     private void resurrectNetworkInterface(NetworkInterfaceEmbeddedRequestDto dto, NetworkInterface existing) {
-        if (networkInterfaceRepository.existsByIpAddressAndIdNot(dto.getIpAddress(), existing.getId())) {
-            throw NetworkInterfaceException.duplicateIp(dto.getIpAddress());
+        String ip = normalizeBlankToNull(dto.getIpAddress());
+        String mac = normalizeBlankToNull(dto.getMacAddress());
+        if (ip != null && networkInterfaceRepository.existsByIpAddressAndIdNot(ip, existing.getId())) {
+            throw NetworkInterfaceException.duplicateIp(ip);
         }
-        if (networkInterfaceRepository.existsByMacAddressAndIdNot(dto.getMacAddress(), existing.getId())) {
-            throw NetworkInterfaceException.duplicateMac(dto.getMacAddress());
+        if (mac != null && networkInterfaceRepository.existsByMacAddressAndIdNot(mac, existing.getId())) {
+            throw NetworkInterfaceException.duplicateMac(mac);
         }
-        existing.setIpAddress(dto.getIpAddress());
-        existing.setMacAddress(dto.getMacAddress());
+        existing.setIpAddress(ip);
+        existing.setMacAddress(mac);
         existing.markAsActive();
         networkInterfaceRepository.save(existing);
+    }
+
+    private boolean hasNetworkData(NetworkInterfaceEmbeddedRequestDto dto) {
+        return dto != null
+                && (normalizeBlankToNull(dto.getIpAddress()) != null
+                || normalizeBlankToNull(dto.getMacAddress()) != null);
+    }
+
+    private String normalizeBlankToNull(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     @Override
