@@ -110,17 +110,13 @@ public interface InventoryClient {
     ApiResponse<InventoryAssetLocationResponseDto> findLocationById(@PathVariable UUID id);
 
     @GetMapping("/v1/inventory/buildings/{id}/emails")
-    ApiResponse<PageResponse<InventoryBuildingEmailResponseDto>> findBuildingEmails(
-            @PathVariable UUID id,
-            @RequestParam int page,
-            @RequestParam int size
+    ApiResponse<List<InventoryBuildingEmailResponseDto>> findBuildingEmails(
+            @PathVariable UUID id
     );
 
     @GetMapping("/v1/inventory/campuses/{id}/emails")
-    ApiResponse<PageResponse<InventoryBuildingEmailResponseDto>> findCampusEmails(
-            @PathVariable UUID id,
-            @RequestParam int page,
-            @RequestParam int size
+    ApiResponse<List<InventoryBuildingEmailResponseDto>> findCampusEmails(
+            @PathVariable UUID id
     );
 
     @GetMapping("/v1/inventory/assets/{id}")

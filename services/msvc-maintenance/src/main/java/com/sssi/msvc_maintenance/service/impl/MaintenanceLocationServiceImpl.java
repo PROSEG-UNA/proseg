@@ -133,20 +133,12 @@ public class MaintenanceLocationServiceImpl implements MaintenanceLocationServic
 
     @Override
     public List<String> findBuildingEmails(UUID buildingId, Pageable pageable) {
-        return extractEmails(inventoryClient.findBuildingEmails(
-                buildingId,
-                pageable.getPageNumber(),
-                pageable.getPageSize()
-        ));
+        return extractEmails(inventoryClient.findBuildingEmails(buildingId));
     }
 
     @Override
     public List<String> findCampusEmails(UUID campusId, Pageable pageable) {
-        return extractEmails(inventoryClient.findCampusEmails(
-                campusId,
-                pageable.getPageNumber(),
-                pageable.getPageSize()
-        ));
+        return extractEmails(inventoryClient.findCampusEmails(campusId));
     }
 
     private <T> Page<T> toPage(ApiResponse<PageResponse<T>> response, Pageable pageable) {
@@ -159,13 +151,13 @@ public class MaintenanceLocationServiceImpl implements MaintenanceLocationServic
         return new PageImpl<>(content, pageable, data.getTotalElements());
     }
 
-    private List<String> extractEmails(ApiResponse<PageResponse<InventoryBuildingEmailResponseDto>> response) {
-        PageResponse<InventoryBuildingEmailResponseDto> data = response != null ? response.getData() : null;
-        if (data == null || data.getContent() == null) {
+    private List<String> extractEmails(ApiResponse<List<InventoryBuildingEmailResponseDto>> response) {
+        List<InventoryBuildingEmailResponseDto> data = response != null ? response.getData() : null;
+        if (data == null) {
             return List.of();
         }
 
-        return data.getContent().stream()
+        return data.stream()
                 .map(InventoryBuildingEmailResponseDto::getEmail)
                 .filter(email -> email != null && !email.isBlank())
                 .distinct()
