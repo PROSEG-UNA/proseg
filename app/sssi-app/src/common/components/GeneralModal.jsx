@@ -20,6 +20,7 @@ export default function GeneralModal({
     primaryButton,
     secondaryButton,
     contentSx,
+    paperSx,
     children,
 }) {
     const theme = useTheme();
@@ -51,6 +52,7 @@ export default function GeneralModal({
                         flexDirection: 'column',
                         boxShadow: theme.vars.palette.tones.rose.shadowModal,
                         bgcolor: 'background.paperWarm',
+                        ...paperSx,
                     },
                 },
             }}

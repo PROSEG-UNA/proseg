@@ -4,6 +4,7 @@ import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { useAssetsData } from '../../hooks/useAssetsData';
 import { getAssetsColumns, renderAssetActions } from './assetColumns.jsx';
 import AssetDetailPanel from './AssetDetailPanel.jsx';
+import AssetDetailModal from './AssetDetailModal.jsx';
 import AssetFormModal from './AssetFormModal.jsx';
 import AssetMaintenanceHistoryModal from './AssetMaintenanceHistoryModal.jsx';
 import { deleteAsset } from '../../services/assetsService.js';
@@ -58,6 +59,7 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
     const [sorting, setSorting] = useState([]);
     const [alert, setAlert] = useState(null);
     const [editAssetId, setEditAssetId] = useState(null);
+    const [viewAssetId, setViewAssetId] = useState(null);
     const [assetToDelete, setAssetToDelete] = useState(null);
     const [historyTarget, setHistoryTarget] = useState(null);
     const [deleting, setDeleting] = useState(false);
@@ -65,7 +67,7 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
     const canManageAssets = hasPermission(PERMISSIONS.INVENTORY.MANAGE);
     const canDeleteAssets = hasPermission(PERMISSIONS.INVENTORY.DELETE);
     const canViewMaintenanceHistory = hasPermission(PERMISSIONS.MAINTENANCE.REGISTERS.HISTORY);
-    const canUseActions = canManageAssets || canDeleteAssets || canViewMaintenanceHistory;
+    const canUseActions = true;
 
     const debouncedGlobalFilter = useDebounce(globalFilter, 350);
     const debouncedColumnFilters = useDebounce(columnFilters, 350);
@@ -134,6 +136,10 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
         setEditAssetId(row.id);
     }, []);
 
+    const handleView = useCallback((row) => {
+        setViewAssetId(row.id);
+    }, []);
+
     const handleDelete = useCallback((row) => {
         setAssetToDelete(row);
     }, []);
@@ -184,6 +190,7 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
                 error={error}
                 enableRowActions={canUseActions}
                 renderRowActions={canUseActions ? renderAssetActions({
+                    onView: handleView,
                     onEdit: handleEdit,
                     onDelete: handleDelete,
                     onHistory: handleHistory,
@@ -217,7 +224,12 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
                     },
                 }}
                 enableGlobalFilter
-                renderDetailPanel={({ row }) => <AssetDetailPanel assetId={row.original.id} />}
+                renderDetailPanel={({ row }) => (
+                    <AssetDetailPanel
+                        assetId={row.original.id}
+                        canManageAssets={canManageAssets}
+                    />
+                )}
             />
 
             <AssetFormModal
@@ -225,6 +237,12 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
                 assetId={editAssetId}
                 onClose={handleEditClose}
                 onSaved={handleEditSaved}
+            />
+
+            <AssetDetailModal
+                open={!!viewAssetId}
+                assetId={viewAssetId}
+                onClose={() => setViewAssetId(null)}
             />
 
             <AssetMaintenanceHistoryModal

@@ -12,6 +12,7 @@ import org.hibernate.annotations.Where;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @NamedEntityGraph(
@@ -101,6 +102,9 @@ public class Asset extends BaseEntity {
 
     @OneToOne(mappedBy = "asset", cascade = CascadeType.ALL)
     private NetworkInterface networkInterface;
+
+    @OneToMany(mappedBy = "asset", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<AssetComponent> components;
 
     @Filterable(type = FilterType.TEXT)
     @Column(name = "asset_number")

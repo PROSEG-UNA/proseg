@@ -8,6 +8,7 @@ import dayjs from 'dayjs';
 import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import DeleteIcon from '@mui/icons-material/Delete';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import CoordinateMapPicker from './CoordinateMapPicker.jsx';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
@@ -19,6 +20,12 @@ import { LOCATION_CONFIG as LOCATION_CATALOG_CONFIG } from '../../../locations/c
 import { fetchCatalogOptions, createCatalogItem } from '../../services/catalogService.js';
 import { createAsset, updateAsset, fetchAssetById, fetchLastKnownNetworkInterface, checkAssetNumber } from '../../services/assetsService.js';
 import { uploadPhoto, registerArchive, fetchAssetArchives, deleteArchive } from '../../services/assetArchiveService.js';
+import {
+    fetchAssetComponents,
+    createAssetComponent,
+    updateAssetComponent,
+    deleteAssetComponent,
+} from '../../services/assetComponentsService.js';
 import { INVENTORY_ENDPOINTS } from '../../services/endpoints.js';
 
 const STATUS_OPTIONS = [
@@ -42,6 +49,15 @@ const readAsDataUrl = (file) => new Promise((resolve, reject) => {
     reader.onload = () => resolve(reader.result);
     reader.onerror = reject;
     reader.readAsDataURL(file);
+});
+
+const createEmptyComponent = () => ({
+    localId: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    id: null,
+    name: '',
+    quantity: '1',
+    location: '',
+    observations: '',
 });
 
 export default function AssetFormModal({ open, onClose, onSaved, assetId = null }) {
@@ -73,6 +89,9 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
     const [pendingTypeChange, setPendingTypeChange] = useState(null);
     const [assetNumberExists, setAssetNumberExists] = useState(false);
     const [showAssetNumberConfirm, setShowAssetNumberConfirm] = useState(false);
+    const [components, setComponents] = useState([]);
+    const [componentErrors, setComponentErrors] = useState({});
+    const [componentsToDelete, setComponentsToDelete] = useState([]);
     const fileInputRef = useRef(null);
 
     const selectedType             = types.find(t => t.id === formValues.typeId) ?? null;
@@ -96,134 +115,248 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
     });
 
     useEffect(() => {
-        if (!open) return;
-        setPhotos([]);
-        setExistingPhotos([]);
-        setPhotosToDelete([]);
-        setFormValues(INIT);
-        setErrors({});
-        setTouched({});
-        setSaving(false);
-        setAlert(null);
-        setIsDragOver(false);
-        setPendingTypeChange(null);
-        setAssetNumberExists(false);
-        setShowAssetNumberConfirm(false);
+        if (!open) return undefined;
+
+        const resetHandle = window.setTimeout(() => {
+            setPhotos([]);
+            setExistingPhotos([]);
+            setPhotosToDelete([]);
+            setFormValues(INIT);
+            setErrors({});
+            setTouched({});
+            setSaving(false);
+            setAlert(null);
+            setIsDragOver(false);
+            setPendingTypeChange(null);
+            setAssetNumberExists(false);
+            setShowAssetNumberConfirm(false);
+            setComponents([]);
+            setComponentErrors({});
+            setComponentsToDelete([]);
+        }, 0);
+
+        return () => window.clearTimeout(resetHandle);
     }, [open]);
 
-    const loadOptions = () => {
-        if (!open) return;
-        let cancelled = false;
-        setLoadingOptions(true);
-        Promise.all([
-            fetchCatalogOptions(INVENTORY_ENDPOINTS.brands),
-            fetchCatalogOptions(INVENTORY_ENDPOINTS.types),
-            fetchCatalogOptions(INVENTORY_ENDPOINTS.models),
-            fetchCatalogOptions(INVENTORY_ENDPOINTS.campuses),
-            fetchCatalogOptions(INVENTORY_ENDPOINTS.buildings),
-            fetchCatalogOptions(INVENTORY_ENDPOINTS.locations),
-        ]).then(([b, t, m, s, bd, l]) => {
-            if (cancelled) return;
-            setBrands(prev => {
-                const ids = new Set(b.map(x => x.id));
-                return [...b, ...prev.filter(x => !ids.has(x.id))];
-            });
-            setTypes(prev => {
-                const ids = new Set(t.map(x => x.id));
-                return [...t, ...prev.filter(x => !ids.has(x.id))];
-            });
-            setModels(prev => {
-                const ids = new Set(m.map(x => x.id));
-                return [...m, ...prev.filter(x => !ids.has(x.id))];
-            });
-            setCampuses(prev => {
-                const ids = new Set(s.map(x => x.id));
-                return [...s, ...prev.filter(x => !ids.has(x.id))];
-            });
-            setBuildings(prev => {
-                const ids = new Set(bd.map(x => x.id));
-                return [...bd, ...prev.filter(x => !ids.has(x.id))];
-            });
-            setLocations(prev => {
-                const ids = new Set(l.map(x => x.id));
-                return [...l, ...prev.filter(x => !ids.has(x.id))];
-            });
-        }).catch(() => {}).finally(() => { if (!cancelled) setLoadingOptions(false); });
-        return () => { cancelled = true; };
+    const addComponent = () => {
+        setComponents(prev => [...prev, createEmptyComponent()]);
     };
 
-    useEffect(loadOptions, [open]);
+    const updateComponentField = (localId, key, value) => {
+        setComponents(prev => prev.map(component => component.localId === localId
+            ? { ...component, [key]: value }
+            : component));
 
-    const loadAssetData = () => {
-        if (!open || !assetId) return;
-        let cancelled = false;
-        setLoadingAsset(true);
-
-        fetchAssetById(assetId)
-            .then(asset => {
-                if (cancelled) return;
-                if (asset) {
-                    setFormValues({
-                        executingUnit:          asset.executingUnit ?? '',
-                        responsibleEmployee:    asset.responsibleEmployee ?? '',
-                        responsibleEmployeeId:  asset.responsibleEmployeeId ?? '',
-                        brandId:                asset.model?.brand?.id ?? '',
-                        typeId:                 asset.model?.type?.id ?? '',
-                        modelId:                asset.model?.id ?? '',
-                        campusId:               asset.location?.floor?.building?.campus?.id ?? '',
-                        buildingId:             asset.location?.floor?.building?.id ?? '',
-                        floorNumber:            asset.location?.floor?.name ? parseInt(asset.location.floor.name) : '',
-                        locationId:             asset.location?.id ?? '',
-                        status:                 asset.status ?? '',
-                        acquisitionDate:        asset.acquisitionDate ?? '',
-                        warrantyEndDate:        asset.warrantyEndDate ?? '',
-                        firmwareSupportEndDate: asset.firmwareSupportEndDate ?? '',
-                        decommissionDate:       asset.decommissionDate ?? '',
-                        ipAddress:              asset.networkInterface?.ipAddress ?? '',
-                        macAddress:             asset.networkInterface?.macAddress ?? '',
-                        assetNumber:            asset.assetNumber ?? '',
-                        serialNumber:           asset.serialNumber ?? '',
-                        latitude:               asset.latitude != null ? String(asset.latitude) : '',
-                        longitude:              asset.longitude != null ? String(asset.longitude) : '',
-                    });
-                    if (asset.model?.type) {
-                        setTypes(prev => prev.some(t => t.id === asset.model.type.id) ? prev : [...prev, asset.model.type]);
-                    }
-                    if (asset.model?.brand) {
-                        setBrands(prev => prev.some(b => b.id === asset.model.brand.id) ? prev : [...prev, asset.model.brand]);
-                    }
-                    if (asset.model) {
-                        setModels(prev => prev.some(m => m.id === asset.model.id) ? prev : [...prev, asset.model]);
-                    }
-                    const campus = asset.location?.floor?.building?.campus;
-                    if (campus) {
-                        setCampuses(prev => prev.some(s => s.id === campus.id) ? prev : [...prev, campus]);
-                    }
-                    const building = asset.location?.floor?.building;
-                    if (building) {
-                        setBuildings(prev => prev.some(b => b.id === building.id) ? prev : [...prev, building]);
-                    }
-                    if (asset.location) {
-                        setLocations(prev => prev.some(l => l.id === asset.location.id) ? prev : [...prev, asset.location]);
-                    }
-                }
-            })
-            .catch(() => {
-                if (!cancelled) setAlert({ type: 'error', message: 'No se pudo cargar el activo' });
-            })
-            .finally(() => { if (!cancelled) setLoadingAsset(false); });
-
-        fetchAssetArchives(assetId)
-            .then(archives => {
-                if (cancelled) return;
-                setExistingPhotos(archives.filter(a => !!a.imageUrl));
-            })
-            .catch(() => {});
-
-        return () => { cancelled = true; };
+        setComponentErrors(prev => {
+            if (!prev[localId]?.[key]) return prev;
+            return {
+                ...prev,
+                [localId]: {
+                    ...prev[localId],
+                    [key]: '',
+                },
+            };
+        });
     };
 
-    useEffect(loadAssetData, [open, assetId]);
+    const removeComponent = (localId) => {
+        setComponents(prev => {
+            const component = prev.find(item => item.localId === localId);
+            if (component?.id) {
+                setComponentsToDelete(current => [...current, component.id]);
+            }
+            return prev.filter(item => item.localId !== localId);
+        });
+
+        setComponentErrors(prev => {
+            if (!prev[localId]) return prev;
+            const next = { ...prev };
+            delete next[localId];
+            return next;
+        });
+    };
+
+    const validateComponents = () => {
+        const nextErrors = {};
+
+        components.forEach((component) => {
+            const errorsByField = {};
+
+            if (!component.name?.trim()) {
+                errorsByField.name = 'El nombre es obligatorio';
+            } else if (component.name.trim().length > 255) {
+                errorsByField.name = 'El nombre no puede superar los 255 caracteres';
+            }
+
+            const quantity = Number(component.quantity);
+            if (!component.quantity?.toString().trim()) {
+                errorsByField.quantity = 'La cantidad es obligatoria';
+            } else if (!Number.isInteger(quantity) || quantity < 1) {
+                errorsByField.quantity = 'La cantidad debe ser mayor o igual a 1';
+            }
+
+            if ((component.location ?? '').length > 255) {
+                errorsByField.location = 'La ubicación no puede superar los 255 caracteres';
+            }
+
+            if ((component.observations ?? '').length > 1000) {
+                errorsByField.observations = 'Las observaciones no pueden superar los 1000 caracteres';
+            }
+
+            if (Object.keys(errorsByField).length > 0) {
+                nextErrors[component.localId] = errorsByField;
+            }
+        });
+
+        setComponentErrors(nextErrors);
+        return Object.keys(nextErrors).length === 0;
+    };
+
+    useEffect(() => {
+        if (!open) return undefined;
+
+        let cancelled = false;
+
+        const loadHandle = window.setTimeout(() => {
+            setLoadingOptions(true);
+
+            Promise.all([
+                fetchCatalogOptions(INVENTORY_ENDPOINTS.brands),
+                fetchCatalogOptions(INVENTORY_ENDPOINTS.types),
+                fetchCatalogOptions(INVENTORY_ENDPOINTS.models),
+                fetchCatalogOptions(INVENTORY_ENDPOINTS.campuses),
+                fetchCatalogOptions(INVENTORY_ENDPOINTS.buildings),
+                fetchCatalogOptions(INVENTORY_ENDPOINTS.locations),
+            ]).then(([b, t, m, s, bd, l]) => {
+                if (cancelled) return;
+                setBrands(prev => {
+                    const ids = new Set(b.map(x => x.id));
+                    return [...b, ...prev.filter(x => !ids.has(x.id))];
+                });
+                setTypes(prev => {
+                    const ids = new Set(t.map(x => x.id));
+                    return [...t, ...prev.filter(x => !ids.has(x.id))];
+                });
+                setModels(prev => {
+                    const ids = new Set(m.map(x => x.id));
+                    return [...m, ...prev.filter(x => !ids.has(x.id))];
+                });
+                setCampuses(prev => {
+                    const ids = new Set(s.map(x => x.id));
+                    return [...s, ...prev.filter(x => !ids.has(x.id))];
+                });
+                setBuildings(prev => {
+                    const ids = new Set(bd.map(x => x.id));
+                    return [...bd, ...prev.filter(x => !ids.has(x.id))];
+                });
+                setLocations(prev => {
+                    const ids = new Set(l.map(x => x.id));
+                    return [...l, ...prev.filter(x => !ids.has(x.id))];
+                });
+            }).catch(() => {}).finally(() => {
+                if (!cancelled) setLoadingOptions(false);
+            });
+        }, 0);
+
+        return () => {
+            cancelled = true;
+            window.clearTimeout(loadHandle);
+        };
+    }, [open]);
+
+    useEffect(() => {
+        if (!open || !assetId) return undefined;
+
+        let cancelled = false;
+
+        const assetLoadHandle = window.setTimeout(() => {
+            setLoadingAsset(true);
+
+            fetchAssetById(assetId)
+                .then(asset => {
+                    if (cancelled) return;
+                    if (asset) {
+                        setFormValues({
+                            executingUnit:          asset.executingUnit ?? '',
+                            responsibleEmployee:    asset.responsibleEmployee ?? '',
+                            responsibleEmployeeId:  asset.responsibleEmployeeId ?? '',
+                            brandId:                asset.model?.brand?.id ?? '',
+                            typeId:                 asset.model?.type?.id ?? '',
+                            modelId:                asset.model?.id ?? '',
+                            campusId:               asset.location?.floor?.building?.campus?.id ?? '',
+                            buildingId:             asset.location?.floor?.building?.id ?? '',
+                            floorNumber:            asset.location?.floor?.name ? parseInt(asset.location.floor.name) : '',
+                            locationId:             asset.location?.id ?? '',
+                            status:                 asset.status ?? '',
+                            acquisitionDate:        asset.acquisitionDate ?? '',
+                            warrantyEndDate:        asset.warrantyEndDate ?? '',
+                            firmwareSupportEndDate: asset.firmwareSupportEndDate ?? '',
+                            decommissionDate:       asset.decommissionDate ?? '',
+                            ipAddress:              asset.networkInterface?.ipAddress ?? '',
+                            macAddress:             asset.networkInterface?.macAddress ?? '',
+                            assetNumber:            asset.assetNumber ?? '',
+                            serialNumber:           asset.serialNumber ?? '',
+                            latitude:               asset.latitude != null ? String(asset.latitude) : '',
+                            longitude:              asset.longitude != null ? String(asset.longitude) : '',
+                        });
+                        if (asset.model?.type) {
+                            setTypes(prev => prev.some(t => t.id === asset.model.type.id) ? prev : [...prev, asset.model.type]);
+                        }
+                        if (asset.model?.brand) {
+                            setBrands(prev => prev.some(b => b.id === asset.model.brand.id) ? prev : [...prev, asset.model.brand]);
+                        }
+                        if (asset.model) {
+                            setModels(prev => prev.some(m => m.id === asset.model.id) ? prev : [...prev, asset.model]);
+                        }
+                        const campus = asset.location?.floor?.building?.campus;
+                        if (campus) {
+                            setCampuses(prev => prev.some(s => s.id === campus.id) ? prev : [...prev, campus]);
+                        }
+                        const building = asset.location?.floor?.building;
+                        if (building) {
+                            setBuildings(prev => prev.some(b => b.id === building.id) ? prev : [...prev, building]);
+                        }
+                        if (asset.location) {
+                            setLocations(prev => prev.some(l => l.id === asset.location.id) ? prev : [...prev, asset.location]);
+                        }
+                    }
+                })
+                .catch(() => {
+                    if (!cancelled) setAlert({ type: 'error', message: 'No se pudo cargar el activo' });
+                })
+                .finally(() => {
+                    if (!cancelled) setLoadingAsset(false);
+                });
+
+            fetchAssetArchives(assetId)
+                .then(archives => {
+                    if (cancelled) return;
+                    setExistingPhotos(archives.filter(a => !!a.imageUrl));
+                })
+                .catch(() => {});
+
+            fetchAssetComponents(assetId)
+                .then(assetComponents => {
+                    if (cancelled) return;
+                    setComponents((assetComponents ?? []).map(component => ({
+                        localId: component.id,
+                        id: component.id,
+                        name: component.name ?? '',
+                        quantity: component.quantity != null ? String(component.quantity) : '1',
+                        location: component.location ?? '',
+                        observations: component.observations ?? '',
+                    })));
+                    setComponentErrors({});
+                    setComponentsToDelete([]);
+                })
+                .catch(() => {});
+        }, 0);
+
+        return () => {
+            cancelled = true;
+            window.clearTimeout(assetLoadHandle);
+        };
+    }, [open, assetId]);
 
     const validateField = (key, value) => {
         const required = ['brandId', 'typeId', 'modelId', 'campusId', 'status', 'assetNumber', 'serialNumber'];
@@ -460,7 +593,9 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
             } else {
                 setFormValues(prev => ({ ...prev, [fieldKey]: newItem.id }));
             }
-        } catch (_) {}
+        } catch {
+            // noop
+        }
     };
 
     const resolveLocationId = async () => {
@@ -516,6 +651,27 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
             } else {
                 const created = await createAsset(payload);
                 savedAssetId = created.id;
+            }
+
+            if (componentsToDelete.length > 0) {
+                await Promise.all(componentsToDelete.map(componentId => deleteAssetComponent(componentId)));
+            }
+
+            if (components.length > 0) {
+                await Promise.all(components.map(component => {
+                    const componentPayload = {
+                        name: component.name.trim(),
+                        quantity: Number(component.quantity),
+                        location: component.location?.trim() || null,
+                        observations: component.observations?.trim() || null,
+                    };
+
+                    if (component.id) {
+                        return updateAssetComponent(component.id, componentPayload);
+                    }
+
+                    return createAssetComponent(savedAssetId, componentPayload);
+                }));
             }
 
             if (photos.length > 0) {
@@ -598,6 +754,11 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
 
         if (Object.keys(newErrors).length > 0) {
             setAlert({ type: 'warning', message: 'Revisa los datos antes de continuar' });
+            return;
+        }
+
+        if (!validateComponents()) {
+            setAlert({ type: 'warning', message: 'Revisa los componentes asociados antes de continuar' });
             return;
         }
 
@@ -1028,6 +1189,123 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                                 fullWidth size="small" disabled={saving}
                                 sx={fieldSx}
                             />
+                        </Box>
+                    </Box>
+
+                    <Divider />
+
+                    <Box>
+                        {sectionLabel('Componentes asociados')}
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                            {components.length === 0 ? (
+                                <Typography sx={{ color: 'text.secondary', fontSize: 13.5 }}>
+                                    No hay componentes asociados.
+                                </Typography>
+                            ) : (
+                                components.map((component, index) => {
+                                    const componentFieldErrors = componentErrors[component.localId] ?? {};
+
+                                    return (
+                                        <Box
+                                            key={component.localId}
+                                            sx={{
+                                                p: 1.5,
+                                                border: '1px solid',
+                                                borderColor: 'divider',
+                                                borderRadius: '12px',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: 1.5,
+                                            }}
+                                        >
+                                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                                                <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: 'text.secondary' }}>
+                                                    Componente #{index + 1}
+                                                </Typography>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => removeComponent(component.localId)}
+                                                    disabled={saving}
+                                                    sx={{ color: 'error.main' }}
+                                                >
+                                                    <DeleteIcon sx={{ fontSize: 18 }} />
+                                                </IconButton>
+                                            </Box>
+
+                                            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1.8fr 0.8fr' }, gap: 2 }}>
+                                                <TextField
+                                                    label="Nombre"
+                                                    value={component.name}
+                                                    onChange={e => updateComponentField(component.localId, 'name', e.target.value)}
+                                                    fullWidth
+                                                    size="small"
+                                                    disabled={saving}
+                                                    error={!!componentFieldErrors.name}
+                                                    helperText={componentFieldErrors.name || ' '}
+                                                    sx={fieldSx}
+                                                />
+                                                <TextField
+                                                    label="Cantidad"
+                                                    value={component.quantity}
+                                                    onChange={e => updateComponentField(component.localId, 'quantity', e.target.value.replace(/[^0-9]/g, ''))}
+                                                    fullWidth
+                                                    size="small"
+                                                    disabled={saving}
+                                                    error={!!componentFieldErrors.quantity}
+                                                    helperText={componentFieldErrors.quantity || ' '}
+                                                    sx={fieldSx}
+                                                />
+                                            </Box>
+
+                                            <TextField
+                                                label="Ubicación"
+                                                value={component.location}
+                                                onChange={e => updateComponentField(component.localId, 'location', e.target.value)}
+                                                fullWidth
+                                                size="small"
+                                                disabled={saving}
+                                                error={!!componentFieldErrors.location}
+                                                helperText={componentFieldErrors.location || ' '}
+                                                sx={fieldSx}
+                                            />
+
+                                            <TextField
+                                                label="Observaciones"
+                                                value={component.observations}
+                                                onChange={e => updateComponentField(component.localId, 'observations', e.target.value)}
+                                                fullWidth
+                                                size="small"
+                                                multiline
+                                                minRows={2}
+                                                disabled={saving}
+                                                error={!!componentFieldErrors.observations}
+                                                helperText={componentFieldErrors.observations || ' '}
+                                                sx={fieldSx}
+                                            />
+                                        </Box>
+                                    );
+                                })
+                            )}
+
+                            <Box>
+                                <IconButton
+                                    onClick={addComponent}
+                                    disabled={saving}
+                                    sx={{
+                                        border: '1px dashed',
+                                        borderColor: 'divider',
+                                        borderRadius: '10px',
+                                        px: 1.25,
+                                        py: 0.75,
+                                        gap: 0.5,
+                                    }}
+                                >
+                                    <AddCircleOutlinedIcon sx={{ fontSize: 18 }} />
+                                    <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: 'text.secondary' }}>
+                                        Agregar componente
+                                    </Typography>
+                                </IconButton>
+                            </Box>
                         </Box>
                     </Box>
 

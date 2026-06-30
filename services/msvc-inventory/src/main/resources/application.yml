@@ -55,6 +55,7 @@ routes:
   types: ${api.prefix}/types
   models: ${api.prefix}/models
   assets: ${api.prefix}/assets
+  asset-components: ${api.prefix}/components
   network-interfaces: ${api.prefix}/network-interfaces
   alarm-sensors: ${api.prefix}/assets/alarm-sensors
   images: ${api.prefix}/images

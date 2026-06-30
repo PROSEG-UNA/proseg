@@ -9,6 +9,7 @@ export const INVENTORY_ENDPOINTS = {
     models:            '/api/v1/inventory/models',
     floors: '/api/v1/inventory/floors',
     networkInterfaces: '/api/v1/inventory/network-interfaces',
+    assetComponents: '/api/v1/inventory/components',
 };
 
 export const DOCUMENT_PROCESSOR_ENDPOINTS = {

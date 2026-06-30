@@ -31,6 +31,8 @@ export default function CoordinateMapPicker({
     latitude, longitude,
     onCoordinatesChange, onLatitudeChange, onLongitudeChange,
     onBlur, disabled, errors, touched,
+    showCoordinateFields = true,
+    mapHeight = 300,
 }) {
     const lat = parseFloat(latitude);
     const lng = parseFloat(longitude);
@@ -39,7 +41,7 @@ export default function CoordinateMapPicker({
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <Box aria-label="Selector de coordenadas" sx={{ height: 300, borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'divider', cursor: disabled ? 'default' : 'crosshair' }}>
+            <Box aria-label="Selector de coordenadas" sx={{ height: mapHeight, borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'divider', cursor: disabled ? 'default' : 'crosshair' }}>
                 <MapContainer
                     center={center}
                     zoom={hasCoords ? 13 : DEFAULT_ZOOM}
@@ -55,32 +57,34 @@ export default function CoordinateMapPicker({
                 </MapContainer>
             </Box>
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-                <TextField
-                    label="Latitud" value={latitude}
-                    onChange={e => onLatitudeChange(e.target.value)}
-                    onBlur={() => onBlur('latitude')}
-                    fullWidth size="small" disabled={disabled}
-                    type="number"
-                    inputProps={{ step: 'any' }}
-                    error={touched.latitude && !!errors.latitude}
-                    helperText={touched.latitude ? (errors.latitude || ' ') : ' '}
-                    placeholder="-33.4500000"
-                    sx={fieldSx}
-                />
-                <TextField
-                    label="Longitud" value={longitude}
-                    onChange={e => onLongitudeChange(e.target.value)}
-                    onBlur={() => onBlur('longitude')}
-                    fullWidth size="small" disabled={disabled}
-                    type="number"
-                    inputProps={{ step: 'any' }}
-                    error={touched.longitude && !!errors.longitude}
-                    helperText={touched.longitude ? (errors.longitude || ' ') : ' '}
-                    placeholder="-70.6500000"
-                    sx={fieldSx}
-                />
-            </Box>
+            {showCoordinateFields && (
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                    <TextField
+                        label="Latitud" value={latitude}
+                        onChange={e => onLatitudeChange(e.target.value)}
+                        onBlur={() => onBlur('latitude')}
+                        fullWidth size="small" disabled={disabled}
+                        type="number"
+                        inputProps={{ step: 'any' }}
+                        error={touched.latitude && !!errors.latitude}
+                        helperText={touched.latitude ? (errors.latitude || ' ') : ' '}
+                        placeholder="-33.4500000"
+                        sx={fieldSx}
+                    />
+                    <TextField
+                        label="Longitud" value={longitude}
+                        onChange={e => onLongitudeChange(e.target.value)}
+                        onBlur={() => onBlur('longitude')}
+                        fullWidth size="small" disabled={disabled}
+                        type="number"
+                        inputProps={{ step: 'any' }}
+                        error={touched.longitude && !!errors.longitude}
+                        helperText={touched.longitude ? (errors.longitude || ' ') : ' '}
+                        placeholder="-70.6500000"
+                        sx={fieldSx}
+                    />
+                </Box>
+            )}
         </Box>
     );
 }

@@ -1,0 +1,15 @@
+server:
+  port: 8099
+
+spring:
+  application:
+    name: msvc-maintenance
+
+  config:
+    import: configserver:http://localhost:8888
+
+api:
+  prefix: /api/v1/maintenance
+
+routes:
+  test: ${api.prefix}/test
