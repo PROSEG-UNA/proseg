@@ -30,6 +30,10 @@ export async function fetchAssetsByLocation(locationId, options = {}) {
     return fetchPage(`${MAINTENANCE_ENDPOINTS.locations}/locations/${locationId}/assets`, options);
 }
 
+export async function searchInventoryAssets(options = {}) {
+    return fetchPage(`${MAINTENANCE_ENDPOINTS.locations}/assets`, options);
+}
+
 export async function fetchCampusById(id) {
     const { data } = await axios.get(`${MAINTENANCE_ENDPOINTS.locations}/campuses/${id}`, maintenanceConfig);
     return data?.data ?? null;

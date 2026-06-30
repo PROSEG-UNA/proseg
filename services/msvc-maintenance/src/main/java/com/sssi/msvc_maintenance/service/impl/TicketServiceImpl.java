@@ -148,7 +148,25 @@ public class TicketServiceImpl implements TicketService {
         InventoryAssetLocationResponseDto location = null;
         if (request.getLocationId() != null) {
             location = requireLocation(request.getLocationId());
-            if (floor == null || location.getFloor() == null || !location.getFloor().getId().equals(floor.getId())) {
+            if (location.getFloor() == null || location.getFloor().getId() == null) {
+                throw new LocationException(
+                        HttpStatus.BAD_REQUEST,
+                        "LOCATION_FLOOR_REQUIRED",
+                        "La ubicación indicada no tiene un piso asociado");
+            }
+
+            if (floor == null) {
+                floor = requireFloor(location.getFloor().getId());
+            }
+
+            if (building == null || floor.getBuilding() == null || !floor.getBuilding().getId().equals(building.getId())) {
+                throw new LocationException(
+                        HttpStatus.BAD_REQUEST,
+                        "LOCATION_BUILDING_MISMATCH",
+                        "La ubicación " + location.getId() + " no pertenece al edificio indicado");
+            }
+
+            if (!location.getFloor().getId().equals(floor.getId())) {
                 throw new LocationException(
                         HttpStatus.BAD_REQUEST,
                         "LOCATION_FLOOR_MISMATCH",
@@ -266,7 +284,25 @@ public class TicketServiceImpl implements TicketService {
         InventoryAssetLocationResponseDto location = null;
         if (request.getLocationId() != null) {
             location = requireLocation(request.getLocationId());
-            if (floor == null || location.getFloor() == null || !location.getFloor().getId().equals(floor.getId())) {
+            if (location.getFloor() == null || location.getFloor().getId() == null) {
+                throw new LocationException(
+                        HttpStatus.BAD_REQUEST,
+                        "LOCATION_FLOOR_REQUIRED",
+                        "La ubicación indicada no tiene un piso asociado");
+            }
+
+            if (floor == null) {
+                floor = requireFloor(location.getFloor().getId());
+            }
+
+            if (building == null || floor.getBuilding() == null || !floor.getBuilding().getId().equals(building.getId())) {
+                throw new LocationException(
+                        HttpStatus.BAD_REQUEST,
+                        "LOCATION_BUILDING_MISMATCH",
+                        "La ubicación " + location.getId() + " no pertenece al edificio indicado");
+            }
+
+            if (!location.getFloor().getId().equals(floor.getId())) {
                 throw new LocationException(
                         HttpStatus.BAD_REQUEST,
                         "LOCATION_FLOOR_MISMATCH",
@@ -929,6 +965,13 @@ public class TicketServiceImpl implements TicketService {
                             .assetNumber(asset != null ? asset.getAssetNumber() : null)
                             .serialNumber(asset != null ? asset.getSerialNumber() : null)
                             .assetName(asset != null && asset.getModel() != null ? asset.getModel().getName() : null)
+                            .modelName(asset != null && asset.getModel() != null ? asset.getModel().getName() : null)
+                            .type(asset != null && asset.getModel() != null && asset.getModel().getType() != null
+                                ? asset.getModel().getType().getName()
+                                : null)
+                            .brand(asset != null && asset.getModel() != null && asset.getModel().getBrand() != null
+                                ? asset.getModel().getBrand().getName()
+                                : null)
                             .locationDescription(asset != null && asset.getLocation() != null ? asset.getLocation().getDescription() : null)
                             .build();
                 })

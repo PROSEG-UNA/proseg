@@ -216,7 +216,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout>
+                                                <DashboardLayout title="Gestión de Mantenimiento">
                                                     <TicketsPage />
                                                 </DashboardLayout>
                                             }

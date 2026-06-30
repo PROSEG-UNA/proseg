@@ -17,5 +17,8 @@ public class TicketAssetResponseDto {
     private String assetNumber;
     private String serialNumber;
     private String assetName;
+    private String modelName;
+    private String type;
+    private String brand;
     private String locationDescription;
 }

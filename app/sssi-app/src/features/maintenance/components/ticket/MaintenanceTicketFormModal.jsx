@@ -45,13 +45,12 @@ import {
 } from '../../services/ticketsService';
 import MaintenanceTicketHistoryTab from './MaintenanceTicketHistoryTab';
 import {
-    fetchAssetsByBuilding,
-    fetchAssetsByLocation,
     fetchBuildingsByCampus,
     fetchCampuses,
     fetchFloorsByBuilding,
     fetchLocationsByBuilding,
 } from '../../services/locationsService';
+import { fetchMaintenanceAssets } from '../../services/request/requestsService';
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { AuthContext } from '../../../../common/context/AuthContext';
@@ -64,7 +63,7 @@ const INITIAL_VALUES = {
     priority: 'LOW',
     status: 'OPEN',
     assignedTo: '',
-    requiresLocation: 'false',
+    requiresLocation: 'true',
     siteId: '',
     buildingId: '',
     floorId: '',
@@ -74,6 +73,8 @@ const INITIAL_VALUES = {
 
 const LOCATION_PAGE_OPTIONS = { page: 0, size: 100 };
 const ASSET_PAGE_OPTIONS = { page: 0, size: 100 };
+const SAFE_TEXT_REGEX = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9.,()#&/\-\s]+$/u;
+const SAFE_TEXT_HELPER = 'Solo se permiten letras, números, espacios y . , ( ) # & / -';
 const readAsDataUrl = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
@@ -86,10 +87,31 @@ const isImageType = (type) => typeof type === 'string' && type.startsWith('image
 const buildAssetLabel = (asset) => {
     const assetNumber = asset.assetNumber ?? asset.id;
     const serialNumber = asset.serialNumber ? ` - ${asset.serialNumber}` : '';
-    const model = asset.model?.name ?? asset.assetName ?? 'Sin modelo';
-    const location = asset.location?.description ?? asset.locationDescription ?? 'Sin ubicación';
+    const model = asset.model?.name ?? asset.modelName ?? asset.assetName ?? asset.type ?? 'Sin modelo';
+    const type = (typeof asset.type === 'string' ? asset.type : asset.type?.name) ?? asset.typeName ?? asset.assetType?.name ?? asset.assetType ?? 'Sin tipo';
+    const brand = asset.model?.brand?.name ?? asset.brand ?? 'Sin marca';
+    const location = asset.location?.description
+        ?? asset.locationName
+        ?? asset.locationDescription
+        ?? asset.building?.name
+        ?? asset.buildingName
+        ?? asset.campus?.name
+        ?? asset.campusName
+        ?? 'Sin ubicación';
 
-    return `${assetNumber}${serialNumber} - ${model} - ${location}`;
+    return `${assetNumber}${serialNumber} - ${model} - ${type} - ${brand} - ${location}`;
+};
+
+const mergeAssetOptions = (assetOptions, selectedOptions) => {
+    const merged = new Map();
+
+    [...selectedOptions, ...assetOptions].forEach((asset) => {
+        if (asset?.id) {
+            merged.set(asset.id, asset);
+        }
+    });
+
+    return Array.from(merged.values());
 };
 
 const getCommentDateValue = (comment) => {
@@ -98,6 +120,10 @@ const getCommentDateValue = (comment) => {
 };
 
 const isCommentEdited = (comment) => {
+    if (comment?.edited) {
+        return true;
+    }
+
     if (!comment?.createdAt || !comment?.updatedAt) {
         return false;
     }
@@ -106,10 +132,10 @@ const isCommentEdited = (comment) => {
     const updatedAt = new Date(comment.updatedAt).getTime();
 
     if (Number.isNaN(createdAt) || Number.isNaN(updatedAt)) {
-        return false;
+        return comment.createdAt !== comment.updatedAt;
     }
 
-    return updatedAt - createdAt > 1000;
+    return updatedAt > createdAt;
 };
 
 const getTicketCampusId = (ticket) => ticket?.siteId ?? ticket?.campusId ?? ticket?.site?.id ?? ticket?.campus?.id ?? '';
@@ -178,7 +204,11 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
     const [loadingPhotos, setLoadingPhotos] = useState(false);
     const [assigneeOptions, setAssigneeOptions] = useState([]);
     const [loadingAssignees, setLoadingAssignees] = useState(false);
+    const [assetSearchTerm, setAssetSearchTerm] = useState('');
     const fileInputRef = useRef(null);
+
+    const isAssetMode = formValues.requiresAsset === 'true';
+    const requiresLocationSelection = !isAssetMode;
 
     const currentUserIds = useMemo(() => (
         [
@@ -244,6 +274,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             setLoadingPhotos(false);
             setAssigneeOptions([]);
             setLoadingAssignees(false);
+            setAssetSearchTerm('');
             return;
         }
 
@@ -265,6 +296,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         setLoadingPhotos(false);
         setAssigneeOptions([]);
         setLoadingAssignees(false);
+        setAssetSearchTerm('');
         setBuildings([]);
         setFloors([]);
         setLocations([]);
@@ -281,7 +313,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                 priority: ticket.priority ?? 'LOW',
                 status: ticket.status ?? 'OPEN',
                 assignedTo: ticket.assignedTo ?? '',
-                requiresLocation: ticketSiteId ? 'true' : 'false',
+                requiresLocation: ticketAssets.length > 0 ? 'false' : 'true',
                 siteId: ticketSiteId,
                 buildingId: getTicketBuildingId(ticket),
                 floorId: getTicketFloorId(ticket),
@@ -294,6 +326,9 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                 assetNumber: ticketAsset.assetNumber,
                 serialNumber: ticketAsset.serialNumber,
                 assetName: ticketAsset.assetName,
+                modelName: ticketAsset.modelName ?? ticketAsset.assetName,
+                type: ticketAsset.type,
+                brand: ticketAsset.brand,
                 locationDescription: ticketAsset.locationDescription,
             })));
         } else {
@@ -348,7 +383,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
     }, [open, isEditing, canAssignTicket, ticket?.assignedTo, ticket?.assignedToName]);
 
     useEffect(() => {
-        if (!open || formValues.requiresLocation !== 'true') {
+        if (!open || !requiresLocationSelection) {
             setCampuses([]);
             return;
         }
@@ -377,10 +412,10 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         return () => {
             cancelled = true;
         };
-    }, [open, formValues.requiresLocation]);
+    }, [open, requiresLocationSelection]);
 
     useEffect(() => {
-        if (!open || formValues.requiresLocation !== 'true' || !formValues.siteId) {
+        if (!open || !requiresLocationSelection || !formValues.siteId) {
             setBuildings([]);
             return;
         }
@@ -409,10 +444,10 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         return () => {
             cancelled = true;
         };
-    }, [open, formValues.requiresLocation, formValues.siteId]);
+    }, [open, requiresLocationSelection, formValues.siteId]);
 
     useEffect(() => {
-        if (!open || formValues.requiresLocation !== 'true' || !formValues.buildingId) {
+        if (!open || !requiresLocationSelection || !formValues.buildingId) {
             setFloors([]);
             setLocations([]);
             return;
@@ -451,11 +486,30 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         return () => {
             cancelled = true;
         };
-    }, [open, formValues.requiresLocation, formValues.buildingId]);
+    }, [open, requiresLocationSelection, formValues.buildingId]);
+
+    const filteredLocations = useMemo(() => {
+        if (!formValues.floorId) {
+            return [];
+        }
+
+        return locations.filter((location) => {
+            const locationFloorId = location.floor?.id ?? location.floorId;
+            return locationFloorId === formValues.floorId;
+        });
+    }, [locations, formValues.floorId]);
 
     useEffect(() => {
-        if (!open || formValues.requiresAsset !== 'true' || formValues.requiresLocation !== 'true' || !formValues.buildingId) {
+        if (!open || !isAssetMode) {
+            setLoadingAssets(false);
             setAssets([]);
+            return;
+        }
+
+        const trimmedSearch = assetSearchTerm.trim();
+        if (trimmedSearch.length < 2) {
+            setLoadingAssets(false);
+            setAssets(selectedAssets);
             return;
         }
 
@@ -465,20 +519,23 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             setLoadingAssets(true);
 
             try {
-                const assetPage = formValues.locationId
-                    ? await fetchAssetsByLocation(formValues.locationId, ASSET_PAGE_OPTIONS)
-                    : await fetchAssetsByBuilding(formValues.buildingId, ASSET_PAGE_OPTIONS);
+                const assetPage = await fetchMaintenanceAssets({
+                    ...ASSET_PAGE_OPTIONS,
+                    size: 50,
+                    search: trimmedSearch,
+                    sort: ['assetNumber,asc'],
+                });
+
                 if (cancelled) return;
 
                 const assetItems = assetPage?.content ?? [];
-                setAssets(assetItems);
-                setSelectedAssets((prev) => prev.map((selected) => assetItems.find((asset) => asset.id === selected.id) ?? selected));
+                setAssets(mergeAssetOptions(assetItems, selectedAssets));
             } catch (error) {
                 if (!cancelled) {
                     setAlert({ type: 'error', message: error?.response?.data?.message ?? error?.message ?? 'No se pudieron cargar los activos' });
                 }
             } finally {
-                if (!cancelled) setLoadingAssets(false);
+                setLoadingAssets(false);
             }
         }
 
@@ -487,7 +544,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         return () => {
             cancelled = true;
         };
-    }, [open, formValues.requiresAsset, formValues.requiresLocation, formValues.buildingId, formValues.locationId]);
+    }, [open, isAssetMode, assetSearchTerm, selectedAssets]);
 
     useEffect(() => {
         if (!open || !ticket?.id || rightTab !== 'history') return;
@@ -531,15 +588,6 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         return () => { cancelled = true; };
     }, [open, ticket?.id, activeTab]);
 
-    const filteredLocations = useMemo(() => {
-        if (!formValues.floorId) return locations;
-
-        return locations.filter((location) => {
-            const floorId = location.floor?.id ?? location.floorId;
-            return floorId === formValues.floorId;
-        });
-    }, [locations, formValues.floorId]);
-
     const commentsToShow = useMemo(
         () => [...ticketComments, ...pendingComments].sort((a, b) => getCommentDateValue(b) - getCommentDateValue(a)),
         [ticketComments, pendingComments]
@@ -567,6 +615,18 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         return assignedValue;
     }, [isEditing, formValues.assignedTo, assigneeOptions, ticket?.assignedTo, ticket?.assignedToName]);
 
+    const availableStatusOptions = useMemo(() => {
+        if (ticket?.status === 'OPEN') {
+            return MAINTENANCE_TICKET_STATUS_OPTIONS.filter((option) => option.value !== 'REOPENED');
+        }
+
+        if (ticket?.status === 'REOPENED') {
+            return MAINTENANCE_TICKET_STATUS_OPTIONS.filter((option) => option.value !== 'OPEN');
+        }
+
+        return MAINTENANCE_TICKET_STATUS_OPTIONS;
+    }, [ticket?.status]);
+
     const canManageComment = (comment) => {
         if (isReadOnly) {
             return false;
@@ -583,6 +643,14 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         );
     };
 
+    const validateSafeTextField = (trimmedValue, message) => {
+        if (!trimmedValue) {
+            return '';
+        }
+
+        return SAFE_TEXT_REGEX.test(trimmedValue) ? '' : message;
+    };
+
     const validateField = (key, value, values = formValues) => {
         let error = '';
         const trimmed = typeof value === 'string' ? value.trim() : value;
@@ -592,7 +660,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             error = 'Este campo es requerido';
         }
 
-        if (!error && key === 'siteId' && values.requiresLocation === 'true' && !trimmed) {
+        if (!error && key === 'siteId' && values.requiresAsset !== 'true' && !trimmed) {
             error = 'Este campo es requerido';
         }
 
@@ -604,8 +672,16 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             error = 'La descripción no puede superar los 500 caracteres';
         }
 
+        if (!error && key === 'description') {
+            error = validateSafeTextField(trimmed, `La descripción contiene caracteres inválidos. ${SAFE_TEXT_HELPER}`);
+        }
+
         if (!error && key === 'comment' && trimmed && trimmed.length > 1000) {
             error = 'El comentario no puede superar los 1000 caracteres';
+        }
+
+        if (!error && key === 'comment') {
+            error = validateSafeTextField(trimmed, `El comentario contiene caracteres inválidos. ${SAFE_TEXT_HELPER}`);
         }
 
         setErrors((prev) => ({ ...prev, [key]: error }));
@@ -667,7 +743,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             setFormValues(nextValues);
             setFloors([]);
             setLocations([]);
-            setAssets([]);
+            setAssets([]); 
             setSelectedAssets([]);
 
             if (touched.buildingId) validateField('buildingId', value, nextValues);
@@ -686,7 +762,12 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         }
 
         if (key === 'locationId') {
-            const nextValues = { ...formValues, locationId: value };
+            const selectedLocation = locations.find((location) => location.id === value);
+            const derivedFloorId = selectedLocation
+                ? (selectedLocation.floor?.id ?? selectedLocation.floorId ?? '')
+                : '';
+
+            const nextValues = { ...formValues, locationId: value, floorId: derivedFloorId };
 
             setFormValues(nextValues);
             setAssets([]);
@@ -697,17 +778,38 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         }
 
         if (key === 'requiresAsset') {
-            const nextValues = { ...formValues, requiresAsset: value };
+            const nextValues = {
+                ...formValues,
+                requiresAsset: value,
+                requiresLocation: value === 'true' ? 'false' : 'true',
+                siteId: '',
+                buildingId: '',
+                floorId: '',
+                locationId: '',
+            };
 
             setFormValues(nextValues);
-
-            if (value !== 'true') {
-                setAssets([]);
-                setSelectedAssets([]);
-                setErrors((prev) => ({ ...prev, locationId: '' }));
-            } else if (touched.locationId) {
-                validateField('locationId', nextValues.locationId, nextValues);
-            }
+            setAssetSearchTerm('');
+            setAssets([]);
+            setSelectedAssets([]);
+            setCampuses([]);
+            setBuildings([]);
+            setFloors([]);
+            setLocations([]);
+            setErrors((prev) => ({
+                ...prev,
+                siteId: '',
+                buildingId: '',
+                floorId: '',
+                locationId: '',
+            }));
+            setTouched((prev) => ({
+                ...prev,
+                siteId: false,
+                buildingId: false,
+                floorId: false,
+                locationId: false,
+            }));
 
             return;
         }
@@ -812,7 +914,11 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
         setCommentActionLoadingId(comment.id);
         try {
             const updatedComment = await updateMaintenanceTicketComment(ticket.id, comment.id, trimmedContent);
-            setTicketComments((prev) => prev.map((item) => (item.id === comment.id ? updatedComment : item)));
+            setTicketComments((prev) => prev.map((item) => (
+                item.id === comment.id
+                    ? { ...updatedComment, edited: trimmedContent !== (comment.content ?? '').trim() }
+                    : item
+            )));
             setEditingCommentId(null);
             setEditingCommentContent('');
         } catch (error) {
@@ -911,7 +1017,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             }
         });
 
-        if (formValues.requiresLocation === 'true' && !formValues.siteId?.trim()) {
+        if (formValues.requiresAsset !== 'true' && !formValues.siteId?.trim()) {
             nextTouched.siteId = true;
             nextErrors.siteId = 'Este campo es requerido';
         }
@@ -926,8 +1032,28 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             nextTouched.description = true;
         }
 
+        const descriptionPatternError = validateSafeTextField(
+            formValues.description?.trim(),
+            `La descripción contiene caracteres inválidos. ${SAFE_TEXT_HELPER}`
+        );
+
+        if (descriptionPatternError) {
+            nextErrors.description = descriptionPatternError;
+            nextTouched.description = true;
+        }
+
         if (formValues.comment?.trim()?.length > 1000) {
             nextErrors.comment = 'El comentario no puede superar los 1000 caracteres';
+            nextTouched.comment = true;
+        }
+
+        const commentPatternError = validateSafeTextField(
+            formValues.comment?.trim(),
+            `El comentario contiene caracteres inválidos. ${SAFE_TEXT_HELPER}`
+        );
+
+        if (commentPatternError) {
+            nextErrors.comment = commentPatternError;
             nextTouched.comment = true;
         }
 
@@ -952,13 +1078,13 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                 title: isRestrictedEditor ? (ticket?.title ?? formValues.title.trim()) : formValues.title.trim(),
                 description: isRestrictedEditor ? (ticket?.description ?? formValues.description.trim()) : formValues.description.trim(),
                 ...(canSetPriority ? { priority: formValues.priority } : {}),
-                siteId: isRestrictedEditor ? protectedSiteId : (formValues.requiresLocation === 'true' ? formValues.siteId : null),
-                buildingId: isRestrictedEditor ? protectedBuildingId : (formValues.requiresLocation === 'true' ? (formValues.buildingId || null) : null),
-                floorId: isRestrictedEditor ? protectedFloorId : (formValues.requiresLocation === 'true' ? (formValues.floorId || null) : null),
-                locationId: isRestrictedEditor ? protectedLocationId : (formValues.requiresLocation === 'true' ? (formValues.locationId || null) : null),
+                siteId: isRestrictedEditor ? protectedSiteId : (formValues.siteId || null),
+                buildingId: isRestrictedEditor ? protectedBuildingId : (formValues.buildingId || null),
+                floorId: isRestrictedEditor ? protectedFloorId : (formValues.floorId || null),
+                locationId: isRestrictedEditor ? protectedLocationId : (formValues.locationId || null),
                 assetIds: isRestrictedEditor
                     ? existingAssetIds
-                    : (formValues.requiresLocation === 'true' && formValues.requiresAsset === 'true' ? selectedAssets.map((asset) => asset.id) : []),
+                    : (formValues.requiresAsset === 'true' ? selectedAssets.map((asset) => asset.id) : []),
                 ...(isEditing && !isRestrictedEditor && removedPhotoIds.length > 0 ? { removedPhotoIds } : {}),
             };
 
@@ -1125,7 +1251,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                 },
                             }}
                         >
-                            <Tab value="details" label={buildTabLabel(DescriptionOutlinedIcon, 'Detalles')} />
+                            <Tab value="details" label={buildTabLabel(DescriptionOutlinedIcon, 'Información')} />
                             <Tab value="attachments" label={buildTabLabel(ImageOutlinedIcon, 'Adjuntos')} />
                         </Tabs>
                     </Box>
@@ -1341,7 +1467,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                     helperText=" "
                                                     sx={fieldSx}
                                                 >
-                                                    {MAINTENANCE_TICKET_STATUS_OPTIONS.map((option) => (
+                                                    {availableStatusOptions.map((option) => (
                                                         <MenuItem key={option.value} value={option.value}>
                                                             {option.label}
                                                         </MenuItem>
@@ -1407,161 +1533,148 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
 
                                         <Divider sx={{ my: 2.5 }} />
 
-                                        <Typography sx={sectionTitleSx}>¿Se requiere ubicación?</Typography>
+                                        <Typography sx={sectionTitleSx}>¿Se requiere activo?</Typography>
 
                                         <FormControl disabled={saving || loadingCatalogs || !canEditCoreFields}>
                                             <RadioGroup
                                                 row
-                                                value={formValues.requiresLocation}
-                                                onChange={(event) => handleChange('requiresLocation', event.target.value)}
+                                                value={formValues.requiresAsset}
+                                                onChange={(event) => handleChange('requiresAsset', event.target.value)}
                                             >
                                                 <FormControlLabel value="true" control={<Radio />} label="Sí" />
                                                 <FormControlLabel value="false" control={<Radio />} label="No" />
                                             </RadioGroup>
                                         </FormControl>
 
-                                        {formValues.requiresLocation === 'true' ? (
-                                            <>
-                                                <Stack spacing={2} sx={{ mt: 1.5 }}>
-                                                    <SearchableSelect
-                                                        label="Sede"
-                                                        value={formValues.siteId}
-                                                        onChange={(value) => handleChange('siteId', value)}
-                                                        onBlur={() => handleBlur('siteId')}
-                                                        items={campuses}
-                                                        getItemLabel={(campus) => campus.name}
-                                                        getItemValue={(campus) => campus.id}
-                                                        required
-                                                        fullWidth
-                                                        size="small"
-                                                        disabled={saving || loadingOptions || !canEditCoreFields}
-                                                        error={touched.siteId && !!errors.siteId}
-                                                        helperText={touched.siteId ? (errors.siteId || ' ') : ' '}
-                                                        sx={fieldSx}
-                                                    />
+                                        {isAssetMode ? (
+                                            <Box sx={{ mt: 1.5 }}>
+                                                <Typography sx={{ fontWeight: 700, fontSize: 13.5, mb: 1 }}>
+                                                    Activos
+                                                </Typography>
 
-                                                    <SearchableSelect
-                                                        label="Edificio"
-                                                        value={formValues.buildingId}
-                                                        onChange={(value) => handleChange('buildingId', value)}
-                                                        onBlur={() => handleBlur('buildingId')}
-                                                        items={buildings}
-                                                        getItemLabel={(building) => building.name}
-                                                        getItemValue={(building) => building.id}
-                                                        clearable
-                                                        fullWidth
-                                                        size="small"
-                                                        disabled={saving || loadingBuildings || !canEditCoreFields || !formValues.siteId}
-                                                        error={touched.buildingId && !!errors.buildingId}
-                                                        helperText={touched.buildingId ? (errors.buildingId || ' ') : ' '}
-                                                        sx={fieldSx}
-                                                    />
-
-                                                    <SearchableSelect
-                                                        label="Locación"
-                                                        value={formValues.locationId}
-                                                        onChange={(value) => handleChange('locationId', value)}
-                                                        onBlur={() => handleBlur('locationId')}
-                                                        items={filteredLocations}
-                                                        getItemLabel={(location) => location.description ?? location.name}
-                                                        getItemValue={(location) => location.id}
-                                                        clearable
-                                                        fullWidth
-                                                        size="small"
-                                                        disabled={saving || loadingLocations || !canEditCoreFields || !formValues.buildingId}
-                                                        error={touched.locationId && !!errors.locationId}
-                                                        helperText={touched.locationId ? (errors.locationId || ' ') : 'Opcional'}
-                                                        sx={fieldSx}
-                                                    />
-
-                                                    <SearchableSelect
-                                                        label="Piso"
-                                                        value={formValues.floorId}
-                                                        onChange={(value) => handleChange('floorId', value)}
-                                                        onBlur={() => handleBlur('floorId')}
-                                                        items={floors}
-                                                        getItemLabel={(floor) => floor.name}
-                                                        getItemValue={(floor) => floor.id}
-                                                        clearable
-                                                        fullWidth
-                                                        size="small"
-                                                        disabled={saving || loadingFloors || !canEditCoreFields || !formValues.buildingId}
-                                                        helperText={touched.floorId ? (errors.floorId || ' ') : 'Opcional'}
-                                                        sx={fieldSx}
-                                                    />
-                                                </Stack>
-
-                                                <Divider sx={{ my: 2.5 }} />
-
-                                                <Typography sx={sectionTitleSx}>¿Se requiere activo?</Typography>
-
-                                                <FormControl disabled={saving || loadingCatalogs || !canEditCoreFields}>
-                                                    <RadioGroup
-                                                        row
-                                                        value={formValues.requiresAsset}
-                                                        onChange={(event) => handleChange('requiresAsset', event.target.value)}
-                                                    >
-                                                        <FormControlLabel value="true" control={<Radio />} label="Sí" />
-                                                        <FormControlLabel value="false" control={<Radio />} label="No" />
-                                                    </RadioGroup>
-                                                </FormControl>
-
-                                                {formValues.requiresAsset === 'true' ? (
-                                                    <Box sx={{ mt: 1.5 }}>
-                                                        <Typography sx={{ fontWeight: 700, fontSize: 13.5, mb: 1 }}>
-                                                            Activos
-                                                        </Typography>
-
-                                                        <Autocomplete
-                                                            multiple
-                                                            options={assets}
-                                                            value={selectedAssets}
-                                                            onChange={(_, value) => setSelectedAssets(value)}
-                                                            getOptionLabel={buildAssetLabel}
-                                                            isOptionEqualToValue={(option, value) => option.id === value.id}
-                                                            loading={loadingAssets}
-                                                            disabled={!canEditCoreFields || !formValues.buildingId || loadingAssets}
-                                                            renderTags={(value, getTagProps) => value.map((option, index) => (
-                                                                <Chip
-                                                                    {...getTagProps({ index })}
-                                                                    key={option.id}
-                                                                    label={buildAssetLabel(option)}
-                                                                    size="small"
-                                                                    sx={chipSx}
-                                                                />
-                                                            ))}
-                                                            renderInput={(params) => (
-                                                                <TextField
-                                                                    {...params}
-                                                                    placeholder={formValues.buildingId ? 'Busca y selecciona activos' : 'Selecciona un edificio primero'}
-                                                                    size="small"
-                                                                    sx={fieldSx}
-                                                                    helperText={formValues.locationId
-                                                                        ? 'Activos filtrados por locación seleccionada'
-                                                                        : (formValues.buildingId
-                                                                            ? 'Activos del edificio (sin locación)'
-                                                                            : 'Debes seleccionar un edificio para ver activos')}
-                                                                />
-                                                            )}
+                                                <Autocomplete
+                                                    multiple
+                                                    options={assets}
+                                                    value={selectedAssets}
+                                                    inputValue={assetSearchTerm}
+                                                    onInputChange={(_, value, reason) => {
+                                                        if (reason === 'input' || reason === 'clear') {
+                                                            setAssetSearchTerm(value);
+                                                        }
+                                                    }}
+                                                    onChange={(_, value) => setSelectedAssets(value)}
+                                                    getOptionLabel={buildAssetLabel}
+                                                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                                                    filterOptions={(options) => options}
+                                                    loading={loadingAssets}
+                                                    disabled={!canEditCoreFields}
+                                                    noOptionsText={assetSearchTerm.trim().length < 2 ? 'Escribe al menos 2 caracteres' : 'No se encontraron activos'}
+                                                    renderTags={(value, getTagProps) => value.map((option, index) => (
+                                                        <Chip
+                                                            {...getTagProps({ index })}
+                                                            key={option.id}
+                                                            label={buildAssetLabel(option)}
+                                                            size="small"
+                                                            sx={chipSx}
                                                         />
+                                                    ))}
+                                                    renderInput={(params) => (
+                                                        <TextField
+                                                            {...params}
+                                                            placeholder="Busca por n° activo, n° serie, tipo de activo o modelo"
+                                                            size="small"
+                                                            sx={fieldSx}
+                                                            helperText={assetSearchTerm.trim().length < 2
+                                                                ? ''
+                                                                : 'Selecciona uno o varios activos del inventario'}
+                                                        />
+                                                    )}
+                                                />
 
-                                                        {selectedAssets.length > 0 ? (
-                                                            <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                                                                {selectedAssets.map((asset) => (
-                                                                    <Chip
-                                                                        key={asset.id}
-                                                                        label={buildAssetLabel(asset)}
-                                                                        size="small"
-                                                                        variant="outlined"
-                                                                        sx={chipSx}
-                                                                    />
-                                                                ))}
-                                                            </Box>
-                                                        ) : null}
+                                                {selectedAssets.length > 0 ? (
+                                                    <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                                                        {selectedAssets.map((asset) => (
+                                                            <Chip
+                                                                key={asset.id}
+                                                                label={buildAssetLabel(asset)}
+                                                                size="small"
+                                                                variant="outlined"
+                                                                sx={chipSx}
+                                                            />
+                                                        ))}
                                                     </Box>
                                                 ) : null}
-                                            </>
-                                        ) : null}
+                                            </Box>
+                                        ) : (
+                                            <Stack spacing={2} sx={{ mt: 1.5 }}>
+                                                <SearchableSelect
+                                                    label="Sede"
+                                                    value={formValues.siteId}
+                                                    onChange={(value) => handleChange('siteId', value)}
+                                                    onBlur={() => handleBlur('siteId')}
+                                                    items={campuses}
+                                                    getItemLabel={(campus) => campus.name}
+                                                    getItemValue={(campus) => campus.id}
+                                                    required
+                                                    fullWidth
+                                                    size="small"
+                                                    disabled={saving || loadingOptions || !canEditCoreFields}
+                                                    error={touched.siteId && !!errors.siteId}
+                                                    helperText={touched.siteId ? (errors.siteId || ' ') : ' '}
+                                                    sx={fieldSx}
+                                                />
+
+                                                <SearchableSelect
+                                                    label="Edificio"
+                                                    value={formValues.buildingId}
+                                                    onChange={(value) => handleChange('buildingId', value)}
+                                                    onBlur={() => handleBlur('buildingId')}
+                                                    items={buildings}
+                                                    getItemLabel={(building) => building.name}
+                                                    getItemValue={(building) => building.id}
+                                                    clearable
+                                                    fullWidth
+                                                    size="small"
+                                                    disabled={saving || loadingBuildings || !canEditCoreFields || !formValues.siteId}
+                                                    error={touched.buildingId && !!errors.buildingId}
+                                                    helperText={touched.buildingId ? (errors.buildingId || ' ') : ' '}
+                                                    sx={fieldSx}
+                                                />
+
+                                                <SearchableSelect
+                                                    label="Piso"
+                                                    value={formValues.floorId}
+                                                    onChange={(value) => handleChange('floorId', value)}
+                                                    onBlur={() => handleBlur('floorId')}
+                                                    items={floors}
+                                                    getItemLabel={(floor) => floor.name}
+                                                    getItemValue={(floor) => floor.id}
+                                                    clearable
+                                                    fullWidth
+                                                    size="small"
+                                                    disabled={saving || loadingFloors || !canEditCoreFields || !formValues.buildingId}
+                                                    helperText={touched.floorId ? (errors.floorId || ' ') : 'Opcional'}
+                                                    sx={fieldSx}
+                                                />
+
+                                                <SearchableSelect
+                                                    label="Locación"
+                                                    value={formValues.locationId}
+                                                    onChange={(value) => handleChange('locationId', value)}
+                                                    onBlur={() => handleBlur('locationId')}
+                                                    items={filteredLocations}
+                                                    getItemLabel={(location) => location.description ?? location.name}
+                                                    getItemValue={(location) => location.id}
+                                                    clearable
+                                                    fullWidth
+                                                    size="small"
+                                                    disabled={saving || loadingLocations || !canEditCoreFields || !formValues.buildingId || !formValues.floorId}
+                                                    error={touched.locationId && !!errors.locationId}
+                                                    helperText={touched.locationId ? (errors.locationId || ' ') : (!formValues.floorId ? 'Selecciona un piso primero' : 'Opcional')}
+                                                    sx={fieldSx}
+                                                />
+                                            </Stack>
+                                        )}
                                     </Box>
                                 ) : null}
 

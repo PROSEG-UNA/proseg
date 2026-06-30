@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
-import NewReleasesOutlinedIcon from '@mui/icons-material/NewReleasesOutlined';
+import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import CheckCircleOutlinedIcon from "@mui/icons-material/CheckCircleOutlined";
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
@@ -20,7 +20,7 @@ const ALL_TAB_VALUE = 'ALL';
 
 const STATUS_TAB_ICONS = {
     ALL: <FormatListBulletedIcon sx={{ fontSize: 18 }} />,
-    OPEN: <NewReleasesOutlinedIcon sx={{ fontSize: 18 }} />,
+    OPEN: <LockOpenOutlinedIcon sx={{ fontSize: 18 }} />,
     IN_PROGRESS: <AutorenewIcon sx={{ fontSize: 18 }} />,
     RESOLVED: <CheckCircleOutlinedIcon sx={{ fontSize: 18 }} />,
     REOPENED: <AutorenewIcon sx={{ fontSize: 18 }} />,
