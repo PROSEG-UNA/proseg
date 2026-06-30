@@ -26,10 +26,10 @@ public class NetworkInterface extends BaseEntity {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column(name = "ip_address", nullable = false, unique = true)
+    @Column(name = "ip_address", nullable = true, unique = true)
     private String ipAddress;
 
-    @Column(name = "mac_address", nullable = false, unique = true)
+    @Column(name = "mac_address", nullable = true, unique = true)
     private String macAddress;
 
     @OneToOne(fetch = FetchType.LAZY)

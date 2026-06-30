@@ -359,7 +359,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
     }, [open, assetId]);
 
     const validateField = (key, value) => {
-        const required = ['brandId', 'typeId', 'modelId', 'campusId', 'status', 'assetNumber', 'serialNumber'];
+        const required = ['brandId', 'typeId', 'modelId', 'campusId', 'status', 'assetNumber'];
         let error = '';
 
         if (required.includes(key) && (!value || (typeof value === 'string' && !value.trim()))) {
@@ -637,10 +637,10 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 serialNumber:            formValues.serialNumber?.trim()          || null,
                 latitude:                formValues.latitude !== '' ? parseFloat(formValues.latitude) : null,
                 longitude:               formValues.longitude !== '' ? parseFloat(formValues.longitude) : null,
-                ...(requiresNetworkInterface && formValues.ipAddress?.trim() && formValues.macAddress?.trim() && {
+                ...(requiresNetworkInterface && {
                     networkInterface: {
-                        ipAddress:  formValues.ipAddress.trim(),
-                        macAddress: formValues.macAddress.trim(),
+                        ipAddress:  formValues.ipAddress?.trim()  || null,
+                        macAddress: formValues.macAddress?.trim() || null,
                     },
                 }),
             };
@@ -710,7 +710,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
     };
 
     const handleSave = async () => {
-        const requiredFields = ['brandId', 'typeId', 'modelId', 'campusId', 'status', 'assetNumber', 'serialNumber'];
+        const requiredFields = ['brandId', 'typeId', 'modelId', 'campusId', 'status', 'assetNumber'];
 
         const newTouched = {};
         const newErrors  = {};
@@ -884,7 +884,6 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                             </Box>
                             <TextField
                                 label="Número de serie" value={formValues.serialNumber}
-                                required
                                 onChange={e => handleChange('serialNumber', e.target.value)}
                                 onBlur={() => handleBlur('serialNumber')}
                                 fullWidth size="small" disabled={saving}
@@ -1072,7 +1071,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                                 {sectionLabel('IP y MAC')}
                                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                                     <TextField
-                                        label="Dirección IP" value={formValues.ipAddress} required
+                                        label="Dirección IP" value={formValues.ipAddress}
                                         onChange={e => {
                                             const raw = e.target.value;
                                             const prev = formValues.ipAddress;
@@ -1103,7 +1102,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                                         sx={fieldSx}
                                     />
                                     <TextField
-                                        label="Dirección MAC" value={formValues.macAddress} required
+                                        label="Dirección MAC" value={formValues.macAddress}
                                         onChange={e => {
                                             const hex = e.target.value.replace(/[^0-9A-Fa-f]/g, '').toUpperCase().slice(0, 12);
                                             const formatted = hex.match(/.{1,2}/g)?.join(':') ?? '';

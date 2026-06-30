@@ -107,7 +107,7 @@ public class Asset extends BaseEntity {
     private List<AssetComponent> components;
 
     @Filterable(type = FilterType.TEXT)
-    @Column(name = "asset_number")
+    @Column(name = "asset_number", unique = true)
     private String assetNumber;
 
     @Filterable(type = FilterType.TEXT)

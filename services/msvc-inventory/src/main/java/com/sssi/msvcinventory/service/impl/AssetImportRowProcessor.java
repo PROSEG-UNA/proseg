@@ -349,20 +349,21 @@ public class AssetImportRowProcessor {
         if (ip == null && mac == null) {
             return;
         }
-        if (ip == null || mac == null) {
-            throw AssetImportException.networkInterfaceIncomplete();
+        if (ip != null) {
+            if (duplicateIpsInFile.contains(ip)) {
+                throw AssetImportException.duplicateIpAddressInFile();
+            }
+            if (networkInterfaceRepository.existsByIpAddress(ip)) {
+                throw AssetImportException.duplicateIpAddress();
+            }
         }
-        if (duplicateIpsInFile.contains(ip)) {
-            throw AssetImportException.duplicateIpAddressInFile();
-        }
-        if (networkInterfaceRepository.existsByIpAddress(ip)) {
-            throw AssetImportException.duplicateIpAddress();
-        }
-        if (duplicateMacsInFile.contains(mac)) {
-            throw AssetImportException.duplicateMacAddressInFile();
-        }
-        if (networkInterfaceRepository.existsByMacAddress(mac)) {
-            throw AssetImportException.duplicateMacAddress();
+        if (mac != null) {
+            if (duplicateMacsInFile.contains(mac)) {
+                throw AssetImportException.duplicateMacAddressInFile();
+            }
+            if (networkInterfaceRepository.existsByMacAddress(mac)) {
+                throw AssetImportException.duplicateMacAddress();
+            }
         }
     }
 
