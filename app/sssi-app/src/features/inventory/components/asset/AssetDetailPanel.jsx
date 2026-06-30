@@ -1,10 +1,20 @@
 import { useState, useEffect } from 'react';
-import { Box, Typography, Skeleton, Dialog, IconButton } from '@mui/material';
+import { Box, Typography, Skeleton, Dialog, IconButton, Button } from '@mui/material';
 import RouterIcon from '@mui/icons-material/Router';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
+import WidgetsOutlinedIcon from '@mui/icons-material/WidgetsOutlined';
+import AddIcon from '@mui/icons-material/Add';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
 import { fetchNetworkInterfaceByAsset } from '../../services/assetsService';
 import { fetchAssetArchives } from '../../services/assetArchiveService';
+import {
+    fetchAssetComponents,
+    deleteAssetComponent,
+} from '../../services/assetComponentsService';
+import AssetComponentFormModal from './AssetComponentFormModal.jsx';
+import DialogModal from '../../../../common/components/DialogModal.jsx';
 
 function InfoRow({ label, value }) {
     return (
@@ -54,25 +64,38 @@ function SectionHeader({ icon: Icon, label }) {
     );
 }
 
-export default function AssetDetailPanel({ assetId }) {
+export default function AssetDetailPanel({ assetId, canManageAssets = false }) {
     const [netIface, setNetIface] = useState(null);
     const [images, setImages]     = useState([]);
+    const [components, setComponents] = useState([]);
     const [loading, setLoading]   = useState(true);
     const [lightbox, setLightbox] = useState(null);
+    const [componentModal, setComponentModal] = useState(null);
+    const [componentToDelete, setComponentToDelete] = useState(null);
+    const [deletingComponent, setDeletingComponent] = useState(false);
+    const [alert, setAlert] = useState(null);
+
+    const loadComponents = async () => {
+        const data = await fetchAssetComponents(assetId);
+        setComponents(Array.isArray(data) ? data : []);
+    };
 
     const loadDetails = () => {
         let cancelled = false;
         setLoading(true);
         setNetIface(null);
         setImages([]);
+        setComponents([]);
 
         Promise.all([
             fetchNetworkInterfaceByAsset(assetId).catch(() => null),
             fetchAssetArchives(assetId).catch(() => []),
-        ]).then(([iface, archives]) => {
+            fetchAssetComponents(assetId).catch(() => []),
+        ]).then(([iface, archives, loadedComponents]) => {
             if (cancelled) return;
             setNetIface(iface);
             setImages(archives.filter(a => !!a.imageUrl));
+            setComponents(Array.isArray(loadedComponents) ? loadedComponents : []);
         }).finally(() => {
             if (!cancelled) setLoading(false);
         });
@@ -95,7 +118,30 @@ export default function AssetDetailPanel({ assetId }) {
     const hasNetIface = !!netIface;
     const hasImages   = images.length > 0;
 
-    if (!hasNetIface && !hasImages) return null;
+    const handleComponentSaved = async () => {
+        try {
+            await loadComponents();
+            setAlert({ type: 'success', message: 'Componente guardado correctamente' });
+        } catch {
+            setAlert({ type: 'error', message: 'No se pudieron cargar los componentes' });
+        }
+    };
+
+    const handleDeleteComponent = async () => {
+        if (!componentToDelete) return;
+        setDeletingComponent(true);
+        try {
+            await deleteAssetComponent(componentToDelete.id);
+            await loadComponents();
+            setComponentToDelete(null);
+            setAlert({ type: 'success', message: 'Componente eliminado correctamente' });
+        } catch (error) {
+            const data = error?.response?.data;
+            setAlert({ type: 'error', message: data?.message ?? error?.message ?? 'No se pudo eliminar el componente' });
+        } finally {
+            setDeletingComponent(false);
+        }
+    };
 
     return (
         <>
@@ -137,6 +183,79 @@ export default function AssetDetailPanel({ assetId }) {
                         </Box>
                     </Box>
                 )}
+
+                <Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 1 }}>
+                        <SectionHeader icon={WidgetsOutlinedIcon} label="Componentes Asociados" />
+                        {canManageAssets && (
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<AddIcon sx={{ fontSize: 16 }} />}
+                                onClick={() => setComponentModal({ mode: 'create', component: null })}
+                                sx={{ textTransform: 'none', mt: -1 }}
+                            >
+                                Agregar
+                            </Button>
+                        )}
+                    </Box>
+
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, pl: 2.5 }}>
+                        {components.length === 0 ? (
+                            <Typography sx={{ color: 'text.secondary', fontSize: 13.25 }}>
+                                Sin componentes asociados.
+                            </Typography>
+                        ) : (
+                            components.map((component) => (
+                                <Box
+                                    key={component.id}
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        justifyContent: 'space-between',
+                                        gap: 1.5,
+                                        border: '1px solid',
+                                        borderColor: 'divider',
+                                        borderRadius: '10px',
+                                        p: 1.5,
+                                    }}
+                                >
+                                    <Box sx={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                                        <Typography sx={{ fontSize: 13.25, fontWeight: 700 }}>{component.name || '—'}</Typography>
+                                        <Typography sx={{ fontSize: 12.5, color: 'text.secondary' }}>
+                                            Cantidad: {component.quantity ?? '—'}
+                                        </Typography>
+                                        <Typography sx={{ fontSize: 12.5, color: 'text.secondary' }}>
+                                            Ubicación: {component.location || '—'}
+                                        </Typography>
+                                        <Typography sx={{ fontSize: 12.5, color: 'text.secondary', whiteSpace: 'pre-wrap' }}>
+                                            Observaciones: {component.observations || '—'}
+                                        </Typography>
+                                    </Box>
+
+                                    {canManageAssets && (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => setComponentModal({ mode: 'edit', component })}
+                                                sx={{ color: 'text.secondary' }}
+                                            >
+                                                <EditOutlinedIcon sx={{ fontSize: 18 }} />
+                                            </IconButton>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => setComponentToDelete(component)}
+                                                sx={{ color: 'error.main' }}
+                                            >
+                                                <DeleteIcon sx={{ fontSize: 18 }} />
+                                            </IconButton>
+                                        </Box>
+                                    )}
+                                </Box>
+                            ))
+                        )}
+                    </Box>
+                </Box>
             </Box>
 
             <Dialog
@@ -182,6 +301,33 @@ export default function AssetDetailPanel({ assetId }) {
                     </IconButton>
                 </Box>
             </Dialog>
+
+            <AssetComponentFormModal
+                open={!!componentModal}
+                assetId={assetId}
+                componentData={componentModal?.component ?? null}
+                onClose={() => setComponentModal(null)}
+                onSaved={handleComponentSaved}
+            />
+
+            <DialogModal
+                type="delete"
+                open={!!componentToDelete}
+                title="Eliminar componente"
+                message={`¿Seguro que deseas eliminar el componente "${componentToDelete?.name || ''}"?`}
+                onClose={() => {
+                    if (!deletingComponent) setComponentToDelete(null);
+                }}
+                onConfirm={handleDeleteComponent}
+                confirmLabel="Eliminar"
+            />
+
+            <DialogModal
+                open={!!alert}
+                type={alert?.type}
+                message={alert?.message}
+                onClose={() => setAlert(null)}
+            />
         </>
     );
 }

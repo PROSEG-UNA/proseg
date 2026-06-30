@@ -1,4 +1,5 @@
 import Chip from '@mui/material/Chip';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import HistoryIcon from '@mui/icons-material/History';
@@ -154,9 +155,15 @@ export function getAssetsColumns() {
     ];
 }
 
-export function renderAssetActions({ onEdit, onDelete, onHistory, canEdit, canDelete, canViewHistory }) {
+export function renderAssetActions({ onView, onEdit, onDelete, onHistory, canEdit, canDelete, canViewHistory }) {
     return ({ row }) => {
         const actions = [
+            {
+                key: 'view',
+                label: 'Ver activo',
+                icon: <VisibilityOutlinedIcon fontSize="small" />,
+                onClick: () => onView(row.original),
+            },
             {
                 key: 'edit',
                 label: 'Editar activo',
