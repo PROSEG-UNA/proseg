@@ -13,7 +13,7 @@ import { fetchCompanies, fetchCompanyTechnicians, fetchMyCompany } from '../../s
 import { usePermissions } from '../../../../common/hooks/index.js';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { fetchCampuses, fetchBuildingsByCampus, fetchBuildingEmails, fetchCampusEmails } from '../../services/locationsService';
-import { MAINTENANCE_STATUS_OPTIONS, checkScheduleConsistency } from '../../maintenanceUtils';
+import { maintenanceStatusOptionsFor, checkScheduleConsistency } from '../../maintenanceUtils';
 
 const SCHEDULE_DATE_ERROR = 'La fecha de fin no puede ser anterior a la fecha de inicio';
 const SCHEDULE_TIME_ERROR = 'La hora de salida no puede ser anterior a la hora de llegada';
@@ -72,6 +72,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
     const [selectedTechnicians, setSelectedTechnicians] = useState({});
     const [technicianToAdd, setTechnicianToAdd] = useState('');
     const [responsibleId, setResponsibleId] = useState('');
+    const [originalStatus, setOriginalStatus] = useState('PENDING');
     const [alert, setAlert] = useState(null);
 
     useEffect(() => {
@@ -255,6 +256,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                     campusId: request.campusId ?? '',
                     buildingId: request.buildingId ?? '',
                 });
+                setOriginalStatus(request.status ?? 'PENDING');
                 const assigned = Array.isArray(request.assignedTechnicians) ? request.assignedTechnicians : [];
                 setSelectedTechnicians(assigned.reduce((acc, technician) => {
                     acc[technician.id] = technician;
@@ -552,7 +554,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                                         sx={fieldSx}
                                         helperText=" "
                                     >
-                                        {MAINTENANCE_STATUS_OPTIONS.map((option) => (
+                                        {maintenanceStatusOptionsFor(originalStatus).map((option) => (
                                             <MenuItem key={option.value} value={option.value}>
                                                 {option.label}
                                             </MenuItem>

@@ -31,6 +31,16 @@ export async function updateMaintenanceRequest(requestId, payload) {
     return data?.data;
 }
 
+export async function acceptMaintenanceRequest(requestId) {
+    const { data } = await axios.patch(`${REQUESTS_BASE}/${requestId}/accept`, null, maintenanceConfig);
+    return data?.data;
+}
+
+export async function cancelMaintenanceRequest(requestId, reason) {
+    const { data } = await axios.patch(`${REQUESTS_BASE}/${requestId}/cancel`, { reason }, maintenanceConfig);
+    return data?.data;
+}
+
 export async function deleteMaintenanceRequest(requestId) {
     const { data } = await axios.delete(`${REQUESTS_BASE}/${requestId}`, maintenanceConfig);
     return data?.data;
