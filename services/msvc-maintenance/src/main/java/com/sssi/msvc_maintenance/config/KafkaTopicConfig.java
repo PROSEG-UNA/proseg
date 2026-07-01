@@ -37,4 +37,13 @@ public class KafkaTopicConfig {
                 .configs(TOPIC_CONFIG)
                 .build();
     }
+
+    @Bean
+    public NewTopic maintenanceRequestCancelledTopic() {
+        return TopicBuilder.name(KafkaTopics.MAINTENANCE_REQUEST_CANCELLED_TOPIC)
+                .partitions(3)
+                .replicas(1)
+                .configs(TOPIC_CONFIG)
+                .build();
+    }
 }
