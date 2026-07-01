@@ -33,4 +33,6 @@ public final class KafkaTopics {
     public static final String USER_COMPANY_ASSIGNED_TOPIC = "user-company-assigned-v1";
 
     public static final String MAINTENANCE_REQUEST_CREATED_TOPIC = "maintenance-request-created-v1";
+
+    public static final String MAINTENANCE_REQUEST_CANCELLED_TOPIC = "maintenance-request-cancelled-v1";
 }
