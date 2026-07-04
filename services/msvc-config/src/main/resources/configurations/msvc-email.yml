@@ -36,6 +36,11 @@ spring:
   thymeleaf:
     prefix: classpath:/templates/email/
 
+app:
+  brand:
+    name: ${APP_BRAND_NAME:PROSEG}
+    full-name: ${APP_BRAND_FULL_NAME:Programa de Servicios Generales}
+
 eureka:
   instance:
     hostname: ${EUREKA_INSTANCE_HOSTNAME:msvc-email}

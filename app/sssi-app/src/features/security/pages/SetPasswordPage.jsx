@@ -16,6 +16,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import {getInvitationInfo, setPassword as setPasswordApi} from '../../security/services/usersService.js';
 import {Helmet} from "react-helmet-async";
+import { APP_CONFIG } from '../../../config/appConfig.js';
 
 const RED = {
     50: '#fff1f2',
@@ -223,7 +224,7 @@ function SuccessView({info}) {
         : `linear-gradient(135deg, ${RED[600]} 0%, ${RED[800]} 100%)`;
     return (
         <PageShell>
-            <ModalHeader title="¡Cuenta activada!" subtitle="Ya podés iniciar sesión en SPGS"/>
+            <ModalHeader title="¡Cuenta activada!" subtitle={`Ya podés iniciar sesión en ${APP_CONFIG.name}`}/>
             <Box sx={{p: 3.5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2}}>
                 <Box sx={{
                     width: 64, height: 64, borderRadius: '50%',
@@ -361,9 +362,9 @@ export function SetPasswordPage() {
     return (
         <PageShell>
             <Helmet>
-                <title>Configurar Contraseña | SPSG</title>
+                <title>{`Configurar contraseña - ${APP_CONFIG.name}`}</title>
             </Helmet>
-            <ModalHeader title="Configurá tu contraseña" subtitle="Activá tu cuenta en SPGS"/>
+            <ModalHeader title="Configurá tu contraseña" subtitle={`Activá tu cuenta en ${APP_CONFIG.name}`}/>
 
             {loading && (
                 <LinearProgress sx={{

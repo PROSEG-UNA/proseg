@@ -27,6 +27,7 @@ import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import { usePermissions } from '../hooks/usePermissions';
 import { PERMISSIONS } from '../constants/permissions';
 import { alpha } from '@mui/material/styles';
+import { APP_CONFIG } from '../../config/appConfig.js';
 export function MobileNavbar() {
   const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -157,7 +158,7 @@ export function MobileNavbar() {
                 whiteSpace: 'nowrap',
               }}
             >
-              Sistema Programa Servicios Generales
+              {APP_CONFIG.fullName}
             </Typography>
           </Toolbar>
         </AppBar>

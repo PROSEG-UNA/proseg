@@ -47,7 +47,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Sistema Programa Servicios Generales">
+                                                <DashboardLayout title="Inicio" pageTitle="Inicio">
                                                     <HomePage />
                                                 </DashboardLayout>
                                             }
@@ -60,7 +60,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Activos">
+                                                <DashboardLayout title="Gestión de Activos" pageTitle="Activos">
                                                     <AssetPage />
                                                 </DashboardLayout>
                                             }
@@ -73,7 +73,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Campus">
+                                                <DashboardLayout title="Gestión de Campus" pageTitle="Campus">
                                                     <CampusPage />
                                                 </DashboardLayout>
                                             }
@@ -85,7 +85,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Edificios">
+                                                <DashboardLayout title="Gestión de Edificios" pageTitle="Edificios">
                                                     <BuildingPage />
                                                 </DashboardLayout>
                                             }
@@ -97,7 +97,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Locaciones">
+                                                <DashboardLayout title="Gestión de Locaciones" pageTitle="Locaciones">
                                                     <LocationPage />
                                                 </DashboardLayout>
                                             }
@@ -109,7 +109,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Correos">
+                                                <DashboardLayout title="Gestión de Correos" pageTitle="Correos">
                                                     <EmailPage />
                                                 </DashboardLayout>
                                             }
@@ -121,7 +121,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout>
+                                                <DashboardLayout title="Gestión de Mantenimiento" pageTitle="Mantenimiento">
                                                     <MaintenancePage />
                                                 </DashboardLayout>
                                             }
@@ -133,7 +133,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout>
+                                                <DashboardLayout title="Gestión de Técnicos" pageTitle="Técnicos">
                                                     <MaintenancePage />
                                                 </DashboardLayout>
                                             }
@@ -145,7 +145,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Seguridad">
+                                                <DashboardLayout title="Gestión de Seguridad" pageTitle="Seguridad">
                                                     <SecurityPage />
                                                 </DashboardLayout>
                                             }
@@ -157,7 +157,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Usuarios">
+                                                <DashboardLayout title="Gestión de Usuarios" pageTitle="Usuarios">
                                                     <UserPage />
                                                 </DashboardLayout>
                                             }
@@ -169,7 +169,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Roles">
+                                                <DashboardLayout title="Gestión de Roles" pageTitle="Roles">
                                                     <RolePage />
                                                 </DashboardLayout>
                                             }
@@ -181,7 +181,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Mantenimiento">
+                                                <DashboardLayout title="Gestión de Empresas" pageTitle="Empresas">
                                                     <CompaniesPage />
                                                 </DashboardLayout>
                                             }
@@ -193,7 +193,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Mantenimiento">
+                                                <DashboardLayout title="Gestión de Solicitudes" pageTitle="Aceptar solicitud">
                                                     <MaintenanceRequestActionPage action="accept" />
                                                 </DashboardLayout>
                                             }
@@ -205,7 +205,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Mantenimiento">
+                                                <DashboardLayout title="Gestión de Solicitudes" pageTitle="Cancelar solicitud">
                                                     <MaintenanceRequestActionPage action="cancel" />
                                                 </DashboardLayout>
                                             }
@@ -217,7 +217,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Mantenimiento">
+                                                <DashboardLayout title="Gestión de Solicitudes" pageTitle="Solicitudes">
                                                     <RequestsPage />
                                                 </DashboardLayout>
                                             }
@@ -229,7 +229,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Mantenimiento">
+                                                <DashboardLayout title="Gestión de Registros" pageTitle="Registros">
                                                     <MaintenanceRegisterPage />
                                                 </DashboardLayout>
                                             }
@@ -241,7 +241,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Mantenimiento">
+                                                <DashboardLayout title="Gestión de Tickets" pageTitle="Tickets">
                                                     <TicketsPage />
                                                 </DashboardLayout>
                                             }

@@ -19,6 +19,7 @@ import GeneralModal from '../../../common/components/GeneralModal.jsx';
 import { ValidatedTextField } from '../../../common/components/ValidatedTextField';
 import { useFormValidation } from '../../../common/hooks/useFormValidation';
 import { Helmet } from 'react-helmet-async';
+import { APP_CONFIG } from '../../../config/appConfig.js';
 
 function PageShell() {
     const theme = useTheme();
@@ -83,7 +84,7 @@ export function LoginPage() {
     return (
         <>
             <Helmet>
-                <title>Iniciar Sesión | SPSG</title>
+                <title>{`Iniciar sesión - ${APP_CONFIG.name}`}</title>
             </Helmet>
             <PageShell />
             <GeneralModal
@@ -93,7 +94,7 @@ export function LoginPage() {
                 maxWidth="xs"
                 fullScreenAt="xs"
                 icon={AdminPanelSettingsIcon}
-                title="Sistema Programa Servicios Generales"
+                title={APP_CONFIG.fullName}
                 subtitle="Gestión de Servicios Institucionales"
                 loading={loading}
                 footerLeft={

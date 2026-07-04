@@ -39,6 +39,8 @@ public class EmailEventService {
 
     @Value("${app.urls.maintenance-action:http://localhost:5173/mantenimiento/solicitudes}")
     private String maintenanceActionBaseUrl;
+    @Value("${app.brand.name:PROSEG}")
+    private String brandName;
 
     public void sendLoginEmail(UserLoginEvent event) {
         ApiResponse<KeycloakUserResponseDto> apiResponse = authClient.getUserById(event.getKeycloakUserId());
@@ -56,7 +58,7 @@ public class EmailEventService {
         emailService.sendEmail(
                 Email.builder()
                         .to(List.of(user.getEmail()))
-                        .subject("Alerta de seguridad - SSSI")
+                        .subject("Alerta de seguridad - " + brandName)
                         .templateDefinition(template)
                         .build()
         );
@@ -75,7 +77,7 @@ public class EmailEventService {
         emailService.sendEmail(
                 Email.builder()
                         .to(List.of(event.getEmail()))
-                        .subject("Bienvenido a SPSG - Registro exitoso")
+                        .subject("Bienvenido a " + brandName + " - Registro exitoso")
                         .templateDefinition(template)
                         .build()
         );
@@ -108,7 +110,7 @@ public class EmailEventService {
                         emailService.sendEmail(
                                 Email.builder()
                                         .to(List.of(admin.getEmail()))
-                                        .subject("Nuevo usuario requiere aprobación - SPSG")
+                                        .subject("Nuevo usuario requiere aprobación - " + brandName)
                                         .templateDefinition(template)
                                         .build()
                         );
@@ -133,7 +135,7 @@ public class EmailEventService {
         emailService.sendEmail(
                 Email.builder()
                         .to(List.of(event.getEmail()))
-                        .subject("Fuiste invitado a SPGS - Configurá tu contraseña")
+                        .subject("Fuiste invitado a " + brandName + " - Configurá tu contraseña")
                         .templateDefinition(template)
                         .build()
         );
@@ -177,7 +179,7 @@ public class EmailEventService {
                         emailService.sendEmail(
                                 Email.builder()
                                         .to(List.of(admin.getEmail()))
-                                        .subject("Nuevo usuario creado en SPGS")
+                                        .subject("Nuevo usuario creado en " + brandName)
                                         .templateDefinition(template)
                                         .build()
                         );
@@ -219,7 +221,7 @@ public class EmailEventService {
         emailService.sendEmail(
                 Email.builder()
                         .to(List.of(user.getEmail()))
-                        .subject("Tu cuenta en SPGS fue activada correctamente")
+                        .subject("Tu cuenta en " + brandName + " fue activada correctamente")
                         .templateDefinition(template)
                         .build()
         );
@@ -240,7 +242,7 @@ public class EmailEventService {
         emailService.sendEmail(
                 Email.builder()
                         .to(List.of(event.getEmail()))
-                        .subject("Restablecé tu contraseña - SPGS")
+                        .subject("Restablecé tu contraseña - " + brandName)
                         .templateDefinition(template)
                         .build()
         );
@@ -269,7 +271,7 @@ public class EmailEventService {
             emailService.sendEmail(
                     Email.builder()
                             .to(List.of(user.getEmail()))
-                            .subject("Tu contraseña fue actualizada en SPSG")
+                            .subject("Tu contraseña fue actualizada en " + brandName)
                             .templateDefinition(template)
                             .build()
             );
@@ -294,7 +296,7 @@ public class EmailEventService {
             emailService.sendEmail(
                     Email.builder()
                             .to(List.of(event.getEmail()))
-                            .subject("Tu contraseña expirará pronto en SPGS")
+                            .subject("Tu contraseña expirará pronto en " + brandName)
                             .templateDefinition(template)
                             .build()
             );
@@ -326,7 +328,7 @@ public class EmailEventService {
             emailService.sendEmail(
                     Email.builder()
                             .to(List.of(event.getEmail()))
-                            .subject("Tu contraseña expiró - Acción requerida en SPSG")
+                            .subject("Tu contraseña expiró - Acción requerida en " + brandName)
                             .templateDefinition(template)
                             .build()
             );
@@ -386,7 +388,7 @@ public class EmailEventService {
                 emailService.sendEmail(
                         Email.builder()
                                 .to(List.of(user.getEmail()))
-                                .subject("Acceso empresarial habilitado - PROSEG")
+                                .subject("Acceso empresarial habilitado - " + brandName)
                                 .templateDefinition(template)
                                 .build()
                 );
@@ -447,7 +449,7 @@ public class EmailEventService {
                         .to(toRecipients)
                         .cc(ccRecipients)
                         .bcc(bccRecipients)
-                        .subject("Nueva solicitud de mantenimiento registrada - PROSEG")
+                        .subject("Nueva solicitud de mantenimiento registrada - " + brandName)
                         .templateDefinition(template)
                         .build()
         );
