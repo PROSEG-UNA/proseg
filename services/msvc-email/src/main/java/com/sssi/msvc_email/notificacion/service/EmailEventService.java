@@ -457,6 +457,116 @@ public class EmailEventService {
         log.info("Email de solicitud de mantenimiento enviado a to={} cc={} bcc={}", toRecipients, ccRecipients, bccRecipients);
     }
 
+    public void sendMaintenanceRequestNotificationEmail(MaintenanceRequestNotificationEvent event) {
+        List<String> toRecipients = cleanEmails(event.getRecipientEmails());
+
+        List<String> ccRecipients = cleanEmails(event.getExtraEmails()).stream()
+                .filter(email -> !toRecipients.contains(email))
+                .toList();
+
+        List<String> bccRecipients = cleanEmails(resolveSuperAdminEmails()).stream()
+                .filter(email -> !toRecipients.contains(email) && !ccRecipients.contains(email))
+                .toList();
+
+        if (toRecipients.isEmpty() && ccRecipients.isEmpty() && bccRecipients.isEmpty()) {
+            log.warn("MaintenanceRequestNotificationEvent sin email destinatario, se omite envio");
+            return;
+        }
+
+        MaintenanceRequestNotificationEmailTemplate template = MaintenanceRequestNotificationEmailTemplate.builder()
+                .requestId(event.getRequestId())
+                .actionType(event.getActionType())
+                .actionLabel(event.getActionLabel())
+                .detail(event.getDetail())
+                .companyName(event.getCompanyName())
+                .legalId(event.getLegalId())
+                .description(event.getDescription())
+                .cancellationReason(event.getCancellationReason())
+                .status(event.getStatus())
+                .startDate(event.getStartDate())
+                .endDate(event.getEndDate())
+                .startTime(event.getStartTime())
+                .endTime(event.getEndTime())
+                .campusName(event.getCampusName())
+                .buildingName(event.getBuildingName())
+                .changedFields(event.getChangedFields())
+                .timestamp(event.getTimestamp() != null ? event.getTimestamp() : System.currentTimeMillis())
+                .build();
+
+        emailService.sendEmail(
+                Email.builder()
+                        .to(toRecipients)
+                        .cc(ccRecipients)
+                        .bcc(bccRecipients)
+                        .subject(buildMaintenanceNotificationSubject(event))
+                        .templateDefinition(template)
+                        .build()
+        );
+
+        log.info("Email de notificacion de mantenimiento enviado a to={} cc={} bcc={}", toRecipients, ccRecipients, bccRecipients);
+    }
+
+    public void sendTicketNotificationEmail(TicketNotificationEvent event) {
+        List<String> toRecipients = cleanEmails(event.getRecipientEmails());
+
+        List<String> ccRecipients = cleanEmails(event.getExtraEmails()).stream()
+                .filter(email -> !toRecipients.contains(email))
+                .toList();
+
+        List<String> bccRecipients = cleanEmails(resolveSuperAdminEmails()).stream()
+                .filter(email -> !toRecipients.contains(email) && !ccRecipients.contains(email))
+                .toList();
+
+        if (toRecipients.isEmpty() && ccRecipients.isEmpty() && bccRecipients.isEmpty()) {
+            log.warn("TicketNotificationEvent sin email destinatario, se omite envio");
+            return;
+        }
+
+        TicketNotificationEmailTemplate template = TicketNotificationEmailTemplate.builder()
+                .ticketId(event.getTicketId())
+                .actionType(event.getActionType())
+                .actionLabel(event.getActionLabel())
+                .actorName(event.getActorName())
+                .ticketTitle(event.getTicketTitle())
+                .ticketDescription(event.getTicketDescription())
+                .status(event.getStatus())
+                .priority(event.getPriority())
+                .campusName(event.getCampusName())
+                .buildingName(event.getBuildingName())
+                .detail(event.getDetail())
+                .changedFields(event.getChangedFields())
+                .timestamp(event.getTimestamp() != null ? event.getTimestamp() : System.currentTimeMillis())
+                .build();
+
+        emailService.sendEmail(
+                Email.builder()
+                        .to(toRecipients)
+                        .cc(ccRecipients)
+                        .bcc(bccRecipients)
+                        .subject(buildTicketNotificationSubject(event))
+                        .templateDefinition(template)
+                        .build()
+        );
+
+        log.info("Email de ticket enviado a to={} cc={} bcc={}", toRecipients, ccRecipients, bccRecipients);
+    }
+
+    private String buildTicketNotificationSubject(TicketNotificationEvent event) {
+        String actionLabel = event.getActionLabel() != null && !event.getActionLabel().isBlank()
+                ? event.getActionLabel()
+                : "Actualizacion de ticket";
+        String ticketRef = event.getTicketId() != null ? event.getTicketId().toString() : "N/A";
+        return actionLabel + " - Ticket " + ticketRef + " - " + brandName;
+    }
+
+    private String buildMaintenanceNotificationSubject(MaintenanceRequestNotificationEvent event) {
+        String actionLabel = event.getActionLabel() != null && !event.getActionLabel().isBlank()
+                ? event.getActionLabel()
+                : "Actualizacion de solicitud";
+        String requestRef = event.getRequestId() != null ? event.getRequestId().toString() : "N/A";
+        return actionLabel + " - Solicitud " + requestRef + " - " + brandName;
+    }
+
     private List<String> cleanEmails(List<String> emails) {
         if (emails == null) {
             return List.of();

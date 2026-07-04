@@ -112,4 +112,16 @@ public class KafkaConsumerConfig {
     maintenanceRequestCreatedListenerFactory() {
         return listenerFactory(MaintenanceRequestCreatedEvent.class);
     }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, MaintenanceRequestNotificationEvent>
+    maintenanceRequestNotificationListenerFactory() {
+        return listenerFactory(MaintenanceRequestNotificationEvent.class);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, TicketNotificationEvent>
+    ticketNotificationListenerFactory() {
+        return listenerFactory(TicketNotificationEvent.class);
+    }
 }

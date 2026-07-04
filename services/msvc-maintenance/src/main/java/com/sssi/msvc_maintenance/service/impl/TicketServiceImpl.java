@@ -12,6 +12,7 @@ import com.sssi.common.api.exception.LocationException;
 import com.sssi.common.api.exception.CampusException;
 import com.sssi.msvc_maintenance.client.AuthClient;
 import com.sssi.msvc_maintenance.client.InventoryClient;
+import com.sssi.msvc_maintenance.config.MaintenanceNotificationProperties;
 import com.sssi.msvc_maintenance.dto.request.TicketAssignedToUpdateRequestDto;
 import com.sssi.msvc_maintenance.dto.request.TicketCommentCreateRequestDto;
 import com.sssi.msvc_maintenance.dto.request.TicketCommentUpdateRequestDto;
@@ -37,6 +38,7 @@ import com.sssi.msvc_maintenance.entity.TicketPhoto;
 import com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType;
 import com.sssi.msvc_maintenance.entity.enums.TicketPriority;
 import com.sssi.msvc_maintenance.entity.enums.TicketStatus;
+import com.sssi.msvc_maintenance.event.TicketNotificationDomainEvent;
 import com.sssi.msvc_maintenance.repository.TicketAssetRepository;
 import com.sssi.msvc_maintenance.repository.TicketCommentRepository;
 import com.sssi.msvc_maintenance.repository.TicketPhotoRepository;
@@ -51,6 +53,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -96,6 +99,8 @@ public class TicketServiceImpl implements TicketService {
     private final RestTemplate restTemplate;
     private final TicketWebSocketManager webSocketManager;
     private final AuthClient authClient;
+    private final MaintenanceNotificationProperties notificationProperties;
+    private final ApplicationEventPublisher eventPublisher;
     private static final Logger log = LoggerFactory.getLogger(TicketServiceImpl.class);
 
     private static final int ARCHIVE_CHUNK_SIZE_BYTES = 5 * 1024 * 1024;
@@ -211,6 +216,15 @@ public class TicketServiceImpl implements TicketService {
                 .status(saved.getStatus())
                 .priority(saved.getPriority())
                 .build());
+
+        publishTicketNotification(
+                saved,
+                "CREATED",
+                "Ticket creado",
+                createdBy,
+                "Se creo un nuevo ticket",
+                List.of()
+        );
 
         return response;
     }
@@ -355,14 +369,18 @@ public class TicketServiceImpl implements TicketService {
         Ticket saved = ticketRepository.save(ticket);
         Set<UUID> newAssetIds = assetIds.stream().collect(Collectors.toSet());
 
+        List<String> changedFields = new ArrayList<>();
+
         if (!Objects.equals(oldTitle, saved.getTitle())) {
             saveHistory(saved, TicketHistoryChangeType.EDITED, "title", oldTitle,
                     saved.getTitle(), actorId, null);
+            changedFields.add(formatChange("Titulo", oldTitle, saved.getTitle()));
         }
 
         if (!Objects.equals(oldDescription, saved.getDescription())) {
             saveHistory(saved, TicketHistoryChangeType.EDITED, "description",
                     oldDescription, saved.getDescription(), actorId, null);
+            changedFields.add(formatChange("Descripcion", oldDescription, saved.getDescription()));
         }
 
         if (!Objects.equals(oldPriority, saved.getPriority())) {
@@ -371,50 +389,69 @@ public class TicketServiceImpl implements TicketService {
                     oldPriority == null ? null : oldPriority.name(),
                     saved.getPriority() == null ? null : saved.getPriority().name(),
                     actorId, null);
+            changedFields.add(formatChange(
+                    "Prioridad",
+                    toPriorityLabel(oldPriority),
+                    toPriorityLabel(saved.getPriority()))
+            );
         }
 
         if (!Objects.equals(oldSiteId, saved.getSiteId())) {
             saveHistory(saved, TicketHistoryChangeType.EDITED, "site",
                     oldSiteName, site != null ? site.getName() : null, actorId, null);
+            changedFields.add(formatChange("Recinto", oldSiteName, site != null ? site.getName() : null));
         }
 
         if (!Objects.equals(oldBuildingId, saved.getBuildingId())) {
             saveHistory(saved, TicketHistoryChangeType.EDITED, "building",
                     oldBuildingName, building != null ? building.getName() : null, actorId, null);
+            changedFields.add(formatChange("Edificio", oldBuildingName, building != null ? building.getName() : null));
         }
 
         if (!Objects.equals(oldFloorId, saved.getFloorId())) {
             saveHistory(saved, TicketHistoryChangeType.EDITED, "floor",
                     oldFloorName, floor != null ? floor.getName() : null, actorId, null);
+            changedFields.add(formatChange("Piso", oldFloorName, floor != null ? floor.getName() : null));
         }
 
         if (!Objects.equals(oldLocationId, saved.getLocationId())) {
             saveHistory(saved, TicketHistoryChangeType.EDITED, "location",
                     oldLocationName, location != null ? location.getDescription() : null, actorId, null);
+            changedFields.add(formatChange(
+                    "Ubicacion",
+                    oldLocationName,
+                    location != null ? location.getDescription() : null)
+            );
         }
 
         for (UUID assetId : newAssetIds) {
             if (!oldAssetIds.contains(assetId)) {
+                String assetLabel = buildAssetHistoryLabel(assetId);
                 saveHistory(saved, TicketHistoryChangeType.EDITED, "asset",
-                        null, buildAssetHistoryLabel(assetId), actorId, null);
+                        null, assetLabel, actorId, null);
+                changedFields.add("Activo agregado: " + assetLabel);
             }
         }
 
         for (UUID oldAssetId : oldAssetIds) {
             if (!newAssetIds.contains(oldAssetId)) {
+                String oldAssetLabel = oldAssetLabels.get(oldAssetId);
                 saveHistory(saved, TicketHistoryChangeType.EDITED, "asset",
-                        oldAssetLabels.get(oldAssetId), null, actorId, null);
+                        oldAssetLabel, null, actorId, null);
+                changedFields.add("Activo removido: " + valueOrFallback(oldAssetLabel));
             }
         }
 
         for (String removedPhotoName : removedPhotoNames) {
             saveHistory(saved, TicketHistoryChangeType.ATTACHMENT_REMOVED,
                     "attachment", removedPhotoName, null, actorId, null);
+            changedFields.add("Adjunto removido: " + valueOrFallback(removedPhotoName));
         }
 
         for (String addedPhotoName : addedPhotoNames) {
             saveHistory(saved, TicketHistoryChangeType.ATTACHMENT_ADDED,
                     "attachment", null, addedPhotoName, actorId, null);
+            changedFields.add("Adjunto agregado: " + valueOrFallback(addedPhotoName));
         }
 
         webSocketManager.broadcast(TicketWebSocketEventDto.builder()
@@ -425,6 +462,15 @@ public class TicketServiceImpl implements TicketService {
                 .status(saved.getStatus())
                 .priority(saved.getPriority())
                 .build());
+
+        publishTicketNotification(
+                saved,
+                "UPDATED",
+                "Ticket actualizado",
+                actorId,
+                "Se actualizo la informacion general del ticket",
+                changedFields
+        );
 
         return toResponse(saved);
     }
@@ -502,6 +548,16 @@ public class TicketServiceImpl implements TicketService {
                 .status(saved.getStatus())
                 .priority(saved.getPriority())
                 .build());
+
+        String actorId = extractUserId(authentication);
+        publishTicketNotification(
+                saved,
+                "PRIORITY_CHANGED",
+                "Prioridad del ticket actualizada",
+                actorId,
+                "Se cambio la prioridad del ticket",
+                List.of(formatChange("Prioridad", toPriorityLabel(oldPriority), toPriorityLabel(saved.getPriority())))
+        );
 
         return toResponse(saved);
     }
@@ -590,6 +646,19 @@ public class TicketServiceImpl implements TicketService {
                 .priority(saved.getPriority())
                 .build());
 
+        String actorId = extractUserId(authentication);
+        String oldValue = oldAssignedTo != null ? resolveAuthorName(oldAssignedTo.toString()) : "Sin asignar";
+        String newValue = saved.getAssignedTo() != null ? resolveAuthorName(saved.getAssignedTo().toString()) : "Sin asignar";
+
+        publishTicketNotification(
+                saved,
+                "ASSIGNED_TO_CHANGED",
+                "Asignacion del ticket actualizada",
+                actorId,
+                "Se actualizo la persona asignada al ticket",
+                List.of(formatChange("Asignado a", oldValue, newValue))
+        );
+
         return toResponse(saved);
     }
 
@@ -613,9 +682,20 @@ public class TicketServiceImpl implements TicketService {
 
         TicketComment saved = ticketCommentRepository.save(comment);
         ticket.getTicketComments().add(saved);
+        String actorId = extractUserId(authentication);
+        String actorName = resolveAuthorName(actorId);
 
         saveHistory(ticket, TicketHistoryChangeType.COMMENT_ADDED, "comment",
-                null, saved.getContent(), extractUserId(authentication), null);
+                null, saved.getContent(), actorId, null);
+
+        publishTicketNotification(
+                ticket,
+                "COMMENT_ADDED",
+                "Comentario agregado en ticket",
+                actorId,
+                "Se agrego un nuevo comentario",
+                List.of(formatCommentAdded(actorName, saved.getContent()))
+        );
 
         return toCommentResponse(saved);
     }
@@ -634,6 +714,7 @@ public class TicketServiceImpl implements TicketService {
 
         TicketComment comment = findCommentInTicket(ticket, commentId);
         String actorId = extractUserId(authentication);
+        String actorName = resolveAuthorName(actorId);
         if (!actorId.equals(comment.getAuthorId())) {
             throw TicketException.commentEditForbidden();
         }
@@ -647,6 +728,15 @@ public class TicketServiceImpl implements TicketService {
             saveHistory(ticket, TicketHistoryChangeType.COMMENT_EDITED,
                     "comment", oldContent, newContent, actorId, null);
         }
+
+        publishTicketNotification(
+                ticket,
+                "COMMENT_EDITED",
+                "Comentario actualizado en ticket",
+                actorId,
+                "Se modifico un comentario",
+                List.of(formatCommentEdited(actorName, oldContent, newContent))
+        );
 
         return toCommentResponse(updated);
     }
@@ -669,11 +759,21 @@ public class TicketServiceImpl implements TicketService {
         }
 
         String oldContent = comment.getContent();
+        String actorName = resolveAuthorName(actorId);
         ticket.getTicketComments().remove(comment);
         ticketCommentRepository.delete(comment);
 
         saveHistory(ticket, com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType.COMMENT_REMOVED,
                 "eliminó un comentario", oldContent, null, actorId, null);
+
+        publishTicketNotification(
+                ticket,
+                "COMMENT_REMOVED",
+                "Comentario eliminado en ticket",
+                actorId,
+                "Se elimino un comentario",
+                List.of(formatCommentRemoved(actorName, oldContent))
+        );
     }
 
     @Override
@@ -709,6 +809,16 @@ public class TicketServiceImpl implements TicketService {
                 .status(saved.getStatus())
                 .priority(saved.getPriority())
                 .build());
+
+        String actorId = extractUserId(authentication);
+        publishTicketNotification(
+                saved,
+                "STATUS_CHANGED",
+                "Estado del ticket actualizado",
+                actorId,
+                "Se cambio el estado del ticket",
+                List.of(formatChange("Estado", toStatusLabel(oldStatus), toStatusLabel(saved.getStatus())))
+        );
 
         return toResponse(saved);
     }
@@ -788,6 +898,171 @@ public class TicketServiceImpl implements TicketService {
                 .build();
 
         ticketHistoryChangeRepository.save(history);
+    }
+
+    private void publishTicketNotification(Ticket ticket,
+                                           String actionType,
+                                           String actionLabel,
+                                           String actorId,
+                                           String detail,
+                                           List<String> changedFields) {
+        eventPublisher.publishEvent(new TicketNotificationDomainEvent(
+                ticket.getId(),
+                actionType,
+                actionLabel,
+                actorId,
+                resolveAuthorName(actorId),
+                ticket.getTitle(),
+                ticket.getDescription(),
+                toStatusLabel(ticket.getStatus()),
+                toPriorityLabel(ticket.getPriority()),
+                resolveCampusNameSafe(ticket.getSiteId()),
+                resolveBuildingNameSafe(ticket.getBuildingId()),
+                detail,
+                changedFields == null ? List.of() : changedFields,
+                resolveTicketNotificationEmails(ticket, actorId),
+                cleanEmails(notificationProperties.getExtraEmails()),
+                System.currentTimeMillis()
+        ));
+    }
+
+    private List<String> resolveTicketNotificationEmails(Ticket ticket, String actorId) {
+        Set<String> userIds = new HashSet<>();
+        addAuthorId(userIds, actorId);
+        addAuthorId(userIds, ticket.getCreatedBy());
+        if (ticket.getAssignedTo() != null) {
+            addAuthorId(userIds, ticket.getAssignedTo().toString());
+        }
+        if (ticket.getAssignedBy() != null) {
+            addAuthorId(userIds, ticket.getAssignedBy().toString());
+        }
+        ticket.getTicketComments().stream()
+                .map(TicketComment::getAuthorId)
+                .forEach(authorId -> addAuthorId(userIds, authorId));
+
+        List<String> recipients = new ArrayList<>(resolveUserEmails(userIds));
+        recipients.addAll(resolveLocationEmails(ticket.getSiteId(), ticket.getBuildingId()));
+        return cleanEmails(recipients);
+    }
+
+    private List<String> resolveUserEmails(Collection<String> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return List.of();
+        }
+
+        try {
+            ApiResponse<List<KeycloakUserResponse>> response = authClient.findUsersByKeycloakIds(new ArrayList<>(userIds));
+            List<KeycloakUserResponse> users = response != null && response.getData() != null
+                    ? response.getData()
+                    : List.of();
+
+            return users.stream()
+                    .map(KeycloakUserResponse::email)
+                    .filter(email -> email != null && !email.isBlank())
+                    .toList();
+        } catch (Exception exception) {
+            log.warn("No se pudieron resolver emails de usuarios de ticket: {}", exception.getMessage());
+            return List.of();
+        }
+    }
+
+    private List<String> resolveLocationEmails(UUID siteId, UUID buildingId) {
+        List<String> emails = new ArrayList<>();
+        try {
+            if (siteId != null) {
+                ApiResponse<List<com.sssi.msvc_maintenance.dto.response.InventoryBuildingEmailResponseDto>> response =
+                        inventoryClient.findCampusEmails(siteId);
+                emails.addAll(extractLocationEmails(response));
+            }
+        } catch (Exception exception) {
+            log.warn("No se pudieron resolver correos del recinto {}: {}", siteId, exception.getMessage());
+        }
+
+        try {
+            if (buildingId != null) {
+                ApiResponse<List<com.sssi.msvc_maintenance.dto.response.InventoryBuildingEmailResponseDto>> response =
+                        inventoryClient.findBuildingEmails(buildingId);
+                emails.addAll(extractLocationEmails(response));
+            }
+        } catch (Exception exception) {
+            log.warn("No se pudieron resolver correos del edificio {}: {}", buildingId, exception.getMessage());
+        }
+
+        return cleanEmails(emails);
+    }
+
+    private List<String> extractLocationEmails(ApiResponse<List<com.sssi.msvc_maintenance.dto.response.InventoryBuildingEmailResponseDto>> response) {
+        List<com.sssi.msvc_maintenance.dto.response.InventoryBuildingEmailResponseDto> data =
+                response != null ? response.getData() : null;
+
+        if (data == null) {
+            return List.of();
+        }
+
+        return data.stream()
+                .map(com.sssi.msvc_maintenance.dto.response.InventoryBuildingEmailResponseDto::getEmail)
+                .filter(email -> email != null && !email.isBlank())
+                .toList();
+    }
+
+    private List<String> cleanEmails(List<String> emails) {
+        if (emails == null) {
+            return List.of();
+        }
+
+        return emails.stream()
+                .filter(email -> email != null && !email.isBlank())
+                .map(String::trim)
+                .distinct()
+                .toList();
+    }
+
+    private String toStatusLabel(TicketStatus status) {
+        if (status == null) {
+            return null;
+        }
+        return switch (status) {
+            case OPEN -> "Abierto";
+            case IN_PROGRESS -> "En progreso";
+            case RESOLVED -> "Resuelto";
+            case REOPENED -> "Reabierto";
+            case CANCELLED -> "Cancelado";
+        };
+    }
+
+    private String toPriorityLabel(TicketPriority priority) {
+        if (priority == null) {
+            return null;
+        }
+        return switch (priority) {
+            case LOW -> "Baja";
+            case MEDIUM -> "Media";
+            case HIGH -> "Alta";
+        };
+    }
+
+    private String formatChange(String fieldName, String oldValue, String newValue) {
+        return fieldName + ": " + valueOrFallback(oldValue) + " -> " + valueOrFallback(newValue);
+    }
+
+    private String formatCommentAdded(String actorName, String newValue) {
+        return "Comentario de " + valueOrFallback(actorName) + ": " + valueOrFallback(newValue);
+    }
+
+    private String formatCommentEdited(String actorName, String oldValue, String newValue) {
+        return "Comentario editado por " + valueOrFallback(actorName)
+                + ": " + valueOrFallback(oldValue) + " - " + valueOrFallback(newValue);
+    }
+
+    private String formatCommentRemoved(String actorName, String oldValue) {
+        return "Comentario eliminado por " + valueOrFallback(actorName) + ": " + valueOrFallback(oldValue);
+    }
+
+    private String valueOrFallback(String value) {
+        if (value == null || value.isBlank()) {
+            return "Sin valor";
+        }
+        return value;
     }
 
     private void saveTicketAssets(Ticket ticket, List<UUID> assetIds) {

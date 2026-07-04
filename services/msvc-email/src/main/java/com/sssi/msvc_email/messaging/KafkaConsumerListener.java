@@ -125,4 +125,24 @@ public class KafkaConsumerListener {
         log.info("MAINTENANCE REQUEST CREATED EVENT: {}", event);
         emailEventService.sendMaintenanceRequestCreatedEmail(event);
     }
+
+    @KafkaListener(
+            topics = KafkaTopics.MAINTENANCE_REQUEST_NOTIFICATION_TOPIC,
+            groupId = "msvc-email-group",
+            containerFactory = "maintenanceRequestNotificationListenerFactory"
+    )
+    public void onMaintenanceRequestNotification(MaintenanceRequestNotificationEvent event) {
+        log.info("MAINTENANCE REQUEST NOTIFICATION EVENT: {}", event);
+        emailEventService.sendMaintenanceRequestNotificationEmail(event);
+    }
+
+    @KafkaListener(
+            topics = KafkaTopics.TICKET_NOTIFICATION_TOPIC,
+            groupId = "msvc-email-group",
+            containerFactory = "ticketNotificationListenerFactory"
+    )
+    public void onTicketNotification(TicketNotificationEvent event) {
+        log.info("TICKET NOTIFICATION EVENT: {}", event);
+        emailEventService.sendTicketNotificationEmail(event);
+    }
 }

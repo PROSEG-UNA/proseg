@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(${actionLabel}, ${actionLabel}, 'Se detecto un movimiento en una solicitud de mantenimiento.', ~{::section})}">
+<section>
+<p style="margin:0 0 20px 0;font-size:15px;line-height:1.6;color:#374151;">
+    Se registro una actualizacion en la solicitud de mantenimiento de
+    <strong th:text="${companyName}">Empresa</strong>.
+</p>
+
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+       style="border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;margin-bottom:24px;">
+    <tr>
+        <td colspan="2"
+            style="padding:14px 16px;font-size:15px;font-weight:bold;background:#fef2f2;border-bottom:1px solid #fee2e2;color:#b91c1c;">
+            Detalle de la solicitud
+        </td>
+    </tr>
+    <tr>
+        <td style="padding:12px 16px;font-size:14px;width:40%;border-bottom:1px solid #e5e7eb;"><strong>Accion:</strong></td>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;" th:text="${actionLabel}">Solicitud actualizada</td>
+    </tr>
+    <tr>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;"><strong>Solicitud ID:</strong></td>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;" th:text="${requestId} ?: 'N/A'">id</td>
+    </tr>
+    <tr>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;"><strong>Estado:</strong></td>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;" th:text="${status}">Pendiente</td>
+    </tr>
+    <tr>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;"><strong>Resumen:</strong></td>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;" th:text="${detail} ?: 'Movimiento registrado'">Resumen</td>
+    </tr>
+    <tr>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;"><strong>Empresa:</strong></td>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;" th:text="${companyName}">Empresa</td>
+    </tr>
+    <tr>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;"><strong>Cedula juridica:</strong></td>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;" th:text="${legalId} ?: 'Sin valor'">123</td>
+    </tr>
+    <tr>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;"><strong>Descripcion:</strong></td>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;" th:text="${description} ?: 'Sin valor'">Descripcion</td>
+    </tr>
+    <tr th:if="${cancellationReason != null and !cancellationReason.isBlank()}">
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;"><strong>Motivo rechazo:</strong></td>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;" th:text="${cancellationReason}">Motivo</td>
+    </tr>
+    <tr>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;"><strong>Fechas:</strong></td>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;">
+            <span th:text="${startDate} ?: 'Sin valor'">01/01/2026</span> -> <span th:text="${endDate} ?: 'Sin valor'">02/01/2026</span>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;"><strong>Horario:</strong></td>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;">
+            <span th:text="${startTime} ?: 'Sin valor'">08:00</span> - <span th:text="${endTime} ?: 'Sin valor'">17:00</span>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;"><strong>Campus:</strong></td>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;" th:text="${campusName} ?: 'Sin valor'">Campus</td>
+    </tr>
+    <tr>
+        <td style="padding:12px 16px;font-size:14px;"><strong>Edificio:</strong></td>
+        <td style="padding:12px 16px;font-size:14px;" th:text="${buildingName} ?: 'Sin valor'">Edificio</td>
+    </tr>
+</table>
+
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+       style="border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;margin-bottom:24px;"
+       th:if="${changedFields != null and !changedFields.isEmpty()}">
+    <tr>
+        <td style="padding:14px 16px;font-size:15px;font-weight:bold;background:#eff6ff;border-bottom:1px solid #dbeafe;color:#1d4ed8;">
+            Cambios detectados
+        </td>
+    </tr>
+    <tr>
+        <td style="padding:12px 16px;font-size:14px;">
+            <ul style="margin:0;padding-left:18px;color:#374151;">
+                <li th:each="change : ${changedFields}" th:text="${change}" style="margin:4px 0;">Cambio</li>
+            </ul>
+        </td>
+    </tr>
+</table>
+
+<p style="margin:0;font-size:12px;color:#6b7280;">
+    Movimiento registrado el:
+    <span th:text="${timestamp}">01/01/2026 00:00</span>
+</p>
+</section>
+</html>
