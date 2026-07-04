@@ -555,16 +555,14 @@ public class EmailEventService {
         String actionLabel = event.getActionLabel() != null && !event.getActionLabel().isBlank()
                 ? event.getActionLabel()
                 : "Actualizacion de ticket";
-        String ticketRef = event.getTicketId() != null ? event.getTicketId().toString() : "N/A";
-        return actionLabel + " - Ticket " + ticketRef + " - " + brandName;
+        return actionLabel + " - Ticket - " + brandName;
     }
 
     private String buildMaintenanceNotificationSubject(MaintenanceRequestNotificationEvent event) {
         String actionLabel = event.getActionLabel() != null && !event.getActionLabel().isBlank()
                 ? event.getActionLabel()
                 : "Actualizacion de solicitud";
-        String requestRef = event.getRequestId() != null ? event.getRequestId().toString() : "N/A";
-        return actionLabel + " - Solicitud " + requestRef + " - " + brandName;
+        return actionLabel + " - Solicitud de mantenimiento - " + brandName;
     }
 
     private List<String> cleanEmails(List<String> emails) {

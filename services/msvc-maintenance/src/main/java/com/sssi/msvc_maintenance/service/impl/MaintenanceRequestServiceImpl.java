@@ -5,6 +5,8 @@ import com.sssi.common.api.response.PageResponse;
 import com.sssi.msvc_maintenance.client.InventoryClient;
 import com.sssi.msvc_maintenance.dto.request.MaintenanceRequestRequestDto;
 import com.sssi.msvc_maintenance.dto.response.InventoryAssetResponseDto;
+import com.sssi.msvc_maintenance.dto.response.InventoryBuildingResponseDto;
+import com.sssi.msvc_maintenance.dto.response.InventoryCampusResponseDto;
 import com.sssi.msvc_maintenance.dto.response.MaintenanceAssetOptionDto;
 import com.sssi.msvc_maintenance.dto.response.MaintenanceRequestResponseDto;
 import com.sssi.msvc_maintenance.entity.Company;
@@ -181,10 +183,13 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         java.time.LocalTime oldEndTime = maintenanceRequest.getEndTime();
         UUID oldCampusId = maintenanceRequest.getCampusId();
         UUID oldBuildingId = maintenanceRequest.getBuildingId();
+        String oldCampusName = resolveCampusNameSafe(oldCampusId);
+        String oldBuildingName = resolveBuildingNameSafe(oldBuildingId);
         Set<UUID> oldTechnicianIds = toTechnicianIds(maintenanceRequest.getAssignedTechnicians());
         UUID oldResponsibleId = maintenanceRequest.getResponsibleUserCompany() != null
                 ? maintenanceRequest.getResponsibleUserCompany().getId()
                 : null;
+        String oldResponsibleName = resolveResponsibleName(maintenanceRequest.getResponsibleUserCompany());
         Set<String> oldEmails = toEmailSet(maintenanceRequest.getEmails());
 
         UUID companyId = parseUuid(request.getCompanyId(), "companyId");
@@ -226,8 +231,11 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                         oldEndTime,
                         oldCampusId,
                         oldBuildingId,
+                        oldCampusName,
+                        oldBuildingName,
                         oldTechnicianIds,
                         oldResponsibleId,
+                        oldResponsibleName,
                         oldEmails,
                         saved
                 )
@@ -342,8 +350,11 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                                                   java.time.LocalTime oldEndTime,
                                                   UUID oldCampusId,
                                                   UUID oldBuildingId,
+                                                  String oldCampusName,
+                                                  String oldBuildingName,
                                                   Set<UUID> oldTechnicianIds,
                                                   UUID oldResponsibleId,
+                                                  String oldResponsibleName,
                                                   Set<String> oldEmails,
                                                   MaintenanceRequest saved) {
         List<String> changedFields = new ArrayList<>();
@@ -367,10 +378,10 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
             changedFields.add(formatChange("Hora fin", valueOrFallback(oldEndTime), valueOrFallback(saved.getEndTime())));
         }
         if (!Objects.equals(oldCampusId, saved.getCampusId())) {
-            changedFields.add(formatChange("Campus", valueOrFallback(oldCampusId), valueOrFallback(saved.getCampusId())));
+            changedFields.add(formatChange("Campus", oldCampusName, resolveCampusNameSafe(saved.getCampusId())));
         }
         if (!Objects.equals(oldBuildingId, saved.getBuildingId())) {
-            changedFields.add(formatChange("Edificio", valueOrFallback(oldBuildingId), valueOrFallback(saved.getBuildingId())));
+            changedFields.add(formatChange("Edificio", oldBuildingName, resolveBuildingNameSafe(saved.getBuildingId())));
         }
 
         Set<UUID> newTechnicianIds = toTechnicianIds(saved.getAssignedTechnicians());
@@ -382,7 +393,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                 ? saved.getResponsibleUserCompany().getId()
                 : null;
         if (!Objects.equals(oldResponsibleId, newResponsibleId)) {
-            changedFields.add(formatChange("Responsable", valueOrFallback(oldResponsibleId), valueOrFallback(newResponsibleId)));
+            changedFields.add(formatChange("Responsable", oldResponsibleName, resolveResponsibleName(saved.getResponsibleUserCompany())));
         }
 
         Set<String> newEmails = toEmailSet(saved.getEmails());
@@ -457,6 +468,42 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                 .map(String::trim)
                 .distinct()
                 .toList();
+    }
+
+    private String resolveCampusNameSafe(UUID campusId) {
+        if (campusId == null) {
+            return null;
+        }
+        try {
+            ApiResponse<InventoryCampusResponseDto> response = inventoryClient.findCampusById(campusId);
+            InventoryCampusResponseDto campus = response != null ? response.getData() : null;
+            return campus != null ? campus.getName() : "Recinto no disponible";
+        } catch (Exception exception) {
+            return "Recinto no disponible";
+        }
+    }
+
+    private String resolveBuildingNameSafe(UUID buildingId) {
+        if (buildingId == null) {
+            return null;
+        }
+        try {
+            ApiResponse<InventoryBuildingResponseDto> response = inventoryClient.findBuildingById(buildingId);
+            InventoryBuildingResponseDto building = response != null ? response.getData() : null;
+            return building != null ? building.getName() : "Edificio no disponible";
+        } catch (Exception exception) {
+            return "Edificio no disponible";
+        }
+    }
+
+    private String resolveResponsibleName(UserCompany responsible) {
+        if (responsible == null) {
+            return "Sin responsable";
+        }
+        if (responsible.getUserEmail() != null && !responsible.getUserEmail().isBlank()) {
+            return responsible.getUserEmail();
+        }
+        return "Responsable asignado";
     }
 
     private Set<UUID> toTechnicianIds(List<UserCompany> technicians) {

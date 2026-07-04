@@ -1117,7 +1117,7 @@ public class TicketServiceImpl implements TicketService {
 
         String assetNumber = asset.getAssetNumber() != null && !asset.getAssetNumber().isBlank()
                 ? asset.getAssetNumber()
-                : asset.getId().toString();
+                : "Activo sin codigo";
         String modelName = asset.getModel() != null ? asset.getModel().getName() : null;
 
         if (modelName == null || modelName.isBlank()) {
@@ -1135,7 +1135,7 @@ public class TicketServiceImpl implements TicketService {
         try {
             return buildAssetHistoryLabel(requireAsset(assetId));
         } catch (Exception exception) {
-            return assetId.toString();
+            return "Activo no identificado";
         }
     }
 
@@ -1147,7 +1147,7 @@ public class TicketServiceImpl implements TicketService {
         try {
             return requireCampus(campusId).getName();
         } catch (Exception exception) {
-            return campusId.toString();
+            return "Recinto no disponible";
         }
     }
 
@@ -1159,7 +1159,7 @@ public class TicketServiceImpl implements TicketService {
         try {
             return requireBuilding(buildingId).getName();
         } catch (Exception exception) {
-            return buildingId.toString();
+            return "Edificio no disponible";
         }
     }
 
@@ -1171,7 +1171,7 @@ public class TicketServiceImpl implements TicketService {
         try {
             return requireFloor(floorId).getName();
         } catch (Exception exception) {
-            return floorId.toString();
+            return "Piso no disponible";
         }
     }
 
@@ -1183,7 +1183,7 @@ public class TicketServiceImpl implements TicketService {
         try {
             return requireLocation(locationId).getDescription();
         } catch (Exception exception) {
-            return locationId.toString();
+            return "Ubicacion no disponible";
         }
     }
 
@@ -1473,13 +1473,13 @@ public class TicketServiceImpl implements TicketService {
                             HashMap::new
                     ));
 
-            ids.forEach(id -> names.putIfAbsent(id, id));
+            ids.forEach(id -> names.putIfAbsent(id, "Usuario"));
 
             return names;
         } catch (Exception exception) {
             return ids.stream().collect(Collectors.toMap(
                     Function.identity(),
-                    Function.identity()
+                    id -> "Usuario"
             ));
         }
     }
@@ -1489,7 +1489,7 @@ public class TicketServiceImpl implements TicketService {
             return "Usuario";
         }
 
-        return resolveAuthorNames(List.of(authorId)).getOrDefault(authorId, authorId);
+        return resolveAuthorNames(List.of(authorId)).getOrDefault(authorId, "Usuario");
     }
 
     private String buildAuthorName(KeycloakUserResponse user, String fallback) {
