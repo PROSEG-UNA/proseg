@@ -39,4 +39,8 @@ public final class KafkaTopics {
     public static final String MAINTENANCE_REQUEST_NOTIFICATION_TOPIC = "maintenance-request-notification-v1";
 
     public static final String TICKET_NOTIFICATION_TOPIC = "ticket-notification-v1";
+
+    public static final String USER_ROLE_ASSIGNED_TOPIC = "user-role-assigned-v1";
+
+    public static final String USER_STATUS_CHANGED_TOPIC = "user-status-changed-v1";
 }
