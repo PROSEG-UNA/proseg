@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout('Cambio de estado', 'Cambio de estado', 'Tu estado en la plataforma ha sido actualizado', ~{::section})}">
+<section>
+<p style="margin:0 0 16px 0;
+                                  font-size:15px;
+                                  line-height:1.6;
+                                  color:#374151;">
+
+                            Estimado/a
+                            <strong th:text="${firstName + ' ' + lastName}">
+                                Usuario
+                            </strong>,
+
+                        </p>
+
+                        <table role="presentation"
+                               width="100%"
+                               cellspacing="0"
+                               cellpadding="0"
+                               style="border-left:4px solid #2563eb;
+                                      background:#eff6ff;
+                                      border-radius:4px;
+                                      margin-bottom:24px;">
+
+                            <tr>
+
+                                <td style="padding:14px 16px;
+                                           font-size:14px;
+                                           line-height:1.7;
+                                           color:#1e3a8a;">
+
+                                    Tu estado en <span th:text="${brandName}">PROSEG</span>
+                                    ha sido actualizado por un administrador.
+
+                                </td>
+
+                            </tr>
+
+                        </table>
+
+                        <p style="margin:0 0 20px 0;
+                                  font-size:14px;
+                                  line-height:1.75;
+                                  color:#374151;">
+
+                            Tu cuenta ha experimentado un cambio de estado. A continuación se detallan los cambios:
+
+                        </p>
+
+                        <table role="presentation"
+                               width="100%"
+                               cellspacing="0"
+                               cellpadding="0"
+                               style="border:1px solid #e5e7eb;
+                                      border-radius:8px;
+                                      background:#f9fafb;
+                                      margin-bottom:24px;">
+
+                            <tr>
+
+                                <td colspan="2"
+                                    style="padding:14px 16px;
+                                           font-size:15px;
+                                           font-weight:bold;
+                                           background:#dbeafe;
+                                           border-bottom:1px solid #bfdbfe;
+                                           color:#1e40af;">
+
+                                    Cambio de estado
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+
+                                    <strong>Tu Usuario:</strong>
+
+                                </td>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;"
+                                    th:text="${username}">
+
+                                    usuario
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+
+                                    <strong>Tu Email:</strong>
+
+                                </td>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;"
+                                    th:text="${email}">
+
+                                    correo@dominio.com
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;
+                                           background:#fef2f2;">
+
+                                    <strong>Estado anterior:</strong>
+
+                                </td>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;
+                                           background:#fef2f2;">
+
+                                    <span style="display:inline-block;
+                                                 padding:4px 10px;
+                                                 border-radius:999px;
+                                                 background:#fee2e2;
+                                                 color:#991b1b;
+                                                 font-size:12px;
+                                                 font-weight:600;"
+                                          th:text="${oldStatus}">
+
+                                        Estado
+
+                                    </span>
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+
+                                    <strong>Nuevo estado:</strong>
+
+                                </td>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+
+                                    <span style="display:inline-block;
+                                                 padding:4px 10px;
+                                                 border-radius:999px;
+                                                 background:#dcfce7;
+                                                 color:#166534;
+                                                 font-size:12px;
+                                                 font-weight:600;"
+                                          th:text="${newStatus}">
+
+                                        Estado
+
+                                    </span>
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+
+                                    <strong>Modificado por:</strong>
+
+                                </td>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+
+                                    <span th:text="${changedByFirstName + ' ' + changedByLastName}">
+                                        Administrador
+                                    </span>
+                                    <br/>
+                                    <span style="font-size:12px; color:#6b7280;">
+                                        (<span th:text="${changedByUsername}">admin</span>)
+                                    </span>
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+
+                                    <strong>Email del administrador:</strong>
+
+                                </td>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;"
+                                    th:text="${changedByEmail}">
+
+                                    admin@dominio.com
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+
+                                    <strong>Motivo/Razón:</strong>
+
+                                </td>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;"
+                                    th:text="${reason}">
+
+                                    Sin especificar
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;">
+
+                                    <strong>Fecha y hora:</strong>
+
+                                </td>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;"
+                                    th:text="${timestamp}">
+
+                                    01/01/2026 00:00
+
+                                </td>
+
+                            </tr>
+
+                        </table>
+
+                        <p style="margin:0 0 24px 0;
+                                  font-size:14px;
+                                  line-height:1.75;
+                                  color:#374151;">
+
+                            Si tienes preguntas sobre este cambio o crees que fue realizado por error,
+                            por favor comunícate con tu administrador de sistemas.
+
+                        </p>
+
+</section>
+</html>

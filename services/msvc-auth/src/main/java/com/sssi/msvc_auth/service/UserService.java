@@ -1,9 +1,7 @@
 package com.sssi.msvc_auth.service;
 
 import com.sssi.common.api.response.PagedResponse;
-import com.sssi.common.kafka.events.ManagedUserCreatedEvent;
-import com.sssi.common.kafka.events.UserInvitedEvent;
-import com.sssi.common.kafka.events.UserPasswordConfiguredEvent;
+import com.sssi.common.kafka.events.*;
 import com.sssi.common.kafka.topics.KafkaTopics;
 import com.sssi.msvc_auth.client.MaintenanceCompanyClient;
 import com.sssi.msvc_auth.dto.*;
@@ -54,8 +52,9 @@ public class UserService {
     }
 
     @Transactional
-    public User updateUserApproval(UUID id, User.UserStatus status) {
+    public User updateUserApproval(UUID id, User.UserStatus status, String currentUserId) {
         User updatedUser = userApprobationService.updateStatus(id, status);
+        String oldStatus = updatedUser.getStatus() == User.UserStatus.APPROVED ? "PENDING" : "APPROVED";
 
         if (updatedUser.getStatus() == User.UserStatus.APPROVED) {
             keycloakAdminService.enableUser(updatedUser.getKeycloakUserId());
@@ -64,6 +63,37 @@ public class UserService {
         }
 
         log.info("Estado de aprobacion actualizado para userId {} -> {}", id, updatedUser.getStatus());
+
+        // Send Kafka event for email notification
+        try {
+            KeycloakUserResponseDto targetUser = keycloakAdminService.getUserById(updatedUser.getKeycloakUserId());
+            KeycloakUserResponseDto adminUser = keycloakAdminService.getUserById(currentUserId);
+
+            kafkaTemplate.send(
+                    KafkaTopics.USER_STATUS_CHANGED_TOPIC,
+                    UserStatusChangedEvent.builder()
+                            .userId(updatedUser.getKeycloakUserId())
+                            .username(targetUser.getUsername())
+                            .email(targetUser.getEmail())
+                            .firstName(targetUser.getFirstName())
+                            .lastName(targetUser.getLastName())
+                            .oldStatus(oldStatus)
+                            .newStatus(updatedUser.getStatus().name())
+                            .changedByUserId(currentUserId)
+                            .changedByUsername(adminUser.getUsername())
+                            .changedByEmail(adminUser.getEmail())
+                            .changedByFirstName(adminUser.getFirstName())
+                            .changedByLastName(adminUser.getLastName())
+                            .reason("Status approval change")
+                            .timestamp(Instant.now().toEpochMilli())
+                            .build()
+            );
+            log.info("Evento de cambio de estado enviado: usuario={}, estado={}", updatedUser.getKeycloakUserId(), updatedUser.getStatus());
+        } catch (Exception kafkaEx) {
+            log.warn("No se pudo enviar evento de cambio de estado para usuario {}: {}",
+                    updatedUser.getKeycloakUserId(), kafkaEx.getMessage());
+        }
+
         return updatedUser;
     }
 
@@ -217,9 +247,44 @@ public class UserService {
                 .build();
     }
 
-    public void assignRoleToUser(String userId, String roleId) {
+    @Transactional
+    public void assignRoleToUser(String userId, String roleId, String currentUserId) {
         validateAssociatedCompanyForRole(userId, roleId);
+        
+        // Get user and admin info before making changes
+        KeycloakUserResponseDto targetUser = keycloakAdminService.getUserById(userId);
+        KeycloakUserResponseDto adminUser = keycloakAdminService.getUserById(currentUserId);
+        String roleName = keycloakAdminService.getRoleNameById(roleId);
+        
+        // Assign the role
         keycloakAdminService.assignRoleToUser(userId, roleId);
+        
+        // Send Kafka event for email notification
+        try {
+            kafkaTemplate.send(
+                    KafkaTopics.USER_ROLE_ASSIGNED_TOPIC,
+                    UserRoleAssignedEvent.builder()
+                            .userId(userId)
+                            .username(targetUser.getUsername())
+                            .email(targetUser.getEmail())
+                            .firstName(targetUser.getFirstName())
+                            .lastName(targetUser.getLastName())
+                            .roleId(roleId)
+                            .roleName(roleName)
+                            .assignedByUserId(currentUserId)
+                            .assignedByUsername(adminUser.getUsername())
+                            .assignedByEmail(adminUser.getEmail())
+                            .assignedByFirstName(adminUser.getFirstName())
+                            .assignedByLastName(adminUser.getLastName())
+                            .timestamp(Instant.now().toEpochMilli())
+                            .build()
+            );
+            log.info("Evento de asignación de rol enviado: usuario={}, rol={}, asignadoPor={}",
+                    userId, roleName, currentUserId);
+        } catch (Exception kafkaEx) {
+            log.warn("No se pudo enviar evento de asignación de rol para usuario {}: {}",
+                    userId, kafkaEx.getMessage());
+        }
     }
 
     private void validateAssociatedCompanyForRole(String userId, String roleId) {

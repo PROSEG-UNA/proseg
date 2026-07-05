@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout('Asignación de rol', 'Asignación de rol', 'Se te ha asignado un nuevo rol en la plataforma', ~{::section})}">
+<section>
+<p style="margin:0 0 16px 0;
+                                  font-size:15px;
+                                  line-height:1.6;
+                                  color:#374151;">
+
+                            Estimado/a
+                            <strong th:text="${firstName + ' ' + lastName}">
+                                Usuario
+                            </strong>,
+
+                        </p>
+
+                        <table role="presentation"
+                               width="100%"
+                               cellspacing="0"
+                               cellpadding="0"
+                               style="border-left:4px solid #2563eb;
+                                      background:#eff6ff;
+                                      border-radius:4px;
+                                      margin-bottom:24px;">
+
+                            <tr>
+
+                                <td style="padding:14px 16px;
+                                           font-size:14px;
+                                           line-height:1.7;
+                                           color:#1e3a8a;">
+
+                                    Tu cuenta en <span th:text="${brandName}">PROSEG</span>
+                                    ha sido actualizada con un nuevo rol.
+
+                                </td>
+
+                            </tr>
+
+                        </table>
+
+                        <p style="margin:0 0 20px 0;
+                                  font-size:14px;
+                                  line-height:1.75;
+                                  color:#374151;">
+
+                            Se te ha asignado el siguiente rol en el sistema:
+
+                        </p>
+
+                        <table role="presentation"
+                               width="100%"
+                               cellspacing="0"
+                               cellpadding="0"
+                               style="border:1px solid #e5e7eb;
+                                      border-radius:8px;
+                                      background:#f9fafb;
+                                      margin-bottom:24px;">
+
+                            <tr>
+
+                                <td colspan="2"
+                                    style="padding:14px 16px;
+                                           font-size:15px;
+                                           font-weight:bold;
+                                           background:#dbeafe;
+                                           border-bottom:1px solid #bfdbfe;
+                                           color:#1e40af;">
+
+                                    Información de la asignación
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+
+                                    <strong>Nuevo Rol:</strong>
+
+                                </td>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;"
+                                    th:text="${roleName}">
+
+                                    Rol
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+
+                                    <strong>Tu Usuario:</strong>
+
+                                </td>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;"
+                                    th:text="${username}">
+
+                                    usuario
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+
+                                    <strong>Tu Email:</strong>
+
+                                </td>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;"
+                                    th:text="${email}">
+
+                                    correo@dominio.com
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+
+                                    <strong>Asignado por:</strong>
+
+                                </td>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+
+                                    <span th:text="${assignedByFirstName + ' ' + assignedByLastName}">
+                                        Super Administrador
+                                    </span>
+                                    <br/>
+                                    <span style="font-size:12px; color:#6b7280;">
+                                        (<span th:text="${assignedByUsername}">admin</span>)
+                                    </span>
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;">
+
+                                    <strong>Email del Administrador:</strong>
+
+                                </td>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;
+                                           border-bottom:1px solid #e5e7eb;"
+                                    th:text="${assignedByEmail}">
+
+                                    admin@dominio.com
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;">
+
+                                    <strong>Fecha de asignación:</strong>
+
+                                </td>
+
+                                <td style="padding:12px 16px;
+                                           font-size:14px;"
+                                    th:text="${timestamp}">
+
+                                    01/01/2026 00:00
+
+                                </td>
+
+                            </tr>
+
+                        </table>
+
+                        <p style="margin:0 0 24px 0;
+                                  font-size:14px;
+                                  line-height:1.75;
+                                  color:#374151;">
+
+                            Con este nuevo rol tendrás acceso a funcionalidades adicionales en la plataforma.
+                            Si tienes dudas sobre tus permisos o roles, por favor contacta con tu administrador.
+
+                        </p>
+
+</section>
+</html>

@@ -11,6 +11,7 @@ import com.sssi.msvc_maintenance.dto.request.TicketCreateRequestDto;
 import com.sssi.msvc_maintenance.dto.request.TicketPriorityUpdateRequestDto;
 import com.sssi.msvc_maintenance.dto.request.TicketStatusUpdateRequestDto;
 import com.sssi.msvc_maintenance.dto.response.TicketCommentResponseDto;
+import com.sssi.msvc_maintenance.dto.response.TicketDashboardSummaryResponseDto;
 import com.sssi.msvc_maintenance.dto.response.KeycloakUserResponse;
 import com.sssi.msvc_maintenance.dto.response.TicketListResponseDto;
 import com.sssi.msvc_maintenance.dto.response.TicketPhotoResponseDto;
@@ -103,6 +104,12 @@ public class TicketController {
             @Valid @RequestBody TicketStatusUpdateRequestDto request,
             Authentication authentication) {
         return ApiResponseBuilder.ok(ticketService.updateStatus(id, request, authentication), "Estado actualizado correctamente");
+    }
+
+    @GetMapping("/dashboard")
+    public ResponseEntity<ApiResponse<TicketDashboardSummaryResponseDto>> getDashboardSummary(
+            Authentication authentication) {
+        return ApiResponseBuilder.ok(ticketService.getDashboardSummary(authentication), "Resumen de dashboard de tickets");
     }
 
     @GetMapping("/{id}/photos")

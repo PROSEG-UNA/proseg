@@ -41,6 +41,14 @@ public class DocumentProcessorException extends BaseException {
         );
     }
 
+    public static DocumentProcessorException maintenanceUnavailable() {
+        return new DocumentProcessorException(
+                HttpStatus.BAD_GATEWAY,
+                "MAINTENANCE_UNAVAILABLE",
+                "No fue posible obtener los datos de mantenimiento"
+        );
+    }
+
     public static DocumentProcessorException unsupportedDocumentType(String documentType) {
         return new DocumentProcessorException(
                 HttpStatus.BAD_REQUEST,
@@ -54,6 +62,30 @@ public class DocumentProcessorException extends BaseException {
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "TEMPLATE_GENERATION_FAILED",
                 "No fue posible generar la plantilla"
+        );
+    }
+
+    public static DocumentProcessorException unsupportedExportFormat(String format) {
+        return new DocumentProcessorException(
+                HttpStatus.BAD_REQUEST,
+                "UNSUPPORTED_EXPORT_FORMAT",
+                "Formato de exportación no soportado: " + format
+        );
+    }
+
+    public static DocumentProcessorException exportGenerationFailed() {
+        return new DocumentProcessorException(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "EXPORT_GENERATION_FAILED",
+                "No fue posible generar el archivo de exportación"
+        );
+    }
+
+    public static DocumentProcessorException exportMaxRowsExceeded(int maxRows) {
+        return new DocumentProcessorException(
+                HttpStatus.BAD_REQUEST,
+                "EXPORT_MAX_ROWS_EXCEEDED",
+                "La exportación excede el máximo permitido de filas: " + maxRows
         );
     }
 }

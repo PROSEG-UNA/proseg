@@ -73,9 +73,12 @@ public class UserController {
     @PatchMapping("/approval/{id}")
     public ResponseEntity<ApiResponse<String>> updateUserApproval(
             @PathVariable UUID id,
-            @Valid @RequestBody UserApprovalRequestDto request
+            @Valid @RequestBody UserApprovalRequestDto request,
+            Authentication authentication
     ) {
-        User updatedUser = userService.updateUserApproval(id, request.getStatus());
+        String currentUserId = authentication.getName();
+        log.info("Usuario [{}] actualizando estado de aprobación para usuario ID: {}", currentUserId, id);
+        User updatedUser = userService.updateUserApproval(id, request.getStatus(), currentUserId);
 
         return ApiResponseBuilder.ok(
                 updatedUser.getStatus().name(),
@@ -86,10 +89,12 @@ public class UserController {
     @PutMapping("/{userId}/roles/{roleId}")
     public ResponseEntity<ApiResponse<Void>> assignRoleToUser(
             @PathVariable String userId,
-            @PathVariable String roleId
+            @PathVariable String roleId,
+            Authentication authentication
     ) {
-        log.info("Asignando rol unico roleId {} al usuario {}", roleId, userId);
-        userService.assignRoleToUser(userId, roleId);
+        String currentUserId = authentication.getName();
+        log.info("Usuario [{}] asignando rol unico roleId {} al usuario {}", currentUserId, roleId, userId);
+        userService.assignRoleToUser(userId, roleId, currentUserId);
         return ApiResponseBuilder.ok(null, "Rol unico asignado correctamente");
     }
 

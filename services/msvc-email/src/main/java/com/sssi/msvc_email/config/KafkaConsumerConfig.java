@@ -124,4 +124,16 @@ public class KafkaConsumerConfig {
     ticketNotificationListenerFactory() {
         return listenerFactory(TicketNotificationEvent.class);
     }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, UserRoleAssignedEvent>
+    userRoleAssignedListenerFactory() {
+        return listenerFactory(UserRoleAssignedEvent.class);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, UserStatusChangedEvent>
+    userStatusChangedListenerFactory() {
+        return listenerFactory(UserStatusChangedEvent.class);
+    }
 }
