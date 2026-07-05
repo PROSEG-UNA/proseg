@@ -27,6 +27,8 @@ import com.sssi.msvc_maintenance.dto.response.InventoryCampusResponseDto;
 import com.sssi.msvc_maintenance.dto.response.KeycloakUserResponse;
 import com.sssi.msvc_maintenance.dto.response.TicketAssetResponseDto;
 import com.sssi.msvc_maintenance.dto.response.TicketCommentResponseDto;
+import com.sssi.msvc_maintenance.dto.response.TicketDashboardMetricItemDto;
+import com.sssi.msvc_maintenance.dto.response.TicketDashboardSummaryResponseDto;
 import com.sssi.msvc_maintenance.dto.response.TicketListResponseDto;
 import com.sssi.msvc_maintenance.dto.response.TicketPhotoResponseDto;
 import com.sssi.msvc_maintenance.dto.response.TicketResponseDto;
@@ -35,6 +37,7 @@ import com.sssi.msvc_maintenance.entity.Ticket;
 import com.sssi.msvc_maintenance.entity.TicketAsset;
 import com.sssi.msvc_maintenance.entity.TicketComment;
 import com.sssi.msvc_maintenance.entity.TicketPhoto;
+import com.sssi.msvc_maintenance.entity.UserCompany;
 import com.sssi.msvc_maintenance.entity.enums.TicketHistoryChangeType;
 import com.sssi.msvc_maintenance.entity.enums.TicketPriority;
 import com.sssi.msvc_maintenance.entity.enums.TicketStatus;
@@ -43,6 +46,7 @@ import com.sssi.msvc_maintenance.repository.TicketAssetRepository;
 import com.sssi.msvc_maintenance.repository.TicketCommentRepository;
 import com.sssi.msvc_maintenance.repository.TicketPhotoRepository;
 import com.sssi.msvc_maintenance.repository.TicketRepository;
+import com.sssi.msvc_maintenance.repository.UserCompanyRepository;
 import com.sssi.msvc_maintenance.security.Privileges;
 import com.sssi.msvc_maintenance.service.TicketService;
 import com.sssi.msvc_maintenance.websocket.TicketWebSocketEventDto;
@@ -79,6 +83,7 @@ import org.springframework.web.util.UriUtils;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -89,12 +94,22 @@ public class TicketServiceImpl implements TicketService {
 
     private static final ZoneId TICKET_TIME_ZONE = ZoneId.of("America/Costa_Rica");
     private static final int ASSIGNEE_PAGE_SIZE = 200;
+    private static final Set<TicketStatus> PENDING_STATUSES = Set.of(
+            TicketStatus.OPEN,
+            TicketStatus.IN_PROGRESS,
+            TicketStatus.REOPENED
+    );
+    private static final String UNASSIGNED_KEY = "unassigned";
+    private static final String UNASSIGNED_LABEL = "Sin asignar";
+    private static final String NO_COMPANY_KEY = "no-company";
+    private static final String NO_COMPANY_LABEL = "Sin empresa";
 
     private final TicketRepository ticketRepository;
     private final TicketAssetRepository ticketAssetRepository;
     private final TicketPhotoRepository ticketPhotoRepository;
     private final TicketCommentRepository ticketCommentRepository;
     private final com.sssi.msvc_maintenance.repository.TicketHistoryChangeRepository ticketHistoryChangeRepository;
+    private final UserCompanyRepository userCompanyRepository;
     private final InventoryClient inventoryClient;
     private final RestTemplate restTemplate;
     private final TicketWebSocketManager webSocketManager;
@@ -107,6 +122,9 @@ public class TicketServiceImpl implements TicketService {
 
     @org.springframework.beans.factory.annotation.Value("${GATEWAY_BASE_URL:http://localhost:8081}")
     private String archiveBaseUrl;
+
+    @org.springframework.beans.factory.annotation.Value("${app.dashboard.ticket-overdue-hours:72}")
+    private long ticketOverdueHours;
 
     @Override
     @Transactional
@@ -501,6 +519,56 @@ public class TicketServiceImpl implements TicketService {
         Map<String, String> authorNames = resolveTicketAuthorNames(tickets);
 
         return tickets.map(ticket -> toListResponse(ticket, authorNames));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TicketDashboardSummaryResponseDto getDashboardSummary(Authentication authentication) {
+        List<Ticket> tickets = findTicketsForDashboard(authentication);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime overdueBefore = now.minusHours(Math.max(ticketOverdueHours, 1));
+        LocalDateTime recentStart = now.minusDays(7);
+
+        long totalTickets = tickets.size();
+        long pendingTickets = tickets.stream().filter(ticket -> isPendingStatus(ticket.getStatus())).count();
+        long resolvedTickets = tickets.stream().filter(ticket -> ticket.getStatus() == TicketStatus.RESOLVED).count();
+        long cancelledTickets = tickets.stream().filter(ticket -> ticket.getStatus() == TicketStatus.CANCELLED).count();
+        long unassignedTickets = tickets.stream().filter(ticket -> ticket.getAssignedTo() == null).count();
+        long overdueTickets = tickets.stream()
+                .filter(ticket -> isPendingStatus(ticket.getStatus()))
+                .filter(ticket -> ticket.getCreatedAt() != null && ticket.getCreatedAt().isBefore(overdueBefore))
+                .count();
+        long recentTicketsLast7Days = tickets.stream()
+                .filter(ticket -> ticket.getCreatedAt() != null && !ticket.getCreatedAt().isBefore(recentStart))
+                .count();
+
+        double resolutionRate = totalTickets == 0
+                ? 0d
+                : Math.round((((double) resolvedTickets * 100d) / (double) totalTickets) * 10d) / 10d;
+
+        Double averageResolutionHours = calculateAverageResolutionHours(tickets);
+        Map<String, String> authorNames = resolveAuthorNamesForDashboard(tickets);
+
+        List<TicketDashboardMetricItemDto> byStatus = buildByStatusMetrics(tickets);
+        List<TicketDashboardMetricItemDto> byPriority = buildByPriorityMetrics(tickets);
+        List<TicketDashboardMetricItemDto> byTechnician = buildByTechnicianMetrics(tickets, authorNames);
+        List<TicketDashboardMetricItemDto> byCompany = buildByCompanyMetrics(tickets);
+
+        return TicketDashboardSummaryResponseDto.builder()
+                .totalTickets(totalTickets)
+                .pendingTickets(pendingTickets)
+                .overdueTickets(overdueTickets)
+                .resolvedTickets(resolvedTickets)
+                .cancelledTickets(cancelledTickets)
+                .unassignedTickets(unassignedTickets)
+                .recentTicketsLast7Days(recentTicketsLast7Days)
+                .resolutionRate(resolutionRate)
+                .averageResolutionHours(averageResolutionHours)
+                .byStatus(byStatus)
+                .byPriority(byPriority)
+                .byTechnician(byTechnician)
+                .byCompany(byCompany)
+                .build();
     }
 
     @Override
@@ -1447,6 +1515,137 @@ public class TicketServiceImpl implements TicketService {
         });
 
         return resolveAuthorNames(authorIds);
+    }
+
+    private List<Ticket> findTicketsForDashboard(Authentication authentication) {
+        if (isAdmin(authentication) || hasViewAllTickets(authentication)) {
+            return ticketRepository.findAll();
+        }
+
+        String userId = extractUserId(authentication);
+        return ticketRepository.findByCreatedBy(userId, Pageable.unpaged()).getContent();
+    }
+
+    private boolean isPendingStatus(TicketStatus status) {
+        return status != null && PENDING_STATUSES.contains(status);
+    }
+
+    private Double calculateAverageResolutionHours(List<Ticket> tickets) {
+        List<Long> resolutionHours = tickets.stream()
+                .filter(ticket -> ticket.getStatus() == TicketStatus.RESOLVED)
+                .filter(ticket -> ticket.getCreatedAt() != null && ticket.getUpdatedAt() != null)
+                .map(ticket -> ChronoUnit.HOURS.between(ticket.getCreatedAt(), ticket.getUpdatedAt()))
+                .filter(hours -> hours >= 0)
+                .toList();
+
+        if (resolutionHours.isEmpty()) {
+            return null;
+        }
+
+        double average = resolutionHours.stream().mapToLong(Long::longValue).average().orElse(0d);
+        return Math.round(average * 10d) / 10d;
+    }
+
+    private Map<String, String> resolveAuthorNamesForDashboard(List<Ticket> tickets) {
+        Set<String> authorIds = new HashSet<>();
+        tickets.stream()
+                .map(Ticket::getAssignedTo)
+                .filter(Objects::nonNull)
+                .map(UUID::toString)
+                .forEach(authorIds::add);
+        return resolveAuthorNames(authorIds);
+    }
+
+    private List<TicketDashboardMetricItemDto> buildByStatusMetrics(List<Ticket> tickets) {
+        Map<TicketStatus, Long> counts = tickets.stream()
+                .collect(Collectors.groupingBy(Ticket::getStatus, Collectors.counting()));
+
+        return Arrays.stream(TicketStatus.values())
+                .map(status -> TicketDashboardMetricItemDto.builder()
+                        .key(status.name())
+                        .label(toStatusLabel(status))
+                        .count(counts.getOrDefault(status, 0L))
+                        .build())
+                .toList();
+    }
+
+    private List<TicketDashboardMetricItemDto> buildByPriorityMetrics(List<Ticket> tickets) {
+        Map<TicketPriority, Long> counts = tickets.stream()
+                .collect(Collectors.groupingBy(Ticket::getPriority, Collectors.counting()));
+
+        return Arrays.stream(TicketPriority.values())
+                .map(priority -> TicketDashboardMetricItemDto.builder()
+                        .key(priority.name())
+                        .label(toPriorityLabel(priority))
+                        .count(counts.getOrDefault(priority, 0L))
+                        .build())
+                .toList();
+    }
+
+    private List<TicketDashboardMetricItemDto> buildByTechnicianMetrics(List<Ticket> tickets, Map<String, String> authorNames) {
+        Map<String, Long> counts = new HashMap<>();
+        for (Ticket ticket : tickets) {
+            String key = ticket.getAssignedTo() != null ? ticket.getAssignedTo().toString() : UNASSIGNED_KEY;
+            counts.merge(key, 1L, Long::sum);
+        }
+
+        return counts.entrySet().stream()
+                .map(entry -> TicketDashboardMetricItemDto.builder()
+                        .key(entry.getKey())
+                        .label(resolveTechnicianLabel(entry.getKey(), authorNames))
+                        .count(entry.getValue())
+                        .build())
+                .sorted(Comparator.comparingLong(TicketDashboardMetricItemDto::getCount).reversed()
+                        .thenComparing(TicketDashboardMetricItemDto::getLabel, String.CASE_INSENSITIVE_ORDER))
+                .toList();
+    }
+
+    private String resolveTechnicianLabel(String technicianKey, Map<String, String> authorNames) {
+        if (UNASSIGNED_KEY.equals(technicianKey)) {
+            return UNASSIGNED_LABEL;
+        }
+        return authorNames.getOrDefault(technicianKey, "Tecnico no identificado");
+    }
+
+    private List<TicketDashboardMetricItemDto> buildByCompanyMetrics(List<Ticket> tickets) {
+        Set<String> creatorIds = tickets.stream()
+                .map(Ticket::getCreatedBy)
+                .filter(value -> value != null && !value.isBlank())
+                .collect(Collectors.toSet());
+
+        Map<String, String> companyByUserId = new HashMap<>();
+        creatorIds.forEach(creatorId -> {
+            List<UserCompany> relations = userCompanyRepository.findAllByKeycloakUserId(creatorId);
+            if (relations == null || relations.isEmpty()) {
+                return;
+            }
+
+            UserCompany firstRelation = relations.get(0);
+            if (firstRelation.getCompany() == null || firstRelation.getCompany().getName() == null) {
+                return;
+            }
+
+            String companyName = firstRelation.getCompany().getName().trim();
+            if (!companyName.isBlank()) {
+                companyByUserId.put(creatorId, companyName);
+            }
+        });
+
+        Map<String, Long> counts = new HashMap<>();
+        for (Ticket ticket : tickets) {
+            String key = companyByUserId.getOrDefault(ticket.getCreatedBy(), NO_COMPANY_KEY);
+            counts.merge(key, 1L, Long::sum);
+        }
+
+        return counts.entrySet().stream()
+                .map(entry -> TicketDashboardMetricItemDto.builder()
+                        .key(entry.getKey())
+                        .label(NO_COMPANY_KEY.equals(entry.getKey()) ? NO_COMPANY_LABEL : entry.getKey())
+                        .count(entry.getValue())
+                        .build())
+                .sorted(Comparator.comparingLong(TicketDashboardMetricItemDto::getCount).reversed()
+                        .thenComparing(TicketDashboardMetricItemDto::getLabel, String.CASE_INSENSITIVE_ORDER))
+                .toList();
     }
 
     private Map<String, String> resolveAuthorNames(Collection<String> authorIds) {

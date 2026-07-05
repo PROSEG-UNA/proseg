@@ -114,3 +114,8 @@ export async function fetchMaintenanceTicketHistory(ticketId, options = {}) {
     });
     return data?.data ?? null;
 }
+
+export async function fetchMaintenanceTicketsDashboardSummary() {
+    const { data } = await axios.get(`${TICKETS_BASE}/dashboard`, maintenanceConfig);
+    return data?.data ?? null;
+}
