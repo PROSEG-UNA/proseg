@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{fragments/layout :: layout(${actionLabel}, ${actionLabel}, 'Se detecto un movimiento en un ticket de mantenimiento.', ~{::section})}">
+      th:replace="~{fragments/layout :: layout(${actionLabel}, ${actionLabel}, 'Se detecto un cambio en un ticket de mantenimiento.', ~{::section})}">
 <section>
 <p style="margin:0 0 20px 0;font-size:15px;line-height:1.6;color:#374151;">
     Se registro un movimiento en el ticket
@@ -54,7 +54,7 @@
        th:if="${changedFields != null and !changedFields.isEmpty()}">
     <tr>
         <td style="padding:14px 16px;font-size:15px;font-weight:bold;background:#eff6ff;border-bottom:1px solid #dbeafe;color:#1d4ed8;">
-            Cambios detectados
+            Cambios realizados
         </td>
     </tr>
     <tr>
