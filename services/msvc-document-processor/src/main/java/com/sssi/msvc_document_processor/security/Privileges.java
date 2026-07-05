@@ -8,4 +8,12 @@ public final class Privileges {
         public static final String IMPORTAR = "IMPORTAR_ACTIVOS";
         public static final String EXPORTAR = "EXPORTAR_ACTIVOS";
     }
+
+    public static final class SolicitudesMantenimiento {
+        public static final String LEER = "LEER_SOLICITUDES_MANTENIMIENTO";
+    }
+
+    public static final class TicketsMantenimiento {
+        public static final String LEER = "LEER_TICKET_MANTENIMIENTO";
+    }
 }

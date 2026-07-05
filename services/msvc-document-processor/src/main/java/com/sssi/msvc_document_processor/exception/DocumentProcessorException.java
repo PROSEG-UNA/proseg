@@ -41,6 +41,14 @@ public class DocumentProcessorException extends BaseException {
         );
     }
 
+    public static DocumentProcessorException maintenanceUnavailable() {
+        return new DocumentProcessorException(
+                HttpStatus.BAD_GATEWAY,
+                "MAINTENANCE_UNAVAILABLE",
+                "No fue posible obtener los datos de mantenimiento"
+        );
+    }
+
     public static DocumentProcessorException unsupportedDocumentType(String documentType) {
         return new DocumentProcessorException(
                 HttpStatus.BAD_REQUEST,

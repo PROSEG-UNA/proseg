@@ -1,15 +1,17 @@
 import { useCallback, useState } from 'react';
-import { Box, Container, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Button, Container, Menu, MenuItem, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import { Header } from '../../../common/components/Header';
+import DownloadForOfflineOutlinedIcon from '@mui/icons-material/DownloadForOfflineOutlined';
 import { NavDrawer } from '../../../common/components/Sidebar';
 import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
+import DialogModal from '../../../common/components/DialogModal.jsx';
 import { PrimaryButton } from '../../../common/components/PrimaryButton.jsx';
 import { usePermissions } from '../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../common/constants/permissions';
 import MaintenanceTicketFormModal from '../components/ticket/MaintenanceTicketFormModal.jsx';
 import MaintenanceTicketTable from '../components/ticket/MaintenanceTicketTable.jsx';
 import { fetchMaintenanceTicketById } from '../services/ticketsService';
+import { exportMaintenanceTickets, triggerBrowserDownload } from '../services/maintenanceExportService.js';
 
 export default function TicketsPage() {
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -18,16 +20,19 @@ export default function TicketsPage() {
     const [viewMode, setViewMode] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
     const [loadingTicketDetail, setLoadingTicketDetail] = useState(false);
+    const [exportAnchorEl, setExportAnchorEl] = useState(null);
+    const [exporting, setExporting] = useState(false);
+    const [alert, setAlert] = useState(null);
 
     const { hasPermission } = usePermissions();
-    const theme = useTheme();
-    const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
 
     const canViewTickets = hasPermission(PERMISSIONS.MAINTENANCE.TICKETS.READ)
         || hasPermission(PERMISSIONS.MAINTENANCE.TICKETS.CREATE)
         || hasPermission(PERMISSIONS.MAINTENANCE.TICKETS.EDIT)
         || hasPermission(PERMISSIONS.MAINTENANCE.TICKETS.DELETE);
     const canCreateTickets = hasPermission(PERMISSIONS.MAINTENANCE.TICKETS.CREATE);
+    const canExportTickets = hasPermission(PERMISSIONS.MAINTENANCE.TICKETS.READ);
+    const exportMenuOpen = Boolean(exportAnchorEl);
 
     const handleRefresh = useCallback(() => setRefreshKey((value) => value + 1), []);
 
@@ -78,6 +83,33 @@ export default function TicketsPage() {
         handleRefresh();
     };
 
+    const handleOpenExportMenu = (event) => {
+        setExportAnchorEl(event.currentTarget);
+    };
+
+    const handleCloseExportMenu = () => {
+        if (exporting) return;
+        setExportAnchorEl(null);
+    };
+
+    const handleExport = async (format) => {
+        setExporting(true);
+        try {
+            const { blob, filename } = await exportMaintenanceTickets({ format });
+            triggerBrowserDownload(blob, filename);
+            setAlert({
+                type: 'success',
+                message: `Exportación de tickets completada (${format.toUpperCase()})`,
+            });
+        } catch (error) {
+            const message = error?.message || 'No fue posible exportar los tickets';
+            setAlert({ type: 'error', message });
+        } finally {
+            setExporting(false);
+            setExportAnchorEl(null);
+        }
+    };
+
     if (!canViewTickets) {
         return <AccessDeniedState />;
     }
@@ -96,11 +128,45 @@ export default function TicketsPage() {
                             Gestión de incidencias, edición rápida y seguimiento.
                         </Typography>
                     </Box>
-                    {canCreateTickets ? (
-                        <PrimaryButton startIcon={<AddIcon />} onClick={handleOpenCreate}>
-                            Crear ticket
-                        </PrimaryButton>
-                    ) : null}
+                    <Box sx={{ display: 'flex', gap: 1.25, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        {canExportTickets ? (
+                            <>
+                                <Button
+                                    variant="outlined"
+                                    startIcon={<DownloadForOfflineOutlinedIcon />}
+                                    onClick={handleOpenExportMenu}
+                                    sx={{
+                                        textTransform: 'none',
+                                        fontWeight: 700,
+                                        borderRadius: '10px',
+                                        px: 2.5,
+                                    }}
+                                    disabled={exporting}
+                                >
+                                    {exporting ? 'Exportando...' : 'Exportar'}
+                                </Button>
+                                <Menu
+                                    anchorEl={exportAnchorEl}
+                                    open={exportMenuOpen}
+                                    onClose={handleCloseExportMenu}
+                                    anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                                    transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                                >
+                                    <MenuItem onClick={() => handleExport('xlsx')} disabled={exporting}>
+                                        Exportar en Excel (.xlsx)
+                                    </MenuItem>
+                                    <MenuItem onClick={() => handleExport('csv')} disabled={exporting}>
+                                        Exportar en CSV (.csv)
+                                    </MenuItem>
+                                </Menu>
+                            </>
+                        ) : null}
+                        {canCreateTickets ? (
+                            <PrimaryButton startIcon={<AddIcon />} onClick={handleOpenCreate}>
+                                Crear ticket
+                            </PrimaryButton>
+                        ) : null}
+                    </Box>
                 </Box>
 
                 <MaintenanceTicketTable
@@ -118,6 +184,13 @@ export default function TicketsPage() {
                 onClose={handleCloseForm}
                 onCreated={handleSaved}
                 loadingDetail={loadingTicketDetail}
+            />
+
+            <DialogModal
+                open={!!alert}
+                type={alert?.type}
+                message={alert?.message}
+                onClose={() => setAlert(null)}
             />
         </Box>
     );
