@@ -3,6 +3,7 @@ package com.sssi.msvc_email.notificacion.template.impl;
 import com.sssi.common.utils.DateUtils;
 import com.sssi.msvc_email.notificacion.template.EmailTemplateDefinition;
 import com.sssi.msvc_email.notificacion.util.TemplateValidator;
+import com.sssi.msvc_email.utils.UserStatusTranslator;
 import lombok.Builder;
 import org.thymeleaf.context.Context;
 
@@ -39,8 +40,8 @@ public class UserStatusChangedEmailTemplate implements EmailTemplateDefinition {
         ctx.setVariable("lastName", lastName);
         ctx.setVariable("username", username);
         ctx.setVariable("email", email);
-        ctx.setVariable("oldStatus", oldStatus);
-        ctx.setVariable("newStatus", newStatus);
+        ctx.setVariable("oldStatus", UserStatusTranslator.translateStatus(oldStatus));
+        ctx.setVariable("newStatus", UserStatusTranslator.translateStatus(newStatus));
         ctx.setVariable("timestamp", DateUtils.formatReadable(timestamp));
         ctx.setVariable("changedByFirstName", changedByFirstName);
         ctx.setVariable("changedByLastName", changedByLastName);
