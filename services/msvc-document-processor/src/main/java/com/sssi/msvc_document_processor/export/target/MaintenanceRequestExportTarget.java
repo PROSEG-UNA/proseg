@@ -26,20 +26,20 @@ public class MaintenanceRequestExportTarget implements DocumentExportTarget {
     private static final List<ExportColumnDefinition> COLUMNS = List.of(
             new ExportColumnDefinition("id", "ID", row -> getValue(row, "id")),
             new ExportColumnDefinition("companyName", "Empresa", row -> getValue(row, "company", "name")),
-            new ExportColumnDefinition("companyLegalId", "Cedula juridica", row -> getValue(row, "company", "legalId")),
-            new ExportColumnDefinition("description", "Descripcion", row -> getValue(row, "description")),
+            new ExportColumnDefinition("companyLegalId", "Cédula jurídica", row -> getValue(row, "company", "legalId")),
+            new ExportColumnDefinition("description", "Descripción", row -> getValue(row, "description")),
             new ExportColumnDefinition("status", "Estado", row -> getValue(row, "status")),
-            new ExportColumnDefinition("emails", "Correos", row -> getValue(row, "emails")),
-            new ExportColumnDefinition("startDate", "Fecha inicio", row -> getValue(row, "startDate")),
-            new ExportColumnDefinition("endDate", "Fecha fin", row -> getValue(row, "endDate")),
-            new ExportColumnDefinition("startTime", "Hora inicio", row -> getValue(row, "startTime")),
-            new ExportColumnDefinition("endTime", "Hora fin", row -> getValue(row, "endTime")),
+            new ExportColumnDefinition("emails", "Correos electrónicos", row -> getValue(row, "emails")),
+            new ExportColumnDefinition("startDate", "Fecha de inicio", row -> getValue(row, "startDate")),
+            new ExportColumnDefinition("endDate", "Fecha de finalización", row -> getValue(row, "endDate")),
+            new ExportColumnDefinition("startTime", "Hora de inicio", row -> getValue(row, "startTime")),
+            new ExportColumnDefinition("endTime", "Hora de finalización", row -> getValue(row, "endTime")),
             new ExportColumnDefinition("campusId", "Campus", row -> getValue(row, "campusId")),
             new ExportColumnDefinition("buildingId", "Edificio", row -> getValue(row, "buildingId")),
             new ExportColumnDefinition("responsibleEmail", "Responsable", row -> getValue(row, "responsibleUserCompany", "userEmail")),
-            new ExportColumnDefinition("assignedTechnicians", "Tecnicos asignados", row -> getValue(row, "assignedTechnicians", "userEmail")),
-            new ExportColumnDefinition("createdAt", "Creado", row -> getValue(row, "createdAt")),
-            new ExportColumnDefinition("updatedAt", "Actualizado", row -> getValue(row, "updatedAt"))
+            new ExportColumnDefinition("assignedTechnicians", "Técnicos asignados", row -> getValue(row, "assignedTechnicians", "userEmail")),
+            new ExportColumnDefinition("createdAt", "Fecha de creación", row -> getValue(row, "createdAt")),
+            new ExportColumnDefinition("updatedAt", "Fecha de actualización", row -> getValue(row, "updatedAt"))
     );
 
     @Override

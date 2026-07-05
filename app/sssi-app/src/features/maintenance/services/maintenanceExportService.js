@@ -6,6 +6,8 @@ import {
 } from './endpoints.js';
 
 const config = { withCredentials: true };
+const CSV_FORMAT = 'csv';
+const XLSX_FORMAT = 'xlsx';
 
 function parseFilenameFromDisposition(contentDisposition, fallback) {
     if (!contentDisposition) return fallback;
@@ -28,7 +30,7 @@ function parseFilenameFromDisposition(contentDisposition, fallback) {
 }
 
 function extensionFor(format) {
-    return String(format || '').toLowerCase() === 'csv' ? 'csv' : 'xlsx';
+    return String(format || '').toLowerCase() === CSV_FORMAT ? CSV_FORMAT : XLSX_FORMAT;
 }
 
 async function extractExportErrorMessage(error, fallbackMessage) {

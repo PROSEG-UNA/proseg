@@ -40,7 +40,7 @@ export default function RequestsPage() {
     const openCreateRequest = (initialCompanyId = '') => setRequestFormState({ open: true, requestId: null, initialCompanyId });
     const openEditRequest = (request) => setRequestFormState({ open: true, requestId: request.id, initialCompanyId: request.companyId ?? '' });
 
-    const refreshRequests = () => setRequestsRefresh((v) => v + 1);
+    const refreshRequests = () => setRequestsRefresh((previousValue) => previousValue + 1);
 
     const handleOpenExportMenu = (event) => {
         setExportAnchorEl(event.currentTarget);

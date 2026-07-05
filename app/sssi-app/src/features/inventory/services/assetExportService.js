@@ -2,6 +2,8 @@ import axios from 'axios';
 import { DOCUMENT_PROCESSOR_ENDPOINTS, ASSETS_DOCUMENT_TYPE } from './endpoints.js';
 
 const config = { withCredentials: true };
+const CSV_FORMAT = 'csv';
+const XLSX_FORMAT = 'xlsx';
 
 function parseFilenameFromDisposition(contentDisposition, fallback) {
     if (!contentDisposition) return fallback;
@@ -24,10 +26,10 @@ function parseFilenameFromDisposition(contentDisposition, fallback) {
 }
 
 function extensionFor(format) {
-    return String(format || '').toLowerCase() === 'csv' ? 'csv' : 'xlsx';
+    return String(format || '').toLowerCase() === CSV_FORMAT ? CSV_FORMAT : XLSX_FORMAT;
 }
 
-export async function exportAssets({ format = 'xlsx', filename, params = {} } = {}) {
+export async function exportAssets({ format = XLSX_FORMAT, filename, params = {} } = {}) {
     const url = `${DOCUMENT_PROCESSOR_ENDPOINTS.exports}/${ASSETS_DOCUMENT_TYPE}`;
     const { data, headers } = await axios.get(url, {
         ...config,

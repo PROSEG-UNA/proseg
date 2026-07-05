@@ -24,30 +24,30 @@ public class AssetExportTarget implements DocumentExportTarget {
     private final InventoryFeignExceptionTranslator inventoryErrorTranslator;
 
     private static final List<ExportColumnDefinition> COLUMNS = List.of(
-            new ExportColumnDefinition("assetNumber", "Numero de activo", row -> getValue(row, "assetNumber")),
-            new ExportColumnDefinition("kind", "Categoria", row -> getValue(row, "kind")),
+            new ExportColumnDefinition("assetNumber", "Número de activo", row -> getValue(row, "assetNumber")),
+            new ExportColumnDefinition("kind", "Categoría", row -> getValue(row, "kind")),
             new ExportColumnDefinition("status", "Estado", row -> getValue(row, "status")),
             new ExportColumnDefinition("typeName", "Tipo", row -> getValue(row, "model", "type", "name")),
             new ExportColumnDefinition("brandName", "Marca", row -> getValue(row, "model", "brand", "name")),
             new ExportColumnDefinition("modelName", "Modelo", row -> getValue(row, "model", "name")),
-            new ExportColumnDefinition("serialNumber", "Numero de serie", row -> getValue(row, "serialNumber")),
+            new ExportColumnDefinition("serialNumber", "Número de serie", row -> getValue(row, "serialNumber")),
             new ExportColumnDefinition("executingUnit", "Unidad ejecutora", row -> getValue(row, "executingUnit")),
             new ExportColumnDefinition("responsibleEmployee", "Responsable", row -> getValue(row, "responsibleEmployee")),
-            new ExportColumnDefinition("responsibleEmployeeId", "Identificacion responsable", row -> getValue(row, "responsibleEmployeeId")),
+            new ExportColumnDefinition("responsibleEmployeeId", "Identificación del responsable", row -> getValue(row, "responsibleEmployeeId")),
             new ExportColumnDefinition("campus", "Campus", row -> getValue(row, "location", "floor", "building", "campus", "name")),
             new ExportColumnDefinition("building", "Edificio", row -> getValue(row, "location", "floor", "building", "name")),
             new ExportColumnDefinition("floor", "Piso", row -> getValue(row, "location", "floor", "name")),
-            new ExportColumnDefinition("location", "Locacion", row -> getValue(row, "location", "description")),
-            new ExportColumnDefinition("acquisitionDate", "Fecha de adquisicion", row -> getValue(row, "acquisitionDate")),
-            new ExportColumnDefinition("warrantyEndDate", "Fin de garantia", row -> getValue(row, "warrantyEndDate")),
-            new ExportColumnDefinition("firmwareSupportEndDate", "Fin de soporte firmware", row -> getValue(row, "firmwareSupportEndDate")),
+            new ExportColumnDefinition("location", "Ubicación", row -> getValue(row, "location", "description")),
+            new ExportColumnDefinition("acquisitionDate", "Fecha de adquisición", row -> getValue(row, "acquisitionDate")),
+            new ExportColumnDefinition("warrantyEndDate", "Fin de garantía", row -> getValue(row, "warrantyEndDate")),
+            new ExportColumnDefinition("firmwareSupportEndDate", "Fin del soporte de firmware", row -> getValue(row, "firmwareSupportEndDate")),
             new ExportColumnDefinition("decommissionDate", "Fecha de baja", row -> getValue(row, "decommissionDate")),
-            new ExportColumnDefinition("ipAddress", "Direccion IP", row -> getValue(row, "networkInterface", "ipAddress")),
-            new ExportColumnDefinition("macAddress", "Direccion MAC", row -> getValue(row, "networkInterface", "macAddress")),
+            new ExportColumnDefinition("ipAddress", "Dirección IP", row -> getValue(row, "networkInterface", "ipAddress")),
+            new ExportColumnDefinition("macAddress", "Dirección MAC", row -> getValue(row, "networkInterface", "macAddress")),
             new ExportColumnDefinition("latitude", "Latitud", row -> getValue(row, "latitude")),
             new ExportColumnDefinition("longitude", "Longitud", row -> getValue(row, "longitude")),
-            new ExportColumnDefinition("createdAt", "Creado", row -> getValue(row, "createdAt")),
-            new ExportColumnDefinition("updatedAt", "Actualizado", row -> getValue(row, "updatedAt"))
+            new ExportColumnDefinition("createdAt", "Fecha de creación", row -> getValue(row, "createdAt")),
+            new ExportColumnDefinition("updatedAt", "Fecha de actualización", row -> getValue(row, "updatedAt"))
     );
 
     @Override
