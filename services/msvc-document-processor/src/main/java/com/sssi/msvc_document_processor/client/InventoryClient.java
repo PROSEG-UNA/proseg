@@ -1,6 +1,7 @@
 package com.sssi.msvc_document_processor.client;
 
 import com.sssi.common.api.response.ApiResponse;
+import com.sssi.common.api.response.PageResponse;
 import com.sssi.msvc_document_processor.config.FeignConfig;
 import com.sssi.msvc_document_processor.dto.request.ConfirmRequestDto;
 import com.sssi.msvc_document_processor.dto.response.ImportPreviewDto;
@@ -11,6 +12,10 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.util.MultiValueMap;
+
+import java.util.Map;
 
 @FeignClient(
         name = "msvc-inventory",
@@ -27,4 +32,7 @@ public interface InventoryClient {
 
     @PostMapping("/v1/inventory/assets/import/confirm")
     ApiResponse<ImportConfirmDto> confirmAssets(@RequestBody ConfirmRequestDto request);
+
+    @GetMapping("/v1/inventory/assets")
+    ApiResponse<PageResponse<Map<String, Object>>> getAssets(@RequestParam MultiValueMap<String, String> queryParams);
 }

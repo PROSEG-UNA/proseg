@@ -6,3 +6,8 @@ spring:
     name: msvc-document-processor
   config:
     import: ${SPRING_CONFIG_IMPORT:optional:configserver:http://msvc-config:8888}
+
+document-processor:
+  export:
+    page-size: ${DOCUMENT_PROCESSOR_EXPORT_PAGE_SIZE:500}
+    max-rows: ${DOCUMENT_PROCESSOR_EXPORT_MAX_ROWS:50000}
