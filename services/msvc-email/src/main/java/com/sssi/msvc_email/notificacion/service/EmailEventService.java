@@ -39,6 +39,8 @@ public class EmailEventService {
 
     @Value("${app.urls.maintenance-action:http://localhost:5173/mantenimiento/solicitudes}")
     private String maintenanceActionBaseUrl;
+    @Value("${app.brand.name:PROSEG}")
+    private String brandName;
 
     public void sendLoginEmail(UserLoginEvent event) {
         ApiResponse<KeycloakUserResponseDto> apiResponse = authClient.getUserById(event.getKeycloakUserId());
@@ -56,7 +58,7 @@ public class EmailEventService {
         emailService.sendEmail(
                 Email.builder()
                         .to(List.of(user.getEmail()))
-                        .subject("Alerta de seguridad - SSSI")
+                        .subject("Alerta de seguridad - " + brandName)
                         .templateDefinition(template)
                         .build()
         );
@@ -75,7 +77,7 @@ public class EmailEventService {
         emailService.sendEmail(
                 Email.builder()
                         .to(List.of(event.getEmail()))
-                        .subject("Bienvenido a SPSG - Registro exitoso")
+                        .subject("Bienvenido a " + brandName + " - Registro exitoso")
                         .templateDefinition(template)
                         .build()
         );
@@ -108,7 +110,7 @@ public class EmailEventService {
                         emailService.sendEmail(
                                 Email.builder()
                                         .to(List.of(admin.getEmail()))
-                                        .subject("Nuevo usuario requiere aprobación - SPSG")
+                                        .subject("Nuevo usuario requiere aprobación - " + brandName)
                                         .templateDefinition(template)
                                         .build()
                         );
@@ -133,7 +135,7 @@ public class EmailEventService {
         emailService.sendEmail(
                 Email.builder()
                         .to(List.of(event.getEmail()))
-                        .subject("Fuiste invitado a SPGS - Configurá tu contraseña")
+                        .subject("Fuiste invitado a " + brandName + " - Configurá tu contraseña")
                         .templateDefinition(template)
                         .build()
         );
@@ -177,7 +179,7 @@ public class EmailEventService {
                         emailService.sendEmail(
                                 Email.builder()
                                         .to(List.of(admin.getEmail()))
-                                        .subject("Nuevo usuario creado en SPGS")
+                                        .subject("Nuevo usuario creado en " + brandName)
                                         .templateDefinition(template)
                                         .build()
                         );
@@ -219,7 +221,7 @@ public class EmailEventService {
         emailService.sendEmail(
                 Email.builder()
                         .to(List.of(user.getEmail()))
-                        .subject("Tu cuenta en SPGS fue activada correctamente")
+                        .subject("Tu cuenta en " + brandName + " fue activada correctamente")
                         .templateDefinition(template)
                         .build()
         );
@@ -240,7 +242,7 @@ public class EmailEventService {
         emailService.sendEmail(
                 Email.builder()
                         .to(List.of(event.getEmail()))
-                        .subject("Restablecé tu contraseña - SPGS")
+                        .subject("Restablecé tu contraseña - " + brandName)
                         .templateDefinition(template)
                         .build()
         );
@@ -269,7 +271,7 @@ public class EmailEventService {
             emailService.sendEmail(
                     Email.builder()
                             .to(List.of(user.getEmail()))
-                            .subject("Tu contraseña fue actualizada en SPSG")
+                            .subject("Tu contraseña fue actualizada en " + brandName)
                             .templateDefinition(template)
                             .build()
             );
@@ -294,7 +296,7 @@ public class EmailEventService {
             emailService.sendEmail(
                     Email.builder()
                             .to(List.of(event.getEmail()))
-                            .subject("Tu contraseña expirará pronto en SPGS")
+                            .subject("Tu contraseña expirará pronto en " + brandName)
                             .templateDefinition(template)
                             .build()
             );
@@ -326,7 +328,7 @@ public class EmailEventService {
             emailService.sendEmail(
                     Email.builder()
                             .to(List.of(event.getEmail()))
-                            .subject("Tu contraseña expiró - Acción requerida en SPSG")
+                            .subject("Tu contraseña expiró - Acción requerida en " + brandName)
                             .templateDefinition(template)
                             .build()
             );
@@ -386,7 +388,7 @@ public class EmailEventService {
                 emailService.sendEmail(
                         Email.builder()
                                 .to(List.of(user.getEmail()))
-                                .subject("Acceso empresarial habilitado - PROSEG")
+                                .subject("Acceso empresarial habilitado - " + brandName)
                                 .templateDefinition(template)
                                 .build()
                 );
@@ -447,12 +449,120 @@ public class EmailEventService {
                         .to(toRecipients)
                         .cc(ccRecipients)
                         .bcc(bccRecipients)
-                        .subject("Nueva solicitud de mantenimiento registrada - PROSEG")
+                        .subject("Nueva solicitud de mantenimiento registrada - " + brandName)
                         .templateDefinition(template)
                         .build()
         );
 
         log.info("Email de solicitud de mantenimiento enviado a to={} cc={} bcc={}", toRecipients, ccRecipients, bccRecipients);
+    }
+
+    public void sendMaintenanceRequestNotificationEmail(MaintenanceRequestNotificationEvent event) {
+        List<String> toRecipients = cleanEmails(event.getRecipientEmails());
+
+        List<String> ccRecipients = cleanEmails(event.getExtraEmails()).stream()
+                .filter(email -> !toRecipients.contains(email))
+                .toList();
+
+        List<String> bccRecipients = cleanEmails(resolveSuperAdminEmails()).stream()
+                .filter(email -> !toRecipients.contains(email) && !ccRecipients.contains(email))
+                .toList();
+
+        if (toRecipients.isEmpty() && ccRecipients.isEmpty() && bccRecipients.isEmpty()) {
+            log.warn("MaintenanceRequestNotificationEvent sin email destinatario, se omite envio");
+            return;
+        }
+
+        MaintenanceRequestNotificationEmailTemplate template = MaintenanceRequestNotificationEmailTemplate.builder()
+                .requestId(event.getRequestId())
+                .actionType(event.getActionType())
+                .actionLabel(event.getActionLabel())
+                .detail(event.getDetail())
+                .companyName(event.getCompanyName())
+                .legalId(event.getLegalId())
+                .description(event.getDescription())
+                .cancellationReason(event.getCancellationReason())
+                .status(event.getStatus())
+                .startDate(event.getStartDate())
+                .endDate(event.getEndDate())
+                .startTime(event.getStartTime())
+                .endTime(event.getEndTime())
+                .campusName(event.getCampusName())
+                .buildingName(event.getBuildingName())
+                .changedFields(event.getChangedFields())
+                .timestamp(event.getTimestamp() != null ? event.getTimestamp() : System.currentTimeMillis())
+                .build();
+
+        emailService.sendEmail(
+                Email.builder()
+                        .to(toRecipients)
+                        .cc(ccRecipients)
+                        .bcc(bccRecipients)
+                        .subject(buildMaintenanceNotificationSubject(event))
+                        .templateDefinition(template)
+                        .build()
+        );
+
+        log.info("Email de notificacion de mantenimiento enviado a to={} cc={} bcc={}", toRecipients, ccRecipients, bccRecipients);
+    }
+
+    public void sendTicketNotificationEmail(TicketNotificationEvent event) {
+        List<String> toRecipients = cleanEmails(event.getRecipientEmails());
+
+        List<String> ccRecipients = cleanEmails(event.getExtraEmails()).stream()
+                .filter(email -> !toRecipients.contains(email))
+                .toList();
+
+        List<String> bccRecipients = cleanEmails(resolveSuperAdminEmails()).stream()
+                .filter(email -> !toRecipients.contains(email) && !ccRecipients.contains(email))
+                .toList();
+
+        if (toRecipients.isEmpty() && ccRecipients.isEmpty() && bccRecipients.isEmpty()) {
+            log.warn("TicketNotificationEvent sin email destinatario, se omite envio");
+            return;
+        }
+
+        TicketNotificationEmailTemplate template = TicketNotificationEmailTemplate.builder()
+                .ticketId(event.getTicketId())
+                .actionType(event.getActionType())
+                .actionLabel(event.getActionLabel())
+                .actorName(event.getActorName())
+                .ticketTitle(event.getTicketTitle())
+                .ticketDescription(event.getTicketDescription())
+                .status(event.getStatus())
+                .priority(event.getPriority())
+                .campusName(event.getCampusName())
+                .buildingName(event.getBuildingName())
+                .detail(event.getDetail())
+                .changedFields(event.getChangedFields())
+                .timestamp(event.getTimestamp() != null ? event.getTimestamp() : System.currentTimeMillis())
+                .build();
+
+        emailService.sendEmail(
+                Email.builder()
+                        .to(toRecipients)
+                        .cc(ccRecipients)
+                        .bcc(bccRecipients)
+                        .subject(buildTicketNotificationSubject(event))
+                        .templateDefinition(template)
+                        .build()
+        );
+
+        log.info("Email de ticket enviado a to={} cc={} bcc={}", toRecipients, ccRecipients, bccRecipients);
+    }
+
+    private String buildTicketNotificationSubject(TicketNotificationEvent event) {
+        String actionLabel = event.getActionLabel() != null && !event.getActionLabel().isBlank()
+                ? event.getActionLabel()
+                : "Actualizacion de ticket";
+        return actionLabel + " - Ticket - " + brandName;
+    }
+
+    private String buildMaintenanceNotificationSubject(MaintenanceRequestNotificationEvent event) {
+        String actionLabel = event.getActionLabel() != null && !event.getActionLabel().isBlank()
+                ? event.getActionLabel()
+                : "Actualizacion de solicitud";
+        return actionLabel + " - Solicitud de mantenimiento - " + brandName;
     }
 
     private List<String> cleanEmails(List<String> emails) {

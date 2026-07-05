@@ -15,6 +15,7 @@ import { forgotPassword, resetPassword } from '../services/authService.js';
 import { Helmet } from 'react-helmet-async';
 import logo from '../../../assets/background-spsg.png';
 import GeneralModal from '../../../common/components/GeneralModal.jsx';
+import { APP_CONFIG } from '../../../config/appConfig.js';
 
 const RED = {
     50: '#fff1f2',
@@ -136,7 +137,7 @@ function ForgotPasswordStep({ onSent }) {
 
     return (
         <>
-            <Helmet><title>Olvidé mi contraseña | SPGS</title></Helmet>
+            <Helmet><title>{`Olvidé mi contraseña - ${APP_CONFIG.name}`}</title></Helmet>
             <LoginBackground />
             <GeneralModal
                 open={true}
@@ -199,7 +200,7 @@ function EmailSentView({ email }) {
 
     return (
         <>
-            <Helmet><title>Revisá tu correo | SPGS</title></Helmet>
+            <Helmet><title>{`Revisá tu correo - ${APP_CONFIG.name}`}</title></Helmet>
             <LoginBackground />
             <GeneralModal
                 open={true}
@@ -224,7 +225,7 @@ function EmailSentView({ email }) {
                         ¡Listo! Revisá tu bandeja
                     </Typography>
                     <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center', lineHeight: 1.7 }}>
-                        Si <strong>{email}</strong> está registrado en SPGS, recibirás un
+                        Si <strong>{email}</strong> está registrado en {APP_CONFIG.name}, recibirás un
                         correo con el enlace para restablecer tu contraseña.
                         El enlace es válido por <strong>1 hora</strong>.
                     </Typography>
@@ -295,7 +296,7 @@ function SuccessView() {
                 fullScreenAt="xs"
                 icon={CheckCircleIcon}
                 title="¡Contraseña actualizada!"
-                subtitle="Ya podés iniciar sesión en SPGS"
+                subtitle={`Ya podés iniciar sesión en ${APP_CONFIG.name}`}
                 primaryButton={{ label: 'Iniciar sesión', onClick: () => navigate('/login') }}
             >
                 <Box sx={{ p: 3.5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
