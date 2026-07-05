@@ -28,6 +28,10 @@ public class EmailService {
 
     @Value("${spring.mail.username}")
     private String sender;
+    @Value("${app.brand.name:PROSEG}")
+    private String brandName;
+    @Value("${app.brand.full-name:Programa de Servicios Generales}")
+    private String brandFullName;
 
     public void sendEmail(Email email) {
         emailValidator.validate(sender);
@@ -48,6 +52,8 @@ public class EmailService {
 
         try {
             Context context = template.buildContext();
+            context.setVariable("brandName", brandName);
+            context.setVariable("brandFullName", brandFullName);
 
             String html = templateEngine.process(template.getTemplateName(), context);
 

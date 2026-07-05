@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(${actionLabel}, ${actionLabel}, 'Se detecto un cambio en un ticket de mantenimiento.', ~{::section})}">
+<section>
+<p style="margin:0 0 20px 0;font-size:15px;line-height:1.6;color:#374151;">
+    Se registro un movimiento en el ticket
+    <strong th:text="${ticketTitle}">Titulo del ticket</strong>.
+</p>
+
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+       style="border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;margin-bottom:24px;">
+    <tr>
+        <td colspan="2"
+            style="padding:14px 16px;font-size:15px;font-weight:bold;background:#fef2f2;border-bottom:1px solid #fee2e2;color:#b91c1c;">
+            Detalle del movimiento
+        </td>
+    </tr>
+    <tr>
+        <td style="padding:12px 16px;font-size:14px;width:40%;border-bottom:1px solid #e5e7eb;"><strong>Accion:</strong></td>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;" th:text="${actionLabel}">Ticket actualizado</td>
+    </tr>
+    <tr>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;"><strong>Realizado por:</strong></td>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;" th:text="${actorName} ?: 'Usuario'">Usuario</td>
+    </tr>
+    <tr>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;"><strong>Estado:</strong></td>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;" th:text="${status} ?: 'Sin estado'">Abierto</td>
+    </tr>
+    <tr>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;"><strong>Prioridad:</strong></td>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;" th:text="${priority} ?: 'Sin prioridad'">Media</td>
+    </tr>
+    <tr>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;"><strong>Recinto:</strong></td>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;" th:text="${campusName} ?: 'Sin recinto'">Recinto</td>
+    </tr>
+    <tr>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;"><strong>Edificio:</strong></td>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;" th:text="${buildingName} ?: 'Sin edificio'">Edificio</td>
+    </tr>
+    <tr>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;"><strong>Descripcion:</strong></td>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #e5e7eb;" th:text="${ticketDescription} ?: 'Sin descripcion'">Descripcion</td>
+    </tr>
+    <tr>
+        <td style="padding:12px 16px;font-size:14px;"><strong>Resumen:</strong></td>
+        <td style="padding:12px 16px;font-size:14px;" th:text="${detail} ?: 'Movimiento registrado'">Detalle</td>
+    </tr>
+</table>
+
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+       style="border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;margin-bottom:24px;"
+       th:if="${changedFields != null and !changedFields.isEmpty()}">
+    <tr>
+        <td style="padding:14px 16px;font-size:15px;font-weight:bold;background:#eff6ff;border-bottom:1px solid #dbeafe;color:#1d4ed8;">
+            Cambios realizados
+        </td>
+    </tr>
+    <tr>
+        <td style="padding:12px 16px;font-size:14px;">
+            <ul style="margin:0;padding-left:18px;color:#374151;">
+                <li th:each="change : ${changedFields}" th:text="${change}" style="margin:4px 0;">Cambio</li>
+            </ul>
+        </td>
+    </tr>
+</table>
+
+<p style="margin:0;font-size:12px;color:#6b7280;">
+    Movimiento registrado el:
+    <span th:text="${timestamp}">01/01/2026 00:00</span>
+</p>
+</section>
+</html>

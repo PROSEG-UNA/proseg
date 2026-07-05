@@ -3,17 +3,23 @@ import { Sidebar, NavDrawer } from '../common/components/Sidebar';
 import { Header } from '../common/components/Header';
 import { SidebarContext } from '../common/context/SidebarContext';
 import { Box, useMediaQuery, useTheme } from '@mui/material';
+import { Helmet } from 'react-helmet-async';
+import { APP_CONFIG } from '../config/appConfig.js';
 
-export function DashboardLayout({ children, title }) {
+export function DashboardLayout({ children, title, pageTitle }) {
   const { isMinimized } = useContext(SidebarContext);
   const theme = useTheme();
   const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const resolvedPageTitle = pageTitle || title || 'Inicio';
 
   const marginLeft = !isMediumOrDown ? (isMinimized ? '80px' : '280px') : '0px';
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100dvh' }}>
+      <Helmet>
+        <title>{`${resolvedPageTitle} - ${APP_CONFIG.name}`}</title>
+      </Helmet>
       {!isMediumOrDown && <Sidebar />}
       <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
       <Box

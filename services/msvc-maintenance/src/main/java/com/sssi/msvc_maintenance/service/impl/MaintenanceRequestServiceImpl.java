@@ -5,6 +5,8 @@ import com.sssi.common.api.response.PageResponse;
 import com.sssi.msvc_maintenance.client.InventoryClient;
 import com.sssi.msvc_maintenance.dto.request.MaintenanceRequestRequestDto;
 import com.sssi.msvc_maintenance.dto.response.InventoryAssetResponseDto;
+import com.sssi.msvc_maintenance.dto.response.InventoryBuildingResponseDto;
+import com.sssi.msvc_maintenance.dto.response.InventoryCampusResponseDto;
 import com.sssi.msvc_maintenance.dto.response.MaintenanceAssetOptionDto;
 import com.sssi.msvc_maintenance.dto.response.MaintenanceRequestResponseDto;
 import com.sssi.msvc_maintenance.entity.Company;
@@ -15,6 +17,7 @@ import com.sssi.msvc_maintenance.entity.MaintenanceRegister;
 import com.sssi.msvc_maintenance.entity.enums.MaintenanceStatus;
 import com.sssi.msvc_maintenance.entity.enums.MaintenanceStatusTransitions;
 import com.sssi.msvc_maintenance.event.MaintenanceRequestCreatedDomainEvent;
+import com.sssi.msvc_maintenance.event.MaintenanceRequestNotificationDomainEvent;
 import com.sssi.msvc_maintenance.exception.CompanyException;
 import com.sssi.msvc_maintenance.exception.MaintenanceRequestException;
 import com.sssi.msvc_maintenance.mapper.MaintenanceAssetOptionMapper;
@@ -28,6 +31,7 @@ import com.sssi.msvc_maintenance.security.Privileges;
 import com.sssi.msvc_maintenance.service.MaintenanceRequestService;
 import com.sssi.msvc_maintenance.specification.GenericSpecifications;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -42,13 +46,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class MaintenanceRequestServiceImpl implements MaintenanceRequestService {
 
     private final MaintenanceRequestRepository maintenanceRequestRepository;
@@ -167,6 +175,23 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         MaintenanceRequest maintenanceRequest = maintenanceRequestRepository.findById(id)
                 .orElseThrow(MaintenanceRequestException::notFound);
 
+        String oldDescription = maintenanceRequest.getDescription();
+        MaintenanceStatus oldStatus = maintenanceRequest.getStatus();
+        java.time.LocalDate oldStartDate = maintenanceRequest.getStartDate();
+        java.time.LocalDate oldEndDate = maintenanceRequest.getEndDate();
+        java.time.LocalTime oldStartTime = maintenanceRequest.getStartTime();
+        java.time.LocalTime oldEndTime = maintenanceRequest.getEndTime();
+        UUID oldCampusId = maintenanceRequest.getCampusId();
+        UUID oldBuildingId = maintenanceRequest.getBuildingId();
+        String oldCampusName = resolveCampusNameSafe(oldCampusId);
+        String oldBuildingName = resolveBuildingNameSafe(oldBuildingId);
+        Set<UUID> oldTechnicianIds = toTechnicianIds(maintenanceRequest.getAssignedTechnicians());
+        UUID oldResponsibleId = maintenanceRequest.getResponsibleUserCompany() != null
+                ? maintenanceRequest.getResponsibleUserCompany().getId()
+                : null;
+        String oldResponsibleName = resolveResponsibleName(maintenanceRequest.getResponsibleUserCompany());
+        Set<String> oldEmails = toEmailSet(maintenanceRequest.getEmails());
+
         UUID companyId = parseUuid(request.getCompanyId(), "companyId");
 
         Company company = companyRepository.findById(companyId)
@@ -190,7 +215,33 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
             maintenanceRequest.setCancellationReason(null);
         }
 
-        return maintenanceRequestMapper.toResponse(maintenanceRequestRepository.save(maintenanceRequest));
+        MaintenanceRequest saved = maintenanceRequestRepository.save(maintenanceRequest);
+
+        publishMaintenanceNotification(
+                saved,
+                "UPDATED",
+                "Solicitud de mantenimiento actualizada",
+                "Se actualizo la solicitud de mantenimiento",
+                buildUpdateChangedFields(
+                        oldDescription,
+                        oldStatus,
+                        oldStartDate,
+                        oldEndDate,
+                        oldStartTime,
+                        oldEndTime,
+                        oldCampusId,
+                        oldBuildingId,
+                        oldCampusName,
+                        oldBuildingName,
+                        oldTechnicianIds,
+                        oldResponsibleId,
+                        oldResponsibleName,
+                        oldEmails,
+                        saved
+                )
+        );
+
+        return maintenanceRequestMapper.toResponse(saved);
     }
 
     @Override
@@ -198,6 +249,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
     public MaintenanceRequestResponseDto accept(UUID id) {
         MaintenanceRequest maintenanceRequest = maintenanceRequestRepository.findById(id)
                 .orElseThrow(MaintenanceRequestException::notFound);
+        MaintenanceStatus previousStatus = maintenanceRequest.getStatus();
 
         if (maintenanceRequest.getStatus() == MaintenanceStatus.CANCELLED) {
             throw MaintenanceRequestException.cannotAcceptCancelled();
@@ -209,7 +261,17 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         maintenanceRequest.setCancellationReason(null);
         syncRegisterStatus(id, MaintenanceStatus.ACCEPTED);
 
-        return maintenanceRequestMapper.toResponse(maintenanceRequestRepository.save(maintenanceRequest));
+        MaintenanceRequest saved = maintenanceRequestRepository.save(maintenanceRequest);
+
+        publishMaintenanceNotification(
+                saved,
+                "ACCEPTED",
+                "Solicitud de mantenimiento aceptada",
+                "La solicitud fue aceptada por administracion",
+                List.of(formatChange("Estado", toStatusLabel(previousStatus), toStatusLabel(saved.getStatus())))
+        );
+
+        return maintenanceRequestMapper.toResponse(saved);
     }
 
     @Override
@@ -217,6 +279,7 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
     public MaintenanceRequestResponseDto cancel(UUID id, String reason) {
         MaintenanceRequest maintenanceRequest = maintenanceRequestRepository.findById(id)
                 .orElseThrow(MaintenanceRequestException::notFound);
+        MaintenanceStatus previousStatus = maintenanceRequest.getStatus();
 
         MaintenanceStatusTransitions.validateOrThrow(maintenanceRequest.getStatus(), MaintenanceStatus.CANCELLED);
 
@@ -224,7 +287,20 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         maintenanceRequest.setCancellationReason(normalizeReason(reason));
         syncRegisterStatus(id, MaintenanceStatus.CANCELLED);
 
-        return maintenanceRequestMapper.toResponse(maintenanceRequestRepository.save(maintenanceRequest));
+        MaintenanceRequest saved = maintenanceRequestRepository.save(maintenanceRequest);
+
+        publishMaintenanceNotification(
+                saved,
+                "REJECTED",
+                "Solicitud de mantenimiento rechazada",
+                "La solicitud fue rechazada por administracion",
+                List.of(
+                        formatChange("Estado", toStatusLabel(previousStatus), toStatusLabel(saved.getStatus())),
+                        "Motivo: " + valueOrFallback(saved.getCancellationReason())
+                )
+        );
+
+        return maintenanceRequestMapper.toResponse(saved);
     }
 
     private void syncRegisterStatus(UUID requestId, MaintenanceStatus status) {
@@ -237,6 +313,241 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
             return null;
         }
         return reason.trim();
+    }
+
+    private void publishMaintenanceNotification(MaintenanceRequest request,
+                                                String actionType,
+                                                String actionLabel,
+                                                String detail,
+                                                List<String> changedFields) {
+        eventPublisher.publishEvent(new MaintenanceRequestNotificationDomainEvent(
+                request.getId(),
+                actionType,
+                actionLabel,
+                detail,
+                request.getCompany().getName(),
+                request.getCompany().getLegalId(),
+                request.getDescription(),
+                request.getCancellationReason(),
+                request.getStatus() != null ? request.getStatus().name() : null,
+                request.getStartDate(),
+                request.getEndDate(),
+                request.getStartTime(),
+                request.getEndTime(),
+                request.getCampusId(),
+                request.getBuildingId(),
+                changedFields == null ? List.of() : changedFields,
+                resolveNotificationEmails(request),
+                System.currentTimeMillis()
+        ));
+    }
+
+    private List<String> buildUpdateChangedFields(String oldDescription,
+                                                  MaintenanceStatus oldStatus,
+                                                  java.time.LocalDate oldStartDate,
+                                                  java.time.LocalDate oldEndDate,
+                                                  java.time.LocalTime oldStartTime,
+                                                  java.time.LocalTime oldEndTime,
+                                                  UUID oldCampusId,
+                                                  UUID oldBuildingId,
+                                                  String oldCampusName,
+                                                  String oldBuildingName,
+                                                  Set<UUID> oldTechnicianIds,
+                                                  UUID oldResponsibleId,
+                                                  String oldResponsibleName,
+                                                  Set<String> oldEmails,
+                                                  MaintenanceRequest saved) {
+        List<String> changedFields = new ArrayList<>();
+
+        if (!Objects.equals(oldDescription, saved.getDescription())) {
+            changedFields.add(formatChange("Descripcion", oldDescription, saved.getDescription()));
+        }
+        if (!Objects.equals(oldStatus, saved.getStatus())) {
+            changedFields.add(formatChange("Estado", toStatusLabel(oldStatus), toStatusLabel(saved.getStatus())));
+        }
+        if (!Objects.equals(oldStartDate, saved.getStartDate())) {
+            changedFields.add(formatChange("Fecha inicio", valueOrFallback(oldStartDate), valueOrFallback(saved.getStartDate())));
+        }
+        if (!Objects.equals(oldEndDate, saved.getEndDate())) {
+            changedFields.add(formatChange("Fecha fin", valueOrFallback(oldEndDate), valueOrFallback(saved.getEndDate())));
+        }
+        if (!Objects.equals(oldStartTime, saved.getStartTime())) {
+            changedFields.add(formatChange("Hora inicio", valueOrFallback(oldStartTime), valueOrFallback(saved.getStartTime())));
+        }
+        if (!Objects.equals(oldEndTime, saved.getEndTime())) {
+            changedFields.add(formatChange("Hora fin", valueOrFallback(oldEndTime), valueOrFallback(saved.getEndTime())));
+        }
+        if (!Objects.equals(oldCampusId, saved.getCampusId())) {
+            changedFields.add(formatChange("Campus", oldCampusName, resolveCampusNameSafe(saved.getCampusId())));
+        }
+        if (!Objects.equals(oldBuildingId, saved.getBuildingId())) {
+            changedFields.add(formatChange("Edificio", oldBuildingName, resolveBuildingNameSafe(saved.getBuildingId())));
+        }
+
+        Set<UUID> newTechnicianIds = toTechnicianIds(saved.getAssignedTechnicians());
+        if (!Objects.equals(oldTechnicianIds, newTechnicianIds)) {
+            changedFields.add("Tecnicos asignados actualizados");
+        }
+
+        UUID newResponsibleId = saved.getResponsibleUserCompany() != null
+                ? saved.getResponsibleUserCompany().getId()
+                : null;
+        if (!Objects.equals(oldResponsibleId, newResponsibleId)) {
+            changedFields.add(formatChange("Responsable", oldResponsibleName, resolveResponsibleName(saved.getResponsibleUserCompany())));
+        }
+
+        Set<String> newEmails = toEmailSet(saved.getEmails());
+        if (!Objects.equals(oldEmails, newEmails)) {
+            changedFields.add("Correos asociados actualizados");
+        }
+
+        return changedFields;
+    }
+
+    private List<String> resolveNotificationEmails(MaintenanceRequest request) {
+        List<String> recipients = new ArrayList<>();
+        recipients.addAll(resolveRequestEmails(request));
+        recipients.addAll(resolveLocationEmails(request.getCampusId(), request.getBuildingId()));
+        return cleanEmails(recipients);
+    }
+
+    private List<String> resolveRequestEmails(MaintenanceRequest request) {
+        if (request.getEmails() == null) {
+            return List.of();
+        }
+        return request.getEmails().stream()
+                .map(MaintenanceEmail::getEmail)
+                .filter(email -> email != null && !email.isBlank())
+                .toList();
+    }
+
+    private List<String> resolveLocationEmails(UUID campusId, UUID buildingId) {
+        List<String> emails = new ArrayList<>();
+
+        try {
+            if (campusId != null) {
+                ApiResponse<List<com.sssi.msvc_maintenance.dto.response.InventoryBuildingEmailResponseDto>> response =
+                        inventoryClient.findCampusEmails(campusId);
+                emails.addAll(extractLocationEmails(response));
+            }
+        } catch (Exception exception) {
+            log.warn("No se pudieron resolver correos del campus {}: {}", campusId, exception.getMessage());
+        }
+
+        try {
+            if (buildingId != null) {
+                ApiResponse<List<com.sssi.msvc_maintenance.dto.response.InventoryBuildingEmailResponseDto>> response =
+                        inventoryClient.findBuildingEmails(buildingId);
+                emails.addAll(extractLocationEmails(response));
+            }
+        } catch (Exception exception) {
+            log.warn("No se pudieron resolver correos del edificio {}: {}", buildingId, exception.getMessage());
+        }
+
+        return cleanEmails(emails);
+    }
+
+    private List<String> extractLocationEmails(ApiResponse<List<com.sssi.msvc_maintenance.dto.response.InventoryBuildingEmailResponseDto>> response) {
+        List<com.sssi.msvc_maintenance.dto.response.InventoryBuildingEmailResponseDto> data =
+                response != null ? response.getData() : null;
+        if (data == null) {
+            return List.of();
+        }
+        return data.stream()
+                .map(com.sssi.msvc_maintenance.dto.response.InventoryBuildingEmailResponseDto::getEmail)
+                .filter(email -> email != null && !email.isBlank())
+                .toList();
+    }
+
+    private List<String> cleanEmails(List<String> emails) {
+        if (emails == null) {
+            return List.of();
+        }
+        return emails.stream()
+                .filter(email -> email != null && !email.isBlank())
+                .map(String::trim)
+                .distinct()
+                .toList();
+    }
+
+    private String resolveCampusNameSafe(UUID campusId) {
+        if (campusId == null) {
+            return null;
+        }
+        try {
+            ApiResponse<InventoryCampusResponseDto> response = inventoryClient.findCampusById(campusId);
+            InventoryCampusResponseDto campus = response != null ? response.getData() : null;
+            return campus != null ? campus.getName() : "Recinto no disponible";
+        } catch (Exception exception) {
+            return "Recinto no disponible";
+        }
+    }
+
+    private String resolveBuildingNameSafe(UUID buildingId) {
+        if (buildingId == null) {
+            return null;
+        }
+        try {
+            ApiResponse<InventoryBuildingResponseDto> response = inventoryClient.findBuildingById(buildingId);
+            InventoryBuildingResponseDto building = response != null ? response.getData() : null;
+            return building != null ? building.getName() : "Edificio no disponible";
+        } catch (Exception exception) {
+            return "Edificio no disponible";
+        }
+    }
+
+    private String resolveResponsibleName(UserCompany responsible) {
+        if (responsible == null) {
+            return "Sin responsable";
+        }
+        if (responsible.getUserEmail() != null && !responsible.getUserEmail().isBlank()) {
+            return responsible.getUserEmail();
+        }
+        return "Responsable asignado";
+    }
+
+    private Set<UUID> toTechnicianIds(List<UserCompany> technicians) {
+        if (technicians == null) {
+            return Set.of();
+        }
+        return technicians.stream()
+                .map(UserCompany::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(HashSet::new));
+    }
+
+    private Set<String> toEmailSet(List<MaintenanceEmail> emails) {
+        if (emails == null) {
+            return Set.of();
+        }
+        return emails.stream()
+                .map(MaintenanceEmail::getEmail)
+                .filter(email -> email != null && !email.isBlank())
+                .collect(Collectors.toCollection(HashSet::new));
+    }
+
+    private String toStatusLabel(MaintenanceStatus status) {
+        if (status == null) {
+            return null;
+        }
+        return switch (status) {
+            case PENDING -> "Pendiente";
+            case ACCEPTED -> "Aceptada";
+            case COMPLETED -> "Completada";
+            case CANCELLED -> "Cancelada";
+        };
+    }
+
+    private String formatChange(String fieldName, String oldValue, String newValue) {
+        return fieldName + ": " + valueOrFallback(oldValue) + " -> " + valueOrFallback(newValue);
+    }
+
+    private String valueOrFallback(Object value) {
+        if (value == null) {
+            return "Sin valor";
+        }
+        String text = value.toString();
+        return text.isBlank() ? "Sin valor" : text;
     }
 
     @Override
@@ -348,4 +659,3 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         }
     }
 }
-

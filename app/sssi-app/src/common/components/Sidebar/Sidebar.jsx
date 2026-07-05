@@ -21,10 +21,12 @@ import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import MenuIcon from '@mui/icons-material/Menu';
 import { useColorScheme } from '@mui/material/styles';
 import { SidebarContext } from '../../context/SidebarContext';
+import { AuthContext } from '../../context/AuthContext';
 import { useAuth } from '../../../features/auth/hooks/useAuth';
 import '../../css/Sidebar.css';
 import { panelSurfaceSx } from '../../theme/sxStyles';
 import { useNavSections } from './useNavSections';
+import { ProfileCard } from './ProfileCard';
 
 const neutralHoverSx = (t) => ({
     bgcolor: 'hsla(220, 20%, 50%, 0.05)',
@@ -171,6 +173,7 @@ export function Sidebar() {
     const navigate = useNavigate();
     const location = useLocation();
     const { handleLogout } = useAuth();
+    const { user } = useContext(AuthContext);
     const [expandedMenu, setExpandedMenu] = useState(null);
     const { isMinimized, setIsMinimized } = useContext(SidebarContext);
     const theme = useTheme();
@@ -336,9 +339,12 @@ export function Sidebar() {
                     borderTop: '1px solid',
                     borderColor: 'divider',
                     display: 'flex',
+                    flexDirection: 'column',
                     justifyContent: 'center',
+                    alignItems: showExpandedContent ? 'stretch' : 'center',
                 }}
             >
+                <ProfileCard user={user} minimized={!showExpandedContent} />
                 {!showExpandedContent ? (
                     <Tooltip title="Cerrar Sesión" placement="right" arrow>
                         <IconButton

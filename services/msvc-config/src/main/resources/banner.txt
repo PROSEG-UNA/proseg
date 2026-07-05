@@ -5,5 +5,5 @@
 /_/ /_/ /_/____/ |___/\___/   \___/\____/_/ /_/_/ /_/\__, /
                                                     /____/
 ${AnsiColor.BRIGHT_CYAN}═════════════════════════════════════════════════════════════${AnsiColor.DEFAULT}
-${AnsiColor.BRIGHT_MAGENTA}    :: SSSI :: ${AnsiColor.BRIGHT_WHITE}Booting up Spring Boot ${spring-boot.version}${AnsiColor.BRIGHT_RED} :: UNA-CR :: ${AnsiColor.DEFAULT}
+${AnsiColor.BRIGHT_MAGENTA}    :: PROSEG :: ${AnsiColor.BRIGHT_WHITE}Booting up Spring Boot ${spring-boot.version}${AnsiColor.BRIGHT_RED} :: UNA-CR :: ${AnsiColor.DEFAULT}
 ${AnsiColor.BRIGHT_YELLOW}═════════════════════════════════════════════════════════════${AnsiColor.DEFAULT}

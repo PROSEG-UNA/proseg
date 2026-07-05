@@ -21,6 +21,7 @@ import GeneralModal from '../../../common/components/GeneralModal.jsx';
 import { useFormValidation } from '../../../common/hooks/useFormValidation';
 import { ValidatedTextField } from '../../../common/components/ValidatedTextField';
 import { Helmet } from 'react-helmet-async';
+import { APP_CONFIG } from '../../../config/appConfig.js';
 
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAADEo_zmnakZDiJdz';
 const TURNSTILE_SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
@@ -177,7 +178,7 @@ export function RegisterPage() {
     return (
         <>
             <Helmet>
-                <title>Registro | SPSG</title>
+                <title>{`Registro - ${APP_CONFIG.name}`}</title>
             </Helmet>
             <PageShell />
             <GeneralModal
@@ -187,7 +188,7 @@ export function RegisterPage() {
                 maxWidth="xs"
                 fullScreenAt="xs"
                 icon={PersonAddIcon}
-                title="Sistema Programa Servicios Generales"
+                title={APP_CONFIG.fullName}
                 subtitle="Gestión de Servicios Institucionales"
                 loading={loading}
                 footerLeft={

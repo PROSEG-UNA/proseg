@@ -49,6 +49,9 @@ eureka:
       defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://msvc-eureka:8761/eureka/}
 
 app:
+  brand:
+    name: ${APP_BRAND_NAME:PROSEG}
+    full-name: ${APP_BRAND_FULL_NAME:Programa de Servicios Generales}
   urls:
     login: ${APP_URLS_LOGIN:https://app.example.com/login}
     approvals: ${APP_URLS_APPROVALS:https://app.example.com/login}
