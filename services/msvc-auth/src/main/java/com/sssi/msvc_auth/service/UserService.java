@@ -9,7 +9,9 @@ import com.sssi.msvc_auth.entity.InvitationToken;
 import com.sssi.msvc_auth.entity.User;
 import com.sssi.msvc_auth.exception.InvitationException;
 import com.sssi.msvc_auth.exception.KeycloakException;
+import com.sssi.msvc_auth.exception.UserException;
 import com.sssi.msvc_auth.repository.InvitationTokenRepository;
+import com.sssi.msvc_auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -23,12 +25,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class UserService {
+    private static final String ARCHIVE_FILE_ROUTE_PREFIX = "/api/v1/archive/files/";
 
     private static final String SOLICITAR_MANTENIMIENTO = "SOLICITAR_MANTENIMIENTO";
     private static final String SELECCIONAR_EMPRESA_EN_SOLICITUD_MANTENIMIENTO = "SELECCIONAR_EMPRESA_EN_SOLICITUD_MANTENIMIENTO";
@@ -40,15 +46,36 @@ public class UserService {
     private final SecureRandom secureRandom = new SecureRandom();
     private final InvitationTokenRepository invitationTokenRepository;
     private final MaintenanceCompanyClient maintenanceCompanyClient;
+    private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
     public PagedResponse<KeycloakUserResponseDto> getAllUsers(Pageable pageable) {
-        return keycloakAdminService.getAllUsers(pageable);
+        PagedResponse<KeycloakUserResponseDto> response = keycloakAdminService.getAllUsers(pageable);
+        List<KeycloakUserResponseDto> content = response.content();
+        if (content == null || content.isEmpty()) {
+            return response;
+        }
+
+        List<String> keycloakUserIds = content.stream()
+                .map(KeycloakUserResponseDto::getId)
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .toList();
+
+        Map<String, User> userByKeycloakId = userRepository.findAllByKeycloakUserIdIn(keycloakUserIds)
+                .stream()
+                .collect(Collectors.toMap(User::getKeycloakUserId, Function.identity()));
+
+        content.forEach(user -> applyProfileImage(user, userByKeycloakId.get(user.getId())));
+        return response;
     }
 
     @Transactional(readOnly = true)
     public KeycloakUserResponseDto getKeycloakUserById(String id) {
-        return keycloakAdminService.getUserById(id);
+        KeycloakUserResponseDto user = keycloakAdminService.getUserById(id);
+        User localUser = userRepository.findByKeycloakUserId(id).orElse(null);
+        applyProfileImage(user, localUser);
+        return user;
     }
 
     @Transactional
@@ -322,6 +349,64 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public List<KeycloakUserResponseDto> getKeycloakUsersByIds(List<String> ids) {
-        return keycloakAdminService.getUsersByIds(ids);
+        List<KeycloakUserResponseDto> users = keycloakAdminService.getUsersByIds(ids);
+        if (users.isEmpty()) {
+            return users;
+        }
+
+        List<String> keycloakUserIds = users.stream()
+                .map(KeycloakUserResponseDto::getId)
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .toList();
+
+        Map<String, User> userByKeycloakId = userRepository.findAllByKeycloakUserIdIn(keycloakUserIds)
+                .stream()
+                .collect(Collectors.toMap(User::getKeycloakUserId, Function.identity()));
+
+        users.forEach(user -> applyProfileImage(user, userByKeycloakId.get(user.getId())));
+        return users;
+    }
+
+    @Transactional
+    public KeycloakUserResponseDto updateCurrentUserProfileImage(String currentUserId, String objectName) {
+        User localUser = userRepository.findByKeycloakUserId(currentUserId)
+                .orElseThrow(() -> UserException.notFound(currentUserId));
+
+        String normalizedObjectName = normalizeObjectName(objectName);
+        if (normalizedObjectName == null) {
+            throw new IllegalArgumentException("El nombre del objeto es obligatorio");
+        }
+
+        localUser.setProfileImageObjectName(normalizedObjectName);
+        userRepository.save(localUser);
+
+        KeycloakUserResponseDto user = keycloakAdminService.getUserById(currentUserId);
+        applyProfileImage(user, localUser);
+        return user;
+    }
+
+    private void applyProfileImage(KeycloakUserResponseDto user, User localUser) {
+        if (user == null || localUser == null) {
+            return;
+        }
+        String objectName = normalizeObjectName(localUser.getProfileImageObjectName());
+        user.setProfileImageObjectName(objectName);
+        user.setProfileImageUrl(toArchiveImageUrl(objectName));
+    }
+
+    private String toArchiveImageUrl(String objectName) {
+        if (objectName == null || objectName.isBlank()) {
+            return null;
+        }
+        return ARCHIVE_FILE_ROUTE_PREFIX + objectName;
+    }
+
+    private String normalizeObjectName(String objectName) {
+        if (objectName == null) {
+            return null;
+        }
+        String trimmed = objectName.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }
