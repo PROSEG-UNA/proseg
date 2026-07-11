@@ -140,5 +140,15 @@ public class UserController {
         List<KeycloakUserResponseDto> users = userService.getKeycloakUsersByIds(ids);
         return ApiResponseBuilder.ok(users, "Usuarios obtenidos correctamente");
     }
-}
 
+    @PatchMapping("/me/profile-image")
+    public ResponseEntity<ApiResponse<KeycloakUserResponseDto>> updateCurrentUserProfileImage(
+            @Valid @RequestBody UpdateProfileImageRequestDto request,
+            Authentication authentication
+    ) {
+        String currentUserId = authentication.getName();
+        KeycloakUserResponseDto updatedUser =
+                userService.updateCurrentUserProfileImage(currentUserId, request.getObjectName());
+        return ApiResponseBuilder.ok(updatedUser, "Imagen de perfil actualizada correctamente");
+    }
+}

@@ -38,6 +38,9 @@ public class User extends BaseEntity {
 	@Column(name = "status", nullable = false)
 	private UserStatus status;
 
+	@Column(name = "profile_image_object_name", length = 500)
+	private String profileImageObjectName;
+
 	public enum UserStatus {
 		PENDING,
 		APPROVED,
@@ -45,4 +48,3 @@ public class User extends BaseEntity {
 		INVITED
 	}
 }
-

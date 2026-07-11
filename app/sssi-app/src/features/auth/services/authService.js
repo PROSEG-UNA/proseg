@@ -42,3 +42,8 @@ export async function refreshAccessToken() {
     const { data } = await axios.post(`${BASE_URL}/refresh`, {}, config);
     return data;
 }
+
+export async function updateCurrentUserProfileImage(objectName) {
+    const { data } = await axios.patch('/api/user/me/profile-image', { objectName }, config);
+    return data;
+}
