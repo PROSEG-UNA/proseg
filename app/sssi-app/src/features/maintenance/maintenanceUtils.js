@@ -1,3 +1,5 @@
+import { formatDate, formatDateTime } from '../../common/utils/formatters.js';
+
 export const MAINTENANCE_STATUS_OPTIONS = [
     { value: 'PENDING', label: 'Pendiente' },
     { value: 'ACCEPTED', label: 'Aceptada' },
@@ -38,22 +40,7 @@ export const MAINTENANCE_PRIORITY_OPTIONS = [
     { value: 'HIGH', label: 'Alta' }
 ];
 
-export function formatDate(value) {
-    if (!value) return '—';
-    const [year, month, day] = String(value).split('-');
-    if (!year || !month || !day) return value;
-    return `${day}/${month}/${year}`;
-}
-
-export function formatDateTime(value) {
-    if (!value) return '—';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-    return new Intl.DateTimeFormat('es-CR', {
-        dateStyle: 'short',
-        timeStyle: 'short',
-    }).format(date);
-}
+export { formatDate, formatDateTime };
 
 export function normalizeTextList(input) {
     return Array.from(

@@ -2,6 +2,7 @@ import Chip from '@mui/material/Chip';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RowActionsMenu from "../../../common/components/RowActionsMenu.jsx";
+import { formatDate } from '../../../common/utils/formatters.js';
 
 const STATUS_FILTER_OPTIONS = [
     { value: 'PENDING', label: 'Pendiente' },
@@ -31,12 +32,6 @@ function priorityChipColor(priorityRaw) {
     if (priorityRaw === 'MEDIUM') return 'info';
     if (priorityRaw === 'LOW') return 'default';
     return 'default';
-}
-
-function formatDate(value) {
-    if (!value) return '—';
-    const [year, month, day] = value.split('-');
-    return `${day}/${month}/${year}`;
 }
 
 export function getMaintenanceRequestColumns() {

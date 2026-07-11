@@ -27,22 +27,15 @@ import {
     deleteAssetComponent,
 } from '../../services/assetComponentsService.js';
 import { INVENTORY_ENDPOINTS } from '../../services/endpoints.js';
+import { useAssetFormState, INIT_FORM } from '../../hooks/useAssetFormState.js';
+import { useAssetCatalogOptions } from '../../hooks/useAssetCatalogOptions.js';
+import { useAssetComponents } from '../../hooks/useAssetComponents.js';
+import { useAssetPhotos } from '../../hooks/useAssetPhotos.js';
 
 const STATUS_OPTIONS = [
     { value: 'APROBADO', label: 'Aprobado' },
     { value: 'DE_BAJA',  label: 'De baja' },
 ];
-
-const INIT = {
-    executingUnit: '', responsibleEmployee: '', responsibleEmployeeId: '',
-    brandId: '', typeId: '', modelId: '',
-    campusId: '', buildingId: '', floorNumber: '', locationId: '',
-    status: '', decommissionDate: '',
-    acquisitionDate: '', warrantyEndDate: '', firmwareSupportEndDate: '',
-    ipAddress: '', macAddress: '',
-    assetNumber: '', serialNumber: '',
-    latitude: '', longitude: '',
-};
 
 const readAsDataUrl = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -51,48 +44,23 @@ const readAsDataUrl = (file) => new Promise((resolve, reject) => {
     reader.readAsDataURL(file);
 });
 
-const createEmptyComponent = () => ({
-    localId: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    id: null,
-    name: '',
-    quantity: '1',
-    location: '',
-    observations: '',
-});
-
 export default function AssetFormModal({ open, onClose, onSaved, assetId = null }) {
     const theme = useTheme();
     const accentColor = theme.vars.palette.tones.rose.fg;
 
     const isEdit = !!assetId;
 
-    const [formValues, setFormValues] = useState(INIT);
-    const [errors, setErrors]         = useState({});
-    const [touched, setTouched]       = useState({});
-    const [saving, setSaving]         = useState(false);
-    const [alert, setAlert]           = useState(null);
-    const [loadingAsset, setLoadingAsset] = useState(false);
+    const formState = useAssetFormState(open);
+    const catalogOptions = useAssetCatalogOptions(open);
+    const assetComponents = useAssetComponents();
+    const assetPhotos = useAssetPhotos(open);
 
-    const [brands, setBrands]       = useState([]);
-    const [types, setTypes]         = useState([]);
-    const [models, setModels]       = useState([]);
-    const [campuses, setCampuses]   = useState([]);
-    const [buildings, setBuildings] = useState([]);
-    const [locations, setLocations] = useState([]);
-    const [loadingOptions, setLoadingOptions] = useState(false);
-
-    const [catalogModal, setCatalogModal]           = useState(null);
-    const [photos, setPhotos]                       = useState([]);
-    const [existingPhotos, setExistingPhotos]       = useState([]);
-    const [photosToDelete, setPhotosToDelete]       = useState([]);
-    const [isDragOver, setIsDragOver]               = useState(false);
-    const [pendingTypeChange, setPendingTypeChange] = useState(null);
-    const [assetNumberExists, setAssetNumberExists] = useState(false);
-    const [showAssetNumberConfirm, setShowAssetNumberConfirm] = useState(false);
-    const [components, setComponents] = useState([]);
-    const [componentErrors, setComponentErrors] = useState({});
-    const [componentsToDelete, setComponentsToDelete] = useState([]);
+    const [catalogModal, setCatalogModal] = useState(null);
     const fileInputRef = useRef(null);
+
+    const { formValues, setFormValues, errors, setErrors, touched, setTouched, saving, setSaving, alert, setAlert, loadingAsset, setLoadingAsset, assetNumberExists, setAssetNumberExists, showAssetNumberConfirm, setShowAssetNumberConfirm, pendingTypeChange, setPendingTypeChange } = formState;
+    const { brands, types, models, campuses, buildings, locations, loadingOptions } = catalogOptions;
+    const { components } = assetComponents;
 
     const selectedType             = types.find(t => t.id === formValues.typeId) ?? null;
     const requiresNetworkInterface = selectedType?.requiresNetworkInterface ?? false;
@@ -114,103 +82,14 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         return l.floor?.building?.id === formValues.buildingId;
     });
 
-    useEffect(() => {
-        if (!open) return undefined;
+    const {
+        addComponent,
+        updateComponentField,
+        removeComponent,
+        validateComponents,
+    } = assetComponents;
 
-        const resetHandle = window.setTimeout(() => {
-            setPhotos([]);
-            setExistingPhotos([]);
-            setPhotosToDelete([]);
-            setFormValues(INIT);
-            setErrors({});
-            setTouched({});
-            setSaving(false);
-            setAlert(null);
-            setIsDragOver(false);
-            setPendingTypeChange(null);
-            setAssetNumberExists(false);
-            setShowAssetNumberConfirm(false);
-            setComponents([]);
-            setComponentErrors({});
-            setComponentsToDelete([]);
-        }, 0);
-
-        return () => window.clearTimeout(resetHandle);
-    }, [open]);
-
-    const addComponent = () => {
-        setComponents(prev => [...prev, createEmptyComponent()]);
-    };
-
-    const updateComponentField = (localId, key, value) => {
-        setComponents(prev => prev.map(component => component.localId === localId
-            ? { ...component, [key]: value }
-            : component));
-
-        setComponentErrors(prev => {
-            if (!prev[localId]?.[key]) return prev;
-            return {
-                ...prev,
-                [localId]: {
-                    ...prev[localId],
-                    [key]: '',
-                },
-            };
-        });
-    };
-
-    const removeComponent = (localId) => {
-        setComponents(prev => {
-            const component = prev.find(item => item.localId === localId);
-            if (component?.id) {
-                setComponentsToDelete(current => [...current, component.id]);
-            }
-            return prev.filter(item => item.localId !== localId);
-        });
-
-        setComponentErrors(prev => {
-            if (!prev[localId]) return prev;
-            const next = { ...prev };
-            delete next[localId];
-            return next;
-        });
-    };
-
-    const validateComponents = () => {
-        const nextErrors = {};
-
-        components.forEach((component) => {
-            const errorsByField = {};
-
-            if (!component.name?.trim()) {
-                errorsByField.name = 'El nombre es obligatorio';
-            } else if (component.name.trim().length > 255) {
-                errorsByField.name = 'El nombre no puede superar los 255 caracteres';
-            }
-
-            const quantity = Number(component.quantity);
-            if (!component.quantity?.toString().trim()) {
-                errorsByField.quantity = 'La cantidad es obligatoria';
-            } else if (!Number.isInteger(quantity) || quantity < 1) {
-                errorsByField.quantity = 'La cantidad debe ser mayor o igual a 1';
-            }
-
-            if ((component.location ?? '').length > 255) {
-                errorsByField.location = 'La ubicación no puede superar los 255 caracteres';
-            }
-
-            if ((component.observations ?? '').length > 1000) {
-                errorsByField.observations = 'Las observaciones no pueden superar los 1000 caracteres';
-            }
-
-            if (Object.keys(errorsByField).length > 0) {
-                nextErrors[component.localId] = errorsByField;
-            }
-        });
-
-        setComponentErrors(nextErrors);
-        return Object.keys(nextErrors).length === 0;
-    };
+    const { photos, setPhotos, existingPhotos, setExistingPhotos, photosToDelete, setPhotosToDelete, isDragOver, setIsDragOver } = assetPhotos;
 
     useEffect(() => {
         if (!open) return undefined;
