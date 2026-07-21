@@ -6,12 +6,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.UUID;
+
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class CleaningRegisterResponseDto {
+    private UUID cleaningExecutionId;
     private int requestedRows;
     private int importedRows;
     private int replacedRows;

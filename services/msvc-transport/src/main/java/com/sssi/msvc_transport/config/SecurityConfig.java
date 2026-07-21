@@ -76,6 +76,14 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.GET, transportRoute + "/reports/**")
                         .hasAnyAuthority(Privileges.Assignments.ACTUALIZAR, Privileges.Assignments.GENERAR)
+                        .requestMatchers(HttpMethod.GET, transportRoute + "/cleaning/history", transportRoute + "/cleaning/history/**")
+                        .hasAnyAuthority(
+                                Privileges.Tours.LEER,
+                                Privileges.Tours.GESTIONAR,
+                                Privileges.Tours.ELIMINAR,
+                                Privileges.Assignments.ACTUALIZAR,
+                                Privileges.Assignments.GENERAR
+                        )
                         .requestMatchers(HttpMethod.POST, transportRoute + "/cleaning/**")
                         .hasAnyAuthority(Privileges.Assignments.ACTUALIZAR, Privileges.Assignments.GENERAR)
                         .anyRequest().authenticated()

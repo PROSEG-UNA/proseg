@@ -5,4 +5,5 @@ export const TRANSPORT_ENDPOINTS = {
     tours: '/api/v1/transport/tours',
     assignment: '/api/v1/transport/assignments',
     cleaning: '/api/v1/transport/cleaning',
+    cleaningHistory: '/api/v1/transport/cleaning/history',
 };

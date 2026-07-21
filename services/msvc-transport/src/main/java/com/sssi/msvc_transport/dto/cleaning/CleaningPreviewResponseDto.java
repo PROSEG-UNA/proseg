@@ -18,4 +18,8 @@ public class CleaningPreviewResponseDto {
     private List<CleaningRowDto> rows;
     private List<CleaningDuplicateGroupDto> duplicateGroups;
     private List<Integer> suggestedRemovals;
+    private int totalRowsRead;
+    private int validRows;
+    private int invalidRows;
+    private int duplicateRowsDetected;
 }

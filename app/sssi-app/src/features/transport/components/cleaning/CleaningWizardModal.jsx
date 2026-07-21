@@ -140,6 +140,8 @@ export default function CleaningWizardModal({ open, onClose, onImported }) {
     const [notice, setNotice] = useState(null);
     const [registerSummary, setRegisterSummary] = useState(null);
     const [resultState, setResultState] = useState(null);
+    const [previewStats, setPreviewStats] = useState(null);
+    const [processStartedAt, setProcessStartedAt] = useState(null);
     const fileInputRef = useRef(null);
 
     const loadingAny = loadingPreview || loadingFinalize || loadingRegister;
@@ -197,6 +199,8 @@ export default function CleaningWizardModal({ open, onClose, onImported }) {
         setEditingRow(null);
         setRegisterSummary(null);
         setResultState(null);
+        setPreviewStats(null);
+        setProcessStartedAt(null);
         clearNotice();
     };
 
@@ -241,6 +245,8 @@ export default function CleaningWizardModal({ open, onClose, onImported }) {
             setNotice({ type: 'warning', message: 'Selecciona un archivo .xlsx o .csv para continuar.' });
             return;
         }
+        const startedAt = new Date().toISOString();
+        setProcessStartedAt(startedAt);
         setLoadingPreview(true);
         try {
             const result = await previewCleaning(file);
@@ -252,6 +258,12 @@ export default function CleaningWizardModal({ open, onClose, onImported }) {
             setDuplicateGroups(result?.duplicateGroups ?? []);
             const suggested = result?.suggestedRemovals ?? [];
             setSuggestedRemovals(suggested);
+            setPreviewStats({
+                totalRowsRead: result?.totalRowsRead ?? rows.length,
+                validRows: result?.validRows ?? rows.length,
+                invalidRows: result?.invalidRows ?? 0,
+                duplicateRowsDetected: result?.duplicateRowsDetected ?? suggested.length,
+            });
             const initialSelection = {};
             suggested.forEach((rowIndex) => {
                 initialSelection[String(rowIndex)] = true;
@@ -311,10 +323,27 @@ export default function CleaningWizardModal({ open, onClose, onImported }) {
             });
             const finalizedRows = toTableRows(finalized?.cleanedRows ?? []);
             setCleanedRows(finalizedRows);
+            const extension = file?.name?.split('.').pop()?.toUpperCase() ?? '';
+            const fileType = extension === 'XLSX' || extension === 'CSV'
+                ? extension
+                : (file?.type || 'DESCONOCIDO');
 
             const registered = await registerCleaningRows({
                 rows: toBackendRows(finalizedRows),
                 replaceExistingInRange: replaceExisting,
+                audit: {
+                    fileName: file?.name ?? 'archivo_desconocido',
+                    fileType,
+                    processStartedAt,
+                    totalRowsRead: previewStats?.totalRowsRead ?? previewRows.length,
+                    validRows: previewStats?.validRows ?? previewRows.length,
+                    invalidRows: previewStats?.invalidRows ?? 0,
+                    duplicateRowsDetected: previewStats?.duplicateRowsDetected ?? suggestedRemovals.length,
+                    selectedForDeletion: selectedRowIndexes,
+                    suggestedRemovals,
+                    removedRows: finalized?.removedRows ?? selectedRowIndexes.length,
+                    remainingRows: finalized?.remainingRows ?? finalizedRows.length,
+                },
             });
             setRegisterSummary(registered);
             onImported?.();

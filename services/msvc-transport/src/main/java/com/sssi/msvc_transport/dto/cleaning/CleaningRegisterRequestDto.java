@@ -20,4 +20,6 @@ public class CleaningRegisterRequestDto {
 
     @Builder.Default
     private boolean replaceExistingInRange = false;
+
+    private CleaningAuditMetadataDto audit;
 }

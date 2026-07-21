@@ -15,12 +15,17 @@ import com.sssi.msvc_transport.repository.DriverRepository;
 import com.sssi.msvc_transport.repository.TourRepository;
 import com.sssi.msvc_transport.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -43,11 +48,13 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CleaningService {
 
     private static final List<String> ROW_KEYS = List.of(
@@ -95,6 +102,7 @@ public class CleaningService {
     private final TourRepository tourRepository;
     private final DriverRepository driverRepository;
     private final VehicleRepository vehicleRepository;
+    private final CleaningHistoryService cleaningHistoryService;
 
     public CleaningPreviewResponseDto preview(MultipartFile file) {
         if (file == null || file.isEmpty()) {
@@ -135,6 +143,10 @@ public class CleaningService {
                 .rows(rows)
                 .duplicateGroups(duplicateGroups)
                 .suggestedRemovals(suggestedRemovals)
+                .totalRowsRead(rows.size())
+                .validRows(rows.size())
+                .invalidRows(0)
+                .duplicateRowsDetected(suggestedRemovals.size())
                 .build();
     }
 
@@ -155,6 +167,50 @@ public class CleaningService {
 
     @Transactional
     public CleaningRegisterResponseDto registerRows(CleaningRegisterRequestDto request) {
+        LocalDateTime processStartedAt = resolveProcessStartedAt(request);
+        String executedBy = resolveExecutedBy();
+        List<CleaningHistoryService.CleaningDetailDraft> detailDrafts = new ArrayList<>();
+        LocalDateTime processFinishedAt = null;
+        appendFinalizeAuditDetails(request, detailDrafts);
+
+        try {
+            RegisterComputationResult result = registerRowsInternal(request, detailDrafts);
+            processFinishedAt = LocalDateTime.now();
+            UUID executionId = cleaningHistoryService.recordSuccess(
+                    request,
+                    result.response(),
+                    executedBy,
+                    processStartedAt,
+                    processFinishedAt,
+                    result.replacedRangeStart(),
+                    result.replacedRangeEnd(),
+                    detailDrafts
+            );
+            result.response().setCleaningExecutionId(executionId);
+            return result.response();
+        } catch (RuntimeException ex) {
+            processFinishedAt = processFinishedAt == null ? LocalDateTime.now() : processFinishedAt;
+            try {
+                cleaningHistoryService.recordFailure(
+                        request,
+                        executedBy,
+                        processStartedAt,
+                        processFinishedAt,
+                        ex,
+                        detailDrafts
+                );
+            } catch (RuntimeException historyEx) {
+                ex.addSuppressed(historyEx);
+                log.error("No se pudo registrar el historial de depuración fallida", historyEx);
+            }
+            throw ex;
+        }
+    }
+
+    private RegisterComputationResult registerRowsInternal(
+            CleaningRegisterRequestDto request,
+            List<CleaningHistoryService.CleaningDetailDraft> detailDrafts
+    ) {
         if (request.getRows() == null || request.getRows().isEmpty()) {
             throw TransportException.badRequest("CLEANING_REGISTER_EMPTY", "No hay filas para registrar");
         }
@@ -171,11 +227,69 @@ public class CleaningService {
             Map<String, String> values = row.getValues() == null ? Map.of() : row.getValues();
             int passengers = Math.max(1, parseInteger(values.get("passengers"), 1));
 
-            Driver driver = resolveOrCreateDriver(values.get("driver"), driverCache, createdDrivers, updatedDrivers);
-            Vehicle vehicle = resolveOrCreateVehicle(values.get("vehicle"), values.get("vehicleType"), passengers, vehicleCache, createdVehicles, updatedVehicles);
-            Tour mapped = mapToTour(row, driver, vehicle);
+            UpsertResult<Driver> driverResult = resolveOrCreateDriver(values.get("driver"), driverCache, createdDrivers, updatedDrivers);
+            if (driverResult.action() != UpsertAction.SKIPPED) {
+                detailDrafts.add(buildDetail(
+                        row.getRowIndex(),
+                        values,
+                        values,
+                        "DRIVER",
+                        mapDriverAction(driverResult.action()),
+                        "SUCCESS",
+                        null,
+                        null,
+                        null
+                ));
+            }
+
+            UpsertResult<Vehicle> vehicleResult = resolveOrCreateVehicle(
+                    values.get("vehicle"),
+                    values.get("vehicleType"),
+                    passengers,
+                    vehicleCache,
+                    createdVehicles,
+                    updatedVehicles
+            );
+            if (vehicleResult.action() != UpsertAction.SKIPPED) {
+                detailDrafts.add(buildDetail(
+                        row.getRowIndex(),
+                        values,
+                        values,
+                        "VEHICLE",
+                        mapVehicleAction(vehicleResult.action()),
+                        "SUCCESS",
+                        null,
+                        null,
+                        null
+                ));
+            }
+
+            Tour mapped = mapToTour(row, driverResult.entity(), vehicleResult.entity());
             if (mapped != null) {
                 tours.add(mapped);
+                detailDrafts.add(buildDetail(
+                        row.getRowIndex(),
+                        values,
+                        values,
+                        "TOUR",
+                        "CREATED_TOUR",
+                        "SUCCESS",
+                        null,
+                        null,
+                        null
+                ));
+            } else {
+                detailDrafts.add(buildDetail(
+                        row.getRowIndex(),
+                        values,
+                        values,
+                        "ROW",
+                        "INVALID_ROW",
+                        "FAILED",
+                        "No se pudo mapear la fila a una gira",
+                        null,
+                        "No se pudo transformar la fila"
+                ));
             }
         }
 
@@ -184,9 +298,13 @@ public class CleaningService {
         }
 
         int replaced = 0;
+        LocalDateTime replacedRangeStart = null;
+        LocalDateTime replacedRangeEnd = null;
         if (request.isReplaceExistingInRange()) {
             LocalDateTime min = tours.stream().map(Tour::getStartDate).min(LocalDateTime::compareTo).orElse(null);
             LocalDateTime max = tours.stream().map(Tour::getEndDate).max(LocalDateTime::compareTo).orElse(null);
+            replacedRangeStart = min;
+            replacedRangeEnd = max;
             if (min != null && max != null) {
                 List<Tour> existing = tourRepository.findAllByStartDateBetween(min, max);
                 replaced = existing.size();
@@ -197,7 +315,7 @@ public class CleaningService {
         }
 
         tourRepository.saveAll(tours);
-        return CleaningRegisterResponseDto.builder()
+        CleaningRegisterResponseDto response = CleaningRegisterResponseDto.builder()
                 .requestedRows(request.getRows().size())
                 .importedRows(tours.size())
                 .replacedRows(replaced)
@@ -206,6 +324,7 @@ public class CleaningService {
                 .createdVehicles(createdVehicles.size())
                 .updatedVehicles(updatedVehicles.size())
                 .build();
+        return new RegisterComputationResult(response, replacedRangeStart, replacedRangeEnd);
     }
 
     private List<CleaningRowDto> parseExcel(MultipartFile file) throws IOException {
@@ -427,7 +546,7 @@ public class CleaningService {
         return tour;
     }
 
-    private Driver resolveOrCreateDriver(
+    private UpsertResult<Driver> resolveOrCreateDriver(
             String rawDriverName,
             Map<String, Driver> cache,
             Set<String> createdKeys,
@@ -435,10 +554,10 @@ public class CleaningService {
     ) {
         String normalizedKey = normalize(rawDriverName);
         if (normalizedKey.isBlank()) {
-            return null;
+            return new UpsertResult<>(null, UpsertAction.SKIPPED);
         }
         if (cache.containsKey(normalizedKey)) {
-            return cache.get(normalizedKey);
+            return new UpsertResult<>(cache.get(normalizedKey), UpsertAction.REUSED);
         }
 
         String[] names = splitDriverName(rawDriverName);
@@ -462,7 +581,7 @@ public class CleaningService {
             Driver saved = driverRepository.save(created);
             cache.put(normalizedKey, saved);
             createdKeys.add(normalizedKey);
-            return saved;
+            return new UpsertResult<>(saved, UpsertAction.CREATED);
         }
 
         boolean changed = false;
@@ -488,10 +607,10 @@ public class CleaningService {
             updatedKeys.add(normalizedKey);
         }
         cache.put(normalizedKey, persisted);
-        return persisted;
+        return new UpsertResult<>(persisted, changed ? UpsertAction.UPDATED : UpsertAction.REUSED);
     }
 
-    private Vehicle resolveOrCreateVehicle(
+    private UpsertResult<Vehicle> resolveOrCreateVehicle(
             String rawPlate,
             String rawVehicleType,
             int passengers,
@@ -501,10 +620,10 @@ public class CleaningService {
     ) {
         String plate = normalizePlate(rawPlate);
         if (plate.isBlank()) {
-            return null;
+            return new UpsertResult<>(null, UpsertAction.SKIPPED);
         }
         if (cache.containsKey(plate)) {
-            return cache.get(plate);
+            return new UpsertResult<>(cache.get(plate), UpsertAction.REUSED);
         }
 
         Vehicle vehicle = vehicleRepository.findByPlateIgnoreCase(plate).orElse(null);
@@ -524,7 +643,7 @@ public class CleaningService {
             Vehicle saved = vehicleRepository.save(created);
             cache.put(plate, saved);
             createdKeys.add(plate);
-            return saved;
+            return new UpsertResult<>(saved, UpsertAction.CREATED);
         }
 
         boolean changed = false;
@@ -554,7 +673,7 @@ public class CleaningService {
             updatedKeys.add(plate);
         }
         cache.put(plate, persisted);
-        return persisted;
+        return new UpsertResult<>(persisted, changed ? UpsertAction.UPDATED : UpsertAction.REUSED);
     }
 
     private String[] splitDriverName(String rawDriverName) {
@@ -612,6 +731,153 @@ public class CleaningService {
             normalized.add(normalize(values.get(key)));
         }
         return String.join("|", normalized);
+    }
+
+    private String mapDriverAction(UpsertAction action) {
+        return switch (action) {
+            case CREATED -> "CREATED_DRIVER";
+            case UPDATED -> "UPDATED_DRIVER";
+            case REUSED -> "REUSED_DRIVER";
+            case SKIPPED -> "INVALID_ROW";
+        };
+    }
+
+    private String mapVehicleAction(UpsertAction action) {
+        return switch (action) {
+            case CREATED -> "CREATED_VEHICLE";
+            case UPDATED -> "UPDATED_VEHICLE";
+            case REUSED -> "REUSED_VEHICLE";
+            case SKIPPED -> "INVALID_ROW";
+        };
+    }
+
+    private void appendFinalizeAuditDetails(
+            CleaningRegisterRequestDto request,
+            List<CleaningHistoryService.CleaningDetailDraft> detailDrafts
+    ) {
+        if (request.getAudit() == null) {
+            return;
+        }
+
+        List<Integer> selectedRows = request.getAudit().getSelectedForDeletion() == null
+                ? List.of()
+                : request.getAudit().getSelectedForDeletion();
+        Set<Integer> suggested = request.getAudit().getSuggestedRemovals() == null
+                ? Set.of()
+                : new HashSet<>(request.getAudit().getSuggestedRemovals());
+
+        for (Integer rowNumber : selectedRows) {
+            if (rowNumber == null || rowNumber <= 0) {
+                continue;
+            }
+            String reason = suggested.contains(rowNumber)
+                    ? "Fila removida por sugerencia de duplicado"
+                    : "Fila removida manualmente durante la depuración";
+            detailDrafts.add(buildDetail(
+                    rowNumber,
+                    Map.of(),
+                    Map.of(),
+                    "ROW",
+                    "IGNORED_DUPLICATE",
+                    "SKIPPED",
+                    reason,
+                    null,
+                    null
+            ));
+        }
+
+        int invalidRows = request.getAudit().getInvalidRows() == null ? 0 : Math.max(0, request.getAudit().getInvalidRows());
+        if (invalidRows > 0) {
+            detailDrafts.add(buildDetail(
+                    null,
+                    Map.of(),
+                    Map.of(),
+                    "ROW",
+                    "INVALID_ROW",
+                    "FAILED",
+                    "Se detectaron filas inválidas en la fase de vista previa",
+                    "Cantidad de filas inválidas: " + invalidRows,
+                    null
+            ));
+        }
+    }
+
+    private CleaningHistoryService.CleaningDetailDraft buildDetail(
+            Integer originalRowNumber,
+            Map<String, String> originalData,
+            Map<String, String> normalizedData,
+            String recordType,
+            String actionPerformed,
+            String processingResult,
+            String rejectionReason,
+            String observations,
+            String validationErrors
+    ) {
+        return CleaningHistoryService.CleaningDetailDraft.builder()
+                .originalRowNumber(originalRowNumber)
+                .originalData(originalData == null ? Map.of() : new LinkedHashMap<>(originalData))
+                .normalizedData(normalizedData == null ? Map.of() : new LinkedHashMap<>(normalizedData))
+                .recordType(recordType)
+                .actionPerformed(actionPerformed)
+                .processingResult(processingResult)
+                .rejectionReason(rejectionReason)
+                .observations(observations)
+                .validationErrors(validationErrors)
+                .build();
+    }
+
+    private LocalDateTime resolveProcessStartedAt(CleaningRegisterRequestDto request) {
+        if (request.getAudit() != null && request.getAudit().getProcessStartedAt() != null) {
+            return request.getAudit().getProcessStartedAt();
+        }
+        return LocalDateTime.now();
+    }
+
+    private String resolveExecutedBy() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return "usuario_desconocido";
+        }
+
+        if (authentication instanceof JwtAuthenticationToken jwtAuthenticationToken) {
+            Jwt jwt = jwtAuthenticationToken.getToken();
+            String preferredUsername = safe(jwt.getClaimAsString("preferred_username"));
+            if (!preferredUsername.isBlank()) return preferredUsername;
+
+            String displayName = safe(jwt.getClaimAsString("name"));
+            if (!displayName.isBlank()) return displayName;
+
+            String givenName = safe(jwt.getClaimAsString("given_name"));
+            String familyName = safe(jwt.getClaimAsString("family_name"));
+            String fullName = (givenName + " " + familyName).trim();
+            if (!fullName.isBlank()) return fullName;
+
+            String email = safe(jwt.getClaimAsString("email"));
+            if (!email.isBlank()) return email;
+        }
+
+        String fallback = safe(authentication.getName());
+        if (!fallback.isBlank() && !looksLikeIdentifier(fallback)) {
+            return fallback;
+        }
+        return "usuario_desconocido";
+    }
+
+    private boolean looksLikeIdentifier(String value) {
+        if (value == null) {
+            return true;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isBlank()) {
+            return true;
+        }
+        try {
+            UUID.fromString(trimmed);
+            return true;
+        } catch (IllegalArgumentException ignored) {
+        }
+        return trimmed.matches("^[0-9a-fA-F]{32}$")
+                || trimmed.matches("^\\d{8,}$");
     }
 
     private List<String> parseCsvLine(String line) {
@@ -740,4 +1006,19 @@ public class CleaningService {
                 .replace("_", "")
                 .trim();
     }
+
+    private enum UpsertAction {
+        CREATED,
+        UPDATED,
+        REUSED,
+        SKIPPED
+    }
+
+    private record UpsertResult<T>(T entity, UpsertAction action) {}
+
+    private record RegisterComputationResult(
+            CleaningRegisterResponseDto response,
+            LocalDateTime replacedRangeStart,
+            LocalDateTime replacedRangeEnd
+    ) {}
 }
