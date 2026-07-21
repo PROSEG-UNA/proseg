@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Box, Chip, Stack, Typography } from '@mui/material';
+import CleaningServicesOutlinedIcon from '@mui/icons-material/CleaningServicesOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import TableBase from '../../../../common/components/TablaBase.jsx';
 import RowActionsMenu from '../../../../common/components/RowActionsMenu.jsx';
@@ -30,6 +31,37 @@ function statusColor(value) {
     if (value === 'FAILED') return 'error';
     if (value === 'PARTIAL') return 'warning';
     return 'default';
+}
+
+function recordTypeLabel(value) {
+    if (!value) return '—';
+    if (value === 'DRIVER') return 'Chofer';
+    if (value === 'VEHICLE') return 'Vehículo';
+    if (value === 'TOUR') return 'Gira';
+    if (value === 'ROW') return 'Fila';
+    return value;
+}
+
+function actionPerformedLabel(value) {
+    if (!value) return '—';
+    if (value === 'CREATED_DRIVER') return 'Chofer creado';
+    if (value === 'UPDATED_DRIVER') return 'Chofer actualizado';
+    if (value === 'REUSED_DRIVER') return 'Chofer reutilizado';
+    if (value === 'CREATED_VEHICLE') return 'Vehículo creado';
+    if (value === 'UPDATED_VEHICLE') return 'Vehículo actualizado';
+    if (value === 'REUSED_VEHICLE') return 'Vehículo reutilizado';
+    if (value === 'CREATED_TOUR') return 'Gira creada';
+    if (value === 'IGNORED_DUPLICATE') return 'Duplicado omitido';
+    if (value === 'INVALID_ROW') return 'Fila inválida';
+    return value;
+}
+
+function processingResultLabel(value) {
+    if (!value) return '—';
+    if (value === 'SUCCESS') return 'Éxito';
+    if (value === 'FAILED') return 'Fallido';
+    if (value === 'SKIPPED') return 'Omitido';
+    return value;
 }
 
 function formatDurationMs(value) {
@@ -255,6 +287,7 @@ export default function CleaningHistoryPanel() {
                     setSelectedId(null);
                     setSelectedDetail(null);
                 }}
+                icon={CleaningServicesOutlinedIcon}
                 title="Detalle de depuración"
                 subtitle={selectedDetail?.fileName ?? ''}
                 maxWidth="xl"
@@ -298,7 +331,13 @@ export default function CleaningHistoryPanel() {
                             <Typography sx={{ fontWeight: 700, fontSize: 16 }}>Registros procesados</Typography>
                             <TableBase
                                 columns={detailColumns}
-                                data={detailRows.map((detail, index) => ({ id: detail.id ?? `${index}`, ...detail }))}
+                                data={detailRows.map((detail, index) => ({
+                                    id: detail.id ?? `${index}`,
+                                    ...detail,
+                                    recordType: recordTypeLabel(detail.recordType),
+                                    actionPerformed: actionPerformedLabel(detail.actionPerformed),
+                                    processingResult: processingResultLabel(detail.processingResult),
+                                }))}
                                 enableGlobalFilter
                                 tableOptions={{
                                     initialState: { pagination: { pageIndex: 0, pageSize: 10 } },
