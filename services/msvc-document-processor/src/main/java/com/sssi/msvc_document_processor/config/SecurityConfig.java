@@ -32,6 +32,18 @@ public class SecurityConfig {
                                 "/api/v1/document-processor/imports/assets/**"
                         ).hasAuthority(Privileges.Activos.IMPORTAR)
 
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/document-processor/exports/assets/**"
+                        ).hasAnyAuthority(Privileges.Activos.IMPORTAR, Privileges.Activos.EXPORTAR)
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/document-processor/exports/tickets/**"
+                        ).hasAuthority(Privileges.TicketsMantenimiento.LEER)
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/document-processor/exports/maintenance-requests/**"
+                        ).hasAuthority(Privileges.SolicitudesMantenimiento.LEER)
+
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex

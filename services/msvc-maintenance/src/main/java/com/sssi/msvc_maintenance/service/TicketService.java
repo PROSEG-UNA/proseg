@@ -7,6 +7,7 @@ import com.sssi.msvc_maintenance.dto.request.TicketCreateRequestDto;
 import com.sssi.msvc_maintenance.dto.request.TicketPriorityUpdateRequestDto;
 import com.sssi.msvc_maintenance.dto.request.TicketStatusUpdateRequestDto;
 import com.sssi.msvc_maintenance.dto.response.TicketCommentResponseDto;
+import com.sssi.msvc_maintenance.dto.response.TicketDashboardSummaryResponseDto;
 import com.sssi.msvc_maintenance.dto.response.KeycloakUserResponse;
 import com.sssi.msvc_maintenance.dto.response.TicketListResponseDto;
 import com.sssi.msvc_maintenance.dto.response.TicketPhotoResponseDto;
@@ -29,6 +30,7 @@ public interface TicketService {
     List<KeycloakUserResponse> findAssignableUsers(Authentication authentication);
     TicketResponseDto updateAssignedTo(UUID id, TicketAssignedToUpdateRequestDto request, Authentication authentication);
     TicketResponseDto updateStatus(UUID id, TicketStatusUpdateRequestDto request, Authentication authentication);
+    TicketDashboardSummaryResponseDto getDashboardSummary(Authentication authentication);
     List<TicketPhotoResponseDto> getPhotos(UUID id, Authentication authentication);
     TicketCommentResponseDto addComment(UUID id, TicketCommentCreateRequestDto request, Authentication authentication);
     TicketCommentResponseDto updateComment(UUID ticketId, UUID commentId, TicketCommentUpdateRequestDto request, Authentication authentication);

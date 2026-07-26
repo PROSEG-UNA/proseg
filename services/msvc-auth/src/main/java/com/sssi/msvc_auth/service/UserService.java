@@ -1,9 +1,7 @@
 package com.sssi.msvc_auth.service;
 
 import com.sssi.common.api.response.PagedResponse;
-import com.sssi.common.kafka.events.ManagedUserCreatedEvent;
-import com.sssi.common.kafka.events.UserInvitedEvent;
-import com.sssi.common.kafka.events.UserPasswordConfiguredEvent;
+import com.sssi.common.kafka.events.*;
 import com.sssi.common.kafka.topics.KafkaTopics;
 import com.sssi.msvc_auth.client.MaintenanceCompanyClient;
 import com.sssi.msvc_auth.dto.*;
@@ -11,7 +9,9 @@ import com.sssi.msvc_auth.entity.InvitationToken;
 import com.sssi.msvc_auth.entity.User;
 import com.sssi.msvc_auth.exception.InvitationException;
 import com.sssi.msvc_auth.exception.KeycloakException;
+import com.sssi.msvc_auth.exception.UserException;
 import com.sssi.msvc_auth.repository.InvitationTokenRepository;
+import com.sssi.msvc_auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -25,12 +25,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class UserService {
+    private static final String ARCHIVE_FILE_ROUTE_PREFIX = "/api/v1/archive/files/";
 
     private static final String SOLICITAR_MANTENIMIENTO = "SOLICITAR_MANTENIMIENTO";
     private static final String SELECCIONAR_EMPRESA_EN_SOLICITUD_MANTENIMIENTO = "SELECCIONAR_EMPRESA_EN_SOLICITUD_MANTENIMIENTO";
@@ -42,20 +46,42 @@ public class UserService {
     private final SecureRandom secureRandom = new SecureRandom();
     private final InvitationTokenRepository invitationTokenRepository;
     private final MaintenanceCompanyClient maintenanceCompanyClient;
+    private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
     public PagedResponse<KeycloakUserResponseDto> getAllUsers(Pageable pageable) {
-        return keycloakAdminService.getAllUsers(pageable);
+        PagedResponse<KeycloakUserResponseDto> response = keycloakAdminService.getAllUsers(pageable);
+        List<KeycloakUserResponseDto> content = response.content();
+        if (content == null || content.isEmpty()) {
+            return response;
+        }
+
+        List<String> keycloakUserIds = content.stream()
+                .map(KeycloakUserResponseDto::getId)
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .toList();
+
+        Map<String, User> userByKeycloakId = userRepository.findAllByKeycloakUserIdIn(keycloakUserIds)
+                .stream()
+                .collect(Collectors.toMap(User::getKeycloakUserId, Function.identity()));
+
+        content.forEach(user -> applyProfileImage(user, userByKeycloakId.get(user.getId())));
+        return response;
     }
 
     @Transactional(readOnly = true)
     public KeycloakUserResponseDto getKeycloakUserById(String id) {
-        return keycloakAdminService.getUserById(id);
+        KeycloakUserResponseDto user = keycloakAdminService.getUserById(id);
+        User localUser = userRepository.findByKeycloakUserId(id).orElse(null);
+        applyProfileImage(user, localUser);
+        return user;
     }
 
     @Transactional
-    public User updateUserApproval(UUID id, User.UserStatus status) {
+    public User updateUserApproval(UUID id, User.UserStatus status, String currentUserId) {
         User updatedUser = userApprobationService.updateStatus(id, status);
+        String oldStatus = updatedUser.getStatus() == User.UserStatus.APPROVED ? "PENDING" : "APPROVED";
 
         if (updatedUser.getStatus() == User.UserStatus.APPROVED) {
             keycloakAdminService.enableUser(updatedUser.getKeycloakUserId());
@@ -64,6 +90,37 @@ public class UserService {
         }
 
         log.info("Estado de aprobacion actualizado para userId {} -> {}", id, updatedUser.getStatus());
+
+        // Send Kafka event for email notification
+        try {
+            KeycloakUserResponseDto targetUser = keycloakAdminService.getUserById(updatedUser.getKeycloakUserId());
+            KeycloakUserResponseDto adminUser = keycloakAdminService.getUserById(currentUserId);
+
+            kafkaTemplate.send(
+                    KafkaTopics.USER_STATUS_CHANGED_TOPIC,
+                    UserStatusChangedEvent.builder()
+                            .userId(updatedUser.getKeycloakUserId())
+                            .username(targetUser.getUsername())
+                            .email(targetUser.getEmail())
+                            .firstName(targetUser.getFirstName())
+                            .lastName(targetUser.getLastName())
+                            .oldStatus(oldStatus)
+                            .newStatus(updatedUser.getStatus().name())
+                            .changedByUserId(currentUserId)
+                            .changedByUsername(adminUser.getUsername())
+                            .changedByEmail(adminUser.getEmail())
+                            .changedByFirstName(adminUser.getFirstName())
+                            .changedByLastName(adminUser.getLastName())
+                            .reason("Status approval change")
+                            .timestamp(Instant.now().toEpochMilli())
+                            .build()
+            );
+            log.info("Evento de cambio de estado enviado: usuario={}, estado={}", updatedUser.getKeycloakUserId(), updatedUser.getStatus());
+        } catch (Exception kafkaEx) {
+            log.warn("No se pudo enviar evento de cambio de estado para usuario {}: {}",
+                    updatedUser.getKeycloakUserId(), kafkaEx.getMessage());
+        }
+
         return updatedUser;
     }
 
@@ -217,9 +274,44 @@ public class UserService {
                 .build();
     }
 
-    public void assignRoleToUser(String userId, String roleId) {
+    @Transactional
+    public void assignRoleToUser(String userId, String roleId, String currentUserId) {
         validateAssociatedCompanyForRole(userId, roleId);
+        
+        // Get user and admin info before making changes
+        KeycloakUserResponseDto targetUser = keycloakAdminService.getUserById(userId);
+        KeycloakUserResponseDto adminUser = keycloakAdminService.getUserById(currentUserId);
+        String roleName = keycloakAdminService.getRoleNameById(roleId);
+        
+        // Assign the role
         keycloakAdminService.assignRoleToUser(userId, roleId);
+        
+        // Send Kafka event for email notification
+        try {
+            kafkaTemplate.send(
+                    KafkaTopics.USER_ROLE_ASSIGNED_TOPIC,
+                    UserRoleAssignedEvent.builder()
+                            .userId(userId)
+                            .username(targetUser.getUsername())
+                            .email(targetUser.getEmail())
+                            .firstName(targetUser.getFirstName())
+                            .lastName(targetUser.getLastName())
+                            .roleId(roleId)
+                            .roleName(roleName)
+                            .assignedByUserId(currentUserId)
+                            .assignedByUsername(adminUser.getUsername())
+                            .assignedByEmail(adminUser.getEmail())
+                            .assignedByFirstName(adminUser.getFirstName())
+                            .assignedByLastName(adminUser.getLastName())
+                            .timestamp(Instant.now().toEpochMilli())
+                            .build()
+            );
+            log.info("Evento de asignación de rol enviado: usuario={}, rol={}, asignadoPor={}",
+                    userId, roleName, currentUserId);
+        } catch (Exception kafkaEx) {
+            log.warn("No se pudo enviar evento de asignación de rol para usuario {}: {}",
+                    userId, kafkaEx.getMessage());
+        }
     }
 
     private void validateAssociatedCompanyForRole(String userId, String roleId) {
@@ -257,6 +349,64 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public List<KeycloakUserResponseDto> getKeycloakUsersByIds(List<String> ids) {
-        return keycloakAdminService.getUsersByIds(ids);
+        List<KeycloakUserResponseDto> users = keycloakAdminService.getUsersByIds(ids);
+        if (users.isEmpty()) {
+            return users;
+        }
+
+        List<String> keycloakUserIds = users.stream()
+                .map(KeycloakUserResponseDto::getId)
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .toList();
+
+        Map<String, User> userByKeycloakId = userRepository.findAllByKeycloakUserIdIn(keycloakUserIds)
+                .stream()
+                .collect(Collectors.toMap(User::getKeycloakUserId, Function.identity()));
+
+        users.forEach(user -> applyProfileImage(user, userByKeycloakId.get(user.getId())));
+        return users;
+    }
+
+    @Transactional
+    public KeycloakUserResponseDto updateCurrentUserProfileImage(String currentUserId, String objectName) {
+        User localUser = userRepository.findByKeycloakUserId(currentUserId)
+                .orElseThrow(() -> UserException.notFound(currentUserId));
+
+        String normalizedObjectName = normalizeObjectName(objectName);
+        if (normalizedObjectName == null) {
+            throw new IllegalArgumentException("El nombre del objeto es obligatorio");
+        }
+
+        localUser.setProfileImageObjectName(normalizedObjectName);
+        userRepository.save(localUser);
+
+        KeycloakUserResponseDto user = keycloakAdminService.getUserById(currentUserId);
+        applyProfileImage(user, localUser);
+        return user;
+    }
+
+    private void applyProfileImage(KeycloakUserResponseDto user, User localUser) {
+        if (user == null || localUser == null) {
+            return;
+        }
+        String objectName = normalizeObjectName(localUser.getProfileImageObjectName());
+        user.setProfileImageObjectName(objectName);
+        user.setProfileImageUrl(toArchiveImageUrl(objectName));
+    }
+
+    private String toArchiveImageUrl(String objectName) {
+        if (objectName == null || objectName.isBlank()) {
+            return null;
+        }
+        return ARCHIVE_FILE_ROUTE_PREFIX + objectName;
+    }
+
+    private String normalizeObjectName(String objectName) {
+        if (objectName == null) {
+            return null;
+        }
+        String trimmed = objectName.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

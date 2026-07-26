@@ -2,25 +2,14 @@ import { useContext } from 'react';
 import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { resolveRedirectTarget } from '../utils';
-import { CircularProgress, Box } from '@mui/material';
+import LoadingScreen from './LoadingScreen';
 
 export function ProtectedRoute({ element }) {
   const { isAuthenticated, loading } = useContext(AuthContext);
   const location = useLocation();
 
   if (loading) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-        }}
-      >
-        <CircularProgress />
-      </Box>
-    );
+    return <LoadingScreen />;
   }
 
   if (isAuthenticated) {
@@ -36,18 +25,7 @@ export function PublicRoute({ element }) {
   const [searchParams] = useSearchParams();
 
   if (loading) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-        }}
-      >
-        <CircularProgress />
-      </Box>
-    );
+    return <LoadingScreen />;
   }
 
   return !isAuthenticated

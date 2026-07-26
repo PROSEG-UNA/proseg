@@ -14,6 +14,8 @@ public class KeycloakUserResponseDto {
     private String email;
     private String firstName;
     private String lastName;
+    private String profileImageObjectName;
+    private String profileImageUrl;
     private String status;
     private List<String> permissions;
 }

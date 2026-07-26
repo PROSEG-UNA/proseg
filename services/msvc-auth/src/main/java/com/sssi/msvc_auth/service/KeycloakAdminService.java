@@ -29,6 +29,8 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class KeycloakAdminService {
+    private static final String PROFILE_IMAGE_OBJECT_NAME_ATTRIBUTE = "profileImageObjectName";
+    private static final String ARCHIVE_FILE_ROUTE_PREFIX = "/api/v1/archive/files/";
 
     @Value("${keycloak.server-url:https://auth.devbychris.com}")
     private String keycloakServerUrl;
@@ -95,14 +97,7 @@ public class KeycloakAdminService {
             );
 
             JsonNode node = objectMapper.readTree(response.getBody());
-
-            return KeycloakUserResponseDto.builder()
-                    .id(node.path("id").asText())
-                    .username(node.path("username").asText())
-                    .email(node.path("email").asText())
-                    .firstName(node.path("firstName").asText())
-                    .lastName(node.path("lastName").asText())
-                    .build();
+            return toUserResponse(node);
 
         } catch (HttpStatusCodeException e) {
 
@@ -262,6 +257,62 @@ public class KeycloakAdminService {
         } catch (Exception e) {
             log.error("Error actualizando enabled del usuario {} en Keycloak: {}", userId, e.getMessage(), e);
             throw new IllegalStateException("No se pudo actualizar el estado del usuario en Keycloak", e);
+        }
+    }
+
+    public KeycloakUserResponseDto updateProfileImageObjectName(String userId, String objectName) {
+        String adminToken = getAdminToken();
+        String userUrl = keycloakServerUrl + "/admin/realms/" + realm + "/users/" + userId;
+        HttpHeaders headers = buildJsonHeaders(adminToken);
+
+        try {
+            String currentUserResponse = restTemplate.exchange(
+                    userUrl,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    String.class
+            ).getBody();
+
+            JsonNode userNode = objectMapper.readTree(currentUserResponse);
+            Map<String, Object> userPayload = buildUserPayload(userId, userNode);
+
+            Map<String, List<String>> attributes = extractAttributes(userNode);
+            String normalizedObjectName = normalizeObjectName(objectName);
+            if (normalizedObjectName == null) {
+                attributes.remove(PROFILE_IMAGE_OBJECT_NAME_ATTRIBUTE);
+            } else {
+                attributes.put(PROFILE_IMAGE_OBJECT_NAME_ATTRIBUTE, List.of(normalizedObjectName));
+            }
+            userPayload.put("attributes", attributes);
+
+            restTemplate.exchange(
+                    userUrl,
+                    HttpMethod.PUT,
+                    new HttpEntity<>(objectMapper.writeValueAsString(userPayload), headers),
+                    String.class
+            );
+
+            return getUserById(userId);
+        } catch (HttpStatusCodeException e) {
+            if (e.getStatusCode().value() == 404) {
+                throw KeycloakException.userNotFound(userId);
+            }
+            log.error(
+                    "Error HTTP actualizando imagen de perfil del usuario {} en Keycloak: {} - {}",
+                    userId,
+                    e.getStatusCode(),
+                    e.getResponseBodyAsString(),
+                    e
+            );
+            throw new IllegalStateException("Error al actualizar la imagen de perfil en Keycloak", e);
+        } catch (Exception e) {
+            log.error(
+                    "Error inesperado actualizando imagen de perfil del usuario {} en Keycloak: {}",
+                    userId,
+                    e.getMessage(),
+                    e
+            );
+            throw new IllegalStateException("Error al actualizar la imagen de perfil en Keycloak", e);
         }
     }
 
@@ -562,13 +613,7 @@ public class KeycloakAdminService {
             List<KeycloakUserResponseDto> users = new ArrayList<>();
 
             for (JsonNode node : usersNode) {
-                users.add(KeycloakUserResponseDto.builder()
-                        .id(node.path("id").asText())
-                        .username(node.path("username").asText())
-                        .email(node.path("email").asText(null))
-                        .firstName(node.path("firstName").asText(null))
-                        .lastName(node.path("lastName").asText(null))
-                        .build());
+                users.add(toUserResponse(node));
             }
 
             List<String> keycloakUserIds = users.stream()
@@ -621,13 +666,7 @@ public class KeycloakAdminService {
             List<KeycloakUserResponseDto> users = new ArrayList<>();
 
             for (JsonNode node : usersNode) {
-                users.add(KeycloakUserResponseDto.builder()
-                        .id(node.path("id").asText())
-                        .username(node.path("username").asText())
-                        .email(node.path("email").asText(null))
-                        .firstName(node.path("firstName").asText(null))
-                        .lastName(node.path("lastName").asText(null))
-                        .build());
+                users.add(toUserResponse(node));
             }
 
             log.info("Usuarios con rol {} obtenidos: {}", roleName, users.size());
@@ -961,13 +1000,7 @@ public class KeycloakAdminService {
 
                 JsonNode node = objectMapper.readTree(response.getBody());
 
-                users.add(KeycloakUserResponseDto.builder()
-                        .id(node.path("id").asText())
-                        .username(node.path("username").asText())
-                        .email(node.path("email").asText(null))
-                        .firstName(node.path("firstName").asText(null))
-                        .lastName(node.path("lastName").asText(null))
-                        .build());
+                users.add(toUserResponse(node));
 
             } catch (HttpStatusCodeException e) {
                 if (e.getStatusCode().value() == 404) {
@@ -982,5 +1015,88 @@ public class KeycloakAdminService {
         }
 
         return users;
+    }
+
+    private KeycloakUserResponseDto toUserResponse(JsonNode node) {
+        String profileImageObjectName = extractProfileImageObjectName(node);
+
+        return KeycloakUserResponseDto.builder()
+                .id(node.path("id").asText())
+                .username(node.path("username").asText())
+                .email(node.path("email").asText(null))
+                .firstName(node.path("firstName").asText(null))
+                .lastName(node.path("lastName").asText(null))
+                .profileImageObjectName(profileImageObjectName)
+                .profileImageUrl(toArchiveImageUrl(profileImageObjectName))
+                .build();
+    }
+
+    private String extractProfileImageObjectName(JsonNode node) {
+        JsonNode attributeNode = node.path("attributes").path(PROFILE_IMAGE_OBJECT_NAME_ATTRIBUTE);
+
+        if (attributeNode.isArray() && attributeNode.size() > 0) {
+            return normalizeObjectName(attributeNode.get(0).asText(null));
+        }
+
+        if (attributeNode.isTextual()) {
+            return normalizeObjectName(attributeNode.asText());
+        }
+
+        return null;
+    }
+
+    private String toArchiveImageUrl(String objectName) {
+        if (objectName == null || objectName.isBlank()) {
+            return null;
+        }
+        return ARCHIVE_FILE_ROUTE_PREFIX + objectName;
+    }
+
+    private String normalizeObjectName(String objectName) {
+        if (objectName == null) {
+            return null;
+        }
+        String trimmed = objectName.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private Map<String, Object> buildUserPayload(String userId, JsonNode userNode) {
+        Map<String, Object> userPayload = new HashMap<>();
+        String username = userNode.path("username").asText("");
+
+        if (username.isBlank()) {
+            throw new IllegalStateException("El usuario de Keycloak no contiene username");
+        }
+
+        userPayload.put("id", userId);
+        userPayload.put("username", username);
+
+        if (userNode.has("enabled")) {
+            userPayload.put("enabled", userNode.path("enabled").asBoolean(false));
+        }
+        if (userNode.hasNonNull("firstName")) {
+            userPayload.put("firstName", userNode.get("firstName").asText());
+        }
+        if (userNode.hasNonNull("lastName")) {
+            userPayload.put("lastName", userNode.get("lastName").asText());
+        }
+        if (userNode.hasNonNull("email")) {
+            userPayload.put("email", userNode.get("email").asText());
+        }
+        if (userNode.has("emailVerified")) {
+            userPayload.put("emailVerified", userNode.path("emailVerified").asBoolean(false));
+        }
+        if (userNode.has("requiredActions")) {
+            userPayload.put("requiredActions", objectMapper.convertValue(userNode.get("requiredActions"), List.class));
+        }
+
+        return userPayload;
+    }
+
+    private Map<String, List<String>> extractAttributes(JsonNode userNode) {
+        if (!userNode.has("attributes")) {
+            return new HashMap<>();
+        }
+        return new HashMap<>(objectMapper.convertValue(userNode.get("attributes"), Map.class));
     }
 }

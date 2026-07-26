@@ -14,6 +14,7 @@ export const INVENTORY_ENDPOINTS = {
 
 export const DOCUMENT_PROCESSOR_ENDPOINTS = {
     imports: '/api/v1/document-processor/imports',
+    exports: '/api/v1/document-processor/exports',
 };
 
 export const ASSETS_DOCUMENT_TYPE = 'assets';

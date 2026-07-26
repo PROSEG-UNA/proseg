@@ -27,22 +27,10 @@ import TagOutlinedIcon from '@mui/icons-material/TagOutlined';
 import PhotoLibraryOutlinedIcon from '@mui/icons-material/PhotoLibraryOutlined';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import CoordinateMapPicker from './CoordinateMapPicker.jsx';
+import { formatDate, formatDateTime } from '../../../../common/utils/formatters.js';
 import { fetchAssetById, fetchLastKnownNetworkInterface } from '../../services/assetsService.js';
 import { fetchAssetArchives } from '../../services/assetArchiveService.js';
 import { fetchAssetComponents } from '../../services/assetComponentsService.js';
-
-function formatDate(value) {
-    if (!value) return '—';
-    const [year, month, day] = value.split('-');
-    return `${day}/${month}/${year}`;
-}
-
-function formatDateTime(value) {
-    if (!value) return '—';
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return value;
-    return parsed.toLocaleString('es-CR');
-}
 
 function buildAssetDisplayName(asset) {
     const parts = [

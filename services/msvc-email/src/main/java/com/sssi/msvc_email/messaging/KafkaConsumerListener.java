@@ -145,4 +145,24 @@ public class KafkaConsumerListener {
         log.info("TICKET NOTIFICATION EVENT: {}", event);
         emailEventService.sendTicketNotificationEmail(event);
     }
+
+    @KafkaListener(
+            topics = KafkaTopics.USER_ROLE_ASSIGNED_TOPIC,
+            groupId = "msvc-email-group",
+            containerFactory = "userRoleAssignedListenerFactory"
+    )
+    public void onUserRoleAssigned(UserRoleAssignedEvent event) {
+        log.info("USER ROLE ASSIGNED EVENT: {}", event);
+        emailEventService.sendUserRoleAssignedEmail(event);
+    }
+
+    @KafkaListener(
+            topics = KafkaTopics.USER_STATUS_CHANGED_TOPIC,
+            groupId = "msvc-email-group",
+            containerFactory = "userStatusChangedListenerFactory"
+    )
+    public void onUserStatusChanged(UserStatusChangedEvent event) {
+        log.info("USER STATUS CHANGED EVENT: {}", event);
+        emailEventService.sendUserStatusChangedEmail(event);
+    }
 }

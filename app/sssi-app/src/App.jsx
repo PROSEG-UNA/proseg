@@ -26,6 +26,13 @@ import BuildingPage from './features/locations/pages/BuildingPage';
 import LocationPage from './features/locations/pages/LocationPage';
 import EmailPage from './features/locations/pages/EmailPage';
 import TicketsPage from './features/maintenance/pages/TicketsPage.jsx';
+import TransportPage from './features/transport/pages/TransportPage.jsx';
+import DriversPage from './features/transport/pages/drivers/DriversPage.jsx';
+import VehiclesPage from './features/transport/pages/vehicles/VehiclesPage.jsx';
+import VehicleMaintenancePage from './features/transport/pages/maintenance/VehicleMaintenancePage.jsx';
+import ToursPage from './features/transport/pages/tours/ToursPage.jsx';
+import AssignmentPage from './features/transport/pages/assignment/AssignmentPage.jsx';
+import CleaningPage from './features/transport/pages/cleaning/CleaningPage.jsx';
 
 function App() {
     return (
@@ -135,6 +142,90 @@ function App() {
                                             element={
                                                 <DashboardLayout title="Gestión de Técnicos" pageTitle="Técnicos">
                                                     <MaintenancePage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/transporte"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Gestión de Transporte" pageTitle="Transporte">
+                                                    <TransportPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/transporte/depuracion"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Depuración de Giras" pageTitle="Depuración">
+                                                    <CleaningPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/transporte/choferes"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Gestión de Choferes" pageTitle="Choferes">
+                                                    <DriversPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/transporte/vehiculos"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Gestión de Vehículos" pageTitle="Vehículos">
+                                                    <VehiclesPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/transporte/mantenimiento"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Mantenimiento de Vehículos" pageTitle="Mantenimiento">
+                                                    <VehicleMaintenancePage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/transporte/giras"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Gestión de Giras" pageTitle="Giras">
+                                                    <ToursPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/transporte/asignaciones"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Gestión de Asignaciones" pageTitle="Asignaciones">
+                                                    <AssignmentPage />
                                                 </DashboardLayout>
                                             }
                                         />

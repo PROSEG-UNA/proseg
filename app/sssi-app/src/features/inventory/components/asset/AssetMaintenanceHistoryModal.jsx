@@ -3,17 +3,8 @@ import HistoryIcon from '@mui/icons-material/History';
 import PersonIcon from '@mui/icons-material/Person';
 import BusinessIcon from '@mui/icons-material/Business';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
+import { formatDateTime } from '../../../../common/utils/formatters.js';
 import { useAssetMaintenanceHistory } from '../../hooks/useAssetMaintenanceHistory';
-
-function formatDateTime(value) {
-    if (!value) return '—';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-    return new Intl.DateTimeFormat('es-CR', {
-        dateStyle: 'short',
-        timeStyle: 'short',
-    }).format(date);
-}
 
 export default function AssetMaintenanceHistoryModal({ open, onClose, asset, refreshKey = 0 }) {
     const theme = useTheme();

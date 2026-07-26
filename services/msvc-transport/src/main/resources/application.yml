@@ -24,3 +24,10 @@ api:
 
 routes:
   transport: ${api.prefix}
+  drivers: ${api.prefix}/drivers
+  vehicles: ${api.prefix}/vehicles
+  vehicle-maintenance: ${api.prefix}/maintenance
+  tours: ${api.prefix}/tours
+  assignments: ${api.prefix}/assignments
+  cleaning: ${api.prefix}/cleaning
+  reports: ${api.prefix}/reports

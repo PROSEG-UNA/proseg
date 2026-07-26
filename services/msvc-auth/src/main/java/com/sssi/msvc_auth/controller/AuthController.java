@@ -39,6 +39,7 @@ public class AuthController {
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final TurnstileService turnstileService;
     private final PasswordResetService passwordResetService;
+    private final UserService userService;
 
     @Value("${app.cookie.secure:false}")
     private boolean secureCookie;
@@ -66,7 +67,7 @@ public class AuthController {
             throw com.sssi.msvc_auth.exception.TokenException.notFound();
         }
         String userId = keycloakAuthService.extractUserIdFromToken(authToken);
-        KeycloakUserResponseDto user = keycloakAdminService.getUserById(userId);
+        KeycloakUserResponseDto user = userService.getKeycloakUserById(userId);
         List<String> permissions = authentication == null
             ? List.of()
             : authentication.getAuthorities().stream()

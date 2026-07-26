@@ -565,6 +565,92 @@ public class EmailEventService {
         return actionLabel + " - Solicitud de mantenimiento - " + brandName;
     }
 
+    public void sendUserRoleAssignedEmail(UserRoleAssignedEvent event) {
+        try {
+            // Send email to the user who was assigned the role
+            UserRoleAssignedEmailTemplate template = UserRoleAssignedEmailTemplate.builder()
+                    .firstName(event.getFirstName())
+                    .lastName(event.getLastName())
+                    .username(event.getUsername())
+                    .email(event.getEmail())
+                    .roleName(event.getRoleName())
+                    .timestamp(event.getTimestamp())
+                    .assignedByFirstName(event.getAssignedByFirstName())
+                    .assignedByLastName(event.getAssignedByLastName())
+                    .assignedByUsername(event.getAssignedByUsername())
+                    .assignedByEmail(event.getAssignedByEmail())
+                    .build();
+
+            emailService.sendEmail(
+                    Email.builder()
+                            .to(List.of(event.getEmail()))
+                            .subject("Se te ha asignado un nuevo rol en " + brandName)
+                            .templateDefinition(template)
+                            .build()
+            );
+
+            log.info("Email de asignación de rol enviado al usuario: {} (rol: {})",
+                    event.getEmail(), event.getRoleName());
+
+            // Send notification email to super admins
+            sendRoleAssignmentNotificationToAdmins(event);
+
+        } catch (Exception e) {
+            log.error("Error enviando email de asignación de rol a userId={}: {}",
+                    event.getUserId(), e.getMessage(), e);
+        }
+    }
+
+    private void sendRoleAssignmentNotificationToAdmins(UserRoleAssignedEvent event) {
+        try {
+            ApiResponse<List<KeycloakUserResponseDto>> response = authClient.getUsersByRole("SUPER_ADMINISTRADOR");
+            List<KeycloakUserResponseDto> superAdmins = response.getData();
+            if (superAdmins == null || superAdmins.isEmpty()) {
+                log.warn("No se encontraron administradores para notificar asignación de rol a usuario: {}",
+                        event.getUsername());
+                return;
+            }
+
+            superAdmins.stream()
+                    .filter(admin -> admin.getUsername() != null && !admin.getUsername().startsWith("service-account"))
+                    .filter(admin -> admin.getEmail() != null && !admin.getEmail().isBlank())
+                    .forEach(admin -> {
+                        try {
+                            UserRoleAssignedAdminNotificationEmailTemplate template = UserRoleAssignedAdminNotificationEmailTemplate.builder()
+                                    .userFirstName(event.getFirstName())
+                                    .userLastName(event.getLastName())
+                                    .username(event.getUsername())
+                                    .userEmail(event.getEmail())
+                                    .roleName(event.getRoleName())
+                                    .timestamp(event.getTimestamp())
+                                    .assignedByFirstName(event.getAssignedByFirstName())
+                                    .assignedByLastName(event.getAssignedByLastName())
+                                    .assignedByUsername(event.getAssignedByUsername())
+                                    .assignedByEmail(event.getAssignedByEmail())
+                                    .build();
+
+                            emailService.sendEmail(
+                                    Email.builder()
+                                            .to(List.of(admin.getEmail()))
+                                            .subject("Alerta: Cambio de rol realizado - " + brandName)
+                                            .templateDefinition(template)
+                                            .build()
+                            );
+
+                            log.info("Notificación de cambio de rol enviada a admin [{}] para usuario [{}]",
+                                    admin.getEmail(), event.getUsername());
+                        } catch (Exception e) {
+                            log.error("Error enviando notificación de cambio de rol a [{}]",
+                                    admin.getEmail(), e);
+                        }
+                    });
+
+        } catch (Exception e) {
+            log.error("Error resolviendo administradores para notificación de cambio de rol: {}",
+                    e.getMessage(), e);
+        }
+    }
+
     private List<String> cleanEmails(List<String> emails) {
         if (emails == null) {
             return List.of();
@@ -591,6 +677,96 @@ public class EmailEventService {
         } catch (Exception e) {
             log.error("No se pudieron resolver los SUPER_ADMINISTRADOR para la solicitud de mantenimiento: {}", e.getMessage(), e);
             return List.of();
+        }
+    }
+
+    public void sendUserStatusChangedEmail(UserStatusChangedEvent event) {
+        try {
+            // Send email to the user whose status changed
+            UserStatusChangedEmailTemplate template = UserStatusChangedEmailTemplate.builder()
+                    .firstName(event.getFirstName())
+                    .lastName(event.getLastName())
+                    .username(event.getUsername())
+                    .email(event.getEmail())
+                    .oldStatus(event.getOldStatus())
+                    .newStatus(event.getNewStatus())
+                    .timestamp(event.getTimestamp())
+                    .changedByFirstName(event.getChangedByFirstName())
+                    .changedByLastName(event.getChangedByLastName())
+                    .changedByUsername(event.getChangedByUsername())
+                    .changedByEmail(event.getChangedByEmail())
+                    .reason(event.getReason())
+                    .build();
+
+            emailService.sendEmail(
+                    Email.builder()
+                            .to(List.of(event.getEmail()))
+                            .subject("Tu estado ha sido actualizado en " + brandName)
+                            .templateDefinition(template)
+                            .build()
+            );
+
+            log.info("Email de cambio de estado enviado al usuario: {} (estado anterior: {} -> nuevo: {})",
+                    event.getEmail(), event.getOldStatus(), event.getNewStatus());
+
+            // Send notification email to super admins
+            sendStatusChangeNotificationToAdmins(event);
+
+        } catch (Exception e) {
+            log.error("Error enviando email de cambio de estado a userId={}: {}",
+                    event.getUserId(), e.getMessage(), e);
+        }
+    }
+
+    private void sendStatusChangeNotificationToAdmins(UserStatusChangedEvent event) {
+        try {
+            ApiResponse<List<KeycloakUserResponseDto>> response = authClient.getUsersByRole("SUPER_ADMINISTRADOR");
+            List<KeycloakUserResponseDto> superAdmins = response.getData();
+            if (superAdmins == null || superAdmins.isEmpty()) {
+                log.warn("No se encontraron administradores para notificar cambio de estado de usuario: {}",
+                        event.getUsername());
+                return;
+            }
+
+            superAdmins.stream()
+                    .filter(admin -> admin.getUsername() != null && !admin.getUsername().startsWith("service-account"))
+                    .filter(admin -> admin.getEmail() != null && !admin.getEmail().isBlank())
+                    .forEach(admin -> {
+                        try {
+                            UserStatusChangedAdminNotificationEmailTemplate template = UserStatusChangedAdminNotificationEmailTemplate.builder()
+                                    .userFirstName(event.getFirstName())
+                                    .userLastName(event.getLastName())
+                                    .username(event.getUsername())
+                                    .userEmail(event.getEmail())
+                                    .oldStatus(event.getOldStatus())
+                                    .newStatus(event.getNewStatus())
+                                    .timestamp(event.getTimestamp())
+                                    .changedByFirstName(event.getChangedByFirstName())
+                                    .changedByLastName(event.getChangedByLastName())
+                                    .changedByUsername(event.getChangedByUsername())
+                                    .changedByEmail(event.getChangedByEmail())
+                                    .reason(event.getReason())
+                                    .build();
+
+                            emailService.sendEmail(
+                                    Email.builder()
+                                            .to(List.of(admin.getEmail()))
+                                            .subject("Alerta: Cambio de estado de usuario - " + brandName)
+                                            .templateDefinition(template)
+                                            .build()
+                            );
+
+                            log.info("Notificación de cambio de estado enviada a admin [{}] para usuario [{}]",
+                                    admin.getEmail(), event.getUsername());
+                        } catch (Exception e) {
+                            log.error("Error enviando notificación de cambio de estado a [{}]",
+                                    admin.getEmail(), e);
+                        }
+                    });
+
+        } catch (Exception e) {
+            log.error("Error resolviendo administradores para notificación de cambio de estado: {}",
+                    e.getMessage(), e);
         }
     }
 }
