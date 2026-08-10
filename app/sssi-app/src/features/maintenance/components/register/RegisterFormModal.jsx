@@ -179,7 +179,7 @@ export default function RegisterFormModal({ open, onClose, onSaved, requestId, c
     };
 
     const request = register?.request;
-    const isActionable = request?.status === 'PENDING' || request?.status === 'ACCEPTED';
+    const isActionable = request?.status === 'PENDING';
     const canRegister = canManage && isActionable;
     const responsibleName = request?.responsibleUserCompany?.userEmail ?? request?.responsibleUserCompany?.keycloakUserId ?? '—';
 
