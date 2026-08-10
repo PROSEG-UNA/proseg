@@ -61,7 +61,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
 
     const formState = useAssetFormState(open);
     const catalogOptions = useAssetCatalogOptions(open);
-    const assetComponents = useAssetComponents();
+    const assetComponents = useAssetComponents(open);
     const assetPhotos = useAssetPhotos(open);
 
     const [catalogModal, setCatalogModal] = useState(null);
@@ -70,7 +70,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
     const { formValues, setFormValues, errors, setErrors, touched, setTouched, saving, setSaving, alert, setAlert, loadingAsset, setLoadingAsset, assetNumberExists, setAssetNumberExists, showAssetNumberConfirm, setShowAssetNumberConfirm, pendingTypeChange, setPendingTypeChange } = formState;
     const { options, upsertOption, loadingOptions } = catalogOptions;
     const { brands, types, models, campuses, buildings, locations } = options;
-    const { components } = assetComponents;
+    const { components, setComponents, componentErrors, setComponentErrors, componentsToDelete, setComponentsToDelete } = assetComponents;
 
     const selectedType             = types.find(t => t.id === formValues.typeId) ?? null;
     const requiresNetworkInterface = selectedType?.requiresNetworkInterface ?? false;
