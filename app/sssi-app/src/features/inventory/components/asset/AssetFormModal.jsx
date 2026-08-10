@@ -37,6 +37,15 @@ const STATUS_OPTIONS = [
     { value: 'DE_BAJA',  label: 'De baja' },
 ];
 
+const MIN_FLOOR_NUMBER = 1;
+
+const FLOOR_NUMBER_ERROR = `El piso debe ser ${MIN_FLOOR_NUMBER} o mayor`;
+
+const toFloorNumberValue = (rawValue) => {
+    const withoutLeadingZeros = String(rawValue).replace(/[^0-9]/g, '').replace(/^0+/, '');
+    return withoutLeadingZeros === '' ? '' : Number(withoutLeadingZeros);
+};
+
 const readAsDataUrl = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
@@ -257,6 +266,11 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
             }
         }
 
+        if (!error && key === 'floorNumber' && value !== '' && value != null) {
+            const floor = Number(value);
+            if (!Number.isInteger(floor) || floor < MIN_FLOOR_NUMBER) error = FLOOR_NUMBER_ERROR;
+        }
+
         if (!error && key === 'latitude' && value !== '') {
             const n = parseFloat(value);
             if (isNaN(n) || n < -90 || n > 90) error = 'La latitud debe estar entre -90 y 90';
@@ -279,6 +293,10 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         }
         setFormValues(prev => ({ ...prev, [key]: value }));
         if (touched[key]) validateField(key, value);
+    };
+
+    const handleFloorNumberChange = (rawValue) => {
+        handleChange('floorNumber', toFloorNumberValue(rawValue));
     };
 
     const handleCampusChange = (value) => {
@@ -620,6 +638,13 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 newTouched.macAddress = true;
             }
         }
+        if (!formValues.locationId && formValues.floorNumber !== '') {
+            const floor = Number(formValues.floorNumber);
+            if (!Number.isInteger(floor) || floor < MIN_FLOOR_NUMBER) {
+                newErrors.floorNumber  = FLOOR_NUMBER_ERROR;
+                newTouched.floorNumber = true;
+            }
+        }
         if (formValues.latitude !== '') {
             const n = parseFloat(formValues.latitude);
             if (isNaN(n) || n < -90 || n > 90) {
@@ -879,11 +904,11 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                             <TextField
                                 label="Número de piso"
                                 value={formValues.floorNumber}
-                                onChange={e => handleChange('floorNumber', e.target.value === '' ? '' : Number(e.target.value))}
+                                onChange={e => handleFloorNumberChange(e.target.value)}
                                 onBlur={() => handleBlur('floorNumber')}
                                 fullWidth size="small"
                                 type="number"
-                                inputProps={{ min: 0 }}
+                                inputProps={{ min: MIN_FLOOR_NUMBER }}
                                 disabled={saving || !formValues.campusId || !formValues.buildingId}
                                 error={touched.floorNumber && !!errors.floorNumber}
                                 helperText={touched.floorNumber ? (errors.floorNumber || ' ') : ' '}
