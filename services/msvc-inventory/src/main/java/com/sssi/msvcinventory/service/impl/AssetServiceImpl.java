@@ -47,9 +47,7 @@ public class AssetServiceImpl implements AssetService {
     @Override
     @Transactional
     public AssetResponseDto create(AssetRequestDto request) {
-        if (assetRepository.existsByAssetNumber(request.getAssetNumber())) {
-            throw AssetException.duplicateAssetNumber(request.getAssetNumber());
-        }
+        request.setAssetNumber(trimToNull(request.getAssetNumber()));
 
         request.setSerialNumber(trimToNull(request.getSerialNumber()));
         if (request.getSerialNumber() != null && !request.getSerialNumber().isBlank()
@@ -163,9 +161,7 @@ public class AssetServiceImpl implements AssetService {
         Asset asset = assetRepository.findById(id)
                 .orElseThrow(() -> AssetException.notFound(id.toString()));
 
-        if (assetRepository.existsByAssetNumberAndIdNot(request.getAssetNumber(), id)) {
-            throw AssetException.duplicateAssetNumber(request.getAssetNumber());
-        }
+        request.setAssetNumber(trimToNull(request.getAssetNumber()));
 
         request.setSerialNumber(trimToNull(request.getSerialNumber()));
         if (request.getSerialNumber() != null && !request.getSerialNumber().isBlank()

@@ -365,11 +365,10 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         validateField(key, formValues[key]);
     };
 
-    const handleAssetNumberBlur = async () => {
-        setTouched(prev => ({ ...prev, assetNumber: true }));
+    const refreshAssetNumberExists = async () => {
         if (!formValues.assetNumber?.trim()) {
             setAssetNumberExists(false);
-            return;
+            return false;
         }
         try {
             const exists = await checkAssetNumber(
@@ -377,9 +376,16 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 isEdit ? assetId : null
             );
             setAssetNumberExists(exists);
+            return exists;
         } catch {
             setAssetNumberExists(false);
+            return false;
         }
+    };
+
+    const handleAssetNumberBlur = async () => {
+        setTouched(prev => ({ ...prev, assetNumber: true }));
+        await refreshAssetNumberExists();
     };
 
     const getOptionsByKey = (key) => {
@@ -641,7 +647,8 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
             return;
         }
 
-        if (assetNumberExists) {
+        const duplicatedAssetNumber = await refreshAssetNumberExists();
+        if (duplicatedAssetNumber) {
             setShowAssetNumberConfirm(true);
             return;
         }
