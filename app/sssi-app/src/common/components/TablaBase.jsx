@@ -17,6 +17,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { MRT_Localization_ES } from 'material-react-table/locales/es';
 import { headerSurfaceSx } from '../theme/sxStyles';
 import TableHorizontalScrollbar from './TableHorizontalScrollbar.jsx';
+import { useFillToBottom, TOP_GAP, BOTTOM_GAP } from '../hooks/useFillToBottom.js';
 
 export default function TableBase({
                                       columns,
@@ -39,6 +40,7 @@ export default function TableBase({
                                       enableStickyHeader = true,
                                       enableStickyFooter = true,
                                       maxHeight,
+                                      fillToBottom = true,
                                       tableOptions = {},
                                   }) {
     const theme = useTheme();
@@ -46,6 +48,7 @@ export default function TableBase({
     const isTouch = useMediaQuery('(pointer: coarse)');
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
     const [isDesktopSearchOpen, setIsDesktopSearchOpen] = useState(false);
+    const fillsToBottom = fillToBottom && !maxHeight;
 
     const stableColumns = useMemo(() => columns, [columns]);
     const tableOptionsState = tableOptions.state ?? {};
@@ -107,11 +110,13 @@ export default function TableBase({
                 overflowY: 'auto',
                 ...(maxHeight
                     ? { maxHeight }
-                    : {
-                        height: table.getState().isFullScreen
-                            ? 'calc(100vh - 120px)'
-                            : 'calc(100vh - 315px)',
-                    }),
+                    : fillsToBottom
+                        ? { flex: '1 1 auto', minHeight: 0, height: 'auto', maxHeight: 'none' }
+                        : {
+                            height: table.getState().isFullScreen
+                                ? 'calc(100vh - 120px)'
+                                : 'calc(100vh - 315px)',
+                        }),
             },
         }),
 
@@ -141,7 +146,16 @@ export default function TableBase({
                 borderColor: 'divider',
                 borderRadius: `${theme.shape.borderRadius}px`,
                 overflow: table.getState().isFullScreen ? 'hidden' : 'clip',
-                marginBottom: table.getState().isFullScreen ? 0 : '2rem',
+                marginBottom: table.getState().isFullScreen || fillsToBottom ? 0 : '2rem',
+                ...(fillsToBottom
+                    ? {
+                        display: 'flex',
+                        flexDirection: 'column',
+                        position: 'relative',
+                        boxSizing: 'border-box',
+                        ...(table.getState().isFullScreen ? {} : { height: '100%', minHeight: 0 }),
+                    }
+                    : {}),
                 '& .Mui-TableHeadCell-Content-Actions': {
                     transition: 'opacity 150ms ease',
                     marginLeft: '4px',
@@ -267,9 +281,15 @@ export default function TableBase({
                 <Box
                     sx={(t) => ({
                         ...headerSurfaceSx(t),
-                        position: 'sticky',
-                        bottom: 0,
                         zIndex: 3,
+                        ...(fillsToBottom
+                            ? {
+                                flex: '0 0 auto',
+                                position: 'relative',
+                                borderTop: '1px solid',
+                                borderTopColor: 'divider',
+                            }
+                            : { position: 'sticky', bottom: 0 }),
                     })}
                 >
                     {!isTouch && <TableHorizontalScrollbar containerRef={table.refs.tableContainerRef} />}
@@ -281,6 +301,7 @@ export default function TableBase({
         muiBottomToolbarProps: {
             sx: (t) => ({
                 ...headerSurfaceSx(t),
+                ...(fillsToBottom ? { position: 'relative', boxShadow: 'none' } : {}),
             }),
         },
 
@@ -376,5 +397,25 @@ export default function TableBase({
 
     });
 
-    return <MaterialReactTable table={table} />;
+    const isFullScreen = table.getState().isFullScreen;
+    const { slotRef, paneRef } = useFillToBottom(fillsToBottom && !isFullScreen);
+
+    if (!fillsToBottom) return <MaterialReactTable table={table} />;
+
+    return (
+        <Box
+            ref={slotRef}
+            sx={{
+                height: `calc(100dvh - ${TOP_GAP + BOTTOM_GAP}px)`,
+                marginBottom: `${BOTTOM_GAP}px`,
+            }}
+        >
+            <Box
+                ref={paneRef}
+                sx={isFullScreen ? { height: '100%' } : { position: 'sticky', top: `${TOP_GAP}px` }}
+            >
+                <MaterialReactTable table={table} />
+            </Box>
+        </Box>
+    );
 }
