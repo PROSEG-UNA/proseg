@@ -20,5 +20,7 @@ public interface AssetMapper {
     @Mapping(target = "model", ignore = true)
     @Mapping(target = "location", ignore = true)
     @Mapping(target = "networkInterface", ignore = true)
+    @Mapping(target = "serialNumber", source = "serialNumber",
+            nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.SET_TO_NULL)
     void updateEntityFromRequest(AssetRequestDto request, @MappingTarget Asset asset);
 }

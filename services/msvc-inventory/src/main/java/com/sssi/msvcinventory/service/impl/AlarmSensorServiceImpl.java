@@ -34,6 +34,8 @@ public class AlarmSensorServiceImpl implements AlarmSensorService {
     @Override
     @Transactional
     public AlarmSensorResponseDto create(AlarmSensorRequestDto request) {
+        request.setSerialNumber(trimToNull(request.getSerialNumber()));
+
         validateDecommissionDate(request);
 
         Model model = modelRepository.findById(request.getModelId())
@@ -63,6 +65,8 @@ public class AlarmSensorServiceImpl implements AlarmSensorService {
         AlarmSensor alarmSensor = alarmSensorRepository.findById(id)
                 .orElseThrow(() -> AlarmSensorException.notFound(id.toString()));
 
+        request.setSerialNumber(trimToNull(request.getSerialNumber()));
+
         Model model = modelRepository.findById(request.getModelId())
                 .orElseThrow(() -> ModelException.notFound(request.getModelId().toString()));
 
@@ -76,6 +80,12 @@ public class AlarmSensorServiceImpl implements AlarmSensorService {
         alarmSensor.setLocation(location);
 
         return alarmSensorMapper.toResponse(alarmSensorRepository.save(alarmSensor));
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private void validateDecommissionDate(AssetRequestDto request) {
