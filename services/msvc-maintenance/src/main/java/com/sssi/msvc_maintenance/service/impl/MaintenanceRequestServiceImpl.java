@@ -251,36 +251,6 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
 
     @Override
     @Transactional
-    public MaintenanceRequestResponseDto accept(UUID id) {
-        MaintenanceRequest maintenanceRequest = maintenanceRequestRepository.findById(id)
-                .orElseThrow(MaintenanceRequestException::notFound);
-        MaintenanceStatus previousStatus = maintenanceRequest.getStatus();
-
-        if (maintenanceRequest.getStatus() == MaintenanceStatus.CANCELLED) {
-            throw MaintenanceRequestException.cannotAcceptCancelled();
-        }
-
-        MaintenanceStatusTransitions.validateOrThrow(maintenanceRequest.getStatus(), MaintenanceStatus.ACCEPTED);
-
-        maintenanceRequest.setStatus(MaintenanceStatus.ACCEPTED);
-        maintenanceRequest.setCancellationReason(null);
-        syncRegisterStatus(id, MaintenanceStatus.ACCEPTED);
-
-        MaintenanceRequest saved = maintenanceRequestRepository.save(maintenanceRequest);
-
-        publishMaintenanceNotification(
-                saved,
-                "ACCEPTED",
-                "Solicitud de mantenimiento aceptada",
-                "La solicitud fue aceptada por administracion",
-                List.of(formatChange("Estado", toStatusLabel(previousStatus), toStatusLabel(saved.getStatus())))
-        );
-
-        return maintenanceRequestMapper.toResponse(saved);
-    }
-
-    @Override
-    @Transactional
     public MaintenanceRequestResponseDto cancel(UUID id, String reason) {
         MaintenanceRequest maintenanceRequest = maintenanceRequestRepository.findById(id)
                 .orElseThrow(MaintenanceRequestException::notFound);
@@ -537,7 +507,6 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         }
         return switch (status) {
             case PENDING -> "Pendiente";
-            case ACCEPTED -> "Aceptada";
             case COMPLETED -> "Completada";
             case CANCELLED -> "Cancelada";
         };

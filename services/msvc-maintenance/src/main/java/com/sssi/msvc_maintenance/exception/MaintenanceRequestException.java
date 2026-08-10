@@ -18,14 +18,6 @@ public class MaintenanceRequestException extends BaseException {
         );
     }
 
-    public static MaintenanceRequestException cannotAcceptCancelled() {
-        return new MaintenanceRequestException(
-                HttpStatus.CONFLICT,
-                "MAINTENANCE_REQUEST_ALREADY_CANCELLED",
-                "No es posible aceptar la solicitud porque ya fue cancelada."
-        );
-    }
-
     public static MaintenanceRequestException notFound() {
         return new MaintenanceRequestException(
                 HttpStatus.NOT_FOUND,

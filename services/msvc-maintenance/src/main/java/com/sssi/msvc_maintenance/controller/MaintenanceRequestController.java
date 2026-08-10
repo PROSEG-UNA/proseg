@@ -103,14 +103,6 @@ public class MaintenanceRequestController {
         );
     }
 
-    @PatchMapping("/{id}/accept")
-    public ResponseEntity<ApiResponse<MaintenanceRequestResponseDto>> accept(@PathVariable UUID id) {
-        return ApiResponseBuilder.ok(
-                maintenanceRequestService.accept(id),
-                "Solicitud de mantenimiento aceptada correctamente"
-        );
-    }
-
     @PatchMapping("/{id}/cancel")
     public ResponseEntity<ApiResponse<MaintenanceRequestResponseDto>> cancel(
             @PathVariable UUID id,

@@ -87,7 +87,6 @@ public class MaintenanceRequestNotificationKafkaPublisher {
         }
         return switch (status) {
             case PENDING -> "Pendiente";
-            case ACCEPTED -> "Aceptada";
             case COMPLETED -> "Completado";
             case CANCELLED -> "Cancelado";
         };
