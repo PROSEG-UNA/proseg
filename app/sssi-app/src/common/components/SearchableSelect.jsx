@@ -32,8 +32,6 @@ export default function SearchableSelect({
     onSearchChange,
     hideSearch = false,
     multiple = false,
-    addMode = false,
-    validateCreate,
 }) {
     const theme = useTheme();
     const accentColor = theme.vars.palette.tones.rose.fg;
@@ -55,14 +53,6 @@ export default function SearchableSelect({
 
     const selectedItem = value ? items.find(i => getItemValue(i) === value) : null;
     const selectedOnPage = selectedItem ? pageItems.some(i => getItemValue(i) === value) : true;
-
-    const canCreate = addMode && typeof validateCreate === 'function' && validateCreate(search);
-    const handleInlineCreate = () => {
-        onCreate?.(search);
-        if (typeof onSearchChange === 'function') onSearchChange(''); else setInternalSearch('');
-        setPage(0);
-        searchInputRef.current?.focus();
-    };
 
     useEffect(() => { setPage(0); }, [search]);
 
@@ -123,20 +113,14 @@ export default function SearchableSelect({
                         inputRef={searchInputRef}
                         size="small"
                         fullWidth
-                        placeholder={addMode ? 'Buscar o agregar...' : 'Buscar...'}
+                        placeholder="Buscar..."
                         value={search}
                         onChange={(e) => {
                             const v = e.target.value;
                             if (typeof onSearchChange === 'function') onSearchChange(v);
                             else setInternalSearch(v);
                         }}
-                        onKeyDown={(e) => {
-                            e.stopPropagation();
-                            if (addMode && e.key === 'Enter' && canCreate) {
-                                e.preventDefault();
-                                handleInlineCreate();
-                            }
-                        }}
+                        onKeyDown={(e) => e.stopPropagation()}
                         sx={{
                             '& .MuiOutlinedInput-root': {
                                 borderRadius: '8px',
@@ -146,24 +130,6 @@ export default function SearchableSelect({
                             '& .MuiInputBase-input': { fontSize: 13.5, py: '6px' },
                         }}
                     />
-                    {addMode && (
-                        <Button
-                            size="small"
-                            variant="outlined"
-                            startIcon={<AddCircleOutlinedIcon sx={{ fontSize: 16 }} />}
-                            disabled={!canCreate}
-                            onMouseDown={(e) => e.stopPropagation()}
-                            onClick={(e) => { e.stopPropagation(); handleInlineCreate(); }}
-                            sx={{
-                                flexShrink: 0, whiteSpace: 'nowrap', textTransform: 'none',
-                                fontSize: 13, fontWeight: 600, color: accentColor,
-                                borderColor: accentColor,
-                                '&:hover': { borderColor: accentColor, bgcolor: 'transparent' },
-                            }}
-                        >
-                            Agregar
-                        </Button>
-                    )}
                 </Box>
             </ListSubheader>
             )}
@@ -207,15 +173,9 @@ export default function SearchableSelect({
                 .filter(v => !pageItems.some(i => getItemValue(i) === v))
                 .map(v => {
                     const item = items.find(i => getItemValue(i) === v);
-                    const labelText = item ? getItemLabel(item) : v;
-                    return addMode && !item ? (
-                        <MenuItem key={`__sel__${v}`} value={v} selected sx={{ fontSize: 13.5, gap: 1 }}>
-                            <CheckBoxIcon sx={{ fontSize: 18, color: accentColor }} />
-                            {labelText}
-                        </MenuItem>
-                    ) : (
+                    return (
                         <MenuItem key={`__sel__${v}`} value={v} sx={{ display: 'none' }}>
-                            {labelText}
+                            {item ? getItemLabel(item) : v}
                         </MenuItem>
                     );
                 })}
@@ -253,8 +213,8 @@ export default function SearchableSelect({
                 </IconButton>
             </ListSubheader>
 
-            {onCreate && !addMode && <Divider />}
-            {onCreate && !addMode && (
+            {onCreate && <Divider />}
+            {onCreate && (
                 <MenuItem
                     value="__CREATE__"
                     sx={{ color: accentColor, fontWeight: 600, fontSize: 13.5, gap: 1, justifyContent: 'center' }}
@@ -264,8 +224,8 @@ export default function SearchableSelect({
                 </MenuItem>
             )}
 
-            {addMode && <Divider />}
-            {addMode && (
+            {multiple && <Divider />}
+            {multiple && (
                 <ListSubheader sx={{ display: 'flex', justifyContent: 'center', py: 0.75, bgcolor: 'background.paper', lineHeight: 'normal' }}>
                     <Button
                         size="small"

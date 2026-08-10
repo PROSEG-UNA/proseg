@@ -34,6 +34,22 @@ public class MaintenanceRequestException extends BaseException {
         );
     }
 
+    public static MaintenanceRequestException emailNotRegistered(String email) {
+        return new MaintenanceRequestException(
+                HttpStatus.BAD_REQUEST,
+                "MAINTENANCE_REQUEST_EMAIL_NOT_REGISTERED",
+                "El correo " + email + " no está registrado en la ubicación seleccionada."
+        );
+    }
+
+    public static MaintenanceRequestException registeredEmailsUnavailable() {
+        return new MaintenanceRequestException(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "MAINTENANCE_REQUEST_EMAILS_UNAVAILABLE",
+                "No pudimos verificar los correos registrados de la ubicación seleccionada."
+        );
+    }
+
     public static MaintenanceRequestException companyNotAllowed() {
         return new MaintenanceRequestException(
                 HttpStatus.FORBIDDEN,
