@@ -5,6 +5,7 @@ import BuildIcon from '@mui/icons-material/Build';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { createMaintenanceRecord } from '../../services/register/registerService';
+import { formatAssetIdentity } from '../../../../common/utils/formatters.js';
 
 export default function RecordFormModal({ open, onClose, onSaved, registerId, asset }) {
     const theme = useTheme();
@@ -63,7 +64,7 @@ export default function RecordFormModal({ open, onClose, onSaved, registerId, as
                 maxWidth="sm"
                 icon={BuildIcon}
                 title="Registrar mantenimiento"
-                subtitle={asset ? `Activo ${asset.assetNumber} · Serie ${asset.serialNumber}` : ''}
+                subtitle={formatAssetIdentity(asset)}
                 loading={saving}
                 secondaryButton={{ label: 'Cancelar', onClick: onClose, disabled: saving }}
                 primaryButton={{
