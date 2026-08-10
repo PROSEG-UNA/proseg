@@ -140,12 +140,11 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row, 
             const payload = {};
             formFields.forEach((field) => { payload[field.key] = formValues[field.key]; });
 
-            if (isEditMode) {
-                await updateCatalogItem(baseUrl, row.id, payload);
-            } else {
-                await createCatalogItem(baseUrl, payload);
-            }
-            onSaved?.();
+            const savedItem = isEditMode
+                ? await updateCatalogItem(baseUrl, row.id, payload)
+                : await createCatalogItem(baseUrl, payload);
+
+            onSaved?.(savedItem);
         } catch (e) {
             setAlert({ type: 'error', message: e?.response?.data?.message ?? e?.message ?? 'Error al guardar' });
         } finally {

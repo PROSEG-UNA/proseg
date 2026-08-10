@@ -17,7 +17,7 @@ import SearchableSelect from '../../../../common/components/SearchableSelect.jsx
 import CatalogFormModal from '../catalog/CatalogFormModal.jsx';
 import { CATALOG_CONFIG } from '../catalog/catalogConfig.js';
 import { LOCATION_CONFIG as LOCATION_CATALOG_CONFIG } from '../../../locations/components/location/locationConfig.js';
-import { fetchCatalogOptions, createCatalogItem } from '../../services/catalogService.js';
+import { createCatalogItem } from '../../services/catalogService.js';
 import { createAsset, updateAsset, fetchAssetById, fetchLastKnownNetworkInterface, checkAssetNumber } from '../../services/assetsService.js';
 import { uploadPhoto, registerArchive, fetchAssetArchives, deleteArchive } from '../../services/assetArchiveService.js';
 import {
@@ -27,7 +27,7 @@ import {
     deleteAssetComponent,
 } from '../../services/assetComponentsService.js';
 import { INVENTORY_ENDPOINTS } from '../../services/endpoints.js';
-import { useAssetFormState, INIT_FORM } from '../../hooks/useAssetFormState.js';
+import { useAssetFormState } from '../../hooks/useAssetFormState.js';
 import { useAssetCatalogOptions } from '../../hooks/useAssetCatalogOptions.js';
 import { useAssetComponents } from '../../hooks/useAssetComponents.js';
 import { useAssetPhotos } from '../../hooks/useAssetPhotos.js';
@@ -68,7 +68,8 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
     const fileInputRef = useRef(null);
 
     const { formValues, setFormValues, errors, setErrors, touched, setTouched, saving, setSaving, alert, setAlert, loadingAsset, setLoadingAsset, assetNumberExists, setAssetNumberExists, showAssetNumberConfirm, setShowAssetNumberConfirm, pendingTypeChange, setPendingTypeChange } = formState;
-    const { brands, types, models, campuses, buildings, locations, loadingOptions } = catalogOptions;
+    const { options, upsertOption, loadingOptions } = catalogOptions;
+    const { brands, types, models, campuses, buildings, locations } = options;
     const { components } = assetComponents;
 
     const selectedType             = types.find(t => t.id === formValues.typeId) ?? null;
@@ -99,58 +100,6 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
     } = assetComponents;
 
     const { photos, setPhotos, existingPhotos, setExistingPhotos, photosToDelete, setPhotosToDelete, isDragOver, setIsDragOver } = assetPhotos;
-
-    useEffect(() => {
-        if (!open) return undefined;
-
-        let cancelled = false;
-
-        const loadHandle = window.setTimeout(() => {
-            setLoadingOptions(true);
-
-            Promise.all([
-                fetchCatalogOptions(INVENTORY_ENDPOINTS.brands),
-                fetchCatalogOptions(INVENTORY_ENDPOINTS.types),
-                fetchCatalogOptions(INVENTORY_ENDPOINTS.models),
-                fetchCatalogOptions(INVENTORY_ENDPOINTS.campuses),
-                fetchCatalogOptions(INVENTORY_ENDPOINTS.buildings),
-                fetchCatalogOptions(INVENTORY_ENDPOINTS.locations),
-            ]).then(([b, t, m, s, bd, l]) => {
-                if (cancelled) return;
-                setBrands(prev => {
-                    const ids = new Set(b.map(x => x.id));
-                    return [...b, ...prev.filter(x => !ids.has(x.id))];
-                });
-                setTypes(prev => {
-                    const ids = new Set(t.map(x => x.id));
-                    return [...t, ...prev.filter(x => !ids.has(x.id))];
-                });
-                setModels(prev => {
-                    const ids = new Set(m.map(x => x.id));
-                    return [...m, ...prev.filter(x => !ids.has(x.id))];
-                });
-                setCampuses(prev => {
-                    const ids = new Set(s.map(x => x.id));
-                    return [...s, ...prev.filter(x => !ids.has(x.id))];
-                });
-                setBuildings(prev => {
-                    const ids = new Set(bd.map(x => x.id));
-                    return [...bd, ...prev.filter(x => !ids.has(x.id))];
-                });
-                setLocations(prev => {
-                    const ids = new Set(l.map(x => x.id));
-                    return [...l, ...prev.filter(x => !ids.has(x.id))];
-                });
-            }).catch(() => {}).finally(() => {
-                if (!cancelled) setLoadingOptions(false);
-            });
-        }, 0);
-
-        return () => {
-            cancelled = true;
-            window.clearTimeout(loadHandle);
-        };
-    }, [open]);
 
     useEffect(() => {
         if (!open || !assetId) return undefined;
@@ -187,26 +136,12 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                             latitude:               asset.latitude != null ? String(asset.latitude) : '',
                             longitude:              asset.longitude != null ? String(asset.longitude) : '',
                         });
-                        if (asset.model?.type) {
-                            setTypes(prev => prev.some(t => t.id === asset.model.type.id) ? prev : [...prev, asset.model.type]);
-                        }
-                        if (asset.model?.brand) {
-                            setBrands(prev => prev.some(b => b.id === asset.model.brand.id) ? prev : [...prev, asset.model.brand]);
-                        }
-                        if (asset.model) {
-                            setModels(prev => prev.some(m => m.id === asset.model.id) ? prev : [...prev, asset.model]);
-                        }
-                        const campus = asset.location?.floor?.building?.campus;
-                        if (campus) {
-                            setCampuses(prev => prev.some(s => s.id === campus.id) ? prev : [...prev, campus]);
-                        }
-                        const building = asset.location?.floor?.building;
-                        if (building) {
-                            setBuildings(prev => prev.some(b => b.id === building.id) ? prev : [...prev, building]);
-                        }
-                        if (asset.location) {
-                            setLocations(prev => prev.some(l => l.id === asset.location.id) ? prev : [...prev, asset.location]);
-                        }
+                        upsertOption('brands', asset.model?.brand);
+                        upsertOption('types', asset.model?.type);
+                        upsertOption('models', asset.model);
+                        upsertOption('campuses', asset.location?.floor?.building?.campus);
+                        upsertOption('buildings', asset.location?.floor?.building);
+                        upsertOption('locations', asset.location);
                     }
                 })
                 .catch(() => {
@@ -350,8 +285,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         }
     };
 
-    const handleTypeChange = (value) => {
-        const newType = types.find(t => t.id === value);
+    const selectType = (value, newType) => {
         const willDeleteNi = isEdit
             && requiresNetworkInterface
             && !newType?.requiresNetworkInterface
@@ -368,6 +302,8 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         }
         applyTypeChange(value, newType);
     };
+
+    const handleTypeChange = (value) => selectType(value, types.find(t => t.id === value));
 
     const confirmTypeChange = () => {
         if (pendingTypeChange) {
@@ -406,27 +342,16 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         await refreshAssetNumberExists();
     };
 
-    const getOptionsByKey = (key) => {
-        if (key === 'brandId')    return brands;
-        if (key === 'typeId')     return types;
-        if (key === 'modelId')    return models;
-        if (key === 'campusId')   return campuses;
-        if (key === 'buildingId') return buildings;
-        if (key === 'locationId') return locations;
-        return [];
-    };
-
-    const setOptionsByKey = (key, opts) => {
-        if (key === 'brandId')         setBrands(opts);
-        else if (key === 'typeId')     setTypes(opts);
-        else if (key === 'modelId')    setModels(opts);
-        else if (key === 'campusId')   setCampuses(opts);
-        else if (key === 'buildingId') setBuildings(opts);
-        else if (key === 'locationId') setLocations(opts);
+    const clearErrorsFor = (keys) => {
+        setErrors(prev => {
+            const next = { ...prev };
+            keys.forEach(key => { next[key] = ''; });
+            return next;
+        });
     };
 
     const openCatalogModal = (fieldKey) => {
-        const configMap = {
+        const configByField = {
             brandId:    CATALOG_CONFIG.brand,
             typeId:     CATALOG_CONFIG.type,
             modelId:    CATALOG_CONFIG.model,
@@ -434,71 +359,97 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
             buildingId: LOCATION_CATALOG_CONFIG.building,
             locationId: LOCATION_CATALOG_CONFIG.location,
         };
-        let initialValues;
-        if (fieldKey === 'buildingId') {
-            initialValues = { campusId: formValues.campusId };
-        } else if (fieldKey === 'locationId') {
-            initialValues = {
+        const initialValuesByField = {
+            modelId: {
+                brandId: formValues.brandId,
+                typeId: formValues.typeId,
+            },
+            buildingId: {
+                campusId: formValues.campusId,
+            },
+            locationId: {
                 campusId: formValues.campusId,
                 buildingId: formValues.buildingId,
                 floorNumber: formValues.floorNumber || 1,
-            };
-        }
-        setCatalogModal({ config: configMap[fieldKey], fieldKey, prevOptions: getOptionsByKey(fieldKey), initialValues });
+            },
+        };
+        setCatalogModal({
+            config: configByField[fieldKey],
+            fieldKey,
+            initialValues: initialValuesByField[fieldKey],
+        });
     };
 
-    const handleCatalogSaved = async () => {
-        if (!catalogModal) return;
-        const { fieldKey, config, prevOptions } = catalogModal;
-        setCatalogModal(null);
-        try {
-            const fresh = await fetchCatalogOptions(config.baseUrl);
-            setOptionsByKey(fieldKey, fresh);
-            const prevIds = new Set(prevOptions.map(x => x.id));
-            const newItem = fresh.find(x => !prevIds.has(x.id));
-            if (!newItem) return;
+    const selectCreatedBrand = (brand) => {
+        upsertOption('brands', brand);
+        handleBrandChange(brand.id);
+    };
 
-            if (fieldKey === 'brandId') {
-                setFormValues(prev => ({ ...prev, brandId: newItem.id, modelId: '' }));
-            } else if (fieldKey === 'typeId') {
-                setFormValues(prev => ({
-                    ...prev,
-                    typeId: newItem.id,
-                    modelId: '',
-                    ...(!newItem.requiresNetworkInterface && { ipAddress: '', macAddress: '' }),
-                }));
-            } else if (fieldKey === 'campusId') {
-                const freshBuildings = await fetchCatalogOptions(INVENTORY_ENDPOINTS.buildings);
-                setBuildings(freshBuildings);
-                setFormValues(prev => ({ ...prev, campusId: newItem.id, buildingId: '', floorNumber: '', locationId: '' }));
-            } else if (fieldKey === 'buildingId') {
-                const freshBuildings = await fetchCatalogOptions(INVENTORY_ENDPOINTS.buildings);
-                setBuildings(freshBuildings);
-                const created = freshBuildings.find(x => !prevIds.has(x.id)) ?? newItem;
-                setFormValues(prev => ({
-                    ...prev,
-                    buildingId: created.id,
-                    campusId: created.campus?.id ?? prev.campusId,
-                    floorNumber: '',
-                    locationId: '',
-                }));
-            } else if (fieldKey === 'locationId') {
-                const freshLocations = await fetchCatalogOptions(INVENTORY_ENDPOINTS.locations);
-                setLocations(freshLocations);
-                const created = freshLocations.find(x => !prevIds.has(x.id)) ?? newItem;
-                setFormValues(prev => ({
-                    ...prev,
-                    locationId: created.id,
-                    campusId: created.floor?.building?.campus?.id ?? prev.campusId,
-                    buildingId: created.floor?.building?.id ?? prev.buildingId,
-                    floorNumber: created.floor?.name ? parseInt(created.floor.name) : prev.floorNumber,
-                }));
-            } else {
-                setFormValues(prev => ({ ...prev, [fieldKey]: newItem.id }));
-            }
-        } catch {
-            // noop
-        }
+    const selectCreatedType = (type) => {
+        upsertOption('types', type);
+        selectType(type.id, type);
+    };
+
+    const selectCreatedModel = (model) => {
+        upsertOption('brands', model.brand);
+        upsertOption('types', model.type);
+        upsertOption('models', model);
+        setFormValues(prev => ({
+            ...prev,
+            brandId: model.brand?.id ?? prev.brandId,
+            typeId:  model.type?.id  ?? prev.typeId,
+            modelId: model.id,
+        }));
+        clearErrorsFor(['brandId', 'typeId', 'modelId']);
+    };
+
+    const selectCreatedCampus = (campus) => {
+        upsertOption('campuses', campus);
+        handleCampusChange(campus.id);
+    };
+
+    const selectCreatedBuilding = (building) => {
+        upsertOption('campuses', building.campus);
+        upsertOption('buildings', building);
+        setFormValues(prev => ({
+            ...prev,
+            campusId: building.campus?.id ?? prev.campusId,
+            buildingId: building.id,
+            floorNumber: '',
+            locationId: '',
+        }));
+        clearErrorsFor(['campusId', 'buildingId']);
+    };
+
+    const selectCreatedLocation = (location) => {
+        const building = location.floor?.building;
+        upsertOption('campuses', building?.campus);
+        upsertOption('buildings', building);
+        upsertOption('locations', location);
+        setFormValues(prev => ({
+            ...prev,
+            campusId: building?.campus?.id ?? prev.campusId,
+            buildingId: building?.id ?? prev.buildingId,
+            floorNumber: location.floor?.name ? parseInt(location.floor.name) : prev.floorNumber,
+            locationId: location.id,
+        }));
+        clearErrorsFor(['campusId', 'buildingId', 'locationId']);
+    };
+
+    const handleCatalogSaved = (created) => {
+        const fieldKey = catalogModal?.fieldKey;
+        setCatalogModal(null);
+        if (!fieldKey || !created?.id) return;
+
+        const selectByField = {
+            brandId:    selectCreatedBrand,
+            typeId:     selectCreatedType,
+            modelId:    selectCreatedModel,
+            campusId:   selectCreatedCampus,
+            buildingId: selectCreatedBuilding,
+            locationId: selectCreatedLocation,
+        };
+        selectByField[fieldKey]?.(created);
     };
 
     const resolveLocationId = async () => {
