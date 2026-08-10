@@ -30,8 +30,6 @@ public class MaintenanceRequestCreatedEmailTemplate implements EmailTemplateDefi
     private final List<String> technicianNames;
     private final String responsibleName;
     private final long timestamp;
-    private final String acceptUrl;
-    private final String cancelUrl;
 
     @Override
     public String getTemplateName() {
@@ -56,8 +54,6 @@ public class MaintenanceRequestCreatedEmailTemplate implements EmailTemplateDefi
         ctx.setVariable("technicianNames", technicianNames == null ? List.of() : technicianNames);
         ctx.setVariable("responsibleName",    responsibleName);
         ctx.setVariable("timestamp",       DateUtils.formatReadable(timestamp));
-        ctx.setVariable("acceptUrl",       acceptUrl);
-        ctx.setVariable("cancelUrl",       cancelUrl);
         return ctx;
     }
 
