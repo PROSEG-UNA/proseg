@@ -143,6 +143,7 @@ export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
                         data={roles}
                         loading={loading}
                         error={error}
+                        fillToBottom={false}
                         tableOptions={{ positionToolbarAlertBanner: 'none' }}
                     />
                 )}

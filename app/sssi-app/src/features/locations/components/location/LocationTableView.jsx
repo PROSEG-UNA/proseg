@@ -5,7 +5,7 @@ import LocationFormModal from './LocationFormModal.jsx';
 import BuildingEmailsModal from '../email/BuildingEmailModal.jsx';
 import CampusEmailsModal from '../email/CampusEmailModal.jsx';
 
-export default function LocationTableView({ table }) {
+export default function LocationTableView({ table, fillToBottom = true }) {
     const {
         config, title, columns,
         rows, loading, error, totalElements,
@@ -36,6 +36,7 @@ export default function LocationTableView({ table }) {
                     error={error}
                     enableRowActions={hasRowActions}
                     renderRowActions={hasRowActions ? renderRowActions : undefined}
+                    fillToBottom={fillToBottom}
                     tableOptions={{
                         positionActionsColumn: 'last',
                         manualPagination: true,
