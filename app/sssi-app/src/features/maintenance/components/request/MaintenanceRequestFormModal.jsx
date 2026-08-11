@@ -39,8 +39,6 @@ const INITIAL_VALUES = {
     buildingId: '',
 };
 
-const EMAIL_REGEX = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
-
 function technicianLabel(technician) {
     return technician?.userEmail || technician?.keycloakUserId || 'Técnico';
 }
@@ -321,8 +319,8 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
             setTechnicianToAdd('');
             setResponsibleId('');
         } else if (key === 'campusId') {
-            merged = { ...formValues, campusId: value, buildingId: '' };
-            setFormValues((prev) => ({ ...prev, campusId: value, buildingId: '' }));
+            merged = { ...formValues, campusId: value, buildingId: '', emails: [] };
+            setFormValues((prev) => ({ ...prev, campusId: value, buildingId: '', emails: [] }));
         } else {
             merged = { ...formValues, [key]: value };
             setFormValues((prev) => ({ ...prev, [key]: value }));
@@ -360,21 +358,6 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
     const handleEmailsChange = (values) => {
         setFormValues((prev) => ({ ...prev, emails: values }));
         if (values.length > 0) setErrors((prev) => ({ ...prev, emails: '' }));
-    };
-
-    const handleAddManualEmail = (rawEmail) => {
-        const email = (rawEmail || '').trim();
-        if (!email) return;
-        if (!EMAIL_REGEX.test(email)) {
-            setErrors((prev) => ({ ...prev, emails: 'El correo electrónico tiene un formato inválido' }));
-            return;
-        }
-        setFormValues((prev) => (
-            prev.emails.includes(email)
-                ? prev
-                : { ...prev, emails: [...prev.emails, email] }
-        ));
-        setErrors((prev) => ({ ...prev, emails: '' }));
     };
 
     const handleRemoveEmail = (email) => {
@@ -772,11 +755,8 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                             <SearchableSelect
                                 label="Correos electrónicos *"
                                 multiple
-                                addMode
-                                validateCreate={(s) => EMAIL_REGEX.test((s || '').trim())}
                                 value={formValues.emails}
                                 onChange={handleEmailsChange}
-                                onCreate={handleAddManualEmail}
                                 fullWidth
                                 size="small"
                                 disabled={anyLoading || loadingEmails}
@@ -785,7 +765,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                                     errors.emails
                                         || (!formValues.campusId
                                             ? 'Selecciona un campus o edificio para ver sus correos'
-                                            : 'Elige de la lista o escribe un correo para agregarlo')
+                                            : 'Elige los correos registrados para la ubicación seleccionada')
                                 }
                                 sx={fieldSx}
                                 items={emailOptions}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 const createEmptyComponent = () => ({
     localId: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -9,10 +9,26 @@ const createEmptyComponent = () => ({
     observations: '',
 });
 
-export function useAssetComponents() {
+export function useAssetComponents(open) {
     const [components, setComponents] = useState([]);
     const [componentErrors, setComponentErrors] = useState({});
     const [componentsToDelete, setComponentsToDelete] = useState([]);
+
+    const resetComponents = useCallback(() => {
+        setComponents([]);
+        setComponentErrors({});
+        setComponentsToDelete([]);
+    }, []);
+
+    const scheduleComponentsReset = useCallback(() => {
+        if (!open) return undefined;
+
+        const resetHandle = window.setTimeout(resetComponents, 0);
+
+        return () => window.clearTimeout(resetHandle);
+    }, [open, resetComponents]);
+
+    useEffect(scheduleComponentsReset, [scheduleComponentsReset]);
 
     const addComponent = () => {
         setComponents(prev => [...prev, createEmptyComponent()]);
@@ -88,12 +104,6 @@ export function useAssetComponents() {
         return Object.keys(nextErrors).length === 0;
     };
 
-    const resetComponents = () => {
-        setComponents([]);
-        setComponentErrors({});
-        setComponentsToDelete([]);
-    };
-
     return {
         components,
         setComponents,
@@ -105,6 +115,5 @@ export function useAssetComponents() {
         updateComponentField,
         removeComponent,
         validateComponents,
-        resetComponents,
     };
 }

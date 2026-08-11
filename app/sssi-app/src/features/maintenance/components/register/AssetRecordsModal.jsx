@@ -3,6 +3,7 @@ import HistoryIcon from '@mui/icons-material/History';
 import PersonIcon from '@mui/icons-material/Person';
 import BusinessIcon from '@mui/icons-material/Business';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
+import { formatAssetIdentity } from '../../../../common/utils/formatters.js';
 import { useAssetRecordsData } from '../../hooks/register/useAssetRecordsData';
 import { formatDateTime } from '../../maintenanceUtils';
 
@@ -24,7 +25,7 @@ export default function AssetRecordsModal({ open, onClose, registerId, asset, re
             maxWidth="sm"
             icon={HistoryIcon}
             title="Historial de mantenimiento"
-            subtitle={asset ? `Activo ${asset.assetNumber} · Serie ${asset.serialNumber}` : ''}
+            subtitle={formatAssetIdentity(asset)}
             loading={loading}
             secondaryButton={{ label: 'Cerrar', onClick: onClose }}
         >

@@ -11,6 +11,7 @@ import GeneralModal from '../../../common/components/GeneralModal.jsx';
 import { createUser } from '../services/usersService';
 import { ValidatedTextField } from '../../../common/components/ValidatedTextField';
 import { useFormValidation } from '../../../common/hooks/useFormValidation';
+import { getFriendlyApiErrorMessage } from '../../../common/utils/index.js';
 
 const INITIAL_FORM = {
     username: '',

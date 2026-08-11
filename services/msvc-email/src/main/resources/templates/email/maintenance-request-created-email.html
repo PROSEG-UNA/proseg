@@ -142,23 +142,17 @@
                             </tr>
                         </table>
 
-                        <!-- ACCIONES -->
-                        <p th:if="${acceptUrl != null}" style="margin:0 0 24px 0;text-align:center;">
-                            <a th:href="${acceptUrl}"
-                               style="display:inline-block;background:#15803d;color:#ffffff;
-                                      text-decoration:none;padding:12px 28px;border-radius:8px;
-                                      font-size:15px;font-weight:600;letter-spacing:0.3px;
-                                      margin:0 6px 8px 6px;">
-                                Aceptar solicitud
-                            </a>
-                            <a th:href="${cancelUrl}"
-                               style="display:inline-block;background:#b91c1c;color:#ffffff;
-                                      text-decoration:none;padding:12px 28px;border-radius:8px;
-                                      font-size:15px;font-weight:600;letter-spacing:0.3px;
-                                      margin:0 6px 8px 6px;">
-                                Cancelar solicitud
-                            </a>
-                        </p>
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+                               style="border:1px solid #fee2e2;border-radius:8px;
+                                      background:#fef2f2;margin-bottom:24px;">
+                            <tr>
+                                <td style="padding:16px;font-size:14px;line-height:1.6;color:#991b1b;text-align:center;">
+                                    Si desea cancelar este mantenimiento por favor enviar un correo a:
+                                    <a href="mailto:seguridad@una.cr"
+                                       style="color:#b91c1c;font-weight:600;text-decoration:underline;">seguridad@una.cr</a>
+                                </td>
+                            </tr>
+                        </table>
 
                         <!-- TIMESTAMP -->
                         <p style="margin:0;font-size:12px;color:#6b7280;">

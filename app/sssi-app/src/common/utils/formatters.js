@@ -25,3 +25,14 @@ export function formatDateTime(value) {
         timeStyle: 'short',
     }).format(date);
 }
+
+const EMPTY_VALUE_PLACEHOLDER = '—';
+
+export function formatAssetIdentity(asset) {
+    if (!asset) return '';
+    const serialNumber = asset.serialNumber;
+    const hasSerialNumber = !!serialNumber && serialNumber !== EMPTY_VALUE_PLACEHOLDER;
+    return hasSerialNumber
+        ? `Activo ${asset.assetNumber} · Serie ${serialNumber}`
+        : `Activo ${asset.assetNumber}`;
+}

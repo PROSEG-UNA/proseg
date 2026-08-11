@@ -47,6 +47,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -81,14 +82,16 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
 
         List<UserCompany> technicians = resolveAssignedTechnicians(request.getAssignedTechnicianIds(), company);
 
+        UUID campusId = parseUuid(request.getCampusId(), "campusId");
+
         MaintenanceRequest maintenanceRequest = maintenanceRequestMapper.toEntity(request);
         maintenanceRequest.setCompany(company);
         maintenanceRequest.setStatus(MaintenanceStatus.PENDING);
-        maintenanceRequest.setCampusId(parseUuid(request.getCampusId(), "campusId"));
+        maintenanceRequest.setCampusId(campusId);
         maintenanceRequest.setBuildingId(request.getBuildingId());
         maintenanceRequest.setAssignedTechnicians(technicians);
         maintenanceRequest.setResponsibleUserCompany(resolveResponsible(request.getResponsibleUserCompanyId(), technicians));
-        maintenanceRequest.setEmails(resolveEmails(request.getEmails()));
+        maintenanceRequest.setEmails(resolveEmails(request.getEmails(), campusId, request.getBuildingId()));
 
         MaintenanceRequest saved = maintenanceRequestRepository.save(maintenanceRequest);
 
@@ -203,13 +206,15 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
             MaintenanceStatusTransitions.validateOrThrow(maintenanceRequest.getStatus(), request.getStatus());
         }
 
+        UUID campusId = parseUuid(request.getCampusId(), "campusId");
+
         maintenanceRequestMapper.updateEntityFromRequest(request, maintenanceRequest);
         maintenanceRequest.setCompany(company);
-        maintenanceRequest.setCampusId(parseUuid(request.getCampusId(), "campusId"));
+        maintenanceRequest.setCampusId(campusId);
         maintenanceRequest.setBuildingId(request.getBuildingId());
         maintenanceRequest.setAssignedTechnicians(technicians);
         maintenanceRequest.setResponsibleUserCompany(resolveResponsible(request.getResponsibleUserCompanyId(), technicians));
-        maintenanceRequest.setEmails(resolveEmails(request.getEmails()));
+        maintenanceRequest.setEmails(resolveEmails(request.getEmails(), campusId, request.getBuildingId()));
 
         if (maintenanceRequest.getStatus() != MaintenanceStatus.CANCELLED) {
             maintenanceRequest.setCancellationReason(null);
@@ -239,36 +244,6 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
                         oldEmails,
                         saved
                 )
-        );
-
-        return maintenanceRequestMapper.toResponse(saved);
-    }
-
-    @Override
-    @Transactional
-    public MaintenanceRequestResponseDto accept(UUID id) {
-        MaintenanceRequest maintenanceRequest = maintenanceRequestRepository.findById(id)
-                .orElseThrow(MaintenanceRequestException::notFound);
-        MaintenanceStatus previousStatus = maintenanceRequest.getStatus();
-
-        if (maintenanceRequest.getStatus() == MaintenanceStatus.CANCELLED) {
-            throw MaintenanceRequestException.cannotAcceptCancelled();
-        }
-
-        MaintenanceStatusTransitions.validateOrThrow(maintenanceRequest.getStatus(), MaintenanceStatus.ACCEPTED);
-
-        maintenanceRequest.setStatus(MaintenanceStatus.ACCEPTED);
-        maintenanceRequest.setCancellationReason(null);
-        syncRegisterStatus(id, MaintenanceStatus.ACCEPTED);
-
-        MaintenanceRequest saved = maintenanceRequestRepository.save(maintenanceRequest);
-
-        publishMaintenanceNotification(
-                saved,
-                "ACCEPTED",
-                "Solicitud de mantenimiento aceptada",
-                "La solicitud fue aceptada por administracion",
-                List.of(formatChange("Estado", toStatusLabel(previousStatus), toStatusLabel(saved.getStatus())))
         );
 
         return maintenanceRequestMapper.toResponse(saved);
@@ -532,7 +507,6 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         }
         return switch (status) {
             case PENDING -> "Pendiente";
-            case ACCEPTED -> "Aceptada";
             case COMPLETED -> "Completada";
             case CANCELLED -> "Cancelada";
         };
@@ -627,18 +601,56 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
         return found;
     }
 
-    private List<MaintenanceEmail> resolveEmails(List<String> rawEmails) {
-        if (rawEmails == null || rawEmails.isEmpty()) {
+    private List<MaintenanceEmail> resolveEmails(List<String> rawEmails, UUID campusId, UUID buildingId) {
+        List<String> requestedEmails = cleanEmails(rawEmails);
+        if (requestedEmails.isEmpty()) {
             return new ArrayList<>();
         }
-        return rawEmails.stream()
-                .filter(email -> email != null && !email.isBlank())
-                .map(String::trim)
+
+        Map<String, String> registeredEmails = fetchRegisteredEmails(campusId, buildingId);
+
+        return requestedEmails.stream()
+                .map(email -> requireRegisteredEmail(email, registeredEmails))
                 .distinct()
-                .map(email -> maintenanceEmailRepository.findByEmail(email)
-                        .orElseGet(() -> maintenanceEmailRepository.save(
-                                MaintenanceEmail.builder().email(email).build())))
+                .map(this::findOrCreateEmail)
                 .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    private String requireRegisteredEmail(String email, Map<String, String> registeredEmails) {
+        String registeredEmail = registeredEmails.get(normalizeEmail(email));
+        if (registeredEmail == null) {
+            throw MaintenanceRequestException.emailNotRegistered(email);
+        }
+        return registeredEmail;
+    }
+
+    private Map<String, String> fetchRegisteredEmails(UUID campusId, UUID buildingId) {
+        List<String> locationEmails = new ArrayList<>();
+        try {
+            if (campusId != null) {
+                locationEmails.addAll(extractLocationEmails(inventoryClient.findCampusEmails(campusId)));
+            }
+            if (buildingId != null) {
+                locationEmails.addAll(extractLocationEmails(inventoryClient.findBuildingEmails(buildingId)));
+            }
+        } catch (Exception exception) {
+            log.warn("No se pudieron obtener los correos registrados del campus {} y edificio {}: {}",
+                    campusId, buildingId, exception.getMessage());
+            throw MaintenanceRequestException.registeredEmailsUnavailable();
+        }
+
+        return cleanEmails(locationEmails).stream()
+                .collect(Collectors.toMap(this::normalizeEmail, email -> email, (existing, duplicate) -> existing));
+    }
+
+    private String normalizeEmail(String email) {
+        return email.toLowerCase(Locale.ROOT);
+    }
+
+    private MaintenanceEmail findOrCreateEmail(String email) {
+        return maintenanceEmailRepository.findByEmail(email)
+                .orElseGet(() -> maintenanceEmailRepository.save(
+                        MaintenanceEmail.builder().email(email).build()));
     }
 
     private UserCompany resolveResponsible(UUID responsibleId, List<UserCompany> technicians) {

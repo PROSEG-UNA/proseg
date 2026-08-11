@@ -8,8 +8,7 @@ import java.util.Set;
 public final class MaintenanceStatusTransitions {
 
     private static final Map<MaintenanceStatus, Set<MaintenanceStatus>> ALLOWED = Map.of(
-            MaintenanceStatus.PENDING, Set.of(MaintenanceStatus.ACCEPTED, MaintenanceStatus.COMPLETED, MaintenanceStatus.CANCELLED),
-            MaintenanceStatus.ACCEPTED, Set.of(MaintenanceStatus.COMPLETED, MaintenanceStatus.CANCELLED),
+            MaintenanceStatus.PENDING, Set.of(MaintenanceStatus.COMPLETED, MaintenanceStatus.CANCELLED),
             MaintenanceStatus.COMPLETED, Set.of(),
             MaintenanceStatus.CANCELLED, Set.of()
     );

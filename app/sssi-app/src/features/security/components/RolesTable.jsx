@@ -7,6 +7,7 @@ import RoleFormModal from './RoleFormModal.jsx';
 import DialogModal from '../../../common/components/DialogModal.jsx';
 import { usePermissions } from '../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../common/constants/permissions';
+import { getFriendlyApiErrorMessage } from '../../../common/utils/index.js';
 
 const STORAGE_KEY = 'roles-table-column-visibility';
 const DEFAULT_COLUMN_VISIBILITY = {};

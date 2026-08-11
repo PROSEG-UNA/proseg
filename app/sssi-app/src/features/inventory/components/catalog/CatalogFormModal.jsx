@@ -9,6 +9,12 @@ import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import { createCatalogItem, updateCatalogItem, fetchCatalogOptions } from '../../services/catalogService';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
 
+const toBoundedNumberValue = (rawValue, min) => {
+    const digitsOnly = String(rawValue).replace(/[^0-9]/g, '');
+    const normalized = min > 0 ? digitsOnly.replace(/^0+/, '') : digitsOnly;
+    return normalized === '' ? '' : Number(normalized);
+};
+
 export default function CatalogFormModal({ open, onClose, onSaved, config, row, initialValues }) {
     const theme = useTheme();
 
@@ -134,12 +140,11 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row, 
             const payload = {};
             formFields.forEach((field) => { payload[field.key] = formValues[field.key]; });
 
-            if (isEditMode) {
-                await updateCatalogItem(baseUrl, row.id, payload);
-            } else {
-                await createCatalogItem(baseUrl, payload);
-            }
-            onSaved?.();
+            const savedItem = isEditMode
+                ? await updateCatalogItem(baseUrl, row.id, payload)
+                : await createCatalogItem(baseUrl, payload);
+
+            onSaved?.(savedItem);
         } catch (e) {
             setAlert({ type: 'error', message: e?.response?.data?.message ?? e?.message ?? 'Error al guardar' });
         } finally {
@@ -255,17 +260,18 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row, 
                         }
 
                         if (field.type === 'number') {
+                            const min = field.min ?? 0;
                             return (
                                 <TextField
                                     key={field.key}
                                     label={field.label}
                                     value={formValues[field.key] ?? ''}
-                                    onChange={(e) => handleChange(field.key, e.target.value === '' ? '' : Number(e.target.value))}
+                                    onChange={(e) => handleChange(field.key, toBoundedNumberValue(e.target.value, min))}
                                     onBlur={() => handleBlur(field.key)}
                                     fullWidth
                                     size="small"
                                     type="number"
-                                    inputProps={{ min: 0 }}
+                                    inputProps={{ min }}
                                     required={field.required}
                                     disabled={saving}
                                     error={touched[field.key] && !!errors[field.key]}

@@ -1,64 +1,64 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { fetchCatalogOptions } from '../services/catalogService.js';
 import { INVENTORY_ENDPOINTS } from '../services/endpoints.js';
 
+const CATALOG_SOURCES = [
+    ['brands', INVENTORY_ENDPOINTS.brands],
+    ['types', INVENTORY_ENDPOINTS.types],
+    ['models', INVENTORY_ENDPOINTS.models],
+    ['campuses', INVENTORY_ENDPOINTS.campuses],
+    ['buildings', INVENTORY_ENDPOINTS.buildings],
+    ['locations', INVENTORY_ENDPOINTS.locations],
+];
+
+const EMPTY_OPTIONS = Object.fromEntries(CATALOG_SOURCES.map(([collection]) => [collection, []]));
+
+const mergeKeepingLocalOnly = (fetched, current) => {
+    const fetchedIds = new Set(fetched.map(option => option.id));
+    return [...fetched, ...current.filter(option => !fetchedIds.has(option.id))];
+};
+
+const withOption = (current, option) => (
+    current.some(existing => existing.id === option.id)
+        ? current.map(existing => (existing.id === option.id ? option : existing))
+        : [option, ...current]
+);
+
 export function useAssetCatalogOptions(open) {
-    const [brands, setBrands] = useState([]);
-    const [types, setTypes] = useState([]);
-    const [models, setModels] = useState([]);
-    const [campuses, setCampuses] = useState([]);
-    const [buildings, setBuildings] = useState([]);
-    const [locations, setLocations] = useState([]);
+    const [options, setOptions] = useState(EMPTY_OPTIONS);
     const [loadingOptions, setLoadingOptions] = useState(false);
 
-    useEffect(() => {
+    const upsertOption = useCallback((collection, option) => {
+        if (!option?.id) return;
+        setOptions(prev => ({ ...prev, [collection]: withOption(prev[collection], option) }));
+    }, []);
+
+    const loadCatalogOptions = useCallback(() => {
         if (!open) return undefined;
 
         let cancelled = false;
 
-        const loadHandle = window.setTimeout(() => {
+        const requestAllOptions = () => {
             setLoadingOptions(true);
 
-            Promise.all([
-                fetchCatalogOptions(INVENTORY_ENDPOINTS.brands),
-                fetchCatalogOptions(INVENTORY_ENDPOINTS.types),
-                fetchCatalogOptions(INVENTORY_ENDPOINTS.models),
-                fetchCatalogOptions(INVENTORY_ENDPOINTS.campuses),
-                fetchCatalogOptions(INVENTORY_ENDPOINTS.buildings),
-                fetchCatalogOptions(INVENTORY_ENDPOINTS.locations),
-            ]).then(([b, t, m, s, bd, l]) => {
-                if (cancelled) return;
-                setBrands(prev => {
-                    const ids = new Set(b.map(x => x.id));
-                    return [...b, ...prev.filter(x => !ids.has(x.id))];
+            Promise.all(CATALOG_SOURCES.map(([, url]) => fetchCatalogOptions(url)))
+                .then(results => {
+                    if (cancelled) return;
+                    setOptions(prev => {
+                        const next = { ...prev };
+                        CATALOG_SOURCES.forEach(([collection], index) => {
+                            next[collection] = mergeKeepingLocalOnly(results[index], prev[collection]);
+                        });
+                        return next;
+                    });
+                })
+                .catch(() => {})
+                .finally(() => {
+                    if (!cancelled) setLoadingOptions(false);
                 });
-                setTypes(prev => {
-                    const ids = new Set(t.map(x => x.id));
-                    return [...t, ...prev.filter(x => !ids.has(x.id))];
-                });
-                setModels(prev => {
-                    const ids = new Set(m.map(x => x.id));
-                    return [...m, ...prev.filter(x => !ids.has(x.id))];
-                });
-                setCampuses(prev => {
-                    const ids = new Set(s.map(x => x.id));
-                    return [...s, ...prev.filter(x => !ids.has(x.id))];
-                });
-                setBuildings(prev => {
-                    const ids = new Set(bd.map(x => x.id));
-                    return [...bd, ...prev.filter(x => !ids.has(x.id))];
-                });
-                setLocations(prev => {
-                    const ids = new Set(l.map(x => x.id));
-                    return [...l, ...prev.filter(x => !ids.has(x.id))];
-                });
-                setLoadingOptions(false);
-            }).catch(() => {
-                if (!cancelled) {
-                    setLoadingOptions(false);
-                }
-            });
-        }, 500);
+        };
+
+        const loadHandle = window.setTimeout(requestAllOptions, 500);
 
         return () => {
             cancelled = true;
@@ -66,19 +66,11 @@ export function useAssetCatalogOptions(open) {
         };
     }, [open]);
 
+    useEffect(loadCatalogOptions, [loadCatalogOptions]);
+
     return {
-        brands,
-        setBrands,
-        types,
-        setTypes,
-        models,
-        setModels,
-        campuses,
-        setCampuses,
-        buildings,
-        setBuildings,
-        locations,
-        setLocations,
+        options,
+        upsertOption,
         loadingOptions,
     };
 }

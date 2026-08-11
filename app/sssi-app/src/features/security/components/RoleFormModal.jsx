@@ -23,7 +23,7 @@ import DialogModal from '../../../common/components/DialogModal.jsx';
 import { useRoleFormData } from '../hooks/useRoleFormData';
 import { ValidatedTextField } from '../../../common/components/ValidatedTextField';
 import { getValidationRule, validateField } from '../../../common/utils/validationRegex';
-import { formatRoleName } from '../../../common/utils/index.js';
+import { formatRoleName, getFriendlyApiErrorMessage } from '../../../common/utils/index.js';
 
 const DOMAIN_META = {
     Usuarios: {

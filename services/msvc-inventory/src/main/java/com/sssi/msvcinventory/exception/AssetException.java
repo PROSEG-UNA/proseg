@@ -33,14 +33,6 @@ public class AssetException extends BaseException {
         );
     }
 
-    public static AssetException duplicateAssetNumber(String assetNumber) {
-        return new AssetException(
-                HttpStatus.CONFLICT,
-                "DUPLICATE_ASSET_NUMBER",
-                "Ya existe un activo con el número de activo: " + assetNumber
-        );
-    }
-
     public static AssetException decommissionDateNotAllowed() {
         return new AssetException(
                 HttpStatus.UNPROCESSABLE_ENTITY,
