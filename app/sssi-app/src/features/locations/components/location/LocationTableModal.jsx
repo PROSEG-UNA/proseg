@@ -39,7 +39,7 @@ export default function LocationTableModal({ open, onClose, config }) {
                 ? { label: `Crear ${title}`, onClick: handleCreate, startIcon: <AddIcon /> }
                 : null}
         >
-            <LocationTableView table={table} />
+            <LocationTableView table={table} fillToBottom={false} />
         </GeneralModal>
     );
 }

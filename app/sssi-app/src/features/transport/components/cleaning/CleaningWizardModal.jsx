@@ -762,6 +762,7 @@ export default function CleaningWizardModal({ open, onClose, onImported }) {
                                                 }]}
                                             />
                                         )}
+                                        fillToBottom={false}
                                         tableOptions={{
                                             initialState: { pagination: { pageIndex: 0, pageSize: 10 } },
                                         }}

@@ -151,6 +151,7 @@ export default function RegisterAssetsTable({ registerId, canRegister }) {
                 error={error}
                 enableRowActions
                 renderRowActions={renderActions}
+                fillToBottom={false}
                 tableOptions={{
                     positionActionsColumn: 'first',
                     manualPagination: true,

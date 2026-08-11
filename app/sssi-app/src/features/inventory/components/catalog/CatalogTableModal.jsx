@@ -198,6 +198,7 @@ export default function CatalogTableModal({ open, onClose, config }) {
                         error={error}
                         enableRowActions={hasRowActions}
                         renderRowActions={hasRowActions ? renderRowActions : undefined}
+                        fillToBottom={false}
                         tableOptions={{
                             positionActionsColumn: 'last',
                             manualPagination: true,
