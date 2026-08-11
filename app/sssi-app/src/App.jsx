@@ -19,7 +19,6 @@ import MaintenancePage from './features/maintenance/pages/MaintenancePage.jsx';
 import DashboardLayout from './layouts/DashboardLayout';
 import CompaniesPage from "./features/maintenance/pages/company/CompaniesPage.jsx";
 import RequestsPage from "./features/maintenance/pages/request/RequestsPage.jsx";
-import MaintenanceRequestActionPage from "./features/maintenance/pages/request/MaintenanceRequestActionPage.jsx";
 import MaintenanceRegisterPage from "./features/maintenance/pages/register/RegisterPage.jsx";
 import CampusPage from './features/locations/pages/CampusPage';
 import BuildingPage from './features/locations/pages/BuildingPage';
@@ -274,30 +273,6 @@ function App() {
                                             element={
                                                 <DashboardLayout title="Gestión de Empresas" pageTitle="Empresas">
                                                     <CompaniesPage />
-                                                </DashboardLayout>
-                                            }
-                                        />
-                                    }
-                                />
-                                <Route
-                                    path="/mantenimiento/solicitudes/:id/aceptar"
-                                    element={
-                                        <ProtectedRoute
-                                            element={
-                                                <DashboardLayout title="Gestión de Solicitudes" pageTitle="Aceptar solicitud">
-                                                    <MaintenanceRequestActionPage action="accept" />
-                                                </DashboardLayout>
-                                            }
-                                        />
-                                    }
-                                />
-                                <Route
-                                    path="/mantenimiento/solicitudes/:id/cancelar"
-                                    element={
-                                        <ProtectedRoute
-                                            element={
-                                                <DashboardLayout title="Gestión de Solicitudes" pageTitle="Cancelar solicitud">
-                                                    <MaintenanceRequestActionPage action="cancel" />
                                                 </DashboardLayout>
                                             }
                                         />

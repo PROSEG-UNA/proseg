@@ -2,14 +2,12 @@ import { formatDate, formatDateTime } from '../../common/utils/formatters.js';
 
 export const MAINTENANCE_STATUS_OPTIONS = [
     { value: 'PENDING', label: 'Pendiente' },
-    { value: 'ACCEPTED', label: 'Aceptada' },
     { value: 'COMPLETED', label: 'Completada' },
     { value: 'CANCELLED', label: 'Cancelada' },
 ];
 
 export const MAINTENANCE_STATUS_TRANSITIONS = {
-    PENDING: ['ACCEPTED', 'COMPLETED', 'CANCELLED'],
-    ACCEPTED: ['COMPLETED', 'CANCELLED'],
+    PENDING: ['COMPLETED', 'CANCELLED'],
     COMPLETED: [],
     CANCELLED: [],
 };

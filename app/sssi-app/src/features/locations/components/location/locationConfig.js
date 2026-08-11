@@ -109,6 +109,7 @@ export const LOCATION_CONFIG = {
                 key: 'floorNumber',
                 label: 'Número de piso',
                 type: 'number',
+                min: 1,
                 required: true,
                 getInitialValue: (row) => row?.floor?.name ? parseInt(row.floor.name) : '',
             },

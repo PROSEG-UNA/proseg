@@ -50,7 +50,7 @@ public class MaintenanceRegisterServiceImpl implements MaintenanceRegisterServic
         Page<MaintenanceRequest> requests = status != null
                 ? maintenanceRequestRepository.findByAssignedTechnicians_KeycloakUserIdAndStatus(keycloakUserId, status, pageable)
                 : maintenanceRequestRepository.findByAssignedTechnicians_KeycloakUserIdAndStatusIn(
-                        keycloakUserId, List.of(MaintenanceStatus.PENDING, MaintenanceStatus.ACCEPTED), pageable);
+                        keycloakUserId, List.of(MaintenanceStatus.PENDING), pageable);
         return requests.map(maintenanceRequestMapper::toResponse);
     }
 

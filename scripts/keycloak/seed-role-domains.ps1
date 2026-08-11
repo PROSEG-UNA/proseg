@@ -160,7 +160,6 @@ Set-RoleDomain "SOLICITAR_MANTENIMIENTO"                         "Solicitud de m
 Set-RoleDomain "EDITAR_SOLICITUDES_MANTENIMIENTO"                "Solicitud de mantenimiento"
 Set-RoleDomain "SELECCIONAR_EMPRESA_EN_SOLICITUD_MANTENIMIENTO"  "Solicitud de mantenimiento"
 Set-RoleDomain "ELIMINAR_SOLICITUDES_MANTENIMIENTO"              "Solicitud de mantenimiento"
-Set-RoleDomain "ACEPTAR_SOLICITUDES_MANTENIMIENTO"               "Solicitud de mantenimiento"
 Set-RoleDomain "CANCELAR_SOLICITUDES_MANTENIMIENTO"              "Solicitud de mantenimiento"
 
 Write-Host ""

@@ -1,14 +1,12 @@
 import Chip from '@mui/material/Chip';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
 import RowActionsMenu from '../../../../common/components/RowActionsMenu.jsx';
 import { formatDate, formatDateTime } from '../../maintenanceUtils';
 
 function statusColor(status) {
     if (status === 'COMPLETED') return 'success';
-    if (status === 'ACCEPTED') return 'info';
     if (status === 'CANCELLED') return 'error';
     return 'warning';
 }
@@ -67,26 +65,16 @@ export function getMaintenanceRequestColumns() {
 export function renderMaintenanceRequestActions({
     onEdit,
     onDelete,
-    onAccept,
     onCancel,
     canEdit,
     canDelete,
-    canAccept,
     canCancel,
 }) {
     return ({ row }) => {
         const status = row.original.statusRaw;
-        const canAcceptRow = canAccept && (status === 'PENDING' || status === 'CANCELLED');
-        const canCancelRow = canCancel && (status === 'PENDING' || status === 'ACCEPTED');
+        const canCancelRow = canCancel && status === 'PENDING';
 
         const actions = [
-            {
-                key: 'accept',
-                label: 'Aceptar solicitud',
-                icon: <CheckCircleOutlineIcon fontSize="small" />,
-                hidden: !canAcceptRow,
-                onClick: () => onAccept(row.original),
-            },
             {
                 key: 'cancel',
                 label: 'Cancelar solicitud',

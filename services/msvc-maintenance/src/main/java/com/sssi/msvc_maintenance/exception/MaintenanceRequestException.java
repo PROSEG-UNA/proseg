@@ -18,19 +18,27 @@ public class MaintenanceRequestException extends BaseException {
         );
     }
 
-    public static MaintenanceRequestException cannotAcceptCancelled() {
-        return new MaintenanceRequestException(
-                HttpStatus.CONFLICT,
-                "MAINTENANCE_REQUEST_ALREADY_CANCELLED",
-                "No es posible aceptar la solicitud porque ya fue cancelada."
-        );
-    }
-
     public static MaintenanceRequestException notFound() {
         return new MaintenanceRequestException(
                 HttpStatus.NOT_FOUND,
                 "MAINTENANCE_REQUEST_NOT_FOUND",
                 "No encontramos la solicitud de mantenimiento seleccionada."
+        );
+    }
+
+    public static MaintenanceRequestException emailNotRegistered(String email) {
+        return new MaintenanceRequestException(
+                HttpStatus.BAD_REQUEST,
+                "MAINTENANCE_REQUEST_EMAIL_NOT_REGISTERED",
+                "El correo " + email + " no está registrado en la ubicación seleccionada."
+        );
+    }
+
+    public static MaintenanceRequestException registeredEmailsUnavailable() {
+        return new MaintenanceRequestException(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "MAINTENANCE_REQUEST_EMAILS_UNAVAILABLE",
+                "No pudimos verificar los correos registrados de la ubicación seleccionada."
         );
     }
 
