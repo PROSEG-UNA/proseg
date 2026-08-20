@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchUsers } from '../services/usersService';
 import { getFriendlyApiErrorMessage } from '../../../common/utils';
+import { keepPreviousPage, queryKeys } from '../../../common/query';
 
 function buildFullName(firstName, lastName) {
     return [firstName, lastName].filter(Boolean).join(' ').trim() || '—';
@@ -20,57 +21,42 @@ function mapStatusToSpanish(status) {
     }
 }
 
-export function useUsersData({ pageIndex = 0, pageSize = 10, refreshKey = 0 } = {}) {
-    const [rows, setRows] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [totalElements, setTotalElements] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
+function mapUserToRow(user) {
+    const statusRaw = user.status || 'PENDING';
+    return {
+        id: user.id,
+        username: user.username || '—',
+        email: user.email || '—',
+        fullName: buildFullName(user.firstName, user.lastName),
+        status: mapStatusToSpanish(statusRaw),
+        statusRaw,
+    };
+}
 
-    useEffect(() => {
-        let ignore = false;
+export function useUsersData({ pageIndex = 0, pageSize = 10 } = {}) {
+    const requestParams = { page: pageIndex, size: pageSize };
 
-        const loadUsers = async () => {
-            try {
-                setLoading(true);
-                setError(null);
+    const listQueryKey = queryKeys.security.userList(requestParams);
 
-                const response = await fetchUsers({ page: pageIndex, size: pageSize });
+    const { data, isLoading, isFetching, error } = useQuery({
+        queryKey: listQueryKey,
+        placeholderData: keepPreviousPage(listQueryKey),
+        queryFn: async () => {
+            const response = await fetchUsers(requestParams);
+            return {
+                rows: (response.content ?? []).map(mapUserToRow),
+                totalElements: response.totalElements ?? 0,
+                totalPages: response.totalPages ?? 0,
+            };
+        },
+    });
 
-                if (ignore) return;
-
-                const mappedRows = (response.content ?? []).map((user) => {
-                    const statusRaw = user.status || 'PENDING';
-                    return {
-                        id: user.id,
-                        username: user.username || '—',
-                        email: user.email || '—',
-                        fullName: buildFullName(user.firstName, user.lastName),
-                        status: mapStatusToSpanish(statusRaw),
-                        statusRaw,
-                    };
-                });
-
-                setRows(mappedRows);
-                setTotalElements(response.totalElements ?? 0);
-                setTotalPages(response.totalPages ?? 0);
-            } catch (err) {
-                if (!ignore) {
-                    setError(getFriendlyApiErrorMessage(err, 'Error al cargar usuarios'));
-                }
-            } finally {
-                if (!ignore) {
-                    setLoading(false);
-                }
-            }
-        };
-
-        void loadUsers();
-
-        return () => {
-            ignore = true;
-        };
-    }, [pageIndex, pageSize, refreshKey]);
-
-    return { rows, loading, error, totalElements, totalPages };
+    return {
+        rows: data?.rows ?? [],
+        loading: isLoading,
+        fetching: isFetching,
+        error: error ? getFriendlyApiErrorMessage(error, 'Error al cargar usuarios') : null,
+        totalElements: data?.totalElements ?? 0,
+        totalPages: data?.totalPages ?? 0,
+    };
 }

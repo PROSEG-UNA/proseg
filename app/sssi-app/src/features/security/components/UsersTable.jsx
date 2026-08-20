@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {Box, Button, Tab, Tabs} from '@mui/material';
 import TableBase from '../../../common/components/TablaBase.jsx';
 import DialogModal from '../../../common/components/DialogModal.jsx';
@@ -15,10 +16,12 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import BlockIcon from '@mui/icons-material/Block';
 import MailIcon from '@mui/icons-material/Mail';
 import { getFriendlyApiErrorMessage } from '../../../common/utils';
+import { queryKeys } from '../../../common/query';
 
 const STORAGE_KEY = 'users-table-column-visibility';
 const DEFAULT_COLUMN_VISIBILITY = {};
 const ALL_TAB_VALUE = 'ALL';
+const FALLBACK_USER_STATUSES = ['PENDING', 'APPROVED', 'REJECTED', 'INVITED'];
 
 function toStatusLabel(status) {
     switch (status) {
@@ -52,7 +55,7 @@ function getStatusIcon(status) {
     }
 }
 
-export default function UsersTable({ refreshKey = 0 }) {
+export default function UsersTable() {
     const [columnVisibility, setColumnVisibility] = useState(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
@@ -62,10 +65,9 @@ export default function UsersTable({ refreshKey = 0 }) {
     });
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
     const [selectedUser, setSelectedUser] = useState(null);
-    const [localRefreshKey, setLocalRefreshKey] = useState(0);
     const [alert, setAlert] = useState(null);
     const [statusTab, setStatusTab] = useState(ALL_TAB_VALUE);
-    const [availableStatuses, setAvailableStatuses] = useState(['PENDING', 'APPROVED', 'REJECTED', 'INVITED']);
+    const queryClient = useQueryClient();
     const { hasPermission } = usePermissions();
     const canAssignRoles = hasPermission(PERMISSIONS.USERS.ASSIGN_ROLE);
     const canApproveUsers = hasPermission(PERMISSIONS.USERS.APPROVE);
@@ -78,60 +80,56 @@ export default function UsersTable({ refreshKey = 0 }) {
     useEffect(persistColumnVisibility, [columnVisibility]);
 
     const triggerRefresh = useCallback(() => {
-        setLocalRefreshKey((k) => k + 1);
-    }, []);
+        void queryClient.invalidateQueries({ queryKey: queryKeys.security.users() });
+    }, [queryClient]);
 
-    const { rows, loading, error, totalElements } = useUsersData({
+    const { rows, loading, fetching, error, totalElements } = useUsersData({
         pageIndex: pagination.pageIndex,
         pageSize: pagination.pageSize,
-        refreshKey: refreshKey + localRefreshKey,
     });
 
-    useEffect(() => {
-        let ignore = false;
+    const { data: fetchedStatuses } = useQuery({
+        queryKey: queryKeys.security.userStatuses(),
+        queryFn: async () => {
+            const statuses = await fetchUserStatuses();
+            return statuses.length > 0 ? statuses : null;
+        },
+        retry: false,
+    });
 
-        const loadStatuses = async () => {
-            try {
-                const statuses = await fetchUserStatuses();
-                if (!ignore && statuses.length > 0) {
-                    setAvailableStatuses(statuses);
-                }
-            } catch {
-                // Si falla endpoint, mantenemos fallback local.
-            }
-        };
+    const availableStatuses = fetchedStatuses ?? FALLBACK_USER_STATUSES;
 
-        void loadStatuses();
-
-        return () => {
-            ignore = true;
-        };
-    }, []);
-
-    const handleApprove = async (user) => {
-        try {
-            await updateUserApproval(user.id, 'APPROVED');
-            const message = user.statusRaw === 'REJECTED'
-                ? 'Usuario activado correctamente.'
-                : 'Usuario aprobado correctamente.';
-            setAlert({ type: 'success', message });
+    const updateApprovalMutation = useMutation({
+        mutationFn: ({ userId, status }) => updateUserApproval(userId, status),
+        onSuccess: (_result, variables) => {
+            setAlert({ type: 'success', message: variables.successMessage });
             triggerRefresh();
-        } catch (err) {
-            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(err, 'Error al aprobar usuario.') });
-        }
+        },
+        onError: (approvalError, variables) => {
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(approvalError, variables.errorMessage) });
+        },
+    });
+
+    const handleApprove = (user) => {
+        updateApprovalMutation.mutate({
+            userId: user.id,
+            status: 'APPROVED',
+            successMessage: user.statusRaw === 'REJECTED'
+                ? 'Usuario activado correctamente.'
+                : 'Usuario aprobado correctamente.',
+            errorMessage: 'Error al aprobar usuario.',
+        });
     };
 
-    const handleReject = async (user) => {
-        try {
-            await updateUserApproval(user.id, 'REJECTED');
-            const message = user.statusRaw === 'APPROVED'
+    const handleReject = (user) => {
+        updateApprovalMutation.mutate({
+            userId: user.id,
+            status: 'REJECTED',
+            successMessage: user.statusRaw === 'APPROVED'
                 ? 'Usuario desactivado correctamente.'
-                : 'Usuario rechazado correctamente.';
-            setAlert({ type: 'success', message });
-            triggerRefresh();
-        } catch (err) {
-            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(err, 'Error al rechazar usuario.') });
-        }
+                : 'Usuario rechazado correctamente.',
+            errorMessage: 'Error al rechazar usuario.',
+        });
     };
 
     const columns = useMemo(() => {
@@ -234,6 +232,7 @@ export default function UsersTable({ refreshKey = 0 }) {
                 columns={columns}
                 data={filteredRows}
                 loading={loading}
+                fetching={fetching}
                 error={error}
                 enableRowActions={canUseActions}
                 renderRowActions={canUseActions ? renderUsersActions({
