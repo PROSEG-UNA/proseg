@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import TableBase from '../../../../common/components/TablaBase.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { useDebounce } from '../../../../common/hooks/useDebounce.js';
@@ -7,6 +8,7 @@ import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { deleteDriver } from '../../services/drivers/driversService';
 import { useTransportDriversData } from '../../hooks/useTransportDriversData';
 import { getDriverColumns, renderDriverActions } from './driverColumns.jsx';
+import { queryKeys } from '../../../../common/query';
 
 const COLUMN_TO_BACKEND_KEY = {
     fullName: 'name',
@@ -17,14 +19,14 @@ const COLUMN_TO_BACKEND_KEY = {
     statusRaw: 'status',
 };
 
-export default function DriversTable({ refreshKey = 0, onRefresh, onEditDriver }) {
+export default function DriversTable({ onEditDriver }) {
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
     const [sorting, setSorting] = useState([]);
     const [alert, setAlert] = useState(null);
     const [driverToDelete, setDriverToDelete] = useState(null);
-    const [deleting, setDeleting] = useState(false);
+    const queryClient = useQueryClient();
     const { hasPermission } = usePermissions();
 
     const canEdit = hasPermission(PERMISSIONS.TRANSPORT.DRIVERS.MANAGE);
@@ -70,16 +72,29 @@ export default function DriversTable({ refreshKey = 0, onRefresh, onEditDriver }
         setPagination((previousValue) => (previousValue.pageIndex === 0 ? previousValue : { ...previousValue, pageIndex: 0 }));
     }, []);
 
-    const { rows, loading, error, totalElements } = useTransportDriversData({
+    const { rows, loading, fetching, error, totalElements } = useTransportDriversData({
         pageIndex: pagination.pageIndex,
         pageSize: pagination.pageSize,
         search: debouncedGlobalFilter,
         filters: backendFilters,
         sort: backendSort,
-        refreshKey,
     });
 
     const columns = useMemo(() => getDriverColumns(), []);
+
+    const deleteDriverMutation = useMutation({
+        mutationFn: (driverId) => deleteDriver(driverId),
+        onSuccess: async () => {
+            setDriverToDelete(null);
+            setAlert({ type: 'success', message: 'Chofer eliminado correctamente' });
+            await queryClient.invalidateQueries({ queryKey: queryKeys.transport.drivers() });
+        },
+        onError: (deleteError) => {
+            setAlert({ type: 'error', message: deleteError?.response?.data?.message ?? deleteError?.message ?? 'No se pudo eliminar el chofer' });
+        },
+    });
+
+    const deleting = deleteDriverMutation.isPending;
 
     const handleDelete = useCallback((row) => setDriverToDelete(row), []);
     const handleDeleteCancel = useCallback(() => {
@@ -87,20 +102,10 @@ export default function DriversTable({ refreshKey = 0, onRefresh, onEditDriver }
         setDriverToDelete(null);
     }, [deleting]);
 
-    const handleDeleteConfirm = useCallback(async () => {
+    const handleDeleteConfirm = useCallback(() => {
         if (!driverToDelete) return;
-        setDeleting(true);
-        try {
-            await deleteDriver(driverToDelete.id);
-            setDriverToDelete(null);
-            setAlert({ type: 'success', message: 'Chofer eliminado correctamente' });
-            onRefresh?.();
-        } catch (error) {
-            setAlert({ type: 'error', message: error?.response?.data?.message ?? error?.message ?? 'No se pudo eliminar el chofer' });
-        } finally {
-            setDeleting(false);
-        }
-    }, [driverToDelete, onRefresh]);
+        deleteDriverMutation.mutate(driverToDelete.id);
+    }, [driverToDelete, deleteDriverMutation]);
 
     return (
         <>
@@ -108,6 +113,7 @@ export default function DriversTable({ refreshKey = 0, onRefresh, onEditDriver }
                 columns={columns}
                 data={rows}
                 loading={loading}
+                fetching={fetching}
                 error={error}
                 enableRowActions={canEdit || canDelete}
                 renderRowActions={renderDriverActions({

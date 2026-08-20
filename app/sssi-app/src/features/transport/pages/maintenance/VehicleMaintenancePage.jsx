@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Box, Container } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { PageHeader } from '../../../../common/components/index.js';
@@ -8,11 +9,12 @@ import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { usePermissions } from '../../../../common/hooks/index.js';
 import TransportMaintenanceTable from '../../components/maintenance/TransportMaintenanceTable.jsx';
 import VehicleMaintenanceFormModal from '../../components/maintenance/VehicleMaintenanceFormModal.jsx';
+import { queryKeys } from '../../../../common/query';
 
 export default function VehicleMaintenancePage() {
     const [maintenanceFormOpen, setMaintenanceFormOpen] = useState(false);
     const [maintenanceFormId, setMaintenanceFormId] = useState(null);
-    const [maintenanceRefresh, setMaintenanceRefresh] = useState(0);
+    const queryClient = useQueryClient();
     const { hasPermission, hasAnyPermission } = usePermissions();
 
     const canViewMaintenance = hasAnyPermission([
@@ -31,7 +33,9 @@ export default function VehicleMaintenancePage() {
         setMaintenanceFormOpen(true);
     };
 
-    const refreshMaintenance = () => setMaintenanceRefresh((value) => value + 1);
+    const refreshMaintenance = () => {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.transport.maintenance() });
+    };
 
     if (!canViewMaintenance) return <AccessDeniedState />;
 
@@ -49,11 +53,7 @@ export default function VehicleMaintenancePage() {
                 />
 
                 <Box sx={{ pt: 3 }}>
-                    <TransportMaintenanceTable
-                        refreshKey={maintenanceRefresh}
-                        onRefresh={refreshMaintenance}
-                        onEditMaintenance={openEditMaintenance}
-                    />
+                    <TransportMaintenanceTable onEditMaintenance={openEditMaintenance} />
                 </Box>
             </Container>
 

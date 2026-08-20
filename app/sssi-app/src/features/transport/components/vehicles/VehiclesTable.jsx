@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import TableBase from '../../../../common/components/TablaBase.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { useDebounce } from '../../../../common/hooks/useDebounce.js';
@@ -7,6 +8,7 @@ import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { deleteVehicle } from '../../services/vehicles/vehiclesService';
 import { useTransportVehiclesData } from '../../hooks/useTransportVehiclesData';
 import { getVehicleColumns, renderVehicleActions } from './vehicleColumns.jsx';
+import { queryKeys } from '../../../../common/query';
 
 const COLUMN_TO_BACKEND_KEY = {
     plate: 'plate',
@@ -17,14 +19,14 @@ const COLUMN_TO_BACKEND_KEY = {
     statusRaw: 'status',
 };
 
-export default function VehiclesTable({ refreshKey = 0, onRefresh, onEditVehicle }) {
+export default function VehiclesTable({ onEditVehicle }) {
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
     const [sorting, setSorting] = useState([]);
     const [alert, setAlert] = useState(null);
     const [vehicleToDelete, setVehicleToDelete] = useState(null);
-    const [deleting, setDeleting] = useState(false);
+    const queryClient = useQueryClient();
     const { hasPermission } = usePermissions();
 
     const canEdit = hasPermission(PERMISSIONS.TRANSPORT.VEHICLES.MANAGE);
@@ -70,16 +72,29 @@ export default function VehiclesTable({ refreshKey = 0, onRefresh, onEditVehicle
         setPagination((previousValue) => (previousValue.pageIndex === 0 ? previousValue : { ...previousValue, pageIndex: 0 }));
     }, []);
 
-    const { rows, loading, error, totalElements } = useTransportVehiclesData({
+    const { rows, loading, fetching, error, totalElements } = useTransportVehiclesData({
         pageIndex: pagination.pageIndex,
         pageSize: pagination.pageSize,
         search: debouncedGlobalFilter,
         filters: backendFilters,
         sort: backendSort,
-        refreshKey,
     });
 
     const columns = useMemo(() => getVehicleColumns(), []);
+
+    const deleteVehicleMutation = useMutation({
+        mutationFn: (vehicleId) => deleteVehicle(vehicleId),
+        onSuccess: async () => {
+            setVehicleToDelete(null);
+            setAlert({ type: 'success', message: 'Vehículo eliminado correctamente' });
+            await queryClient.invalidateQueries({ queryKey: queryKeys.transport.vehicles() });
+        },
+        onError: (deleteError) => {
+            setAlert({ type: 'error', message: deleteError?.response?.data?.message ?? deleteError?.message ?? 'No se pudo eliminar el vehículo' });
+        },
+    });
+
+    const deleting = deleteVehicleMutation.isPending;
 
     const handleDelete = useCallback((row) => setVehicleToDelete(row), []);
     const handleDeleteCancel = useCallback(() => {
@@ -87,20 +102,10 @@ export default function VehiclesTable({ refreshKey = 0, onRefresh, onEditVehicle
         setVehicleToDelete(null);
     }, [deleting]);
 
-    const handleDeleteConfirm = useCallback(async () => {
+    const handleDeleteConfirm = useCallback(() => {
         if (!vehicleToDelete) return;
-        setDeleting(true);
-        try {
-            await deleteVehicle(vehicleToDelete.id);
-            setVehicleToDelete(null);
-            setAlert({ type: 'success', message: 'Vehículo eliminado correctamente' });
-            onRefresh?.();
-        } catch (error) {
-            setAlert({ type: 'error', message: error?.response?.data?.message ?? error?.message ?? 'No se pudo eliminar el vehículo' });
-        } finally {
-            setDeleting(false);
-        }
-    }, [vehicleToDelete, onRefresh]);
+        deleteVehicleMutation.mutate(vehicleToDelete.id);
+    }, [vehicleToDelete, deleteVehicleMutation]);
 
     return (
         <>
@@ -108,6 +113,7 @@ export default function VehiclesTable({ refreshKey = 0, onRefresh, onEditVehicle
                 columns={columns}
                 data={rows}
                 loading={loading}
+                fetching={fetching}
                 error={error}
                 enableRowActions={canEdit || canDelete}
                 renderRowActions={renderVehicleActions({

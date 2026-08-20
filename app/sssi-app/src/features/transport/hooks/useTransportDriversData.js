@@ -1,58 +1,50 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchDrivers } from '../services/drivers/driversService';
 import { getFriendlyApiErrorMessage } from '../../../common/utils';
 import { driverStatusLabel } from '../transportUtils';
+import { keepPreviousPage, queryKeys } from '../../../common/query';
 
-export function useTransportDriversData({ pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [], refreshKey = 0 } = {}) {
-    const [rows, setRows] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [totalElements, setTotalElements] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
+function mapDriverToRow(driver) {
+    return {
+        id: driver.id,
+        firstName: driver.firstName ?? '',
+        lastName: driver.lastName ?? '',
+        fullName: [driver.firstName, driver.lastName].filter(Boolean).join(' ').trim() || driver.name || '—',
+        documentId: driver.documentId ?? '—',
+        licenseNumber: driver.licenseNumber ?? '—',
+        phone: driver.phone ?? '—',
+        email: driver.email ?? '—',
+        status: driverStatusLabel(driver.status),
+        statusRaw: driver.status ?? '',
+        createdAt: driver.createdAt ?? null,
+        updatedAt: driver.updatedAt ?? null,
+    };
+}
 
-    const filtersKey = JSON.stringify(filters);
-    const sortKey = sort.join('|');
-    const stableFilters = useMemo(() => JSON.parse(filtersKey), [filtersKey]);
-    const stableSort = useMemo(() => (sortKey ? sortKey.split('|') : []), [sortKey]);
+export function useTransportDriversData({ pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [] } = {}) {
+    const requestParams = { page: pageIndex, size: pageSize, search, filters, sort };
 
-    useEffect(() => {
-        let ignore = false;
+    const listQueryKey = queryKeys.transport.driverList(requestParams);
 
-        const load = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-                const response = await fetchDrivers({ page: pageIndex, size: pageSize, search, filters: stableFilters, sort: stableSort });
-                if (ignore) return;
+    const { data, isLoading, isFetching, error } = useQuery({
+        queryKey: listQueryKey,
+        placeholderData: keepPreviousPage(listQueryKey),
+        queryFn: async () => {
+            const response = await fetchDrivers(requestParams);
+            return {
+                rows: (response.content ?? []).map(mapDriverToRow),
+                totalElements: response.totalElements ?? 0,
+                totalPages: response.totalPages ?? 0,
+            };
+        },
+    });
 
-                setRows((response.content ?? []).map((driver) => ({
-                    id: driver.id,
-                    firstName: driver.firstName ?? '',
-                    lastName: driver.lastName ?? '',
-                    fullName: [driver.firstName, driver.lastName].filter(Boolean).join(' ').trim() || driver.name || '—',
-                    documentId: driver.documentId ?? '—',
-                    licenseNumber: driver.licenseNumber ?? '—',
-                    phone: driver.phone ?? '—',
-                    email: driver.email ?? '—',
-                    status: driverStatusLabel(driver.status),
-                    statusRaw: driver.status ?? '',
-                    createdAt: driver.createdAt ?? null,
-                    updatedAt: driver.updatedAt ?? null,
-                })));
-                setTotalElements(response.totalElements ?? 0);
-                setTotalPages(response.totalPages ?? 0);
-            } catch (error) {
-                if (!ignore) setError(getFriendlyApiErrorMessage(error, 'Error al cargar choferes'));
-            } finally {
-                if (!ignore) setLoading(false);
-            }
-        };
-
-        void load();
-        return () => {
-            ignore = true;
-        };
-    }, [pageIndex, pageSize, search, stableFilters, stableSort, refreshKey]);
-
-    return { rows, loading, error, totalElements, totalPages };
+    return {
+        rows: data?.rows ?? [],
+        loading: isLoading,
+        fetching: isFetching,
+        error: error ? getFriendlyApiErrorMessage(error, 'Error al cargar choferes') : null,
+        totalElements: data?.totalElements ?? 0,
+        totalPages: data?.totalPages ?? 0,
+    };
 }

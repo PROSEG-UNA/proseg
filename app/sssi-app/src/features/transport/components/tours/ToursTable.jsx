@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import TableBase from '../../../../common/components/TablaBase.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { useDebounce } from '../../../../common/hooks/useDebounce.js';
@@ -7,6 +8,7 @@ import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { deleteTour } from '../../services/tours/toursService';
 import { useTransportToursData } from '../../hooks/useTransportToursData';
 import { getTourColumns, renderTourActions } from './tourColumns.jsx';
+import { queryKeys } from '../../../../common/query';
 
 const COLUMN_TO_BACKEND_KEY = {
     name: 'name',
@@ -17,14 +19,14 @@ const COLUMN_TO_BACKEND_KEY = {
     statusRaw: 'status',
 };
 
-export default function ToursTable({ refreshKey = 0, onRefresh, onEditTour }) {
+export default function ToursTable({ onEditTour }) {
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
     const [sorting, setSorting] = useState([]);
     const [alert, setAlert] = useState(null);
     const [tourToDelete, setTourToDelete] = useState(null);
-    const [deleting, setDeleting] = useState(false);
+    const queryClient = useQueryClient();
     const { hasPermission } = usePermissions();
 
     const canEdit = hasPermission(PERMISSIONS.TRANSPORT.TOURS.MANAGE);
@@ -70,16 +72,29 @@ export default function ToursTable({ refreshKey = 0, onRefresh, onEditTour }) {
         setPagination((previousValue) => (previousValue.pageIndex === 0 ? previousValue : { ...previousValue, pageIndex: 0 }));
     }, []);
 
-    const { rows, loading, error, totalElements } = useTransportToursData({
+    const { rows, loading, fetching, error, totalElements } = useTransportToursData({
         pageIndex: pagination.pageIndex,
         pageSize: pagination.pageSize,
         search: debouncedGlobalFilter,
         filters: backendFilters,
         sort: backendSort,
-        refreshKey,
     });
 
     const columns = useMemo(() => getTourColumns(), []);
+
+    const deleteTourMutation = useMutation({
+        mutationFn: (tourId) => deleteTour(tourId),
+        onSuccess: async () => {
+            setTourToDelete(null);
+            setAlert({ type: 'success', message: 'Gira eliminada correctamente' });
+            await queryClient.invalidateQueries({ queryKey: queryKeys.transport.tours() });
+        },
+        onError: (deleteError) => {
+            setAlert({ type: 'error', message: deleteError?.response?.data?.message ?? deleteError?.message ?? 'No se pudo eliminar la gira' });
+        },
+    });
+
+    const deleting = deleteTourMutation.isPending;
 
     const handleDelete = useCallback((row) => setTourToDelete(row), []);
     const handleDeleteCancel = useCallback(() => {
@@ -87,20 +102,10 @@ export default function ToursTable({ refreshKey = 0, onRefresh, onEditTour }) {
         setTourToDelete(null);
     }, [deleting]);
 
-    const handleDeleteConfirm = useCallback(async () => {
+    const handleDeleteConfirm = useCallback(() => {
         if (!tourToDelete) return;
-        setDeleting(true);
-        try {
-            await deleteTour(tourToDelete.id);
-            setTourToDelete(null);
-            setAlert({ type: 'success', message: 'Gira eliminada correctamente' });
-            onRefresh?.();
-        } catch (error) {
-            setAlert({ type: 'error', message: error?.response?.data?.message ?? error?.message ?? 'No se pudo eliminar la gira' });
-        } finally {
-            setDeleting(false);
-        }
-    }, [tourToDelete, onRefresh]);
+        deleteTourMutation.mutate(tourToDelete.id);
+    }, [tourToDelete, deleteTourMutation]);
 
     return (
         <>
@@ -108,6 +113,7 @@ export default function ToursTable({ refreshKey = 0, onRefresh, onEditTour }) {
                 columns={columns}
                 data={rows}
                 loading={loading}
+                fetching={fetching}
                 error={error}
                 enableRowActions={canEdit || canDelete}
                 renderRowActions={renderTourActions({
