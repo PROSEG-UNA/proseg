@@ -1,6 +1,7 @@
 import { usePermissions } from '../../../../common/hooks/index.js';
 
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Box, Container, Typography, Tabs, Tab, Button, CircularProgress } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DomainOutlinedIcon from '@mui/icons-material/DomainOutlined';
@@ -16,6 +17,7 @@ import SearchableSelect from '../../../../common/components/SearchableSelect.jsx
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { fetchCompanies, fetchCompanyUsers, assignCompanyUser, unassignCompanyUser } from '../../services/company/companiesService';
 import { searchUsers } from '../../../security/services/usersService';
+import { queryKeys } from '../../../../common/query';
 
 const getUserDisplayName = (u) =>
     [u.firstName, u.lastName].filter(Boolean).join(' ').trim() || u.username || u.id;
@@ -24,7 +26,7 @@ export default function CompaniesPage() {
     const [companyFormOpen, setCompanyFormOpen] = useState(false);
     const [companyFormId, setCompanyFormId] = useState(null);
     const [companyUsersTarget, setCompanyUsersTarget] = useState(null);
-    const [companiesRefresh, setCompaniesRefresh] = useState(0);
+    const queryClient = useQueryClient();
 
     const { hasPermission, hasAnyPermission } = usePermissions();
 
@@ -40,7 +42,9 @@ export default function CompaniesPage() {
     const openCreateCompany = () => { setCompanyFormId(null); setCompanyFormOpen(true); };
     const openEditCompany   = (company) => { setCompanyFormId(company.id); setCompanyFormOpen(true); };
     const openCompanyUsers  = (company) => setCompanyUsersTarget(company);
-    const refreshCompanies  = () => setCompaniesRefresh((v) => v + 1);
+    const refreshCompanies = () => {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.maintenance.companies() });
+    };
     const [tabIndex, setTabIndex] = useState(0);
 
     const [inspectCompanyId, setInspectCompanyId]       = useState(null);
@@ -121,8 +125,6 @@ export default function CompaniesPage() {
                 <Box sx={{ pt: 3 }}>
                     {tabIndex === 0 && (
                         <CompanyTable
-                            refreshKey={companiesRefresh}
-                            onRefresh={refreshCompanies}
                             onEditCompany={openEditCompany}
                             onManageUsers={openCompanyUsers}
                         />

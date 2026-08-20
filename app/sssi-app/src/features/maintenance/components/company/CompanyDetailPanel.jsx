@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Box, Button, Divider, Skeleton, Typography } from '@mui/material';
 import BusinessIcon from '@mui/icons-material/Business';
 import PeopleIcon from '@mui/icons-material/People';
 import LaunchIcon from '@mui/icons-material/Launch';
-import { fetchCompanyById } from '../../services/company/companiesService';
 import { formatDateTime } from '../../maintenanceUtils';
+import { companyDetailQueryOptions } from './companyDetailQueries.js';
 
 function InfoRow({ label, value }) {
     return (
@@ -19,34 +19,15 @@ function InfoRow({ label, value }) {
     );
 }
 
-export default function CompanyDetailPanel({ companyId, onManageUsers, canManageUsers = false }) {
-    const [company, setCompany] = useState(null);
-    const [loading, setLoading] = useState(true);
+export default function CompanyDetailPanel({ companyId, listRow = null, onManageUsers, canManageUsers = false }) {
+    const { data, isPending } = useQuery({
+        ...companyDetailQueryOptions(companyId),
+        enabled: Boolean(companyId),
+        placeholderData: listRow ?? undefined,
+    });
 
-    useEffect(() => {
-        let cancelled = false;
-        setLoading(true);
-        setCompany(null);
-
-        fetchCompanyById(companyId)
-            .then((companyData) => {
-                if (!cancelled) {
-                    setCompany(companyData);
-                }
-            })
-            .catch(() => {
-                if (!cancelled) {
-                    setCompany(null);
-                }
-            })
-            .finally(() => {
-                if (!cancelled) setLoading(false);
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [companyId]);
+    const company = data ?? null;
+    const loading = isPending && !company;
 
     if (loading) {
         return (

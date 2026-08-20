@@ -7,15 +7,14 @@ import { formatAssetIdentity } from '../../../../common/utils/formatters.js';
 import { useAssetRecordsData } from '../../hooks/register/useAssetRecordsData';
 import { formatDateTime } from '../../maintenanceUtils';
 
-export default function AssetRecordsModal({ open, onClose, registerId, asset, refreshKey = 0 }) {
+export default function AssetRecordsModal({ open, onClose, registerId, asset }) {
     const theme = useTheme();
     const accentColor = theme.vars.palette.tones.rose.fg;
 
-    const { rows, loading, error, totalElements } = useAssetRecordsData({
+    const { rows, loading, fetching, error, totalElements } = useAssetRecordsData({
         registerId: open ? registerId : null,
         assetId: open ? asset?.id : null,
         pageSize: 50,
-        refreshKey,
     });
 
     return (
@@ -27,6 +26,7 @@ export default function AssetRecordsModal({ open, onClose, registerId, asset, re
             title="Historial de mantenimiento"
             subtitle={formatAssetIdentity(asset)}
             loading={loading}
+            fetching={fetching}
             secondaryButton={{ label: 'Cerrar', onClick: onClose }}
         >
             <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>

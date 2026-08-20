@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
     Box,
     Container,
@@ -18,6 +19,7 @@ import CompanyFormModal from '../components/company/CompanyFormModal.jsx';
 import CompanyUsersModal from '../components/company/CompanyUsersModal.jsx';
 import MaintenanceRequestTable from '../components/request/MaintenanceRequestTable.jsx';
 import MaintenanceRequestFormModal from '../components/request/MaintenanceRequestFormModal.jsx';
+import { queryKeys } from '../../../common/query';
 
 export default function MaintenancePage() {
     const [tabIndex, setTabIndex] = useState(0);
@@ -27,8 +29,7 @@ export default function MaintenancePage() {
     const [companyUsersTarget, setCompanyUsersTarget] = useState(null);
     const [requestFormState, setRequestFormState] = useState({ open: false, requestId: null, initialCompanyId: '' });
 
-    const [companiesRefresh, setCompaniesRefresh] = useState(0);
-    const [requestsRefresh, setRequestsRefresh] = useState(0);
+    const queryClient = useQueryClient();
 
     const { hasPermission, hasAnyPermission } = usePermissions();
 
@@ -79,8 +80,12 @@ export default function MaintenancePage() {
     const openCreateRequest = (initialCompanyId = '') => setRequestFormState({ open: true, requestId: null, initialCompanyId });
     const openEditRequest = (request) => setRequestFormState({ open: true, requestId: request.id, initialCompanyId: request.companyId ?? '' });
 
-    const refreshCompanies = () => setCompaniesRefresh((value) => value + 1);
-    const refreshRequests = () => setRequestsRefresh((value) => value + 1);
+    const refreshCompanies = () => {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.maintenance.companies() });
+    };
+    const refreshRequests = () => {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.maintenance.requests() });
+    };
 
     if (!canViewCompanies && !canViewRequests) {
         return <AccessDeniedState />;
@@ -133,8 +138,6 @@ export default function MaintenancePage() {
                                 Lista de empresas
                             </Typography>
                             <CompanyTable
-                                refreshKey={companiesRefresh}
-                                onRefresh={refreshCompanies}
                                 onEditCompany={openEditCompany}
                                 onManageUsers={openCompanyUsers}
                             />
@@ -147,8 +150,6 @@ export default function MaintenancePage() {
                                 Lista de solicitudes
                             </Typography>
                             <MaintenanceRequestTable
-                                refreshKey={requestsRefresh}
-                                onRefresh={refreshRequests}
                                 onEditRequest={openEditRequest}
                             />
                         </Box>
