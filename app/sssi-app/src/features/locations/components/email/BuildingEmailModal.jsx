@@ -19,7 +19,10 @@ import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
-import {createBuildingEmail, deleteBuildingEmail, fetchEmailsByBuilding} from "../../services/buildingMailService.js";
+import {createBuildingEmail, deleteBuildingEmail} from "../../services/buildingMailService.js";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useBuildingEmails } from '../../hooks/useLocationEmails.js';
+import { queryKeys } from '../../../../common/query';
 
 function EmailSkeleton() {
     return (
@@ -110,40 +113,27 @@ export default function BuildingEmailsModal({ open, onClose, building }) {
     const canManage = hasPermission(PERMISSIONS.INVENTORY.LOCATIONS.MANAGE);
     const canDelete = hasPermission(PERMISSIONS.INVENTORY.LOCATIONS.DELETE);
 
-    const [emails, setEmails] = useState([]);
-    const [loading, setLoading] = useState(false);
     const [newEmail, setNewEmail] = useState('');
     const [emailError, setEmailError] = useState('');
     const [emailTouched, setEmailTouched] = useState(false);
-    const [saving, setSaving] = useState(false);
     const [deletingEmail, setDeletingEmail] = useState(null);
-    const [deleting, setDeleting] = useState(false);
     const [alert, setAlert] = useState(null);
 
-    const loadEmails = useCallback(() => {
-        if (!open || !building?.id) return;
-        let cancelled = false;
-        setLoading(true);
-        setEmails([]);
+    const queryClient = useQueryClient();
+    const { emails, loading } = useBuildingEmails(building?.id, open);
 
-        fetchEmailsByBuilding(building.id)
-            .then((data) => { if (!cancelled) setEmails(data); })
-            .catch(() => { if (!cancelled) setEmails([]); })
-            .finally(() => { if (!cancelled) setLoading(false); });
-
-        return () => { cancelled = true; };
-    }, [open, building?.id]);
+    const invalidateEmails = useCallback(
+        () => queryClient.invalidateQueries({ queryKey: queryKeys.locations.emails() }),
+        [queryClient]
+    );
 
     useEffect(() => {
-        if (!open) {
-            setNewEmail('');
-            setEmailError('');
-            setEmailTouched(false);
-            setAlert(null);
-        } else {
-            loadEmails();
-        }
-    }, [open, loadEmails]);
+        if (open) return;
+        setNewEmail('');
+        setEmailError('');
+        setEmailTouched(false);
+        setAlert(null);
+    }, [open]);
 
     const validateEmail = (value) => {
         if (!value.trim()) return 'El correo electrónico es obligatorio';
@@ -162,41 +152,49 @@ export default function BuildingEmailsModal({ open, onClose, building }) {
         setEmailError(validateEmail(newEmail));
     };
 
-    const handleAdd = async () => {
+    const createEmailMutation = useMutation({
+        mutationFn: (email) => createBuildingEmail(building.id, { email }),
+        onSuccess: async () => {
+            setNewEmail('');
+            setEmailError('');
+            setEmailTouched(false);
+            await invalidateEmails();
+        },
+        onError: (createError) => {
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(createError, 'Error al agregar correo') });
+        },
+    });
+
+    const deleteEmailMutation = useMutation({
+        mutationFn: (emailId) => deleteBuildingEmail(emailId),
+        onSuccess: async () => {
+            setDeletingEmail(null);
+            await invalidateEmails();
+        },
+        onError: (deleteError) => {
+            setDeletingEmail(null);
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(deleteError, 'Error al eliminar correo') });
+        },
+    });
+
+    const saving = createEmailMutation.isPending;
+    const deleting = deleteEmailMutation.isPending;
+
+    const handleAdd = () => {
         setEmailTouched(true);
         const err = validateEmail(newEmail);
         if (err) { setEmailError(err); return; }
 
-        setSaving(true);
-        try {
-            const created = await createBuildingEmail(building.id, { email: newEmail.trim() });
-            setEmails((prev) => [...prev, created]);
-            setNewEmail('');
-            setEmailError('');
-            setEmailTouched(false);
-        } catch (e) {
-            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(e, 'Error al agregar correo') });
-        } finally {
-            setSaving(false);
-        }
+        createEmailMutation.mutate(newEmail.trim());
     };
 
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') { e.preventDefault(); handleAdd(); }
     };
 
-    const handleConfirmDelete = async () => {
-        setDeleting(true);
-        try {
-            await deleteBuildingEmail(deletingEmail.id);
-            setEmails((prev) => prev.filter((em) => em.id !== deletingEmail.id));
-            setDeletingEmail(null);
-        } catch (e) {
-            setDeletingEmail(null);
-            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(e, 'Error al eliminar correo') });
-        } finally {
-            setDeleting(false);
-        }
+    const handleConfirmDelete = () => {
+        if (!deletingEmail) return;
+        deleteEmailMutation.mutate(deletingEmail.id);
     };
 
     const fieldSx = {
