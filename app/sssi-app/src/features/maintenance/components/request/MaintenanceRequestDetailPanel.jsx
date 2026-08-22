@@ -36,8 +36,8 @@ export default function MaintenanceRequestDetailPanel({ requestId }) {
         queryKey: queryKeys.maintenance.requestLocationNames(request?.campusId ?? null, request?.buildingId ?? null),
         queryFn: async () => {
             const [campus, building] = await Promise.all([
-                request.campusId ? fetchCampusById(request.campusId).catch(() => null) : Promise.resolve(null),
-                request.buildingId ? fetchBuildingById(request.buildingId).catch(() => null) : Promise.resolve(null),
+                request.campusId ? fetchCampusById(request.campusId) : Promise.resolve(null),
+                request.buildingId ? fetchBuildingById(request.buildingId) : Promise.resolve(null),
             ]);
 
             return { campus: campus?.name ?? null, building: building?.name ?? null };

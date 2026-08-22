@@ -8,10 +8,10 @@ export function assetDetailQueryOptions(assetId) {
         queryKey: queryKeys.inventory.assetDetail(assetId),
         queryFn: async () => {
             const [iface, archives] = await Promise.all([
-                fetchNetworkInterfaceByAsset(assetId).catch(() => null),
-                fetchAssetArchives(assetId).catch(() => []),
+                fetchNetworkInterfaceByAsset(assetId),
+                fetchAssetArchives(assetId),
             ]);
-            return { netIface: iface, images: (archives ?? []).filter(archive => !!archive.imageUrl) };
+            return { netIface: iface, images: archives.filter(archive => !!archive.imageUrl) };
         },
     };
 }
@@ -19,9 +19,6 @@ export function assetDetailQueryOptions(assetId) {
 export function assetComponentsQueryOptions(assetId) {
     return {
         queryKey: queryKeys.inventory.assetComponents(assetId),
-        queryFn: async () => {
-            const data = await fetchAssetComponents(assetId).catch(() => []);
-            return Array.isArray(data) ? data : [];
-        },
+        queryFn: () => fetchAssetComponents(assetId),
     };
 }
