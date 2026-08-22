@@ -8,8 +8,8 @@ import {
   Container,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
-import CloudDownloadOutlinedIcon from '@mui/icons-material/CloudDownloadOutlined';
+import ImportIcon from '../../../common/components/icons/ImportIcon.jsx';
+import ExportIcon from '../../../common/components/icons/ExportIcon.jsx';
 import { PrimaryButton } from '../../../common/components/PrimaryButton.jsx';
 import { PageHeader } from '../../../common/components/index.js';
 import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
@@ -98,7 +98,7 @@ export function AssetPage() {
                     {canImportAssets && (
                       <Button
                         variant="outlined"
-                        startIcon={<CloudDownloadOutlinedIcon />}
+                        startIcon={<ImportIcon style={{ fontSize: 16, marginRight: 2 }} />}
                         onClick={() => setImportOpen(true)}
                         sx={{
                           textTransform: 'none',
@@ -114,7 +114,7 @@ export function AssetPage() {
                       <>
                         <Button
                           variant="outlined"
-                          startIcon={<CloudUploadOutlinedIcon />}
+                          startIcon={<ExportIcon style={{ fontSize: 16, marginRight: 2 }} />}
                           onClick={handleOpenExportMenu}
                           sx={{
                             textTransform: 'none',
