@@ -131,7 +131,6 @@ export default function CompanyUsersModal({ open, companyId, companyName, onClos
     };
 
     const handleAssign = async () => {
-        // bulk assign selectedUsers
         const ids = Object.keys(selectedUsers);
         if (!companyId || ids.length === 0) {
             setAlert({ type: 'warning', message: 'Selecciona al menos un usuario para vincular' });
