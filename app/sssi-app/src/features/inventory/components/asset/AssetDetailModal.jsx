@@ -149,15 +149,15 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
         queryFn: async () => {
             const [assetData, archivesData, componentsData, lastKnown] = await Promise.all([
                 fetchAssetById(assetId),
-                fetchAssetArchives(assetId).catch(() => []),
-                fetchAssetComponents(assetId).catch(() => []),
-                fetchLastKnownNetworkInterface(assetId).catch(() => null),
+                fetchAssetArchives(assetId),
+                fetchAssetComponents(assetId),
+                fetchLastKnownNetworkInterface(assetId),
             ]);
 
             return {
                 asset: assetData,
-                archives: Array.isArray(archivesData) ? archivesData : [],
-                components: Array.isArray(componentsData) ? componentsData : [],
+                archives: archivesData,
+                components: componentsData,
                 networkInterface: assetData?.networkInterface ?? lastKnown,
             };
         },
