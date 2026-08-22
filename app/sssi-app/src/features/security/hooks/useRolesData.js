@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { fetchRoles, fetchPermissionsByRole } from '../services/rolesService';
+import { fetchRoles } from '../services/rolesService';
 import { getFriendlyApiErrorMessage } from '../../../common/utils';
 import { keepPreviousPage, queryKeys } from '../../../common/query';
 
@@ -14,17 +14,11 @@ export function useRolesData({ pageIndex = 0, pageSize = 10 } = {}) {
         queryFn: async () => {
             const response = await fetchRoles(requestParams);
 
-            const rows = await Promise.all(
-                (response.content ?? []).map(async (role) => {
-                    const permissions = await fetchPermissionsByRole(role.name);
-                    return {
-                        id: role.id,
-                        name: role.name,
-                        description: role.description || '—',
-                        permissionCount: permissions.length,
-                    };
-                })
-            );
+            const rows = (response.content ?? []).map((role) => ({
+                id: role.id,
+                name: role.name,
+                description: role.description || '—',
+            }));
 
             return { rows, totalElements: response.totalElements ?? 0 };
         },
