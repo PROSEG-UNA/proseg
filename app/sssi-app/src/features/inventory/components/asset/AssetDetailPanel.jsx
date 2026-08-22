@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Box, Typography, Skeleton, Dialog, IconButton, Button } from '@mui/material';
+import { Box, Typography, Skeleton, Dialog, IconButton, Button, Alert } from '@mui/material';
 import RouterIcon from '@mui/icons-material/Router';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import WidgetsOutlinedIcon from '@mui/icons-material/WidgetsOutlined';
@@ -12,6 +12,7 @@ import { deleteAssetComponent } from '../../services/assetComponentsService';
 import AssetComponentFormModal from './AssetComponentFormModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { queryKeys } from '../../../../common/query';
+import { getFriendlyApiErrorMessage } from '../../../../common/utils';
 import { assetComponentsQueryOptions, assetDetailQueryOptions } from './assetDetailQueries.js';
 
 function InfoRow({ label, value }) {
@@ -101,6 +102,12 @@ export default function AssetDetailPanel({ assetId, canManageAssets = false }) {
     const components = componentsQuery.data ?? [];
     const deletingComponent = deleteComponentMutation.isPending;
     const loading = Boolean(assetId) && (detailQuery.isPending || componentsQuery.isPending);
+    const loadError = detailQuery.error ?? componentsQuery.error;
+
+    const handleRetryLoad = () => {
+        void detailQuery.refetch();
+        void componentsQuery.refetch();
+    };
 
     if (loading) {
         return (
@@ -108,6 +115,25 @@ export default function AssetDetailPanel({ assetId, canManageAssets = false }) {
                 <Skeleton variant="text" width={120} height={14} />
                 <Skeleton variant="text" width={200} height={18} />
                 <Skeleton variant="text" width={220} height={18} />
+            </Box>
+        );
+    }
+
+    if (loadError) {
+        return (
+            <Box sx={{ p: 2.5 }}>
+                <Alert
+                    severity="error"
+                    variant="outlined"
+                    action={
+                        <Button color="inherit" size="small" onClick={handleRetryLoad}>
+                            Reintentar
+                        </Button>
+                    }
+                    sx={{ fontSize: '0.82rem' }}
+                >
+                    {getFriendlyApiErrorMessage(loadError, 'No se pudo cargar el detalle del activo')}
+                </Alert>
             </Box>
         );
     }
