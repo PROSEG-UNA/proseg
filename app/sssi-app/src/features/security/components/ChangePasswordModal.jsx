@@ -148,20 +148,24 @@ export function ChangePasswordModal({ open, onClose }) {
           disabled={loading || Boolean(success)}
           fullWidth
           size="small"
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton
-                  onClick={() => setShowCurrent((value) => !value)}
-                  edge="end"
-                  size="small"
-                  aria-label={showCurrent ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                  disabled={loading || Boolean(success)}
-                >
-                  {showCurrent ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-                </IconButton>
-              </InputAdornment>
-            ),
+          slotProps={{
+            input: {
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={() => setShowCurrent((value) => !value)}
+                    tabIndex={-1}
+                    aria-label={showCurrent ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    edge="end"
+                    size="small"
+                    disabled={loading || Boolean(success)}
+                    sx={{ color: 'text.secondary', p: 0.5 }}
+                  >
+                    {showCurrent ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            },
           }}
         />
 
@@ -173,20 +177,24 @@ export function ChangePasswordModal({ open, onClose }) {
           disabled={loading || Boolean(success)}
           fullWidth
           size="small"
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton
-                  onClick={() => setShowPassword((value) => !value)}
-                  edge="end"
-                  size="small"
-                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                  disabled={loading || Boolean(success)}
-                >
-                  {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-                </IconButton>
-              </InputAdornment>
-            ),
+          slotProps={{
+            input: {
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={() => setShowPassword((value) => !value)}
+                    tabIndex={-1}
+                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    edge="end"
+                    size="small"
+                    disabled={loading || Boolean(success)}
+                    sx={{ color: 'text.secondary', p: 0.5 }}
+                  >
+                    {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            },
           }}
         />
 
@@ -215,20 +223,24 @@ export function ChangePasswordModal({ open, onClose }) {
           disabled={loading || Boolean(success)}
           fullWidth
           size="small"
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton
-                  onClick={() => setShowConfirm((value) => !value)}
-                  edge="end"
-                  size="small"
-                  aria-label={showConfirm ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                  disabled={loading || Boolean(success)}
-                >
-                  {showConfirm ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-                </IconButton>
-              </InputAdornment>
-            ),
+          slotProps={{
+            input: {
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={() => setShowConfirm((value) => !value)}
+                    tabIndex={-1}
+                    aria-label={showConfirm ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    edge="end"
+                    size="small"
+                    disabled={loading || Boolean(success)}
+                    sx={{ color: 'text.secondary', p: 0.5 }}
+                  >
+                    {showConfirm ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            },
           }}
         />
       </Box>
