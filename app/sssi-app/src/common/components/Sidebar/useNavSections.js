@@ -12,6 +12,7 @@ import PushPinIcon from '@mui/icons-material/PushPin';
 import PlaceIcon from '@mui/icons-material/Place';
 import ApartmentIcon from '@mui/icons-material/Apartment';
 import EmailIcon from '@mui/icons-material/Email';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
@@ -177,13 +178,14 @@ export function useNavSections() {
         if (canViewMaintenanceSection) {
             result.push({
                 key: 'maintenance',
-                icon: BuildIcon,
-                label: 'Mantenimiento',
+                icon: ConfirmationNumberIcon,
+                label: 'Tickets',
                 items: [
+                    canViewTicketsSubmodule ? { key: 'tickets-dashboard', icon: AnalyticsIcon, label: 'Dashboard', path: '/mantenimiento/dashboard' } : null,
                     { key: 'companies', icon: BusinessIcon, label: 'Empresas', path: '/mantenimiento/empresas' },
                     { key: 'requests', icon: ConstructionIcon, label: 'Solicitud de mantenimiento', path: '/mantenimiento/solicitudes' },
                     canViewRegistersSubmodule ? { key: 'registers', icon: AssignmentIcon, label: 'Registro de mantenimiento', path: '/mantenimiento/registros' } : null,
-                    canViewTicketsSubmodule ? { key: 'tickets', icon: ConfirmationNumberIcon, label: 'Tickets', path: '/mantenimiento/tickets' } : null,
+                    canViewTicketsSubmodule ? { key: 'tickets', icon: ConfirmationNumberIcon, label: 'Gestión de tickets', path: '/mantenimiento/tickets' } : null,
                 ].filter(Boolean),
             });
         }

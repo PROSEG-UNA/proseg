@@ -7,11 +7,9 @@ import {
     Card,
     CardContent,
     Chip,
-    CircularProgress,
     Container,
     Divider,
     Grid,
-    LinearProgress,
     Stack,
     Typography,
 } from '@mui/material';
@@ -23,13 +21,10 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircle';
 import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 import AssignmentIndOutlinedIcon from '@mui/icons-material/AssignmentIndOutlined';
-import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
-import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
 import { FeatureCard } from '../../../common/components/FeatureCard.jsx';
 import { APP_CONFIG } from '../../../config/appConfig.js';
 import { usePermissions } from '../../../common/hooks/usePermissions.js';
 import { PERMISSIONS } from '../../../common/constants/permissions.js';
-import { fetchMaintenanceTicketsDashboardSummary } from '../../maintenance/services/ticketsService.js';
 
 const dashboardCardSx = {
     borderRadius: 2.5,
@@ -168,12 +163,9 @@ function InsightProgress({ label, value, helper, color = 'primary' }) {
                 <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{label}</Typography>
                 <Chip size="small" label={`${value}%`} color={color} variant="outlined" />
             </Stack>
-            <LinearProgress
-                variant="determinate"
-                value={Math.min(Math.max(value, 0), 100)}
-                color={color}
-                sx={{ height: 7, borderRadius: 100, mb: 0.4 }}
-            />
+            <Box sx={{ height: 7, borderRadius: 100, mb: 0.4, background: 'action.hover' }}>
+                <Box sx={{ width: `${Math.min(Math.max(value, 0), 100)}%`, height: '100%', background: (t) => t.palette[color]?.main || t.palette.primary.main, borderRadius: 100 }} />
+            </Box>
             <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{helper}</Typography>
         </Box>
     );
@@ -195,29 +187,6 @@ export function HomePage() {
     ]);
     const loadingSummary = canSeeTicketsDashboard && summary === null && summaryError === '';
 
-    useEffect(() => {
-        let isMounted = true;
-
-        if (!canSeeTicketsDashboard) {
-            return () => {
-                isMounted = false;
-            };
-        }
-
-        fetchMaintenanceTicketsDashboardSummary()
-            .then((response) => {
-                if (!isMounted) return;
-                setSummary(response);
-            })
-            .catch(() => {
-                if (!isMounted) return;
-                setSummaryError('No se pudo cargar el dashboard inicial de tickets.');
-            });
-
-        return () => {
-            isMounted = false;
-        };
-    }, [canSeeTicketsDashboard]);
 
     const kpiCards = useMemo(() => {
         if (!summary) return [];
@@ -267,9 +236,10 @@ export function HomePage() {
                 title: 'Ultimos 7 dias',
                 value: summary.recentTicketsLast7Days ?? 0,
                 caption: `Promedio resolucion: ${summary.averageResolutionHours ?? 0}h`,
-                icon: <InsightsOutlinedIcon fontSize="small" />,
+            icon: <CheckCircleOutlineIcon fontSize="small" />,
                 accent: 'primary.main',
             },
+
         ];
     }, [summary]);
 
@@ -306,10 +276,7 @@ export function HomePage() {
         }
         statsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
-    useEffect(() => {
-        if (!showStats) return;
-        statsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, [showStats]);
+
 
     return (
         <Box sx={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
@@ -347,165 +314,6 @@ export function HomePage() {
                     </Typography>
                 </Box>
             </Container>
-
-            {showStats ? (
-                <Container ref={statsSectionRef} maxWidth="lg" sx={{ pb: { xs: 4, md: 5 }, order: 2 }}>
-                    {loadingSummary ? (
-                        <Box sx={{ py: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <CircularProgress size={20} />
-                            <Typography sx={{ fontSize: 14, color: 'text.secondary' }}>
-                                Cargando dashboard inicial...
-                            </Typography>
-                        </Box>
-                    ) : null}
-
-                    {!loadingSummary && summaryError ? (
-                        <Alert severity="warning" sx={{ mb: 2 }}>
-                            {summaryError}
-                        </Alert>
-                    ) : null}
-
-                    {!loadingSummary && summary ? (
-                        <Stack spacing={2.5}>
-                            <SectionHeading
-                                title="Dashboard inicial de mantenimiento"
-                                subtitle="Vista ejecutiva de carga operativa y distribucion de tickets."
-                            />
-
-                            <Grid container spacing={3}>
-                                {kpiCards.map((card) => (
-                                    <Grid item xs={12} sm={6} md={4} lg={3} key={card.key}>
-                                        <KpiCard
-                                            title={card.title}
-                                            value={card.value}
-                                            caption={card.caption}
-                                            icon={card.icon}
-                                            accent={card.accent}
-                                        />
-                                    </Grid>
-                                ))}
-                            </Grid>
-
-                            <Grid container spacing={3}>
-                                <Grid item xs={12} md={8}>
-                                    <Card variant="outlined" sx={dashboardCardSx}>
-                                        <CardContent>
-                                            <Typography sx={{ fontWeight: 800, fontSize: 15, mb: 1.5 }}>
-                                                Area estadistica
-                                            </Typography>
-
-                                            <Grid container spacing={2}>
-                                                <Grid item xs={12} sm={6}>
-                                                    <InsightProgress
-                                                        label="Carga en backlog"
-                                                        value={statisticalRatios.backlogRate}
-                                                        helper="Porcentaje del total que sigue pendiente."
-                                                        color="warning"
-                                                    />
-                                                </Grid>
-                                                <Grid item xs={12} sm={6}>
-                                                    <InsightProgress
-                                                        label="Riesgo de vencimiento"
-                                                        value={statisticalRatios.overdueRate}
-                                                        helper="Tickets que ya superaron el umbral interno."
-                                                        color="error"
-                                                    />
-                                                </Grid>
-                                                <Grid item xs={12} sm={6}>
-                                                    <InsightProgress
-                                                        label="Cobertura de asignacion"
-                                                        value={statisticalRatios.assignmentRate}
-                                                        helper="Tickets actualmente asignados a tecnico."
-                                                        color="success"
-                                                    />
-                                                </Grid>
-                                                <Grid item xs={12} sm={6}>
-                                                    <InsightProgress
-                                                        label="Tasa de cancelacion"
-                                                        value={statisticalRatios.cancellationRate}
-                                                        helper="Participacion de tickets cancelados."
-                                                        color="info"
-                                                    />
-                                                </Grid>
-                                            </Grid>
-
-                                            <Divider sx={{ my: 2 }} />
-
-                                            <Grid container spacing={2}>
-                                                <Grid item xs={12} sm={6}>
-                                                    <Typography sx={{ fontSize: 13, color: 'text.secondary', mb: 0.4 }}>
-                                                        Tickets totales
-                                                    </Typography>
-                                                    <Typography sx={{ fontSize: 28, fontWeight: 900, lineHeight: 1.1 }}>
-                                                        {summary.totalTickets ?? 0}
-                                                    </Typography>
-                                                </Grid>
-                                                <Grid item xs={12} sm={6}>
-                                                    <Typography sx={{ fontSize: 13, color: 'text.secondary', mb: 0.4 }}>
-                                                        Promedio de resolucion
-                                                    </Typography>
-                                                    <Typography sx={{ fontSize: 28, fontWeight: 900, lineHeight: 1.1 }}>
-                                                        {summary.averageResolutionHours ?? 0}h
-                                                    </Typography>
-                                                </Grid>
-                                            </Grid>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                                <Grid item xs={12} md={4}>
-                                    <Card variant="outlined" sx={dashboardCardSx}>
-                                        <CardContent>
-                                            <Typography sx={{ fontWeight: 800, fontSize: 15, mb: 1.5 }}>
-                                                Top de atencion
-                                            </Typography>
-
-                                            <Stack spacing={1.1}>
-                                                <Typography sx={{ fontSize: 12, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                                                    Tecnicos
-                                                </Typography>
-                                                {topTechnicians.length === 0 ? (
-                                                    <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>Sin datos</Typography>
-                                                ) : topTechnicians.map((item, index) => (
-                                                    <Stack key={`tech-${item.key}`} direction="row" justifyContent="space-between">
-                                                        <Typography sx={{ fontSize: 13 }}>{index + 1}. {item.label}</Typography>
-                                                        <Chip size="small" label={item.count} />
-                                                    </Stack>
-                                                ))}
-
-                                                <Divider sx={{ my: 0.8 }} />
-
-                                                <Typography sx={{ fontSize: 12, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                                                    Empresas
-                                                </Typography>
-                                                {topCompanies.length === 0 ? (
-                                                    <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>Sin datos</Typography>
-                                                ) : topCompanies.map((item, index) => (
-                                                    <Stack key={`company-${item.key}`} direction="row" justifyContent="space-between">
-                                                        <Typography sx={{ fontSize: 13 }}>{index + 1}. {item.label}</Typography>
-                                                        <Chip size="small" label={item.count} />
-                                                    </Stack>
-                                                ))}
-                                            </Stack>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                                <Grid item xs={12} md={6}>
-                                    <MetricList title="Distribucion por prioridad" items={summary.byPriority ?? []} color="warning.main" />
-                                </Grid>
-                                <Grid item xs={12} md={6}>
-                                    <MetricList title="Distribucion por estado" items={summary.byStatus ?? []} color="info.main" />
-                                </Grid>
-                                <Grid item xs={12} md={6}>
-                                    <MetricList title="Tickets por tecnico" items={summary.byTechnician ?? []} color="primary.main" />
-                                </Grid>
-                                <Grid item xs={12} md={6}>
-                                    <MetricList title="Tickets por empresa" items={summary.byCompany ?? []} color="success.main" />
-                                </Grid>
-                            </Grid>
-                        </Stack>
-                    ) : null}
-                </Container>
-            ) : null}
 
             <Container maxWidth="lg" sx={{ pb: { xs: 6, md: 8 }, flex: 1, order: 1 }}>
                 <Box sx={{ mb: 2.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -551,24 +359,6 @@ export function HomePage() {
                         buttonLabel="Ir a Roles"
                         onNavigate={() => navigate('/seguridad/roles')}
                     />
-                </Box>
-                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
-                    <Button
-                        size="small"
-                        variant="text"
-                        onClick={handleScrollToStats}
-                        endIcon={<KeyboardArrowDownRoundedIcon fontSize="small" />}
-                        sx={{
-                            color: 'text.secondary',
-                            fontSize: 12,
-                            fontWeight: 500,
-                            minHeight: 28,
-                            opacity: 0.8,
-                            textTransform: 'none',
-                        }}
-                    >
-                        {showStats ? 'Ir a estadisticas' : 'Ver estadisticas'}
-                    </Button>
                 </Box>
             </Container>
         </Box>

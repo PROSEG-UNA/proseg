@@ -21,6 +21,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import LogoutIcon from '@mui/icons-material/Logout';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import BuildIcon from '@mui/icons-material/Build';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import PeopleIcon from '@mui/icons-material/People';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
@@ -101,11 +102,12 @@ export function MobileNavbar() {
 
   const maintenanceItems = canViewMaintenanceSection
     ? [
-        { key: 'module', icon: BuildIcon, label: 'Mantenimiento', path: '/mantenimiento' },
+        { key: 'module', icon: ConfirmationNumberIcon, label: 'Tickets', path: '/mantenimiento' },
+        { key: 'dashboard', icon: AnalyticsIcon, label: 'Dashboard', path: '/mantenimiento/dashboard' },
         { key: 'companies', icon: BuildIcon, label: 'Empresas', path: '/mantenimiento/empresas' },
         { key: 'requests', icon: BuildIcon, label: 'Solicitudes', path: '/mantenimiento/solicitudes' },
         { key: 'technicians', icon: BuildIcon, label: 'Técnicos', path: '/mantenimiento/tecnicos' },
-        { key: 'tickets', icon: ConfirmationNumberIcon, label: 'Tickets', path: '/mantenimiento/tickets' },
+        { key: 'tickets', icon: ConfirmationNumberIcon, label: 'Gestión de tickets', path: '/mantenimiento/tickets' },
       ]
     : [];
 
@@ -342,9 +344,9 @@ export function MobileNavbar() {
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <BuildIcon sx={{ mr: 2, fontSize: 20 }} />
+                        <ConfirmationNumberIcon sx={{ mr: 2, fontSize: 20 }} />
                         <ListItemText
-                          primary="Gestión Mantenimiento"
+                                                  primary="Gestión de Tickets"
                           sx={{ '& .MuiListItemText-primary': { fontSize: '1.05rem', fontWeight: 600, lineHeight: 1.2 } }}
                         />
                       </Box>
