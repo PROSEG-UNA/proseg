@@ -80,8 +80,8 @@ export default function AssetDetailPanel({ assetId, canManageAssets = false }) {
         enabled: Boolean(assetId),
     });
 
-    const invalidateComponents = () => queryClient.invalidateQueries({
-        queryKey: queryKeys.inventory.assetComponents(assetId),
+    const invalidateAssets = () => queryClient.invalidateQueries({
+        queryKey: queryKeys.inventory.assets(),
     });
 
     const deleteComponentMutation = useMutation({
@@ -89,7 +89,7 @@ export default function AssetDetailPanel({ assetId, canManageAssets = false }) {
         onSuccess: async () => {
             setComponentToDelete(null);
             setAlert({ type: 'success', message: 'Componente eliminado correctamente' });
-            await invalidateComponents();
+            await invalidateAssets();
         },
         onError: (deleteError) => {
             const data = deleteError?.response?.data;
@@ -143,7 +143,7 @@ export default function AssetDetailPanel({ assetId, canManageAssets = false }) {
 
     const handleComponentSaved = async () => {
         try {
-            await invalidateComponents();
+            await invalidateAssets();
             setAlert({ type: 'success', message: 'Componente guardado correctamente' });
         } catch {
             setAlert({ type: 'error', message: 'No se pudieron cargar los componentes' });
