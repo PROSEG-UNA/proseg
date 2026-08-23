@@ -30,16 +30,9 @@ const RED = {
     900: '#7f1d1d',
 };
 
-/**
- * expiresAt puede llegar como:
- *   - número Unix en SEGUNDOS  (ej: 1778224518.25)  ← tu backend actual
- *   - string ISO-8601          (ej: "2026-05-08T01:17:34Z")
- * Devuelve siempre un Date válido.
- */
 function parseExpiry(value) {
     if (!value) return null;
     if (typeof value === 'string') return new Date(value);
-    // Si es número y parece segundos (< año 9999 en ms sería ~999999999999)
     const asMs = value < 1e12 ? value * 1000 : value;
     return new Date(asMs);
 }
@@ -79,7 +72,6 @@ function getPasswordStrength(password) {
     return {score: 100, label: 'Muy fuerte', color: '#047857'};
 }
 
-// ── Shell ──────────────────────────────────────────────────────────────────────
 function PageShell({children}) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
@@ -132,7 +124,6 @@ function PageShell({children}) {
     );
 }
 
-// ── Header ─────────────────────────────────────────────────────────────────────
 function ModalHeader({title, subtitle}) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
@@ -162,7 +153,6 @@ function ModalHeader({title, subtitle}) {
     );
 }
 
-// ── Requirement row ────────────────────────────────────────────────────────────
 function Req({label, met}) {
     return (
         <Typography variant="caption" sx={{
@@ -181,7 +171,6 @@ function Req({label, met}) {
     );
 }
 
-// ── 404 ───────────────────────────────────────────────────────────────────────
 function InvalidTokenView() {
     const navigate = useNavigate();
     return (
@@ -214,7 +203,6 @@ function InvalidTokenView() {
     );
 }
 
-// ── Success ───────────────────────────────────────────────────────────────────
 function SuccessView({info}) {
     const navigate = useNavigate();
     const theme = useTheme();
@@ -264,7 +252,6 @@ function SuccessView({info}) {
     );
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
 export function SetPasswordPage() {
     const [searchParams] = useSearchParams();
     const token = searchParams.get('token');
@@ -290,7 +277,6 @@ export function SetPasswordPage() {
     const mismatch = confirm && password !== confirm;
     const timeRemaining = info ? getTimeRemaining(info.expiresAt) : null;
 
-    // Fetch invitation info via authApi
     useEffect(() => {
         if (!token) {
             setTokenValid(false);

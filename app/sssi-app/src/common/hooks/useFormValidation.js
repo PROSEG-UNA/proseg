@@ -1,14 +1,3 @@
-/**
- * useFormValidation Hook
- * Maneja la validación de múltiples campos en un formulario
- * 
- * Uso:
- * const { formData, errors, touched, handleChange, handleBlur, validateForm } = useFormValidation(
- *   { email: '', password: '' },
- *   ['email', 'loginPassword']
- * );
- */
-
 import { useState } from 'react';
 import { validateField, getValidationRule } from '../utils/validationRegex';
 

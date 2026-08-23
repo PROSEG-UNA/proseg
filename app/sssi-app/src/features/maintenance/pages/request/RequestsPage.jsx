@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Box, Button, Container, Menu, MenuItem } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
+import ExportIcon from '../../../../common/components/icons/ExportIcon.jsx';
 import { PageHeader } from '../../../../common/components/index.js';
 import AccessDeniedState from '../../../../common/components/AccessDeniedState.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
@@ -87,7 +87,7 @@ export default function RequestsPage() {
                                 <>
                                     <Button
                                         variant="outlined"
-                                        startIcon={<CloudUploadOutlinedIcon />}
+                                        startIcon={<ExportIcon style={{ fontSize: 16, marginRight: 2 }} />}
                                         onClick={handleOpenExportMenu}
                                         sx={{
                                             textTransform: 'none',
