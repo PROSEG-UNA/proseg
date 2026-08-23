@@ -8,6 +8,7 @@ import {
   LinearProgress,
   TextField,
   Typography,
+  useTheme,
 } from '@mui/material';
 import LockResetIcon from '@mui/icons-material/LockReset';
 import Visibility from '@mui/icons-material/Visibility';
@@ -46,6 +47,12 @@ export function ChangePasswordModal({ open, onClose }) {
   }, [open]);
 
   const strength = useMemo(() => getPasswordStrength(password), [password]);
+
+  const theme = useTheme();
+  const accentColor = theme.vars.palette.tones.rose.fg;
+
+  const passwordsMatch = confirmPassword && password === confirmPassword;
+  const mismatch = confirmPassword && password !== confirmPassword;
 
   const resetSensitiveFields = () => {
     setCurrentPassword('');
@@ -177,6 +184,8 @@ export function ChangePasswordModal({ open, onClose }) {
           disabled={loading || Boolean(success)}
           fullWidth
           size="small"
+          helperText=" "
+          sx={{ mb: 0.5 }}
           slotProps={{
             input: {
               endAdornment: (
@@ -188,9 +197,9 @@ export function ChangePasswordModal({ open, onClose }) {
                     edge="end"
                     size="small"
                     disabled={loading || Boolean(success)}
-                    sx={{ color: 'text.secondary', p: 0.5 }}
+                    sx={{ color: 'text.secondary', p: 0.5, '&:hover': { color: accentColor, bgcolor: 'transparent' } }}
                   >
-                    {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                    {showPassword ? <VisibilityOff sx={{ fontSize: 18 }} /> : <Visibility sx={{ fontSize: 18 }} />}
                   </IconButton>
                 </InputAdornment>
               ),
@@ -220,10 +229,17 @@ export function ChangePasswordModal({ open, onClose }) {
           type={showConfirm ? 'text' : 'password'}
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && !success && handleSubmit()}
           disabled={loading || Boolean(success)}
           fullWidth
           size="small"
+          error={mismatch}
+          helperText={
+            mismatch ? 'Las contraseñas no coinciden' :
+            passwordsMatch ? '✓ Las contraseñas coinciden' : ' '
+          }
           slotProps={{
+            formHelperText: { sx: { color: passwordsMatch ? '#059669' : undefined, fontWeight: 600 } },
             input: {
               endAdornment: (
                 <InputAdornment position="end">
@@ -234,9 +250,9 @@ export function ChangePasswordModal({ open, onClose }) {
                     edge="end"
                     size="small"
                     disabled={loading || Boolean(success)}
-                    sx={{ color: 'text.secondary', p: 0.5 }}
+                    sx={{ color: 'text.secondary', p: 0.5, '&:hover': { color: accentColor, bgcolor: 'transparent' } }}
                   >
-                    {showConfirm ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                    {showConfirm ? <VisibilityOff sx={{ fontSize: 18 }} /> : <Visibility sx={{ fontSize: 18 }} />}
                   </IconButton>
                 </InputAdornment>
               ),
