@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchAssignedRegisters, fetchRegistersHistory } from '../../services/register/registerService';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils';
 import { statusLabel } from '../../maintenanceUtils';
+import { keepPreviousPage, queryKeys } from '../../../../common/query';
 
 function mapRequest(request) {
     return {
@@ -24,43 +25,33 @@ function mapRequest(request) {
     };
 }
 
-export function useMaintenanceRegisterData({ mode = 'assigned', status = null, pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [], refreshKey = 0 } = {}) {
-    const [rows, setRows] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [totalElements, setTotalElements] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
+export function useMaintenanceRegisterData({ mode = 'assigned', status = null, pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [] } = {}) {
+    const requestParams = { page: pageIndex, size: pageSize, search, filters, sort };
 
-    const filtersKey = JSON.stringify(filters);
-    const sortKey = sort.join('|');
+    const listQueryKey = queryKeys.maintenance.registerList({ mode, status }, requestParams);
 
-    useEffect(() => {
-        let ignore = false;
+    const { data, isLoading, isFetching, error } = useQuery({
+        queryKey: listQueryKey,
+        placeholderData: keepPreviousPage(listQueryKey),
+        queryFn: async () => {
+            const response = mode === 'history'
+                ? await fetchRegistersHistory(requestParams)
+                : await fetchAssignedRegisters({ status, ...requestParams });
 
-        const load = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-                const response = mode === 'history'
-                    ? await fetchRegistersHistory({ page: pageIndex, size: pageSize, search, filters, sort })
-                    : await fetchAssignedRegisters({ status, page: pageIndex, size: pageSize, search, filters, sort });
-                if (ignore) return;
+            return {
+                rows: (response.content ?? []).map(mapRequest),
+                totalElements: response.totalElements ?? 0,
+                totalPages: response.totalPages ?? 0,
+            };
+        },
+    });
 
-                setRows((response.content ?? []).map(mapRequest));
-                setTotalElements(response.totalElements ?? 0);
-                setTotalPages(response.totalPages ?? 0);
-            } catch (err) {
-                if (!ignore) setError(getFriendlyApiErrorMessage(err, 'Error al cargar registros de mantenimiento'));
-            } finally {
-                if (!ignore) setLoading(false);
-            }
-        };
-
-        void load();
-        return () => {
-            ignore = true;
-        };
-    }, [mode, status, pageIndex, pageSize, search, filtersKey, sortKey, refreshKey]);
-
-    return { rows, loading, error, totalElements, totalPages };
+    return {
+        rows: data?.rows ?? [],
+        loading: isLoading,
+        fetching: isFetching,
+        error: error ? getFriendlyApiErrorMessage(error, 'Error al cargar registros de mantenimiento') : null,
+        totalElements: data?.totalElements ?? 0,
+        totalPages: data?.totalPages ?? 0,
+    };
 }

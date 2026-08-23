@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import TableBase from '../../../../common/components/TablaBase.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { useDebounce } from '../../../../common/hooks/useDebounce.js';
@@ -9,6 +10,7 @@ import { useMaintenanceCompaniesData } from '../../hooks/company/useMaintenanceC
 import { getCompanyColumns, renderCompanyActions } from './companyColumns.jsx';
 import CompanyDetailPanel from './CompanyDetailPanel.jsx';
 import CompanyDetailModal from './CompanyDetailModal.jsx';
+import { queryKeys } from '../../../../common/query';
 
 const COLUMN_TO_BACKEND_KEY = {
     name: 'name',
@@ -18,14 +20,14 @@ const COLUMN_TO_BACKEND_KEY = {
     address: 'address',
 };
 
-export default function CompanyTable({ refreshKey = 0, onRefresh, onEditCompany, onManageUsers }) {
+export default function CompanyTable({ onEditCompany, onManageUsers }) {
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
     const [sorting, setSorting] = useState([]);
     const [alert, setAlert] = useState(null);
     const [companyToDelete, setCompanyToDelete] = useState(null);
-    const [deleting, setDeleting] = useState(false);
+    const queryClient = useQueryClient();
     const [detailModalOpen, setDetailModalOpen] = useState(false);
     const [detailCompanyId, setDetailCompanyId] = useState(null);
     const { hasPermission } = usePermissions();
@@ -63,16 +65,29 @@ export default function CompanyTable({ refreshKey = 0, onRefresh, onEditCompany,
         setPagination((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }));
     }, [debouncedGlobalFilter, backendFilters, backendSort]);
 
-    const { rows, loading, error, totalElements } = useMaintenanceCompaniesData({
+    const { rows, loading, fetching, error, totalElements } = useMaintenanceCompaniesData({
         pageIndex: pagination.pageIndex,
         pageSize: pagination.pageSize,
         search: debouncedGlobalFilter,
         filters: backendFilters,
         sort: backendSort,
-        refreshKey,
     });
 
     const columns = useMemo(() => getCompanyColumns(), []);
+
+    const deleteCompanyMutation = useMutation({
+        mutationFn: (companyId) => deleteCompany(companyId),
+        onSuccess: async () => {
+            setCompanyToDelete(null);
+            setAlert({ type: 'success', message: 'Empresa eliminada correctamente' });
+            await queryClient.invalidateQueries({ queryKey: queryKeys.maintenance.companies() });
+        },
+        onError: (deleteError) => {
+            setAlert({ type: 'error', message: deleteError?.response?.data?.message ?? deleteError?.message ?? 'No se pudo eliminar la empresa' });
+        },
+    });
+
+    const deleting = deleteCompanyMutation.isPending;
 
     const handleDelete = useCallback((row) => setCompanyToDelete(row), []);
     const handleDeleteCancel = useCallback(() => {
@@ -90,20 +105,10 @@ export default function CompanyTable({ refreshKey = 0, onRefresh, onEditCompany,
         setDetailCompanyId(null);
     }, []);
 
-    const handleDeleteConfirm = useCallback(async () => {
+    const handleDeleteConfirm = useCallback(() => {
         if (!companyToDelete) return;
-        setDeleting(true);
-        try {
-            await deleteCompany(companyToDelete.id);
-            setCompanyToDelete(null);
-            setAlert({ type: 'success', message: 'Empresa eliminada correctamente' });
-            onRefresh?.();
-        } catch (error) {
-            setAlert({ type: 'error', message: error?.response?.data?.message ?? error?.message ?? 'No se pudo eliminar la empresa' });
-        } finally {
-            setDeleting(false);
-        }
-    }, [companyToDelete, onRefresh]);
+        deleteCompanyMutation.mutate(companyToDelete.id);
+    }, [companyToDelete, deleteCompanyMutation]);
 
     return (
         <>
@@ -111,6 +116,7 @@ export default function CompanyTable({ refreshKey = 0, onRefresh, onEditCompany,
                 columns={columns}
                 data={rows}
                 loading={loading}
+                fetching={fetching}
                 error={error}
                 enableRowActions={canEdit || canDelete || canManageUsers}
                 renderRowActions={renderCompanyActions({
@@ -125,6 +131,7 @@ export default function CompanyTable({ refreshKey = 0, onRefresh, onEditCompany,
                 renderDetailPanel={({ row }) => (
                     <CompanyDetailPanel
                         companyId={row.original.id}
+                        listRow={row.original}
                         onManageUsers={onManageUsers}
                         canManageUsers={canManageUsers}
                     />

@@ -1,52 +1,46 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { getFriendlyApiErrorMessage } from '../../../common/utils';
 import { fetchMaintenanceTickets } from '../services/ticketsService';
+import { keepPreviousPage, queryKeys } from '../../../common/query';
 
-export function useMaintenanceTicketsData({ pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [], refreshKey = 0 } = {}) {
-    const [rows, setRows] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [totalElements, setTotalElements] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
+function mapTicketToRow(ticket) {
+    return {
+        id: ticket.id,
+        title: ticket.title ?? '—',
+        description: ticket.description ?? '—',
+        status: ticket.status ?? '—',
+        statusRaw: ticket.status ?? '',
+        createdBy: ticket.createdBy ?? '—',
+        createdByName: ticket.createdByName ?? ticket.createdBy ?? '—',
+        createdAt: ticket.createdAt ?? null,
+        updatedAt: ticket.updatedAt ?? null,
+    };
+}
 
-    const filtersKey = JSON.stringify(filters);
-    const sortKey = sort.join('|');
+export function useMaintenanceTicketsData({ pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [] } = {}) {
+    const requestParams = { page: pageIndex, size: pageSize, search, filters, sort };
 
-    useEffect(() => {
-        let ignore = false;
+    const listQueryKey = queryKeys.maintenance.ticketList(requestParams);
 
-        const load = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-                const response = await fetchMaintenanceTickets({ page: pageIndex, size: pageSize, search, filters, sort });
-                if (ignore) return;
+    const { data, isLoading, isFetching, error } = useQuery({
+        queryKey: listQueryKey,
+        placeholderData: keepPreviousPage(listQueryKey),
+        queryFn: async () => {
+            const response = await fetchMaintenanceTickets(requestParams);
+            return {
+                rows: (response.content ?? []).map(mapTicketToRow),
+                totalElements: response.totalElements ?? 0,
+                totalPages: response.totalPages ?? 0,
+            };
+        },
+    });
 
-                setRows((response.content ?? []).map((ticket) => ({
-                    id: ticket.id,
-                    title: ticket.title ?? '—',
-                    description: ticket.description ?? '—',
-                    status: ticket.status ?? '—',
-                    statusRaw: ticket.status ?? '',
-                    createdBy: ticket.createdBy ?? '—',
-                    createdByName: ticket.createdByName ?? ticket.createdBy ?? '—',
-                    createdAt: ticket.createdAt ?? null,
-                    updatedAt: ticket.updatedAt ?? null,
-                })));
-                setTotalElements(response.totalElements ?? 0);
-                setTotalPages(response.totalPages ?? 0);
-            } catch (error) {
-                if (!ignore) setError(getFriendlyApiErrorMessage(error, 'Error al cargar tickets de mantenimiento'));
-            } finally {
-                if (!ignore) setLoading(false);
-            }
-        };
-
-        void load();
-        return () => {
-            ignore = true;
-        };
-    }, [pageIndex, pageSize, search, filtersKey, sortKey, refreshKey]);
-
-    return { rows, loading, error, totalElements, totalPages };
+    return {
+        rows: data?.rows ?? [],
+        loading: isLoading,
+        fetching: isFetching,
+        error: error ? getFriendlyApiErrorMessage(error, 'Error al cargar tickets de mantenimiento') : null,
+        totalElements: data?.totalElements ?? 0,
+        totalPages: data?.totalPages ?? 0,
+    };
 }

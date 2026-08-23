@@ -6,14 +6,13 @@ import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import { formatDateTime, formatAssetIdentity } from '../../../../common/utils/formatters.js';
 import { useAssetMaintenanceHistory } from '../../hooks/useAssetMaintenanceHistory';
 
-export default function AssetMaintenanceHistoryModal({ open, onClose, asset, refreshKey = 0 }) {
+export default function AssetMaintenanceHistoryModal({ open, onClose, asset }) {
     const theme = useTheme();
     const accentColor = theme.vars.palette.tones.rose.fg;
 
-    const { rows, loading, error, totalElements } = useAssetMaintenanceHistory({
+    const { rows, loading, fetching, error, totalElements } = useAssetMaintenanceHistory({
         assetId: open ? asset?.id : null,
         pageSize: 50,
-        refreshKey,
     });
 
     return (
@@ -25,6 +24,7 @@ export default function AssetMaintenanceHistoryModal({ open, onClose, asset, ref
             title="Historial de mantenimiento"
             subtitle={formatAssetIdentity(asset)}
             loading={loading}
+            fetching={fetching}
             secondaryButton={{ label: 'Cerrar', onClick: onClose }}
         >
             <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>

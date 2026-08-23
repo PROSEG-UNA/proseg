@@ -1,9 +1,10 @@
 import { usePermissions } from '../../../../common/hooks/index.js';
 
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Box, Button, Container, Menu, MenuItem } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import DownloadForOfflineOutlinedIcon from '@mui/icons-material/DownloadForOfflineOutlined';
+import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
 import { PageHeader } from '../../../../common/components/index.js';
 import AccessDeniedState from '../../../../common/components/AccessDeniedState.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
@@ -12,10 +13,11 @@ import { PERMISSIONS } from '../../../../common/constants/permissions';
 import MaintenanceRequestTable from '../../components/request/MaintenanceRequestTable.jsx';
 import MaintenanceRequestFormModal from '../../components/request/MaintenanceRequestFormModal.jsx';
 import { exportMaintenanceRequests, triggerBrowserDownload } from '../../services/maintenanceExportService.js';
+import { queryKeys } from '../../../../common/query';
 
 export default function RequestsPage() {
     const [requestFormState, setRequestFormState] = useState({ open: false, requestId: null, initialCompanyId: '' });
-    const [requestsRefresh, setRequestsRefresh] = useState(0);
+    const queryClient = useQueryClient();
     const [exportAnchorEl, setExportAnchorEl] = useState(null);
     const [exporting, setExporting] = useState(false);
     const [alert, setAlert] = useState(null);
@@ -40,7 +42,9 @@ export default function RequestsPage() {
     const openCreateRequest = (initialCompanyId = '') => setRequestFormState({ open: true, requestId: null, initialCompanyId });
     const openEditRequest = (request) => setRequestFormState({ open: true, requestId: request.id, initialCompanyId: request.companyId ?? '' });
 
-    const refreshRequests = () => setRequestsRefresh((previousValue) => previousValue + 1);
+    const refreshRequests = () => {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.maintenance.requests() });
+    };
 
     const handleOpenExportMenu = (event) => {
         setExportAnchorEl(event.currentTarget);
@@ -83,7 +87,7 @@ export default function RequestsPage() {
                                 <>
                                     <Button
                                         variant="outlined"
-                                        startIcon={<DownloadForOfflineOutlinedIcon />}
+                                        startIcon={<CloudUploadOutlinedIcon />}
                                         onClick={handleOpenExportMenu}
                                         sx={{
                                             textTransform: 'none',
@@ -122,8 +126,6 @@ export default function RequestsPage() {
 
                 <Box sx={{ pt: 3 }}>
                     <MaintenanceRequestTable
-                        refreshKey={requestsRefresh}
-                        onRefresh={refreshRequests}
                         onEditRequest={openEditRequest}
                     />
                 </Box>

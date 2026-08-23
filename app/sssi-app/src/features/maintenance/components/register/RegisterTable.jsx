@@ -12,7 +12,7 @@ const COLUMN_TO_BACKEND_KEY = {
     startDate: 'startDate',
 };
 
-export default function RegisterTable({ refreshKey = 0, onOpenRegister }) {
+export default function RegisterTable({ onOpenRegister }) {
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
@@ -47,14 +47,13 @@ export default function RegisterTable({ refreshKey = 0, onOpenRegister }) {
         setPagination((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }));
     }, [debouncedGlobalFilter, backendFilters, backendSort]);
 
-    const { rows, loading, error, totalElements } = useMaintenanceRegisterData({
+    const { rows, loading, fetching, error, totalElements } = useMaintenanceRegisterData({
         mode: 'history',
         pageIndex: pagination.pageIndex,
         pageSize: pagination.pageSize,
         search: debouncedGlobalFilter,
         filters: backendFilters,
         sort: backendSort,
-        refreshKey,
     });
 
     const columns = useMemo(() => getRegisterColumns(), []);
@@ -64,6 +63,7 @@ export default function RegisterTable({ refreshKey = 0, onOpenRegister }) {
             columns={columns}
             data={rows}
             loading={loading}
+            fetching={fetching}
             error={error}
             enableRowActions
             renderRowActions={renderRegisterActions({ onOpen: onOpenRegister })}

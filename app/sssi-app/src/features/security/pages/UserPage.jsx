@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Box,
   Container,
@@ -12,16 +13,17 @@ import CreateUserModal from '../components/CreateUserModal.jsx';
 import '../css/UserPage.css';
 import { usePermissions } from '../../../common/hooks/index.js';
 import { PERMISSIONS } from '../../../common/constants/permissions';
+import { queryKeys } from '../../../common/query';
 
 export function UserPage() {
   const [createOpen, setCreateOpen] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
   const canViewUsers = hasPermission(PERMISSIONS.USERS.READ_ALL);
   const canCreateUser = hasPermission(PERMISSIONS.USERS.CREATE);
 
   const handleRefresh = () => {
-    setRefreshKey((prev) => prev + 1);
+    void queryClient.invalidateQueries({ queryKey: queryKeys.security.users() });
   };
 
   return (
@@ -42,7 +44,7 @@ export function UserPage() {
                 titleSx={{ fontSize: '1.65rem', letterSpacing: '0.3px' }}
               />
 
-              <UsersTable refreshKey={refreshKey} />
+              <UsersTable />
               <CreateUserModal
                 open={createOpen}
                 onClose={() => setCreateOpen(false)}

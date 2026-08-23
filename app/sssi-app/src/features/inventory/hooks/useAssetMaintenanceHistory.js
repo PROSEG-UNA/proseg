@@ -1,56 +1,40 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchAssetMaintenanceHistory } from '../services/maintenanceHistoryService';
 import { getFriendlyApiErrorMessage } from '../../../common/utils';
+import { keepPreviousPage, queryKeys } from '../../../common/query';
 
-export function useAssetMaintenanceHistory({ assetId = null, pageIndex = 0, pageSize = 10, refreshKey = 0 } = {}) {
-    const [rows, setRows] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [totalElements, setTotalElements] = useState(0);
-
-    const fetchAndSetHistory = () => {
-        if (!assetId) {
-            setRows([]);
-            setTotalElements(0);
-            setLoading(false);
-            return undefined;
-        }
-
-        let ignore = false;
-
-        const loadHistory = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-
-                const response = await fetchAssetMaintenanceHistory({ assetId, page: pageIndex, size: pageSize });
-
-                if (ignore) return;
-
-                setRows((response.content ?? []).map((record) => ({
-                    id: record.id,
-                    assetId: record.assetId,
-                    companyName: record.company?.name ?? '—',
-                    userEmail: record.userEmail ?? '—',
-                    description: record.description ?? '—',
-                    createdAt: record.createdAt ?? null,
-                })));
-                setTotalElements(response.totalElements ?? 0);
-            } catch (err) {
-                if (!ignore) setError(getFriendlyApiErrorMessage(err, 'Error al cargar el historial de mantenimiento'));
-            } finally {
-                if (!ignore) setLoading(false);
-            }
-        };
-
-        void loadHistory();
-
-        return () => {
-            ignore = true;
-        };
+function mapHistoryRecordToRow(record) {
+    return {
+        id: record.id,
+        assetId: record.assetId,
+        companyName: record.company?.name ?? '—',
+        userEmail: record.userEmail ?? '—',
+        description: record.description ?? '—',
+        createdAt: record.createdAt ?? null,
     };
+}
 
-    useEffect(fetchAndSetHistory, [assetId, pageIndex, pageSize, refreshKey]);
+export function useAssetMaintenanceHistory({ assetId = null, pageIndex = 0, pageSize = 10 } = {}) {
+    const listQueryKey = queryKeys.inventory.assetMaintenanceHistory(assetId, { page: pageIndex, size: pageSize });
 
-    return { rows, loading, error, totalElements };
+    const { data, isLoading, isFetching, error } = useQuery({
+        queryKey: listQueryKey,
+        placeholderData: keepPreviousPage(listQueryKey),
+        queryFn: async () => {
+            const response = await fetchAssetMaintenanceHistory({ assetId, page: pageIndex, size: pageSize });
+            return {
+                rows: (response.content ?? []).map(mapHistoryRecordToRow),
+                totalElements: response.totalElements ?? 0,
+            };
+        },
+        enabled: Boolean(assetId),
+    });
+
+    return {
+        rows: data?.rows ?? [],
+        loading: isLoading,
+        fetching: isFetching,
+        error: error ? getFriendlyApiErrorMessage(error, 'Error al cargar el historial de mantenimiento') : null,
+        totalElements: data?.totalElements ?? 0,
+    };
 }

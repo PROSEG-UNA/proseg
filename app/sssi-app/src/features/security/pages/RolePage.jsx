@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Box,
   Container,
@@ -12,13 +13,17 @@ import RolesTable from '../components/RolesTable.jsx';
 import RoleFormModal from '../components/RoleFormModal.jsx';
 import { usePermissions } from '../../../common/hooks/index.js';
 import { PERMISSIONS } from '../../../common/constants/permissions';
+import { queryKeys } from '../../../common/query';
 
 export function RolePage() {
   const [createOpen, setCreateOpen] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
 
-  const handleRefresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+  const handleRefresh = useCallback(
+    () => { void queryClient.invalidateQueries({ queryKey: queryKeys.security.roles() }); },
+    [queryClient]
+  );
   const canViewRoles = hasPermission(PERMISSIONS.ROLES.READ_COMPOSITE);
   const canCreateRole = hasPermission(PERMISSIONS.ROLES.CREATE);
 
@@ -40,7 +45,7 @@ export function RolePage() {
                 titleSx={{ fontSize: '1.65rem', letterSpacing: '0.3px' }}
               />
 
-              <RolesTable refreshKey={refreshKey} onRefresh={handleRefresh} />
+              <RolesTable />
               <RoleFormModal open={createOpen} onClose={() => setCreateOpen(false)} onSaved={handleRefresh} />
             </>
           ) : (

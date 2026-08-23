@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Box, Container } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { PageHeader } from '../../../../common/components/index.js';
@@ -8,11 +9,12 @@ import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { usePermissions } from '../../../../common/hooks/index.js';
 import ToursTable from '../../components/tours/ToursTable.jsx';
 import TourFormModal from '../../components/tours/TourFormModal.jsx';
+import { queryKeys } from '../../../../common/query';
 
 export default function ToursPage() {
     const [tourFormOpen, setTourFormOpen] = useState(false);
     const [tourFormId, setTourFormId] = useState(null);
-    const [toursRefresh, setToursRefresh] = useState(0);
+    const queryClient = useQueryClient();
     const { hasPermission, hasAnyPermission } = usePermissions();
 
     const canViewTours = hasAnyPermission([
@@ -31,7 +33,9 @@ export default function ToursPage() {
         setTourFormOpen(true);
     };
 
-    const refreshTours = () => setToursRefresh((value) => value + 1);
+    const refreshTours = () => {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.transport.tours() });
+    };
 
     if (!canViewTours) return <AccessDeniedState />;
 
@@ -49,11 +53,7 @@ export default function ToursPage() {
                 />
 
                 <Box sx={{ pt: 3 }}>
-                    <ToursTable
-                        refreshKey={toursRefresh}
-                        onRefresh={refreshTours}
-                        onEditTour={openEditTour}
-                    />
+                    <ToursTable onEditTour={openEditTour} />
                 </Box>
             </Container>
 

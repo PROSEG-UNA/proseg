@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Box, Skeleton, Typography } from '@mui/material';
 import ConstructionIcon from '@mui/icons-material/Construction';
-import { fetchMaintenanceRequestById } from '../../services/request/requestsService';
 import { fetchCampusById, fetchBuildingById } from '../../services/locationsService';
 import { formatDate, statusLabel } from '../../maintenanceUtils';
+import { queryKeys } from '../../../../common/query';
+import { requestDetailQueryOptions } from './requestDetailQueries.js';
 
 function InfoRow({ label, value }) {
     return (
@@ -18,56 +19,33 @@ function InfoRow({ label, value }) {
     );
 }
 
+const EMPTY_LOCATION_NAMES = { campus: null, building: null };
+
 function formatTime(value) {
     if (!value) return '—';
     return String(value).substring(0, 5);
 }
 
 export default function MaintenanceRequestDetailPanel({ requestId }) {
-    const [request, setRequest] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [locationNames, setLocationNames] = useState({ campus: null, building: null });
+    const { data: request, isPending } = useQuery({
+        ...requestDetailQueryOptions(requestId),
+        enabled: Boolean(requestId),
+    });
 
-    useEffect(() => {
-        let cancelled = false;
-        setLoading(true);
-        setRequest(null);
-        setLocationNames({ campus: null, building: null });
+    const { data: locationNames = EMPTY_LOCATION_NAMES } = useQuery({
+        queryKey: queryKeys.maintenance.requestLocationNames(request?.campusId ?? null, request?.buildingId ?? null),
+        queryFn: async () => {
+            const [campus, building] = await Promise.all([
+                request.campusId ? fetchCampusById(request.campusId) : Promise.resolve(null),
+                request.buildingId ? fetchBuildingById(request.buildingId) : Promise.resolve(null),
+            ]);
 
-        fetchMaintenanceRequestById(requestId)
-            .then((requestData) => {
-                if (cancelled) return;
-                setRequest(requestData);
-            })
-            .catch(() => null)
-            .finally(() => {
-                if (!cancelled) setLoading(false);
-            });
+            return { campus: campus?.name ?? null, building: building?.name ?? null };
+        },
+        enabled: Boolean(request),
+    });
 
-        return () => {
-            cancelled = true;
-        };
-    }, [requestId]);
-
-    useEffect(() => {
-        if (!request) return;
-        let cancelled = false;
-
-        const resolveCampus = request.campusId ? fetchCampusById(request.campusId).catch(() => null) : Promise.resolve(null);
-        const resolveBuilding = request.buildingId ? fetchBuildingById(request.buildingId).catch(() => null) : Promise.resolve(null);
-
-        Promise.all([resolveCampus, resolveBuilding]).then(([campus, building]) => {
-            if (cancelled) return;
-            setLocationNames({
-                campus: campus?.name ?? null,
-                building: building?.name ?? null,
-            });
-        });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [request]);
+    const loading = isPending && !request;
 
     if (loading) {
         return (
