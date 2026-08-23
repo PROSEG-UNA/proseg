@@ -47,3 +47,12 @@ export async function updateCurrentUserProfileImage(objectName) {
     const { data } = await axios.patch('/api/user/me/profile-image', { objectName }, config);
     return data;
 }
+
+export async function changePassword(currentPassword, password, confirmPassword) {
+    const { data } = await axios.post(
+        `${BASE_URL}/change-password`,
+        { currentPassword, password, confirmPassword },
+        config,
+    );
+    return data;
+}
