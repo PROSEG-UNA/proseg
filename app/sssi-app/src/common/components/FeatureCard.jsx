@@ -15,7 +15,6 @@ export function FeatureCard({ icon, title, description, buttonLabel, onNavigate,
                 flexDirection: 'column',
                 gap: 2,
                 p: 2.5,
-                // ensure consistent sizing inside Grid
                 flex: fullHeight ? 1 : undefined,
                 height: fullHeight ? '100%' : undefined,
                 minHeight: { md: 220 },
