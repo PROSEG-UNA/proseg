@@ -21,6 +21,7 @@ export default function GeneralModal({
     secondaryButton,
     contentSx,
     paperSx,
+    transitionProps,
     children,
 }) {
     const theme = useTheme();
@@ -42,6 +43,7 @@ export default function GeneralModal({
             fullWidth
             slotProps={{
                 backdrop: { sx: { backdropFilter: 'blur(3px)' } },
+                transition: transitionProps,
                 paper: {
                     sx: {
                         maxHeight: isSmall ? '100dvh' : '92dvh',
@@ -150,6 +152,8 @@ export default function GeneralModal({
                     {primaryButton && (
                         <Button
                             onClick={primaryButton.onClick}
+                            type={primaryButton.type}
+                            form={primaryButton.form}
                             variant={primaryButton.variant ?? "outlined"}
                             size="small"
                             startIcon={primaryButton.startIcon}

@@ -176,6 +176,20 @@ public class AuthController {
         return ApiResponseBuilder.ok(null, "Contraseña restablecida correctamente");
     }
 
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @Valid @RequestBody ChangePasswordRequestDto request,
+            Authentication authentication
+    ) {
+        passwordResetService.changePassword(
+                authentication.getName(),
+                request.getCurrentPassword(),
+                request.getPassword(),
+                request.getConfirmPassword()
+        );
+        return ApiResponseBuilder.ok(null, "Contraseña actualizada correctamente");
+    }
+
     @PostMapping(value = "/register", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<RegisterResponseDto>> register(
             @Valid @RequestBody RegisterRequestDto request,

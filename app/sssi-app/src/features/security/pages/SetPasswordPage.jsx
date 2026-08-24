@@ -17,6 +17,7 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import {getInvitationInfo, setPassword as setPasswordApi} from '../../security/services/usersService.js';
 import {Helmet} from "react-helmet-async";
 import { APP_CONFIG } from '../../../config/appConfig.js';
+import { getPasswordStrength } from '../../../common/utils/password.js';
 
 const RED = {
     50: '#fff1f2',
