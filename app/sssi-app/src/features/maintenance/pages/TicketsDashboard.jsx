@@ -153,7 +153,7 @@ function MetricList({ title, items = [], color = 'primary.main' }) {
 function InsightProgress({ label, value, helper, color = 'primary' }) {
     return (
         <Box>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.7 }}>
+            <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 0.7 }}>
                 <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{label}</Typography>
                 <Chip size="small" label={`${value}%`} color={color} variant="outlined" />
             </Stack>
