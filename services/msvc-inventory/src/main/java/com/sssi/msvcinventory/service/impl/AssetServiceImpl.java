@@ -11,8 +11,12 @@ import com.sssi.msvcinventory.exception.ModelException;
 import com.sssi.msvcinventory.exception.TypeException;
 import com.sssi.msvcinventory.exception.LocationException;
 import com.sssi.msvcinventory.exception.NetworkInterfaceException;
+import com.sssi.msvcinventory.exception.ExecutingUnitException;
+import com.sssi.msvcinventory.exception.EmployeeException;
 import com.sssi.msvcinventory.mapper.*;
 import com.sssi.msvcinventory.repository.ModelRepository;
+import com.sssi.msvcinventory.repository.ExecutingUnitRepository;
+import com.sssi.msvcinventory.repository.EmployeeRepository;
 import com.sssi.msvcinventory.repository.AssetRepository;
 import com.sssi.msvcinventory.repository.AssetArchiveRepository;
 import com.sssi.msvcinventory.repository.AssetComponentRepository;
@@ -48,6 +52,8 @@ public class AssetServiceImpl implements AssetService {
     private final NetworkInterfaceRepository networkInterfaceRepository;
     private final AssetArchiveRepository assetArchiveRepository;
     private final AssetComponentRepository assetComponentRepository;
+    private final ExecutingUnitRepository executingUnitRepository;
+    private final EmployeeRepository employeeRepository;
     private final AssetMapper assetMapper;
     private final AlarmSensorMapper alarmSensorMapper;
     private final NetworkInterfaceMapper networkInterfaceMapper;
@@ -74,6 +80,8 @@ public class AssetServiceImpl implements AssetService {
         Asset asset = assetMapper.toEntity(request);
         asset.setModel(model);
         asset.setLocation(location);
+        asset.setExecutingUnit(resolveExecutingUnit(request.getExecutingUnitId()));
+        asset.setEmployee(resolveEmployee(request.getEmployeeId()));
         Asset saved = assetRepository.save(asset);
 
         if (hasNetworkData(request.getNetworkInterface())) {
@@ -191,6 +199,8 @@ public class AssetServiceImpl implements AssetService {
         assetMapper.updateEntityFromRequest(request, asset);
         asset.setModel(model);
         asset.setLocation(location);
+        asset.setExecutingUnit(resolveExecutingUnit(request.getExecutingUnitId()));
+        asset.setEmployee(resolveEmployee(request.getEmployeeId()));
         assetRepository.save(asset);
 
         if (!type.isRequiresNetworkInterface() || !hasNetworkData(request.getNetworkInterface())) {
@@ -221,6 +231,18 @@ public class AssetServiceImpl implements AssetService {
         if (value == null) return null;
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private ExecutingUnit resolveExecutingUnit(UUID executingUnitId) {
+        if (executingUnitId == null) return null;
+        return executingUnitRepository.findById(executingUnitId)
+                .orElseThrow(() -> ExecutingUnitException.notFound(executingUnitId.toString()));
+    }
+
+    private Employee resolveEmployee(UUID employeeId) {
+        if (employeeId == null) return null;
+        return employeeRepository.findById(employeeId)
+                .orElseThrow(() -> EmployeeException.notFound(employeeId.toString()));
     }
 
     @Override

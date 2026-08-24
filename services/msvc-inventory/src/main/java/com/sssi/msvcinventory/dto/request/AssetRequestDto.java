@@ -26,14 +26,9 @@ public class AssetRequestDto {
     @NotNull(message = "El estado es obligatorio")
     private AssetStatus status;
 
-    @Size(max = 255, message = "La unidad ejecutora no puede superar los 255 caracteres")
-    private String executingUnit;
+    private UUID executingUnitId;
 
-    @Size(max = 255, message = "El empleado responsable no puede superar los 255 caracteres")
-    private String responsibleEmployee;
-
-    @Size(max = 100, message = "El ID del empleado responsable no puede superar los 100 caracteres")
-    private String responsibleEmployeeId;
+    private UUID employeeId;
 
     private LocalDate acquisitionDate;
 

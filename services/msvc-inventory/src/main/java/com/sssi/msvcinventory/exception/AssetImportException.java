@@ -113,6 +113,44 @@ public class AssetImportException extends BaseException {
         );
     }
 
+    public static AssetImportException employeeIdentificationNotFound(String identification) {
+        return new AssetImportException(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "IMPORT_EMPLOYEE_IDENTIFICATION_NOT_FOUND",
+                "No existe un funcionario con la identificación '" + identification
+                        + "'. Indica también el nombre."
+        );
+    }
+
+    public static AssetImportException employeeConflict(String name, String identification,
+                                                       String identificationOfName, String nameOfIdentification) {
+        return new AssetImportException(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "IMPORT_EMPLOYEE_CONFLICT",
+                "El nombre '" + name + "' (identificación '" + identificationOfName
+                        + "') y la identificación '" + identification + "' (funcionario '" + nameOfIdentification
+                        + "') corresponden a funcionarios distintos"
+        );
+    }
+
+    public static AssetImportException employeeIdentificationMismatch(String name, String registered, String provided) {
+        return new AssetImportException(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "IMPORT_EMPLOYEE_IDENTIFICATION_MISMATCH",
+                "El funcionario '" + name + "' ya está registrado con la identificación '" + registered
+                        + "'; la fila indica '" + provided + "'"
+        );
+    }
+
+    public static AssetImportException employeeNameMismatch(String identification, String registered, String provided) {
+        return new AssetImportException(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "IMPORT_EMPLOYEE_NAME_MISMATCH",
+                "La identificación '" + identification + "' pertenece al funcionario '" + registered
+                        + "'; la fila indica '" + provided + "'"
+        );
+    }
+
     public static AssetImportException ambiguousLocation() {
         return new AssetImportException(
                 HttpStatus.UNPROCESSABLE_ENTITY,
