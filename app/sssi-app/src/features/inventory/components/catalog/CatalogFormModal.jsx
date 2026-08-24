@@ -19,8 +19,11 @@ const toBoundedNumberValue = (rawValue, min) => {
 export default function CatalogFormModal({ open, onClose, onSaved, config, row, initialValues }) {
     const theme = useTheme();
 
-    const { title = '', icon: Icon = null, formFields = [], baseUrl = '' } = config ?? {};
+    const { title = '', icon: Icon = null, formFields = [], baseUrl = '', gender = 'f' } = config ?? {};
     const isEditMode = !!row;
+
+    const newLabel = gender === 'm' ? 'Nuevo' : 'Nueva';
+    const ofLabel = gender === 'm' ? 'del' : 'de la';
 
     const accentColor = theme.vars.palette.tones.rose.fg;
 
@@ -57,7 +60,7 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row, 
         setAlert(null);
     };
 
-    useEffect(initForm, [open, row]);
+    useEffect(initForm, [open, row, config, initialValues]);
 
     const selectFields = useMemo(() => formFields.filter((field) => field.type === 'select'), [formFields]);
 
@@ -163,9 +166,9 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row, 
                 open={open}
                 onClose={onClose}
                 icon={Icon}
-                title={isEditMode ? `Editar ${title}` : `Nueva ${title}`}
+                title={isEditMode ? `Editar ${title}` : `${newLabel} ${title}`}
                 subtitle={isEditMode
-                    ? `Modifica los datos de la ${title.toLowerCase()}`
+                    ? `Modifica los datos ${ofLabel} ${title.toLowerCase()}`
                     : `Completa los datos para crear ${title.toLowerCase()}`}
                 loading={saving}
                 secondaryButton={{ label: 'Cancelar', onClick: onClose, disabled: saving }}
@@ -272,6 +275,7 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row, 
                                 rows={field.type === 'textarea' ? 3 : undefined}
                                 required={field.required}
                                 disabled={saving}
+                                slotProps={{ input: { readOnly: !!field.readOnly } }}
                                 error={touched[field.key] && !!errors[field.key]}
                                 helperText={touched[field.key] ? (errors[field.key] || ' ') : ' '}
                                 sx={fieldSx}

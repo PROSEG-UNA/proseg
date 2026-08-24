@@ -1,12 +1,15 @@
 import CategoryIcon from '@mui/icons-material/Category';
 import LabelIcon from '@mui/icons-material/Label';
 import DevicesIcon from '@mui/icons-material/Devices';
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import BadgeIcon from '@mui/icons-material/Badge';
 import { INVENTORY_ENDPOINTS } from '../../services/endpoints';
 
 export const CATALOG_CONFIG = {
     type: {
         title: 'Tipo de Activo',
         pluralTitle: 'Tipos de Activos',
+        gender: 'm',
         baseUrl: INVENTORY_ENDPOINTS.types,
         icon: CategoryIcon,
         columnToBackendKey: { name: 'name', description: 'description' },
@@ -50,6 +53,7 @@ export const CATALOG_CONFIG = {
     model: {
         title: 'Modelo',
         pluralTitle: 'Modelos',
+        gender: 'm',
         baseUrl: INVENTORY_ENDPOINTS.models,
         icon: DevicesIcon,
         columnToBackendKey: { name: 'name', brand: 'brand.name', type: 'type.name' },
@@ -92,6 +96,62 @@ export const CATALOG_CONFIG = {
                 getOptionValue: (opt) => opt.id,
                 getInitialValue: (row) => row?.type?.id ?? '',
             },
+        ],
+    },
+    executingUnit: {
+        title: 'Unidad Ejecutora',
+        pluralTitle: 'Unidades Ejecutoras',
+        gender: 'f',
+        baseUrl: INVENTORY_ENDPOINTS.executingUnits,
+        icon: AccountBalanceIcon,
+        columnToBackendKey: { name: 'name' },
+        columns: [
+            { accessorKey: 'name', header: 'Nombre', size: 220, grow: true },
+        ],
+        formFields: [
+            { key: 'name', label: 'Nombre', type: 'text', required: true },
+        ],
+    },
+    employee: {
+        title: 'Funcionario',
+        pluralTitle: 'Funcionarios',
+        gender: 'm',
+        baseUrl: INVENTORY_ENDPOINTS.employees,
+        icon: BadgeIcon,
+        columnToBackendKey: { name: 'name', identification: 'identification' },
+        columns: [
+            { accessorKey: 'name', header: 'Nombre', size: 220, grow: true },
+            { accessorKey: 'identification', header: 'Identificación', size: 160, grow: false },
+        ],
+        formFields: [
+            { key: 'name', label: 'Nombre del funcionario', type: 'text', required: true },
+            { key: 'identification', label: 'Identificación', type: 'text', required: false },
+        ],
+    },
+    employeeWithIdentification: {
+        title: 'Identificación',
+        pluralTitle: 'Identificaciones',
+        gender: 'f',
+        baseUrl: INVENTORY_ENDPOINTS.employees,
+        icon: BadgeIcon,
+        columnToBackendKey: { identification: 'identification' },
+        columns: [],
+        formFields: [
+            { key: 'identification', label: 'Identificación', type: 'text', required: true },
+            { key: 'name', label: 'Nombre del funcionario', type: 'text', required: true },
+        ],
+    },
+    employeeIdentification: {
+        title: 'Identificación',
+        pluralTitle: 'Identificaciones',
+        gender: 'f',
+        baseUrl: INVENTORY_ENDPOINTS.employees,
+        icon: BadgeIcon,
+        columnToBackendKey: { identification: 'identification' },
+        columns: [],
+        formFields: [
+            { key: 'identification', label: 'Identificación', type: 'text', required: true },
+            { key: 'name', label: 'Nombre del funcionario', type: 'text', required: true, readOnly: true },
         ],
     },
 };

@@ -11,6 +11,8 @@ const CATALOG_SOURCES = [
     ['campuses', INVENTORY_ENDPOINTS.campuses],
     ['buildings', INVENTORY_ENDPOINTS.buildings],
     ['locations', INVENTORY_ENDPOINTS.locations],
+    ['executingUnits', INVENTORY_ENDPOINTS.executingUnits],
+    ['employees', INVENTORY_ENDPOINTS.employees],
 ];
 
 const EMPTY_OPTIONS = Object.fromEntries(CATALOG_SOURCES.map(([collection]) => [collection, []]));
@@ -21,10 +23,14 @@ const withOption = (current, option) => (
         : [option, ...current]
 );
 
-const mergeKeepingLocalOnly = (fetched, local) => {
+const mergeWithLocalOverrides = (fetched, local) => {
     if (local.length === 0) return fetched;
+    const localById = new Map(local.map(option => [option.id, option]));
     const fetchedIds = new Set(fetched.map(option => option.id));
-    return [...fetched, ...local.filter(option => !fetchedIds.has(option.id))];
+    return [
+        ...fetched.map(option => localById.get(option.id) ?? option),
+        ...local.filter(option => !fetchedIds.has(option.id)),
+    ];
 };
 
 export function useAssetCatalogOptions(open) {
@@ -52,7 +58,7 @@ export function useAssetCatalogOptions(open) {
     const options = useMemo(() => Object.fromEntries(
         CATALOG_SOURCES.map(([collection]) => [
             collection,
-            mergeKeepingLocalOnly(data?.[collection] ?? [], localOptions[collection] ?? []),
+            mergeWithLocalOverrides(data?.[collection] ?? [], localOptions[collection] ?? []),
         ])
     ), [data, localOptions]);
 

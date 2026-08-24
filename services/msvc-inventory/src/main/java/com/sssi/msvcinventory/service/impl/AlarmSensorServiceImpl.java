@@ -6,15 +6,21 @@ import com.sssi.msvcinventory.dto.request.AssetRequestDto;
 import com.sssi.msvcinventory.entity.AlarmSensor;
 import com.sssi.msvcinventory.entity.Model;
 import com.sssi.msvcinventory.entity.Location;
+import com.sssi.msvcinventory.entity.ExecutingUnit;
+import com.sssi.msvcinventory.entity.Employee;
 import com.sssi.msvcinventory.entity.enums.AssetStatus;
 import com.sssi.msvcinventory.exception.AlarmSensorException;
 import com.sssi.msvcinventory.exception.AssetException;
 import com.sssi.msvcinventory.exception.ModelException;
 import com.sssi.msvcinventory.exception.LocationException;
+import com.sssi.msvcinventory.exception.ExecutingUnitException;
+import com.sssi.msvcinventory.exception.EmployeeException;
 import com.sssi.msvcinventory.mapper.AlarmSensorMapper;
 import com.sssi.msvcinventory.repository.AlarmSensorRepository;
 import com.sssi.msvcinventory.repository.ModelRepository;
 import com.sssi.msvcinventory.repository.LocationRepository;
+import com.sssi.msvcinventory.repository.ExecutingUnitRepository;
+import com.sssi.msvcinventory.repository.EmployeeRepository;
 import com.sssi.msvcinventory.service.AlarmSensorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,6 +35,8 @@ public class AlarmSensorServiceImpl implements AlarmSensorService {
     private final AlarmSensorRepository alarmSensorRepository;
     private final ModelRepository modelRepository;
     private final LocationRepository locationRepository;
+    private final ExecutingUnitRepository executingUnitRepository;
+    private final EmployeeRepository employeeRepository;
     private final AlarmSensorMapper alarmSensorMapper;
 
     @Override
@@ -47,6 +55,8 @@ public class AlarmSensorServiceImpl implements AlarmSensorService {
         AlarmSensor alarmSensor = alarmSensorMapper.toEntity(request);
         alarmSensor.setModel(model);
         alarmSensor.setLocation(location);
+        alarmSensor.setExecutingUnit(resolveExecutingUnit(request.getExecutingUnitId()));
+        alarmSensor.setEmployee(resolveEmployee(request.getEmployeeId()));
 
         return alarmSensorMapper.toResponse(alarmSensorRepository.save(alarmSensor));
     }
@@ -78,6 +88,8 @@ public class AlarmSensorServiceImpl implements AlarmSensorService {
         alarmSensorMapper.updateEntityFromRequest(request, alarmSensor);
         alarmSensor.setModel(model);
         alarmSensor.setLocation(location);
+        alarmSensor.setExecutingUnit(resolveExecutingUnit(request.getExecutingUnitId()));
+        alarmSensor.setEmployee(resolveEmployee(request.getEmployeeId()));
 
         return alarmSensorMapper.toResponse(alarmSensorRepository.save(alarmSensor));
     }
@@ -86,6 +98,18 @@ public class AlarmSensorServiceImpl implements AlarmSensorService {
         if (value == null) return null;
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private ExecutingUnit resolveExecutingUnit(UUID executingUnitId) {
+        if (executingUnitId == null) return null;
+        return executingUnitRepository.findById(executingUnitId)
+                .orElseThrow(() -> ExecutingUnitException.notFound(executingUnitId.toString()));
+    }
+
+    private Employee resolveEmployee(UUID employeeId) {
+        if (employeeId == null) return null;
+        return employeeRepository.findById(employeeId)
+                .orElseThrow(() -> EmployeeException.notFound(employeeId.toString()));
     }
 
     private void validateDecommissionDate(AssetRequestDto request) {

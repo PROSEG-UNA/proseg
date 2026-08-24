@@ -49,6 +49,8 @@ archive:
 
 routes:
   brands: ${api.prefix}/brands
+  executing-units: ${api.prefix}/executing-units
+  employees: ${api.prefix}/employees
   buildings: ${api.prefix}/buildings
   locations: ${api.prefix}/locations
   campuses: ${api.prefix}/campuses

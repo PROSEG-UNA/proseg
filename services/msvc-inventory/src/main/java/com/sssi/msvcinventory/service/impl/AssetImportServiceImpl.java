@@ -12,6 +12,7 @@ import com.sssi.msvcinventory.dto.response.ImportPreviewResponseDto;
 import com.sssi.msvcinventory.dto.response.PendingCreationDto;
 import com.sssi.msvcinventory.exception.AssetImportException;
 import com.sssi.msvcinventory.importer.AssetImportField;
+import com.sssi.msvcinventory.importer.ImportPeopleContext;
 import com.sssi.msvcinventory.service.AssetImportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -114,11 +115,13 @@ public class AssetImportServiceImpl implements AssetImportService {
         Set<String> duplicateIpsInFile = findDuplicatesInFile(rows, AssetImportRowDto::getIpAddress);
         Set<String> duplicateMacsInFile = findDuplicatesInFile(rows, AssetImportRowDto::getMacAddress);
 
+        ImportPeopleContext peopleContext = rowProcessor.newPeopleContext(false);
+
         List<AssetImportRowIssueDto> errors = new ArrayList<>();
         for (AssetImportRowDto row : rows) {
             try {
                 rowProcessor.validateRow(row, duplicateAssetNumbers, duplicateSerials,
-                        duplicateIpsInFile, duplicateMacsInFile);
+                        duplicateIpsInFile, duplicateMacsInFile, peopleContext);
             } catch (BaseException e) {
                 errors.add(AssetImportRowIssueDto.builder()
                         .row(row.getRowNumber())
