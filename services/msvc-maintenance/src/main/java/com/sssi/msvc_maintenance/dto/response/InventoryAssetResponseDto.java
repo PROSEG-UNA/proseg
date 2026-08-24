@@ -22,9 +22,8 @@ public class InventoryAssetResponseDto {
     private String status;
     private String assetNumber;
     private String serialNumber;
-    private String executingUnit;
-    private String responsibleEmployee;
-    private String responsibleEmployeeId;
+    private InventoryAssetExecutingUnitResponseDto executingUnit;
+    private InventoryAssetEmployeeResponseDto employee;
     private LocalDate acquisitionDate;
     private LocalDate warrantyEndDate;
     private LocalDate firmwareSupportEndDate;
