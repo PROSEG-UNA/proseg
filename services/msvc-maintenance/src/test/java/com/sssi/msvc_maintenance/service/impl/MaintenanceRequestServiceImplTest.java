@@ -131,7 +131,6 @@ class MaintenanceRequestServiceImplTest {
         when(maintenanceRequestRepository.findById(requestId)).thenReturn(Optional.of(existingRequest));
         when(maintenanceRequestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        // mapper does not change status (remains CANCELLED)
         doNothing().when(maintenanceRequestMapper).updateEntityFromRequest(any(), any());
 
         MaintenanceRequestRequestDto reqDto = MaintenanceRequestRequestDto.builder()
@@ -148,7 +147,6 @@ class MaintenanceRequestServiceImplTest {
 
         service.update(requestId, reqDto);
 
-        // Expect no publish because it was already cancelled and remains cancelled
         verify(eventPublisher, times(0)).publishEvent(any());
     }
 }

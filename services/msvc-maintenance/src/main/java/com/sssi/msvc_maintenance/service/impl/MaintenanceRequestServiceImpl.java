@@ -222,7 +222,6 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
 
         MaintenanceRequest saved = maintenanceRequestRepository.save(maintenanceRequest);
 
-        // If transitioned now to CANCELLED and previously was not CANCELLED -> send rejection notification (once)
         if (oldStatus != MaintenanceStatus.CANCELLED && saved.getStatus() == MaintenanceStatus.CANCELLED) {
             publishMaintenanceNotification(
                     saved,
@@ -237,12 +236,10 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
             return maintenanceRequestMapper.toResponse(saved);
         }
 
-        // If it was already CANCELLED and remains CANCELLED, do not resend cancellation notification
         if (oldStatus == MaintenanceStatus.CANCELLED && saved.getStatus() == MaintenanceStatus.CANCELLED) {
             return maintenanceRequestMapper.toResponse(saved);
         }
 
-        // Default: publish an UPDATED notification
         publishMaintenanceNotification(
                 saved,
                 "UPDATED",
