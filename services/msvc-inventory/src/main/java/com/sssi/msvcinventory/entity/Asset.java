@@ -20,7 +20,9 @@ import java.util.UUID;
         attributeNodes = {
                 @NamedAttributeNode(value = "model", subgraph = "model-subgraph"),
                 @NamedAttributeNode(value = "location", subgraph = "location-subgraph"),
-                @NamedAttributeNode("networkInterface")
+                @NamedAttributeNode("networkInterface"),
+                @NamedAttributeNode("executingUnit"),
+                @NamedAttributeNode("employee")
         },
         subgraphs = {
                 @NamedSubgraph(name = "model-subgraph", attributeNodes = {
@@ -72,17 +74,15 @@ public class Asset extends BaseEntity {
     @Column(nullable = false)
     private AssetStatus status;
 
-    @Filterable(type = FilterType.TEXT)
-    @Column(name = "executing_unit")
-    private String executingUnit;
+    @Filterable(type = FilterType.TEXT, nestedPaths = {"name"})
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "executing_unit_id")
+    private ExecutingUnit executingUnit;
 
-    @Filterable(type = FilterType.TEXT)
-    @Column(name = "responsible_employee")
-    private String responsibleEmployee;
-
-    @Filterable(type = FilterType.TEXT)
-    @Column(name = "responsible_employee_id")
-    private String responsibleEmployeeId;
+    @Filterable(type = FilterType.TEXT, nestedPaths = {"name", "identification"})
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employee_id")
+    private Employee employee;
 
     @Filterable(type = FilterType.DATE)
     @Column(name = "acquisition_date")
