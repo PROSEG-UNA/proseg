@@ -21,10 +21,18 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircle';
 import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 import AssignmentIndOutlinedIcon from '@mui/icons-material/AssignmentIndOutlined';
+
+import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
+import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
+import CleaningServicesOutlinedIcon from '@mui/icons-material/CleaningServicesOutlined';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
+import EmailIcon from '@mui/icons-material/Email';
 import { FeatureCard } from '../../../common/components/FeatureCard.jsx';
 import { APP_CONFIG } from '../../../config/appConfig.js';
 import { usePermissions } from '../../../common/hooks/usePermissions.js';
 import { PERMISSIONS } from '../../../common/constants/permissions.js';
+import { useNavSections } from '../../../common/components/Sidebar/useNavSections';
+import { fetchMaintenanceTicketsDashboardSummary } from '../../maintenance/services/ticketsService.js';
 
 const dashboardCardSx = {
     borderRadius: 2.5,
@@ -175,6 +183,7 @@ export function HomePage() {
     const navigate = useNavigate();
     const statsSectionRef = useRef(null);
     const { hasAnyPermission } = usePermissions();
+    const { sections } = useNavSections();
     const [showStats, setShowStats] = useState(false);
     const [summary, setSummary] = useState(null);
     const [summaryError, setSummaryError] = useState('');
@@ -338,27 +347,108 @@ export function HomePage() {
                 </Box>
 
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2.5 }}>
-                    <FeatureCard
-                        icon={<StorageIcon fontSize="inherit" />}
-                        title="Gestión de Activos"
-                        description="Administra todos los activos de la organización"
-                        buttonLabel="Ir a Activos"
-                        onNavigate={() => navigate('/inventario/activos')}
-                    />
-                    <FeatureCard
-                        icon={<PeopleIcon fontSize="inherit" />}
-                        title="Gestión de Usuarios"
-                        description="Administra usuarios y su estado dentro del sistema"
-                        buttonLabel="Ir a Usuarios"
-                        onNavigate={() => navigate('/seguridad/usuarios')}
-                    />
-                    <FeatureCard
-                        icon={<VerifiedUserIcon fontSize="inherit" />}
-                        title="Gestión de Roles"
-                        description="Administra roles y permisos de acceso"
-                        buttonLabel="Ir a Roles"
-                        onNavigate={() => navigate('/seguridad/roles')}
-                    />
+                    {(() => {
+                        const hasPath = (path) => sections && sections.some((s) => (s.items || []).some((i) => i.path === path));
+                        const cards = [];
+
+                        const pushCard = (key, node) => {
+                            cards.push(
+                                <Box key={key} sx={{ display: 'flex', flex: { xs: '0 0 100%', sm: '0 0 50%', md: '0 0 calc(33.333% - 16px)' }, boxSizing: 'border-box' }}>
+                                    <Box sx={{ width: '100%', display: 'flex' }}>
+                                        {node}
+                                    </Box>
+                                </Box>
+                            );
+                        };
+
+                        if (hasPath('/inventario/activos')) {
+                            pushCard('activos', (
+                                <FeatureCard
+                                    fullHeight
+                                    icon={<StorageIcon fontSize="inherit" />}
+                                    title="Gestión de Activos"
+                                    description="Administra todos los activos de la organización"
+                                    buttonLabel="Ir a Activos"
+                                    onNavigate={() => navigate('/inventario/activos')}
+                                />
+                            ));
+                        }
+
+                        if (hasPath('/seguridad/usuarios')) {
+                            pushCard('usuarios', (
+                                <FeatureCard
+                                    fullHeight
+                                    icon={<PeopleIcon fontSize="inherit" />}
+                                    title="Gestión de Usuarios"
+                                    description="Administra usuarios y su estado dentro del sistema"
+                                    buttonLabel="Ir a Usuarios"
+                                    onNavigate={() => navigate('/seguridad/usuarios')}
+                                />
+                            ));
+                        }
+
+                        if (hasPath('/seguridad/roles')) {
+                            pushCard('roles', (
+                                <FeatureCard
+                                    fullHeight
+                                    icon={<VerifiedUserIcon fontSize="inherit" />}
+                                    title="Gestión de Roles"
+                                    description="Administra roles y permisos de acceso"
+                                    buttonLabel="Ir a Roles"
+                                    onNavigate={() => navigate('/seguridad/roles')}
+                                />
+                            ));
+                        }
+
+                        if (hasPath('/transporte/depuracion')) {
+                            pushCard('depuracion', (
+                                <FeatureCard
+                                    fullHeight
+                                    icon={<CleaningServicesOutlinedIcon fontSize="inherit" />}
+                                    title="Transporte"
+                                    description="Depuración de giras"
+                                    buttonLabel="Ir a Depuración"
+                                    onNavigate={() => navigate('/transporte/depuracion')}
+                                />
+                            ));
+                        }
+
+                        if (hasPath('/mantenimiento/tickets')) {
+                            pushCard('tickets', (
+                                <FeatureCard
+                                    fullHeight
+                                    icon={<ConfirmationNumberIcon fontSize="inherit" />}
+                                    title="Mantenimiento"
+                                    description="Gestión de tickets y seguimiento"
+                                    buttonLabel="Ir a Tickets"
+                                    onNavigate={() => navigate('/mantenimiento/tickets')}
+                                />
+                            ));
+                        }
+
+                        if (hasPath('/ubicaciones/correos')) {
+                            pushCard('correos', (
+                                <FeatureCard
+                                    fullHeight
+                                    icon={<EmailIcon fontSize="inherit" />}
+                                    title="Ubicaciones"
+                                    description="Gestión de correos institucionales"
+                                    buttonLabel="Ir a Correos"
+                                    onNavigate={() => navigate('/ubicaciones/correos')}
+                                />
+                            ));
+                        }
+
+                        if (cards.length === 0) {
+                            return (
+                                <Box sx={{ width: '100%' }}>
+                                    <Alert severity="info">No hay módulos disponibles para su cuenta.</Alert>
+                                </Box>
+                            );
+                        }
+
+                        return cards;
+                    })()}
                 </Box>
             </Container>
         </Box>
