@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Box, Chip, MenuItem, TextField, Typography } from '@mui/material';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import AssignmentTurnedInOutlinedIcon from '@mui/icons-material/AssignmentTurnedInOutlined';
@@ -13,10 +14,10 @@ import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
 import { fetchAssignments, generateAssignments, updateAssignment } from '../../services/assignment/assignmentService';
-import { fetchDrivers } from '../../services/drivers/driversService';
-import { fetchVehicles } from '../../services/vehicles/vehiclesService';
-import { fetchTours } from '../../services/tours/toursService';
+import { useDriverOptions, useTourOptions, useVehicleOptions } from '../../hooks/useTransportOptions';
+import { useQueryAlert } from '../../../../common/hooks/index.js';
 import { ASSIGNMENT_STATUS_OPTIONS, assignmentStatusLabel, formatDateTime, getStatusChipColor } from '../../transportUtils';
+import { keepPreviousPage, queryKeys } from '../../../../common/query';
 
 const COLUMN_TO_BACKEND_KEY = {
     driverName: 'driver.name',
@@ -33,25 +34,33 @@ const INITIAL_VALUES = {
     notes: '',
 };
 
-export default function AssignmentPanel({ refreshKey = 0, onRefresh }) {
+const EMPTY_LIST = [];
+
+function mapAssignmentToRow(assignment) {
+    return {
+        id: assignment.id,
+        driverId: assignment.driver?.id ?? assignment.driverId ?? '',
+        driverName: [assignment.driver?.firstName, assignment.driver?.lastName].filter(Boolean).join(' ').trim() || assignment.driverName || '—',
+        vehicleId: assignment.vehicle?.id ?? assignment.vehicleId ?? '',
+        vehiclePlate: assignment.vehicle?.plate ?? assignment.vehiclePlate ?? '—',
+        tourId: assignment.tour?.id ?? assignment.tourId ?? '',
+        tourName: assignment.tour?.name ?? assignment.tourName ?? '—',
+        status: assignmentStatusLabel(assignment.status),
+        statusRaw: assignment.status ?? '',
+        notes: assignment.notes ?? '',
+        createdAt: assignment.createdAt ?? null,
+        updatedAt: assignment.updatedAt ?? null,
+    };
+}
+
+export default function AssignmentPanel() {
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
     const [sorting, setSorting] = useState([]);
-    const [rows, setRows] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [totalElements, setTotalElements] = useState(0);
-    const [alert, setAlert] = useState(null);
-    const [generating, setGenerating] = useState(false);
-    const [internalRefresh, setInternalRefresh] = useState(0);
     const [editingAssignment, setEditingAssignment] = useState(null);
     const [formValues, setFormValues] = useState(INITIAL_VALUES);
-    const [saving, setSaving] = useState(false);
-    const [loadingReferences, setLoadingReferences] = useState(false);
-    const [driverOptions, setDriverOptions] = useState([]);
-    const [vehicleOptions, setVehicleOptions] = useState([]);
-    const [tourOptions, setTourOptions] = useState([]);
+    const queryClient = useQueryClient();
     const { hasPermission } = usePermissions();
 
     const canGenerate = hasPermission(PERMISSIONS.TRANSPORT.ASSIGNMENT.GENERATE);
@@ -97,89 +106,50 @@ export default function AssignmentPanel({ refreshKey = 0, onRefresh }) {
         setPagination((previousValue) => (previousValue.pageIndex === 0 ? previousValue : { ...previousValue, pageIndex: 0 }));
     }, []);
 
-    useEffect(() => {
-        let ignore = false;
+    const drivers = useDriverOptions();
+    const vehicles = useVehicleOptions();
+    const tours = useTourOptions();
 
-        const loadReferences = async () => {
-            try {
-                setLoadingReferences(true);
-                const [driversResponse, vehiclesResponse, toursResponse] = await Promise.all([
-                    fetchDrivers({ page: 0, size: 300 }),
-                    fetchVehicles({ page: 0, size: 300 }),
-                    fetchTours({ page: 0, size: 300 }),
-                ]);
-                if (ignore) return;
+    const driverOptions = drivers.options;
+    const vehicleOptions = vehicles.options;
+    const tourOptions = tours.options;
+    const loadingReferences = drivers.loading || vehicles.loading || tours.loading;
 
-                setDriverOptions((driversResponse?.content ?? []).map((driver) => ({
-                    id: driver.id,
-                    label: [driver.firstName, driver.lastName].filter(Boolean).join(' ').trim() || 'Chofer',
-                })));
-                setVehicleOptions((vehiclesResponse?.content ?? []).map((vehicle) => ({
-                    id: vehicle.id,
-                    label: vehicle.plate ? `${vehicle.plate}${vehicle.model ? ` - ${vehicle.model}` : ''}` : 'Vehículo',
-                })));
-                setTourOptions((toursResponse?.content ?? []).map((tour) => ({
-                    id: tour.id,
-                    label: tour.name || 'Gira',
-                })));
-            } catch (error) {
-                if (!ignore) {
-                    setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudieron cargar referencias de asignación') });
-                }
-            } finally {
-                if (!ignore) setLoadingReferences(false);
-            }
-        };
+    const referencesError = drivers.error ?? vehicles.error ?? tours.error;
 
-        void loadReferences();
-        return () => {
-            ignore = true;
-        };
-    }, []);
+    const { alert, setAlert, closeAlert } = useQueryAlert(
+        referencesError ? getFriendlyApiErrorMessage(referencesError, 'No se pudieron cargar referencias de asignación') : null
+    );
 
-    useEffect(() => {
-        let ignore = false;
+    const assignmentsRequestParams = {
+        page: pagination.pageIndex,
+        size: pagination.pageSize,
+        search: debouncedGlobalFilter,
+        filters: backendFilters,
+        sort: backendSort,
+    };
 
-        const load = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-                const response = await fetchAssignments({
-                    page: pagination.pageIndex,
-                    size: pagination.pageSize,
-                    search: debouncedGlobalFilter,
-                    filters: backendFilters,
-                    sort: backendSort,
-                });
-                if (ignore) return;
+    const listQueryKey = queryKeys.transport.assignmentList(assignmentsRequestParams);
 
-                setRows((response.content ?? []).map((assignment) => ({
-                    id: assignment.id,
-                    driverId: assignment.driver?.id ?? assignment.driverId ?? '',
-                    driverName: [assignment.driver?.firstName, assignment.driver?.lastName].filter(Boolean).join(' ').trim() || assignment.driverName || '—',
-                    vehicleId: assignment.vehicle?.id ?? assignment.vehicleId ?? '',
-                    vehiclePlate: assignment.vehicle?.plate ?? assignment.vehiclePlate ?? '—',
-                    tourId: assignment.tour?.id ?? assignment.tourId ?? '',
-                    tourName: assignment.tour?.name ?? assignment.tourName ?? '—',
-                    status: assignmentStatusLabel(assignment.status),
-                    statusRaw: assignment.status ?? '',
-                    notes: assignment.notes ?? '',
-                    createdAt: assignment.createdAt ?? null,
-                    updatedAt: assignment.updatedAt ?? null,
-                })));
-                setTotalElements(response.totalElements ?? 0);
-            } catch (error) {
-                if (!ignore) setError(getFriendlyApiErrorMessage(error, 'Error al cargar asignaciones'));
-            } finally {
-                if (!ignore) setLoading(false);
-            }
-        };
+    const assignmentsQuery = useQuery({
+        queryKey: listQueryKey,
+        placeholderData: keepPreviousPage(listQueryKey),
+        queryFn: async () => {
+            const response = await fetchAssignments(assignmentsRequestParams);
+            return {
+                rows: (response.content ?? []).map(mapAssignmentToRow),
+                totalElements: response.totalElements ?? 0,
+            };
+        },
+    });
 
-        void load();
-        return () => {
-            ignore = true;
-        };
-    }, [pagination.pageIndex, pagination.pageSize, debouncedGlobalFilter, backendFilters, backendSort, refreshKey, internalRefresh]);
+    const rows = assignmentsQuery.data?.rows ?? EMPTY_LIST;
+    const totalElements = assignmentsQuery.data?.totalElements ?? 0;
+    const loading = assignmentsQuery.isLoading;
+    const fetching = assignmentsQuery.isFetching;
+    const error = assignmentsQuery.error
+        ? getFriendlyApiErrorMessage(assignmentsQuery.error, 'Error al cargar asignaciones')
+        : null;
 
     const columns = useMemo(() => [
         { accessorKey: 'tourName', header: 'Gira', size: 220, grow: true },
@@ -217,19 +187,39 @@ export default function AssignmentPanel({ refreshKey = 0, onRefresh }) {
         },
     ], []);
 
-    const handleGenerateAssignments = useCallback(async () => {
-        setGenerating(true);
-        try {
-            await generateAssignments({});
-            setInternalRefresh((value) => value + 1);
-            onRefresh?.();
+    const invalidateAssignments = () => queryClient.invalidateQueries({
+        queryKey: queryKeys.transport.assignment(),
+    });
+
+    const generateAssignmentsMutation = useMutation({
+        mutationFn: () => generateAssignments({}),
+        onSuccess: async () => {
             setAlert({ type: 'success', message: 'Asignaciones generadas correctamente' });
-        } catch (error) {
-            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudieron generar las asignaciones') });
-        } finally {
-            setGenerating(false);
-        }
-    }, [onRefresh]);
+            await invalidateAssignments();
+        },
+        onError: (generateError) => {
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(generateError, 'No se pudieron generar las asignaciones') });
+        },
+    });
+
+    const updateAssignmentMutation = useMutation({
+        mutationFn: ({ assignmentId, payload }) => updateAssignment(assignmentId, payload),
+        onSuccess: async () => {
+            setEditingAssignment(null);
+            setAlert({ type: 'success', message: 'Asignación actualizada correctamente' });
+            await invalidateAssignments();
+        },
+        onError: (updateError) => {
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(updateError, 'No se pudo actualizar la asignación') });
+        },
+    });
+
+    const generating = generateAssignmentsMutation.isPending;
+    const saving = updateAssignmentMutation.isPending;
+
+    const handleGenerateAssignments = useCallback(() => {
+        generateAssignmentsMutation.mutate();
+    }, [generateAssignmentsMutation]);
 
     const openEditAssignment = useCallback((assignment) => {
         setEditingAssignment(assignment);
@@ -242,27 +232,19 @@ export default function AssignmentPanel({ refreshKey = 0, onRefresh }) {
         });
     }, []);
 
-    const handleSaveAssignment = useCallback(async () => {
+    const handleSaveAssignment = useCallback(() => {
         if (!editingAssignment) return;
-        setSaving(true);
-        try {
-            await updateAssignment(editingAssignment.id, {
+        updateAssignmentMutation.mutate({
+            assignmentId: editingAssignment.id,
+            payload: {
                 driverId: formValues.driverId.trim() || null,
                 vehicleId: formValues.vehicleId.trim() || null,
                 tourId: formValues.tourId.trim() || null,
                 status: formValues.status,
                 notes: formValues.notes.trim() || null,
-            });
-            setEditingAssignment(null);
-            setInternalRefresh((value) => value + 1);
-            onRefresh?.();
-            setAlert({ type: 'success', message: 'Asignación actualizada correctamente' });
-        } catch (error) {
-            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo actualizar la asignación') });
-        } finally {
-            setSaving(false);
-        }
-    }, [editingAssignment, formValues, onRefresh]);
+            },
+        });
+    }, [editingAssignment, formValues, updateAssignmentMutation]);
 
     const renderRowActions = useMemo(() => {
         if (!canUpdate) return undefined;
@@ -308,6 +290,7 @@ export default function AssignmentPanel({ refreshKey = 0, onRefresh }) {
                 columns={columns}
                 data={rows}
                 loading={loading}
+                fetching={fetching}
                 error={error}
                 enableRowActions={canUpdate}
                 renderRowActions={renderRowActions}
@@ -424,7 +407,7 @@ export default function AssignmentPanel({ refreshKey = 0, onRefresh }) {
                 open={!!alert}
                 type={alert?.type}
                 message={alert?.message}
-                onClose={() => setAlert(null)}
+                onClose={closeAlert}
             />
         </>
     );

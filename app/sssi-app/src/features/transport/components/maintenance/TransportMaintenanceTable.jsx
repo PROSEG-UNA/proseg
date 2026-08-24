@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import TableBase from '../../../../common/components/TablaBase.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { useDebounce } from '../../../../common/hooks/useDebounce.js';
@@ -7,6 +8,7 @@ import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { deleteVehicleMaintenance } from '../../services/maintenance/maintenanceService';
 import { useTransportMaintenanceData } from '../../hooks/useTransportMaintenanceData';
 import { getTransportMaintenanceColumns, renderTransportMaintenanceActions } from './maintenanceColumns.jsx';
+import { queryKeys } from '../../../../common/query';
 
 const COLUMN_TO_BACKEND_KEY = {
     vehiclePlate: 'vehicle.plate',
@@ -16,14 +18,14 @@ const COLUMN_TO_BACKEND_KEY = {
     scheduledDate: 'scheduledDate',
 };
 
-export default function TransportMaintenanceTable({ refreshKey = 0, onRefresh, onEditMaintenance }) {
+export default function TransportMaintenanceTable({ onEditMaintenance }) {
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
     const [sorting, setSorting] = useState([]);
     const [alert, setAlert] = useState(null);
     const [maintenanceToDelete, setMaintenanceToDelete] = useState(null);
-    const [deleting, setDeleting] = useState(false);
+    const queryClient = useQueryClient();
     const { hasPermission } = usePermissions();
 
     const canEdit = hasPermission(PERMISSIONS.TRANSPORT.MAINTENANCE.MANAGE);
@@ -69,37 +71,40 @@ export default function TransportMaintenanceTable({ refreshKey = 0, onRefresh, o
         setPagination((previousValue) => (previousValue.pageIndex === 0 ? previousValue : { ...previousValue, pageIndex: 0 }));
     }, []);
 
-    const { rows, loading, error, totalElements } = useTransportMaintenanceData({
+    const { rows, loading, fetching, error, totalElements } = useTransportMaintenanceData({
         pageIndex: pagination.pageIndex,
         pageSize: pagination.pageSize,
         search: debouncedGlobalFilter,
         filters: backendFilters,
         sort: backendSort,
-        refreshKey,
     });
 
     const columns = useMemo(() => getTransportMaintenanceColumns(), []);
 
     const handleDelete = useCallback((row) => setMaintenanceToDelete(row), []);
+    const deleteMaintenanceMutation = useMutation({
+        mutationFn: (maintenanceId) => deleteVehicleMaintenance(maintenanceId),
+        onSuccess: async () => {
+            setMaintenanceToDelete(null);
+            setAlert({ type: 'success', message: 'Mantenimiento eliminado correctamente' });
+            await queryClient.invalidateQueries({ queryKey: queryKeys.transport.maintenance() });
+        },
+        onError: (deleteError) => {
+            setAlert({ type: 'error', message: deleteError?.response?.data?.message ?? deleteError?.message ?? 'No se pudo eliminar el mantenimiento' });
+        },
+    });
+
+    const deleting = deleteMaintenanceMutation.isPending;
+
     const handleDeleteCancel = useCallback(() => {
         if (deleting) return;
         setMaintenanceToDelete(null);
     }, [deleting]);
 
-    const handleDeleteConfirm = useCallback(async () => {
+    const handleDeleteConfirm = useCallback(() => {
         if (!maintenanceToDelete) return;
-        setDeleting(true);
-        try {
-            await deleteVehicleMaintenance(maintenanceToDelete.id);
-            setMaintenanceToDelete(null);
-            setAlert({ type: 'success', message: 'Mantenimiento eliminado correctamente' });
-            onRefresh?.();
-        } catch (error) {
-            setAlert({ type: 'error', message: error?.response?.data?.message ?? error?.message ?? 'No se pudo eliminar el mantenimiento' });
-        } finally {
-            setDeleting(false);
-        }
-    }, [maintenanceToDelete, onRefresh]);
+        deleteMaintenanceMutation.mutate(maintenanceToDelete.id);
+    }, [maintenanceToDelete, deleteMaintenanceMutation]);
 
     return (
         <>
@@ -107,6 +112,7 @@ export default function TransportMaintenanceTable({ refreshKey = 0, onRefresh, o
                 columns={columns}
                 data={rows}
                 loading={loading}
+                fetching={fetching}
                 error={error}
                 enableRowActions={canEdit || canDelete}
                 renderRowActions={renderTransportMaintenanceActions({

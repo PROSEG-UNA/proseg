@@ -28,6 +28,16 @@ Use these rules for coding, debugging, refactoring, code review, and technical q
 - Avoid unnecessary error handling.
 - Keep code copy-paste safe.
 
+## Data fetching (app/sssi-app)
+- Use TanStack Query for reads where the server is the source of truth: lists, catalogs, detail panels, dashboards.
+- Use useState + useEffect to load one entity into an editable form. Copy the data into a local draft and reset it when the modal closes.
+- Never derive an input value from the query cache through overrides. That is what made unsaved drafts reappear on reopen.
+- Declare every key in src/common/query/queryKeys.js, hanging from the feature root. Do not inline key arrays in components.
+- Invalidate with the narrowest key that covers the change.
+- Return loading: isLoading for the empty state and fetching: isFetching for the background indicator. Never use isFetching as loading.
+- Do not query per table row. If a row needs a flag, add it to the list endpoint.
+- Pending migrations keep their key declared: assetPhotos, ticketDetail, ticketHistory, companyUsers, technicians.
+
 ## Review
 - State the bug.
 - Show the fix.

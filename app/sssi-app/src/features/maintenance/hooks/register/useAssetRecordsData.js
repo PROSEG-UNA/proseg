@@ -1,51 +1,42 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchAssetRecords } from '../../services/register/registerService';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils';
+import { keepPreviousPage, queryKeys } from '../../../../common/query';
 
-export function useAssetRecordsData({ registerId = null, assetId = null, pageIndex = 0, pageSize = 10, refreshKey = 0 } = {}) {
-    const [rows, setRows] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [totalElements, setTotalElements] = useState(0);
+function mapRecordToRow(record) {
+    return {
+        id: record.id,
+        assetId: record.assetId,
+        companyName: record.company?.name ?? '—',
+        userEmail: record.userEmail ?? '—',
+        description: record.description ?? '—',
+        createdAt: record.createdAt ?? null,
+    };
+}
 
-    useEffect(() => {
-        if (!registerId || !assetId) {
-            setRows([]);
-            setTotalElements(0);
-            setLoading(false);
-            return undefined;
-        }
+export function useAssetRecordsData({ registerId = null, assetId = null, pageIndex = 0, pageSize = 10 } = {}) {
+    const requestParams = { assetId, page: pageIndex, size: pageSize };
 
-        let ignore = false;
+    const listQueryKey = queryKeys.maintenance.assetRecords(registerId, assetId, { page: pageIndex, size: pageSize });
 
-        const load = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-                const response = await fetchAssetRecords(registerId, { assetId, page: pageIndex, size: pageSize });
-                if (ignore) return;
+    const { data, isLoading, isFetching, error } = useQuery({
+        queryKey: listQueryKey,
+        placeholderData: keepPreviousPage(listQueryKey),
+        queryFn: async () => {
+            const response = await fetchAssetRecords(registerId, requestParams);
+            return {
+                rows: (response.content ?? []).map(mapRecordToRow),
+                totalElements: response.totalElements ?? 0,
+            };
+        },
+        enabled: Boolean(registerId && assetId),
+    });
 
-                setRows((response.content ?? []).map((record) => ({
-                    id: record.id,
-                    assetId: record.assetId,
-                    companyName: record.company?.name ?? '—',
-                    userEmail: record.userEmail ?? '—',
-                    description: record.description ?? '—',
-                    createdAt: record.createdAt ?? null,
-                })));
-                setTotalElements(response.totalElements ?? 0);
-            } catch (err) {
-                if (!ignore) setError(getFriendlyApiErrorMessage(err, 'Error al cargar el historial del activo'));
-            } finally {
-                if (!ignore) setLoading(false);
-            }
-        };
-
-        void load();
-        return () => {
-            ignore = true;
-        };
-    }, [registerId, assetId, pageIndex, pageSize, refreshKey]);
-
-    return { rows, loading, error, totalElements };
+    return {
+        rows: data?.rows ?? [],
+        loading: isLoading,
+        fetching: isFetching,
+        error: error ? getFriendlyApiErrorMessage(error, 'Error al cargar el historial del activo') : null,
+        totalElements: data?.totalElements ?? 0,
+    };
 }

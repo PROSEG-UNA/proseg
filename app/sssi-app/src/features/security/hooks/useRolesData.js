@@ -1,50 +1,34 @@
-import { useState, useEffect } from 'react';
-import { fetchRoles, fetchPermissionsByRole } from '../services/rolesService';
+import { useQuery } from '@tanstack/react-query';
+import { fetchRoles } from '../services/rolesService';
 import { getFriendlyApiErrorMessage } from '../../../common/utils';
+import { keepPreviousPage, queryKeys } from '../../../common/query';
 
-export function useRolesData({ pageIndex = 0, pageSize = 10, refreshKey = 0 } = {}) {
-    const [rows, setRows] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [totalElements, setTotalElements] = useState(0);
+export function useRolesData({ pageIndex = 0, pageSize = 10 } = {}) {
+    const requestParams = { page: pageIndex, size: pageSize };
 
-    const loadRoles = async (page, size, ignore) => {
-        try {
-            setLoading(true);
-            setError(null);
+    const listQueryKey = queryKeys.security.roleList(requestParams);
 
-            const response = await fetchRoles({ page, size });
+    const { data, isLoading, isFetching, error } = useQuery({
+        queryKey: listQueryKey,
+        placeholderData: keepPreviousPage(listQueryKey),
+        queryFn: async () => {
+            const response = await fetchRoles(requestParams);
 
-            if (ignore) return;
+            const rows = (response.content ?? []).map((role) => ({
+                id: role.id,
+                name: role.name,
+                description: role.description || '—',
+            }));
 
-            const rolesWithPermissions = await Promise.all(
-                (response.content ?? []).map(async (role) => {
-                    const permissions = await fetchPermissionsByRole(role.name);
-                    return {
-                        id: role.id,
-                        name: role.name,
-                        description: role.description || '—',
-                        permissionCount: permissions.length,
-                    };
-                })
-            );
+            return { rows, totalElements: response.totalElements ?? 0 };
+        },
+    });
 
-            if (!ignore) {
-                setRows(rolesWithPermissions);
-                setTotalElements(response.totalElements ?? 0);
-            }
-        } catch (err) {
-            if (!ignore) setError(getFriendlyApiErrorMessage(err, 'Error al cargar roles'));
-        } finally {
-            if (!ignore) setLoading(false);
-        }
+    return {
+        rows: data?.rows ?? [],
+        loading: isLoading,
+        fetching: isFetching,
+        error: error ? getFriendlyApiErrorMessage(error, 'Error al cargar roles') : null,
+        totalElements: data?.totalElements ?? 0,
     };
-
-    useEffect(() => {
-        let ignore = false;
-        void loadRoles(pageIndex, pageSize, ignore);
-        return () => { ignore = true; };
-    }, [pageIndex, pageSize, refreshKey]);
-
-    return { rows, loading, error, totalElements };
 }

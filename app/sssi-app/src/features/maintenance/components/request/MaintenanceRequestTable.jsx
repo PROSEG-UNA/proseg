@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import TableBase from '../../../../common/components/TablaBase.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import CancelWithReasonModal from '../../../../common/components/CancelWithReasonModal.jsx';
@@ -13,6 +14,7 @@ import { useMaintenanceRequestsData } from '../../hooks/request/useMaintenanceRe
 import { formatDate } from '../../maintenanceUtils';
 import { getMaintenanceRequestColumns, renderMaintenanceRequestActions } from './requestColumns.jsx';
 import MaintenanceRequestDetailPanel from './MaintenanceRequestDetailPanel.jsx';
+import { queryKeys } from '../../../../common/query';
 
 const COLUMN_TO_BACKEND_KEY = {
     companyName: 'company.name',
@@ -21,16 +23,15 @@ const COLUMN_TO_BACKEND_KEY = {
     startDate: 'startDate',
 };
 
-export default function MaintenanceRequestTable({ refreshKey = 0, onRefresh, onEditRequest }) {
+export default function MaintenanceRequestTable({ onEditRequest }) {
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
     const [sorting, setSorting] = useState([]);
     const [alert, setAlert] = useState(null);
     const [requestToDelete, setRequestToDelete] = useState(null);
-    const [deleting, setDeleting] = useState(false);
     const [requestToCancel, setRequestToCancel] = useState(null);
-    const [cancelling, setCancelling] = useState(false);
+    const queryClient = useQueryClient();
     const { hasPermission } = usePermissions();
 
     const canEdit = hasPermission(PERMISSIONS.MAINTENANCE.REQUESTS.UPDATE);
@@ -66,16 +67,46 @@ export default function MaintenanceRequestTable({ refreshKey = 0, onRefresh, onE
         setPagination((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }));
     }, [debouncedGlobalFilter, backendFilters, backendSort]);
 
-    const { rows, loading, error, totalElements } = useMaintenanceRequestsData({
+    const { rows, loading, fetching, error, totalElements } = useMaintenanceRequestsData({
         pageIndex: pagination.pageIndex,
         pageSize: pagination.pageSize,
         search: debouncedGlobalFilter,
         filters: backendFilters,
         sort: backendSort,
-        refreshKey,
     });
 
     const columns = useMemo(() => getMaintenanceRequestColumns(), []);
+
+    const invalidateRequests = () => queryClient.invalidateQueries({
+        queryKey: queryKeys.maintenance.requests(),
+    });
+
+    const deleteRequestMutation = useMutation({
+        mutationFn: (requestId) => deleteMaintenanceRequest(requestId),
+        onSuccess: async () => {
+            setRequestToDelete(null);
+            setAlert({ type: 'success', message: 'Solicitud eliminada correctamente' });
+            await invalidateRequests();
+        },
+        onError: (deleteError) => {
+            setAlert({ type: 'error', message: deleteError?.response?.data?.message ?? deleteError?.message ?? 'No se pudo eliminar la solicitud' });
+        },
+    });
+
+    const cancelRequestMutation = useMutation({
+        mutationFn: ({ requestId, reason }) => cancelMaintenanceRequest(requestId, reason),
+        onSuccess: async () => {
+            setRequestToCancel(null);
+            setAlert({ type: 'success', message: 'Solicitud cancelada correctamente' });
+            await invalidateRequests();
+        },
+        onError: (cancelError) => {
+            setAlert({ type: 'error', message: cancelError?.response?.data?.message ?? cancelError?.message ?? 'No se pudo cancelar la solicitud' });
+        },
+    });
+
+    const deleting = deleteRequestMutation.isPending;
+    const cancelling = cancelRequestMutation.isPending;
 
     const handleDelete = useCallback((row) => setRequestToDelete(row), []);
     const handleDeleteCancel = useCallback(() => {
@@ -83,20 +114,10 @@ export default function MaintenanceRequestTable({ refreshKey = 0, onRefresh, onE
         setRequestToDelete(null);
     }, [deleting]);
 
-    const handleDeleteConfirm = useCallback(async () => {
+    const handleDeleteConfirm = useCallback(() => {
         if (!requestToDelete) return;
-        setDeleting(true);
-        try {
-            await deleteMaintenanceRequest(requestToDelete.id);
-            setRequestToDelete(null);
-            setAlert({ type: 'success', message: 'Solicitud eliminada correctamente' });
-            onRefresh?.();
-        } catch (error) {
-            setAlert({ type: 'error', message: error?.response?.data?.message ?? error?.message ?? 'No se pudo eliminar la solicitud' });
-        } finally {
-            setDeleting(false);
-        }
-    }, [requestToDelete, onRefresh]);
+        deleteRequestMutation.mutate(requestToDelete.id);
+    }, [requestToDelete, deleteRequestMutation]);
 
     const handleCancel = useCallback((row) => setRequestToCancel(row), []);
     const handleCancelClose = useCallback(() => {
@@ -104,20 +125,10 @@ export default function MaintenanceRequestTable({ refreshKey = 0, onRefresh, onE
         setRequestToCancel(null);
     }, [cancelling]);
 
-    const handleCancelConfirm = useCallback(async (reason) => {
+    const handleCancelConfirm = useCallback((reason) => {
         if (!requestToCancel) return;
-        setCancelling(true);
-        try {
-            await cancelMaintenanceRequest(requestToCancel.id, reason);
-            setRequestToCancel(null);
-            setAlert({ type: 'success', message: 'Solicitud cancelada correctamente' });
-            onRefresh?.();
-        } catch (error) {
-            setAlert({ type: 'error', message: error?.response?.data?.message ?? error?.message ?? 'No se pudo cancelar la solicitud' });
-        } finally {
-            setCancelling(false);
-        }
-    }, [requestToCancel, onRefresh]);
+        cancelRequestMutation.mutate({ requestId: requestToCancel.id, reason });
+    }, [requestToCancel, cancelRequestMutation]);
 
     return (
         <>
@@ -125,6 +136,7 @@ export default function MaintenanceRequestTable({ refreshKey = 0, onRefresh, onE
                 columns={columns}
                 data={rows}
                 loading={loading}
+                fetching={fetching}
                 error={error}
                 enableRowActions={canEdit || canDelete || canCancel}
                 renderRowActions={renderMaintenanceRequestActions({

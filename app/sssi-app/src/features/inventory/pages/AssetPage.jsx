@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Box,
   Button,
@@ -7,8 +8,8 @@ import {
   Container,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
-import DownloadForOfflineOutlinedIcon from '@mui/icons-material/DownloadForOfflineOutlined';
+import ImportIcon from '../../../common/components/icons/ImportIcon.jsx';
+import ExportIcon from '../../../common/components/icons/ExportIcon.jsx';
 import { PrimaryButton } from '../../../common/components/PrimaryButton.jsx';
 import { PageHeader } from '../../../common/components/index.js';
 import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
@@ -20,6 +21,7 @@ import ImportAssetsModal from '../components/asset/ImportAssetsModal.jsx';
 import { exportAssets } from '../services/assetExportService.js';
 import { usePermissions } from '../../../common/hooks/index.js';
 import { PERMISSIONS } from '../../../common/constants/permissions';
+import { queryKeys } from '../../../common/query';
 
 export function AssetPage() {
   const [createOpen, setCreateOpen] = useState(false);
@@ -27,10 +29,13 @@ export function AssetPage() {
   const [exportAnchorEl, setExportAnchorEl] = useState(null);
   const [exporting, setExporting] = useState(false);
   const [alert, setAlert] = useState(null);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
 
-  const handleRefresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+  const handleRefresh = useCallback(
+    () => { void queryClient.invalidateQueries({ queryKey: queryKeys.inventory.assets() }); },
+    [queryClient]
+  );
 
   const canViewAssets = hasPermission(PERMISSIONS.INVENTORY.READ);
   const canCreateAsset = hasPermission(PERMISSIONS.INVENTORY.MANAGE);
@@ -93,7 +98,7 @@ export function AssetPage() {
                     {canImportAssets && (
                       <Button
                         variant="outlined"
-                        startIcon={<UploadFileOutlinedIcon />}
+                        startIcon={<ImportIcon style={{ fontSize: 16, marginRight: 2 }} />}
                         onClick={() => setImportOpen(true)}
                         sx={{
                           textTransform: 'none',
@@ -109,7 +114,7 @@ export function AssetPage() {
                       <>
                         <Button
                           variant="outlined"
-                          startIcon={<DownloadForOfflineOutlinedIcon />}
+                          startIcon={<ExportIcon style={{ fontSize: 16, marginRight: 2 }} />}
                           onClick={handleOpenExportMenu}
                           sx={{
                             textTransform: 'none',
@@ -148,7 +153,7 @@ export function AssetPage() {
                 titleSx={{ fontSize: '1.65rem', letterSpacing: '0.3px' }}
               />
 
-              <AssetTable refreshKey={refreshKey} onRefresh={handleRefresh} />
+              <AssetTable />
               <AssetFormModal open={createOpen} onClose={() => setCreateOpen(false)} onSaved={handleRefresh} />
               <ImportAssetsModal open={importOpen} onClose={() => setImportOpen(false)} onImported={handleRefresh} />
             </>

@@ -8,7 +8,7 @@ import CampusEmailsModal from '../email/CampusEmailModal.jsx';
 export default function LocationTableView({ table, fillToBottom = true }) {
     const {
         config, title, columns,
-        rows, loading, error, totalElements,
+        rows, loading, fetching, error, totalElements,
         pagination, setPagination,
         globalFilter, setGlobalFilter,
         columnFilters, setColumnFilters,
@@ -33,6 +33,7 @@ export default function LocationTableView({ table, fillToBottom = true }) {
                     columns={columns}
                     data={rows}
                     loading={loading}
+                    fetching={fetching}
                     error={error}
                     enableRowActions={hasRowActions}
                     renderRowActions={hasRowActions ? renderRowActions : undefined}

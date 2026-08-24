@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Box, Container, Typography, Tabs, Tab } from '@mui/material';
 import PendingActionsOutlinedIcon from '@mui/icons-material/PendingActionsOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
@@ -10,11 +11,12 @@ import { useMaintenanceRegisterData } from '../../hooks/register/useMaintenanceR
 import RegisterCard from '../../components/register/RegisterCard.jsx';
 import RegisterTable from '../../components/register/RegisterTable.jsx';
 import RegisterFormModal from '../../components/register/RegisterFormModal.jsx';
+import { queryKeys } from '../../../../common/query';
 
 export default function RegisterPage() {
     const [modalState, setModalState] = useState({ open: false, requestId: null });
-    const [refresh, setRefresh] = useState(0);
     const [tabIndex, setTabIndex] = useState(0);
+    const queryClient = useQueryClient();
 
     const { hasPermission, hasAnyPermission } = usePermissions();
 
@@ -28,12 +30,13 @@ export default function RegisterPage() {
     const { rows: cards, loading: loadingCards } = useMaintenanceRegisterData({
         mode: 'assigned',
         pageSize: 50,
-        refreshKey: refresh,
     });
 
     const openRegister = (register) => setModalState({ open: true, requestId: register.id });
     const closeRegister = () => setModalState({ open: false, requestId: null });
-    const refreshAll = () => setRefresh((v) => v + 1);
+    const refreshAll = () => {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.maintenance.register() });
+    };
 
     if (!canView) return <AccessDeniedState />;
 
@@ -80,7 +83,7 @@ export default function RegisterPage() {
                     )}
 
                     {tabIndex === 1 && (
-                        <RegisterTable refreshKey={refresh} onOpenRegister={openRegister} />
+                        <RegisterTable onOpenRegister={openRegister} />
                     )}
                 </Box>
             </Container>

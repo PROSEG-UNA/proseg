@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Radio, Typography, useTheme } from '@mui/material';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import GeneralModal from '../../../common/components/GeneralModal.jsx';
@@ -6,6 +7,7 @@ import TableBase from '../../../common/components/TablaBase.jsx';
 import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
 import DialogModal from '../../../common/components/DialogModal.jsx';
 import { fetchRoles } from '../services/rolesService';
+import { queryKeys } from '../../../common/query';
 import { assignSingleRoleToUser, fetchRolesByUserId } from '../services/usersService';
 import { getFriendlyApiErrorMessage, formatRoleName } from '../../../common/utils/index.js';
 
@@ -14,55 +16,61 @@ const roleColumns = [
     { accessorKey: 'description', header: 'Descripción', size: 260, grow: 2 },
 ];
 
+const ROLE_CATALOG_PARAMS = { size: 200 };
+const ROLE_CATALOG_STALE_TIME = 10 * 60_000;
+const EMPTY_ROLES = [];
+const NO_SELECTION_OVERRIDE = { userId: null, roleId: undefined };
+
 export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
     const theme = useTheme();
     const accentColor = theme.vars.palette.tones.rose.fg;
 
-    const [roles, setRoles] = useState([]);
-    const [selectedRoleId, setSelectedRoleId] = useState(null);
-    const [initialRoleId, setInitialRoleId] = useState(null);
-    const [loading, setLoading] = useState(false);
+    const [selectionOverride, setSelectionOverride] = useState(NO_SELECTION_OVERRIDE);
     const [saving, setSaving] = useState(false);
-    const [error, setError] = useState(null);
     const [alert, setAlert] = useState(null);
 
-    useEffect(() => {
-        let ignore = false;
+    const queryClient = useQueryClient();
+    const modalReady = Boolean(open && user?.id);
 
-        const loadRoles = async () => {
-            if (!open || !user?.id) return;
-            try {
-                setLoading(true);
-                setError(null);
-                setSelectedRoleId(null);
+    const rolesQuery = useQuery({
+        queryKey: queryKeys.security.roleCatalog(ROLE_CATALOG_PARAMS),
+        queryFn: async () => {
+            const response = await fetchRoles(ROLE_CATALOG_PARAMS);
+            return (response.content ?? []).map((role) => ({
+                id: role.id,
+                name: role.name,
+                description: role.description || '—',
+            }));
+        },
+        enabled: modalReady,
+        staleTime: ROLE_CATALOG_STALE_TIME,
+    });
 
-                const [rolesResponse, assignedRoles] = await Promise.all([
-                    fetchRoles({ size: 200 }),
-                    fetchRolesByUserId(user.id),
-                ]);
-                if (ignore) return;
+    const userRolesQuery = useQuery({
+        queryKey: queryKeys.security.userRoles(user?.id ?? null),
+        queryFn: () => fetchRolesByUserId(user.id),
+        enabled: modalReady,
+    });
 
-                const mappedRoles = (rolesResponse.content ?? []).map((role) => ({
-                    id: role.id,
-                    name: role.name,
-                    description: role.description || '—',
-                }));
-                setRoles(mappedRoles);
+    const roles = rolesQuery.data ?? EMPTY_ROLES;
 
-                const assignedRoleIds = new Set((assignedRoles ?? []).map((role) => role.id));
-                const preselectedRoleId = mappedRoles.find((role) => assignedRoleIds.has(role.id))?.id ?? null;
-                setSelectedRoleId(preselectedRoleId);
-                setInitialRoleId(preselectedRoleId);
-            } catch (err) {
-                if (!ignore) setError(err?.message || 'Error al cargar roles');
-            } finally {
-                if (!ignore) setLoading(false);
-            }
-        };
+    const initialRoleId = useMemo(() => {
+        const assignedRoleIds = new Set((userRolesQuery.data ?? []).map((role) => role.id));
+        return roles.find((role) => assignedRoleIds.has(role.id))?.id ?? null;
+    }, [roles, userRolesQuery.data]);
 
-        void loadRoles();
-        return () => { ignore = true; };
-    }, [open, user?.id]);
+    const selectedRoleId = selectionOverride.userId === user?.id && selectionOverride.roleId !== undefined
+        ? selectionOverride.roleId
+        : initialRoleId;
+
+    const setSelectedRoleId = useCallback(
+        (roleId) => setSelectionOverride({ userId: user?.id ?? null, roleId }),
+        [user?.id]
+    );
+
+    const loading = rolesQuery.isLoading || userRolesQuery.isLoading;
+    const queryError = rolesQuery.error ?? userRolesQuery.error;
+    const error = queryError ? (queryError.message || 'Error al cargar roles') : null;
 
     const columns = useMemo(
         () => [
@@ -84,8 +92,14 @@ export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
             },
             ...roleColumns,
         ],
-        [selectedRoleId]
+        [selectedRoleId, setSelectedRoleId]
     );
+
+    const handleClose = useCallback(() => {
+        if (saving) return;
+        setSelectionOverride(NO_SELECTION_OVERRIDE);
+        onClose?.();
+    }, [saving, onClose]);
 
     const handleAssign = async () => {
         if (!user?.id) {
@@ -104,7 +118,8 @@ export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
         setSaving(true);
         try {
             await assignSingleRoleToUser(user.id, selectedRoleId);
-            setInitialRoleId(selectedRoleId);
+            setSelectionOverride(NO_SELECTION_OVERRIDE);
+            await queryClient.invalidateQueries({ queryKey: queryKeys.security.userRoles(user.id) });
             setAlert({ type: 'success', message: 'Rol actualizado correctamente.' });
             onSaved?.();
         } catch (err) {
@@ -120,7 +135,7 @@ export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
         <>
             <GeneralModal
                 open={open}
-                onClose={() => !saving && onClose?.()}
+                onClose={handleClose}
                 maxWidth="md"
                 fullScreenAt="md"
                 icon={ManageAccountsIcon}
@@ -132,7 +147,7 @@ export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
                         {selectedRoleId ? 'Rol seleccionado' : 'Sin rol seleccionado'}
                     </Typography>
                 }
-                secondaryButton={{ label: 'Cancelar', onClick: onClose }}
+                secondaryButton={{ label: 'Cancelar', onClick: handleClose }}
                 primaryButton={{ label: saving ? 'Guardando…' : 'Guardar cambios', onClick: handleAssign, disabled: saving, loading: saving }}
             >
                 {isAccessDeniedError ? (

@@ -45,4 +45,6 @@ public class AssetResponseDto {
     private String serialNumber;
     private BigDecimal latitude;
     private BigDecimal longitude;
+    private int imagesCount;
+    private int componentsCount;
 }

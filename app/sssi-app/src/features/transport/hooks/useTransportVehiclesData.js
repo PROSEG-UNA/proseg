@@ -1,56 +1,48 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchVehicles } from '../services/vehicles/vehiclesService';
 import { getFriendlyApiErrorMessage } from '../../../common/utils';
 import { vehicleStatusLabel } from '../transportUtils';
+import { keepPreviousPage, queryKeys } from '../../../common/query';
 
-export function useTransportVehiclesData({ pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [], refreshKey = 0 } = {}) {
-    const [rows, setRows] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [totalElements, setTotalElements] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
+function mapVehicleToRow(vehicle) {
+    return {
+        id: vehicle.id,
+        plate: vehicle.plate ?? '—',
+        brand: vehicle.brand ?? '—',
+        model: vehicle.model ?? '—',
+        year: vehicle.year ?? '—',
+        capacity: vehicle.capacity ?? '—',
+        status: vehicleStatusLabel(vehicle.status),
+        statusRaw: vehicle.status ?? '',
+        createdAt: vehicle.createdAt ?? null,
+        updatedAt: vehicle.updatedAt ?? null,
+    };
+}
 
-    const filtersKey = JSON.stringify(filters);
-    const sortKey = sort.join('|');
-    const stableFilters = useMemo(() => JSON.parse(filtersKey), [filtersKey]);
-    const stableSort = useMemo(() => (sortKey ? sortKey.split('|') : []), [sortKey]);
+export function useTransportVehiclesData({ pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [] } = {}) {
+    const requestParams = { page: pageIndex, size: pageSize, search, filters, sort };
 
-    useEffect(() => {
-        let ignore = false;
+    const listQueryKey = queryKeys.transport.vehicleList(requestParams);
 
-        const load = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-                const response = await fetchVehicles({ page: pageIndex, size: pageSize, search, filters: stableFilters, sort: stableSort });
-                if (ignore) return;
+    const { data, isLoading, isFetching, error } = useQuery({
+        queryKey: listQueryKey,
+        placeholderData: keepPreviousPage(listQueryKey),
+        queryFn: async () => {
+            const response = await fetchVehicles(requestParams);
+            return {
+                rows: (response.content ?? []).map(mapVehicleToRow),
+                totalElements: response.totalElements ?? 0,
+                totalPages: response.totalPages ?? 0,
+            };
+        },
+    });
 
-                setRows((response.content ?? []).map((vehicle) => ({
-                    id: vehicle.id,
-                    plate: vehicle.plate ?? '—',
-                    brand: vehicle.brand ?? '—',
-                    model: vehicle.model ?? '—',
-                    year: vehicle.year ?? '—',
-                    capacity: vehicle.capacity ?? '—',
-                    status: vehicleStatusLabel(vehicle.status),
-                    statusRaw: vehicle.status ?? '',
-                    createdAt: vehicle.createdAt ?? null,
-                    updatedAt: vehicle.updatedAt ?? null,
-                })));
-                setTotalElements(response.totalElements ?? 0);
-                setTotalPages(response.totalPages ?? 0);
-            } catch (error) {
-                if (!ignore) setError(getFriendlyApiErrorMessage(error, 'Error al cargar vehículos'));
-            } finally {
-                if (!ignore) setLoading(false);
-            }
-        };
-
-        void load();
-        return () => {
-            ignore = true;
-        };
-    }, [pageIndex, pageSize, search, stableFilters, stableSort, refreshKey]);
-
-    return { rows, loading, error, totalElements, totalPages };
+    return {
+        rows: data?.rows ?? [],
+        loading: isLoading,
+        fetching: isFetching,
+        error: error ? getFriendlyApiErrorMessage(error, 'Error al cargar vehículos') : null,
+        totalElements: data?.totalElements ?? 0,
+        totalPages: data?.totalPages ?? 0,
+    };
 }

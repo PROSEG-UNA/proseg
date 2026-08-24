@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Box, Container } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { PageHeader } from '../../../../common/components/index.js';
@@ -8,11 +9,12 @@ import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { usePermissions } from '../../../../common/hooks/index.js';
 import DriversTable from '../../components/drivers/DriversTable.jsx';
 import DriverFormModal from '../../components/drivers/DriverFormModal.jsx';
+import { queryKeys } from '../../../../common/query';
 
 export default function DriversPage() {
     const [driverFormOpen, setDriverFormOpen] = useState(false);
     const [driverFormId, setDriverFormId] = useState(null);
-    const [driversRefresh, setDriversRefresh] = useState(0);
+    const queryClient = useQueryClient();
     const { hasPermission, hasAnyPermission } = usePermissions();
 
     const canViewDrivers = hasAnyPermission([
@@ -31,7 +33,9 @@ export default function DriversPage() {
         setDriverFormOpen(true);
     };
 
-    const refreshDrivers = () => setDriversRefresh((value) => value + 1);
+    const refreshDrivers = () => {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.transport.drivers() });
+    };
 
     if (!canViewDrivers) return <AccessDeniedState />;
 
@@ -49,11 +53,7 @@ export default function DriversPage() {
                 />
 
                 <Box sx={{ pt: 3 }}>
-                    <DriversTable
-                        refreshKey={driversRefresh}
-                        onRefresh={refreshDrivers}
-                        onEditDriver={openEditDriver}
-                    />
+                    <DriversTable onEditDriver={openEditDriver} />
                 </Box>
             </Container>
 

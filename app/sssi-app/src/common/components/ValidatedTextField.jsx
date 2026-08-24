@@ -1,19 +1,3 @@
-/**
- * ValidatedTextField Component
- * Envuelve TextField de Material-UI con validación automática
- * 
- * Uso:
- * <ValidatedTextField
- *   fieldName="email"
- *   value={formData.email}
- *   onChange={handleChange}
- *   onBlur={handleBlur}
- *   error={!!errors.email}
- *   helperText={errors.email}
- *   touched={touched.email}
- * />
- */
-
 import { TextField } from '@mui/material';
 import { getValidationRule } from '../utils/validationRegex';
 
@@ -33,7 +17,6 @@ export function ValidatedTextField({
 }) {
   const rule = getValidationRule(fieldName);
 
-  // Si la regla existe y hay patrón, añadirlo a inputProps
   let inputProps = otherProps.inputProps || {};
   if (rule && rule.pattern) {
     inputProps = {
@@ -59,7 +42,7 @@ export function ValidatedTextField({
         return new RegExp(`^[${cleaned}]$`, 'u');
       }
     } catch {
-      // ignore
+      return null;
     }
     return null;
   };

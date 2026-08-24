@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Box, Typography, Skeleton, Dialog, IconButton, Button } from '@mui/material';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Box, Typography, Skeleton, Dialog, IconButton, Button, Alert } from '@mui/material';
 import RouterIcon from '@mui/icons-material/Router';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import WidgetsOutlinedIcon from '@mui/icons-material/WidgetsOutlined';
@@ -7,14 +8,12 @@ import AddIcon from '@mui/icons-material/Add';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
-import { fetchNetworkInterfaceByAsset } from '../../services/assetsService';
-import { fetchAssetArchives } from '../../services/assetArchiveService';
-import {
-    fetchAssetComponents,
-    deleteAssetComponent,
-} from '../../services/assetComponentsService';
+import { deleteAssetComponent } from '../../services/assetComponentsService';
 import AssetComponentFormModal from './AssetComponentFormModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
+import { queryKeys } from '../../../../common/query';
+import { getFriendlyApiErrorMessage } from '../../../../common/utils';
+import { assetComponentsQueryOptions, assetDetailQueryOptions } from './assetDetailQueries.js';
 
 function InfoRow({ label, value }) {
     return (
@@ -65,45 +64,50 @@ function SectionHeader({ icon: Icon, label }) {
 }
 
 export default function AssetDetailPanel({ assetId, canManageAssets = false }) {
-    const [netIface, setNetIface] = useState(null);
-    const [images, setImages]     = useState([]);
-    const [components, setComponents] = useState([]);
-    const [loading, setLoading]   = useState(true);
     const [lightbox, setLightbox] = useState(null);
     const [componentModal, setComponentModal] = useState(null);
     const [componentToDelete, setComponentToDelete] = useState(null);
-    const [deletingComponent, setDeletingComponent] = useState(false);
     const [alert, setAlert] = useState(null);
+    const queryClient = useQueryClient();
 
-    const loadComponents = async () => {
-        const data = await fetchAssetComponents(assetId);
-        setComponents(Array.isArray(data) ? data : []);
+    const detailQuery = useQuery({
+        ...assetDetailQueryOptions(assetId),
+        enabled: Boolean(assetId),
+    });
+
+    const componentsQuery = useQuery({
+        ...assetComponentsQueryOptions(assetId),
+        enabled: Boolean(assetId),
+    });
+
+    const invalidateAssets = () => queryClient.invalidateQueries({
+        queryKey: queryKeys.inventory.assets(),
+    });
+
+    const deleteComponentMutation = useMutation({
+        mutationFn: (componentId) => deleteAssetComponent(componentId),
+        onSuccess: async () => {
+            setComponentToDelete(null);
+            setAlert({ type: 'success', message: 'Componente eliminado correctamente' });
+            await invalidateAssets();
+        },
+        onError: (deleteError) => {
+            const data = deleteError?.response?.data;
+            setAlert({ type: 'error', message: data?.message ?? deleteError?.message ?? 'No se pudo eliminar el componente' });
+        },
+    });
+
+    const netIface = detailQuery.data?.netIface ?? null;
+    const images = detailQuery.data?.images ?? [];
+    const components = componentsQuery.data ?? [];
+    const deletingComponent = deleteComponentMutation.isPending;
+    const loading = Boolean(assetId) && (detailQuery.isPending || componentsQuery.isPending);
+    const loadError = detailQuery.error ?? componentsQuery.error;
+
+    const handleRetryLoad = () => {
+        void detailQuery.refetch();
+        void componentsQuery.refetch();
     };
-
-    const loadDetails = () => {
-        let cancelled = false;
-        setLoading(true);
-        setNetIface(null);
-        setImages([]);
-        setComponents([]);
-
-        Promise.all([
-            fetchNetworkInterfaceByAsset(assetId).catch(() => null),
-            fetchAssetArchives(assetId).catch(() => []),
-            fetchAssetComponents(assetId).catch(() => []),
-        ]).then(([iface, archives, loadedComponents]) => {
-            if (cancelled) return;
-            setNetIface(iface);
-            setImages(archives.filter(a => !!a.imageUrl));
-            setComponents(Array.isArray(loadedComponents) ? loadedComponents : []);
-        }).finally(() => {
-            if (!cancelled) setLoading(false);
-        });
-
-        return () => { cancelled = true; };
-    };
-
-    useEffect(loadDetails, [assetId]);
 
     if (loading) {
         return (
@@ -115,32 +119,40 @@ export default function AssetDetailPanel({ assetId, canManageAssets = false }) {
         );
     }
 
+    if (loadError) {
+        return (
+            <Box sx={{ p: 2.5 }}>
+                <Alert
+                    severity="error"
+                    variant="outlined"
+                    action={
+                        <Button color="inherit" size="small" onClick={handleRetryLoad}>
+                            Reintentar
+                        </Button>
+                    }
+                    sx={{ fontSize: '0.82rem' }}
+                >
+                    {getFriendlyApiErrorMessage(loadError, 'No se pudo cargar el detalle del activo')}
+                </Alert>
+            </Box>
+        );
+    }
+
     const hasNetIface = !!netIface;
     const hasImages   = images.length > 0;
 
     const handleComponentSaved = async () => {
         try {
-            await loadComponents();
+            await invalidateAssets();
             setAlert({ type: 'success', message: 'Componente guardado correctamente' });
         } catch {
             setAlert({ type: 'error', message: 'No se pudieron cargar los componentes' });
         }
     };
 
-    const handleDeleteComponent = async () => {
+    const handleDeleteComponent = () => {
         if (!componentToDelete) return;
-        setDeletingComponent(true);
-        try {
-            await deleteAssetComponent(componentToDelete.id);
-            await loadComponents();
-            setComponentToDelete(null);
-            setAlert({ type: 'success', message: 'Componente eliminado correctamente' });
-        } catch (error) {
-            const data = error?.response?.data;
-            setAlert({ type: 'error', message: data?.message ?? error?.message ?? 'No se pudo eliminar el componente' });
-        } finally {
-            setDeletingComponent(false);
-        }
+        deleteComponentMutation.mutate(componentToDelete.id);
     };
 
     return (

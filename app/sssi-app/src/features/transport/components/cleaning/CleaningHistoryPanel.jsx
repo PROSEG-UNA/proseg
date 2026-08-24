@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Chip, Stack, Typography } from '@mui/material';
 import CleaningServicesOutlinedIcon from '@mui/icons-material/CleaningServicesOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
@@ -10,6 +11,7 @@ import { useDebounce } from '../../../../common/hooks/useDebounce.js';
 import { formatDateTime } from '../../transportUtils.js';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
 import { fetchCleaningHistory, fetchCleaningHistoryById } from '../../services/cleaning/cleaningService.js';
+import { keepPreviousPage, queryKeys } from '../../../../common/query';
 
 const COLUMN_TO_BACKEND_KEY = {
     executedAt: 'executionDate',
@@ -80,19 +82,31 @@ function countUpdated(record) {
     return (record?.updatedDrivers ?? 0) + (record?.updatedVehicles ?? 0) + (record?.updatedTours ?? 0);
 }
 
+const EMPTY_LIST = [];
+
+function mapCleaningRecordToRow(record) {
+    return {
+        id: record.id,
+        executedAt: record.executedAt ?? null,
+        executedBy: record.executedByDisplay ?? record.executedBy ?? '—',
+        fileName: record.fileName ?? '—',
+        finalStatus: record.finalStatus ?? '',
+        totalReadRecords: record.totalReadRecords ?? 0,
+        duplicatesDetected: record.duplicatesDetected ?? 0,
+        invalidRecords: record.invalidRecords ?? 0,
+        durationMs: record.durationMs ?? 0,
+        newCount: countNew(record),
+        updatedCount: countUpdated(record),
+    };
+}
+
 export default function CleaningHistoryPanel() {
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
     const [sorting, setSorting] = useState([{ id: 'executedAt', desc: true }]);
-    const [rows, setRows] = useState([]);
-    const [totalElements, setTotalElements] = useState(0);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [alert, setAlert] = useState(null);
     const [selectedId, setSelectedId] = useState(null);
-    const [selectedDetail, setSelectedDetail] = useState(null);
-    const [loadingDetail, setLoadingDetail] = useState(false);
+    const queryClient = useQueryClient();
 
     const debouncedGlobalFilter = useDebounce(globalFilter, 350);
     const debouncedColumnFilters = useDebounce(columnFilters, 350);
@@ -134,69 +148,59 @@ export default function CleaningHistoryPanel() {
         setPagination((currentValue) => (currentValue.pageIndex === 0 ? currentValue : { ...currentValue, pageIndex: 0 }));
     }, []);
 
-    useEffect(() => {
-        let ignore = false;
-        const load = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-                const response = await fetchCleaningHistory({
-                    page: pagination.pageIndex,
-                    size: pagination.pageSize,
-                    search: debouncedGlobalFilter,
-                    filters: backendFilters,
-                    sort: backendSort,
-                });
-                if (ignore) return;
-                const items = response?.content ?? [];
-                setRows(items.map((record) => ({
-                    id: record.id,
-                    executedAt: record.executedAt ?? null,
-                    executedBy: record.executedByDisplay ?? record.executedBy ?? '—',
-                    fileName: record.fileName ?? '—',
-                    finalStatus: record.finalStatus ?? '',
-                    totalReadRecords: record.totalReadRecords ?? 0,
-                    duplicatesDetected: record.duplicatesDetected ?? 0,
-                    invalidRecords: record.invalidRecords ?? 0,
-                    durationMs: record.durationMs ?? 0,
-                    newCount: countNew(record),
-                    updatedCount: countUpdated(record),
-                })));
-                setTotalElements(response?.totalElements ?? 0);
-            } catch (requestError) {
-                if (!ignore) setError(getFriendlyApiErrorMessage(requestError, 'No se pudo cargar el historial de depuraciones'));
-            } finally {
-                if (!ignore) setLoading(false);
-            }
-        };
-        void load();
-        return () => {
-            ignore = true;
-        };
-    }, [pagination.pageIndex, pagination.pageSize, debouncedGlobalFilter, backendFilters, backendSort]);
+    const historyRequestParams = {
+        page: pagination.pageIndex,
+        size: pagination.pageSize,
+        search: debouncedGlobalFilter,
+        filters: backendFilters,
+        sort: backendSort,
+    };
 
-    useEffect(() => {
-        if (!selectedId) return;
-        let ignore = false;
-        const loadDetail = async () => {
-            try {
-                setLoadingDetail(true);
-                const response = await fetchCleaningHistoryById(selectedId);
-                if (!ignore) setSelectedDetail(response);
-            } catch (requestError) {
-                if (!ignore) {
-                    setAlert({ type: 'error', message: getFriendlyApiErrorMessage(requestError, 'No se pudo cargar el detalle de depuración') });
-                    setSelectedId(null);
-                }
-            } finally {
-                if (!ignore) setLoadingDetail(false);
-            }
-        };
-        void loadDetail();
-        return () => {
-            ignore = true;
-        };
-    }, [selectedId]);
+    const listQueryKey = queryKeys.transport.cleaningList(historyRequestParams);
+
+    const historyQuery = useQuery({
+        queryKey: listQueryKey,
+        placeholderData: keepPreviousPage(listQueryKey),
+        queryFn: async () => {
+            const response = await fetchCleaningHistory(historyRequestParams);
+            return {
+                rows: (response?.content ?? []).map(mapCleaningRecordToRow),
+                totalElements: response?.totalElements ?? 0,
+            };
+        },
+    });
+
+    const detailQuery = useQuery({
+        queryKey: queryKeys.transport.cleaningDetail(selectedId),
+        queryFn: () => fetchCleaningHistoryById(selectedId),
+        enabled: Boolean(selectedId),
+    });
+
+    const rows = historyQuery.data?.rows ?? EMPTY_LIST;
+    const totalElements = historyQuery.data?.totalElements ?? 0;
+    const loading = historyQuery.isLoading;
+    const fetching = historyQuery.isFetching;
+    const error = historyQuery.error
+        ? getFriendlyApiErrorMessage(historyQuery.error, 'No se pudo cargar el historial de depuraciones')
+        : null;
+
+    const selectedDetail = detailQuery.data ?? null;
+    const loadingDetail = Boolean(selectedId) && detailQuery.isPending;
+
+    const detailErrorMessage = detailQuery.error
+        ? getFriendlyApiErrorMessage(detailQuery.error, 'No se pudo cargar el detalle de depuración')
+        : null;
+
+    const handleCloseDetail = useCallback(() => {
+        setSelectedId(null);
+    }, []);
+
+    const handleCloseDetailError = useCallback(() => {
+        if (selectedId) {
+            queryClient.removeQueries({ queryKey: queryKeys.transport.cleaningDetail(selectedId) });
+        }
+        setSelectedId(null);
+    }, [queryClient, selectedId]);
 
     const columns = useMemo(() => [
         {
@@ -254,6 +258,7 @@ export default function CleaningHistoryPanel() {
                 columns={columns}
                 data={rows}
                 loading={loading}
+                fetching={fetching}
                 error={error}
                 enableRowActions
                 renderRowActions={({ row }) => (
@@ -282,11 +287,8 @@ export default function CleaningHistoryPanel() {
             />
 
             <GeneralModal
-                open={!!selectedId}
-                onClose={() => {
-                    setSelectedId(null);
-                    setSelectedDetail(null);
-                }}
+                open={Boolean(selectedId) && !detailErrorMessage}
+                onClose={handleCloseDetail}
                 icon={CleaningServicesOutlinedIcon}
                 title="Detalle de depuración"
                 subtitle={selectedDetail?.fileName ?? ''}
@@ -294,10 +296,7 @@ export default function CleaningHistoryPanel() {
                 fillHeight
                 primaryButton={{
                     label: 'Cerrar',
-                    onClick: () => {
-                        setSelectedId(null);
-                        setSelectedDetail(null);
-                    },
+                    onClick: handleCloseDetail,
                 }}
                 loading={loadingDetail}
             >
@@ -350,10 +349,10 @@ export default function CleaningHistoryPanel() {
             </GeneralModal>
 
             <DialogModal
-                open={!!alert}
-                type={alert?.type}
-                message={alert?.message}
-                onClose={() => setAlert(null)}
+                open={!!detailErrorMessage}
+                type="error"
+                message={detailErrorMessage}
+                onClose={handleCloseDetailError}
             />
         </>
     );

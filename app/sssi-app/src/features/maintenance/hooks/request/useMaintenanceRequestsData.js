@@ -1,60 +1,54 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchMaintenanceRequests } from '../../services/request/requestsService';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils';
 import { statusLabel } from '../../maintenanceUtils';
+import { keepPreviousPage, queryKeys } from '../../../../common/query';
 
-export function useMaintenanceRequestsData({ pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [], refreshKey = 0 } = {}) {
-    const [rows, setRows] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [totalElements, setTotalElements] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
+function mapRequestToRow(request) {
+    return {
+        id: request.id,
+        companyId: request.company?.id ?? '',
+        companyName: request.company?.name ?? '—',
+        companyLegalId: request.company?.legalId ?? '—',
+        email: Array.isArray(request.emails) && request.emails.length > 0 ? request.emails.join(', ') : '—',
+        description: request.description ?? '—',
+        status: statusLabel(request.status),
+        statusRaw: request.status ?? '',
+        startDate: request.startDate ?? null,
+        endDate: request.endDate ?? null,
+        startTime: request.startTime ?? null,
+        endTime: request.endTime ?? null,
+        campusId: request.campusId ?? null,
+        buildingId: request.buildingId ?? null,
+        createdAt: request.createdAt ?? null,
+        updatedAt: request.updatedAt ?? null,
+    };
+}
 
-    const filtersKey = JSON.stringify(filters);
-    const sortKey = sort.join('|');
+export function useMaintenanceRequestsData({ pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [] } = {}) {
+    const requestParams = { page: pageIndex, size: pageSize, search, filters, sort };
 
-    useEffect(() => {
-        let ignore = false;
+    const listQueryKey = queryKeys.maintenance.requestList(requestParams);
 
-        const load = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-                const response = await fetchMaintenanceRequests({ page: pageIndex, size: pageSize, search, filters, sort });
-                if (ignore) return;
+    const { data, isLoading, isFetching, error } = useQuery({
+        queryKey: listQueryKey,
+        placeholderData: keepPreviousPage(listQueryKey),
+        queryFn: async () => {
+            const response = await fetchMaintenanceRequests(requestParams);
+            return {
+                rows: (response.content ?? []).map(mapRequestToRow),
+                totalElements: response.totalElements ?? 0,
+                totalPages: response.totalPages ?? 0,
+            };
+        },
+    });
 
-                setRows((response.content ?? []).map((request) => ({
-                    id: request.id,
-                    companyId: request.company?.id ?? '',
-                    companyName: request.company?.name ?? '—',
-                    companyLegalId: request.company?.legalId ?? '—',
-                    email: Array.isArray(request.emails) && request.emails.length > 0 ? request.emails.join(', ') : '—',
-                    description: request.description ?? '—',
-                    status: statusLabel(request.status),
-                    statusRaw: request.status ?? '',
-                    startDate: request.startDate ?? null,
-                    endDate: request.endDate ?? null,
-                    startTime: request.startTime ?? null,
-                    endTime: request.endTime ?? null,
-                    campusId: request.campusId ?? null,
-                    buildingId: request.buildingId ?? null,
-                    createdAt: request.createdAt ?? null,
-                    updatedAt: request.updatedAt ?? null,
-                })));
-                setTotalElements(response.totalElements ?? 0);
-                setTotalPages(response.totalPages ?? 0);
-            } catch (error) {
-                if (!ignore) setError(getFriendlyApiErrorMessage(error, 'Error al cargar solicitudes de mantenimiento'));
-            } finally {
-                if (!ignore) setLoading(false);
-            }
-        };
-
-        void load();
-        return () => {
-            ignore = true;
-        };
-    }, [pageIndex, pageSize, search, filtersKey, sortKey, refreshKey]);
-
-    return { rows, loading, error, totalElements, totalPages };
+    return {
+        rows: data?.rows ?? [],
+        loading: isLoading,
+        fetching: isFetching,
+        error: error ? getFriendlyApiErrorMessage(error, 'Error al cargar solicitudes de mantenimiento') : null,
+        totalElements: data?.totalElements ?? 0,
+        totalPages: data?.totalPages ?? 0,
+    };
 }

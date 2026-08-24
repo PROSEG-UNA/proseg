@@ -63,7 +63,7 @@ const STATUS_LABELS = Object.fromEntries(
     MAINTENANCE_TICKET_STATUS_OPTIONS.map((option) => [option.value, option.label])
 );
 
-export default function MaintenanceTicketTable({ refreshKey = 0, onRefresh, onEdit, onView }) {
+export default function MaintenanceTicketTable({ onEdit, onView }) {
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
@@ -110,13 +110,12 @@ export default function MaintenanceTicketTable({ refreshKey = 0, onRefresh, onEd
         setPagination((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }));
     }, [debouncedGlobalFilter, backendFilters, backendSort, statusTab]);
 
-    const { rows, loading, error, totalElements } = useMaintenanceTicketsData({
+    const { rows, loading, fetching, error, totalElements } = useMaintenanceTicketsData({
         pageIndex: pagination.pageIndex,
         pageSize: pagination.pageSize,
         search: debouncedGlobalFilter,
         filters: backendFilters,
         sort: backendSort,
-        refreshKey,
     });
 
     const columns = useMemo(() => [
@@ -220,6 +219,7 @@ export default function MaintenanceTicketTable({ refreshKey = 0, onRefresh, onEd
                 columns={columns}
                 data={rows}
                 loading={loading}
+                fetching={fetching}
                 error={error}
                 enableRowActions={canViewTickets}
                 renderRowActions={renderRowActions}
