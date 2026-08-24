@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 const INIT = {
-    executingUnit: '', responsibleEmployee: '', responsibleEmployeeId: '',
+    executingUnitId: '', employeeId: '',
     brandId: '', typeId: '', modelId: '',
     campusId: '', buildingId: '', floorNumber: '', locationId: '',
     status: '', decommissionDate: '',

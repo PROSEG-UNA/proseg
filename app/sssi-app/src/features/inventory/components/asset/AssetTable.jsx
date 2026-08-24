@@ -33,9 +33,9 @@ const DEFAULT_COLUMN_VISIBILITY = {
 const COLUMN_TO_BACKEND_KEY = {
     assetNumber: 'assetNumber',
     serialNumber: 'serialNumber',
-    executingUnit: 'executingUnit',
-    responsibleEmployee: 'responsibleEmployee',
-    responsibleEmployeeId: 'responsibleEmployeeId',
+    executingUnit: 'executingUnit.name',
+    responsibleEmployee: 'employee.name',
+    responsibleEmployeeId: 'employee.identification',
     type: 'model.type.name',
     brand: 'model.brand.name',
     model: 'model.name',

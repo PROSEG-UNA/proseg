@@ -327,9 +327,9 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
 
                             <SectionBlock icon={PersonOutlineOutlinedIcon} title="Responsable">
                                 <Grid container spacing={1.5}>
-                                    <Grid item xs={12} md={4}><DetailCard label="Unidad ejecutora" value={asset.executingUnit} icon={PersonOutlineOutlinedIcon} /></Grid>
-                                    <Grid item xs={12} md={4}><DetailCard label="Funcionario responsable" value={asset.responsibleEmployee} icon={PersonOutlineOutlinedIcon} /></Grid>
-                                    <Grid item xs={12} md={4}><DetailCard label="ID del funcionario" value={asset.responsibleEmployeeId} icon={PersonOutlineOutlinedIcon} /></Grid>
+                                    <Grid item xs={12} md={4}><DetailCard label="Unidad ejecutora" value={asset.executingUnit?.name} icon={PersonOutlineOutlinedIcon} /></Grid>
+                                    <Grid item xs={12} md={4}><DetailCard label="Funcionario responsable" value={asset.employee?.name} icon={PersonOutlineOutlinedIcon} /></Grid>
+                                    <Grid item xs={12} md={4}><DetailCard label="ID del funcionario" value={asset.employee?.identification} icon={PersonOutlineOutlinedIcon} /></Grid>
                                 </Grid>
                             </SectionBlock>
 

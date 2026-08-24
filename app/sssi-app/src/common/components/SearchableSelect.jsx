@@ -4,6 +4,7 @@ import {
     Typography, Divider, Button, Box, useTheme,
 } from '@mui/material';
 import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
@@ -18,6 +19,8 @@ export default function SearchableSelect({
     getItemValue,
     onCreate,
     createLabel,
+    onEdit,
+    editLabel,
     pageSize = 5,
     label,
     required,
@@ -65,10 +68,12 @@ export default function SearchableSelect({
                 const v = e.target.value;
                 if (multiple) {
                     if (Array.isArray(v) && v.includes('__CREATE__')) { onCreate?.(search); return; }
-                    onChange((Array.isArray(v) ? v : []).filter(x => x !== '__CREATE__' && x !== ''));
+                    if (Array.isArray(v) && v.includes('__EDIT__')) { onEdit?.(); return; }
+                    onChange((Array.isArray(v) ? v : []).filter(x => x !== '__CREATE__' && x !== '__EDIT__' && x !== ''));
                     return;
                 }
                 if (v === '__CREATE__') { onCreate?.(search); return; }
+                if (v === '__EDIT__') { onEdit?.(); return; }
                 onChange(v);
             }}
             onBlur={onBlur}
@@ -213,7 +218,7 @@ export default function SearchableSelect({
                 </IconButton>
             </ListSubheader>
 
-            {onCreate && <Divider />}
+            {(onCreate || (onEdit && selectedItem)) && <Divider />}
             {onCreate && (
                 <MenuItem
                     value="__CREATE__"
@@ -221,6 +226,15 @@ export default function SearchableSelect({
                 >
                     <AddCircleOutlinedIcon sx={{ fontSize: 16 }} />
                     {typeof createLabel === 'function' ? createLabel(search) : createLabel}
+                </MenuItem>
+            )}
+            {onEdit && selectedItem && (
+                <MenuItem
+                    value="__EDIT__"
+                    sx={{ color: accentColor, fontWeight: 600, fontSize: 13.5, gap: 1, justifyContent: 'center' }}
+                >
+                    <EditOutlinedIcon sx={{ fontSize: 16 }} />
+                    {typeof editLabel === 'function' ? editLabel(selectedItem) : editLabel}
                 </MenuItem>
             )}
 
