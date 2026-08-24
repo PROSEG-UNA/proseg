@@ -222,6 +222,24 @@ public class MaintenanceRequestServiceImpl implements MaintenanceRequestService 
 
         MaintenanceRequest saved = maintenanceRequestRepository.save(maintenanceRequest);
 
+        if (oldStatus != MaintenanceStatus.CANCELLED && saved.getStatus() == MaintenanceStatus.CANCELLED) {
+            publishMaintenanceNotification(
+                    saved,
+                    "REJECTED",
+                    "Solicitud de mantenimiento rechazada",
+                    "La solicitud fue rechazada por administracion",
+                    List.of(
+                            formatChange("Estado", toStatusLabel(oldStatus), toStatusLabel(saved.getStatus())),
+                            "Motivo: " + valueOrFallback(saved.getCancellationReason())
+                    )
+            );
+            return maintenanceRequestMapper.toResponse(saved);
+        }
+
+        if (oldStatus == MaintenanceStatus.CANCELLED && saved.getStatus() == MaintenanceStatus.CANCELLED) {
+            return maintenanceRequestMapper.toResponse(saved);
+        }
+
         publishMaintenanceNotification(
                 saved,
                 "UPDATED",
