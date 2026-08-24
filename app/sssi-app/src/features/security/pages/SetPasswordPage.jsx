@@ -58,21 +58,6 @@ function getTimeRemaining(value) {
     return `${m} minutos restantes`;
 }
 
-function getPasswordStrength(password) {
-    if (!password) return {score: 0, label: '', color: 'transparent'};
-    let score = 0;
-    if (password.length >= 8) score++;
-    if (password.length >= 12) score++;
-    if (/[A-Z]/.test(password)) score++;
-    if (/[0-9]/.test(password)) score++;
-    if (/[^A-Za-z0-9]/.test(password)) score++;
-    if (score <= 1) return {score: 20, label: 'Muy débil', color: RED[500]};
-    if (score === 2) return {score: 40, label: 'Débil', color: '#f59e0b'};
-    if (score === 3) return {score: 60, label: 'Regular', color: '#d97706'};
-    if (score === 4) return {score: 80, label: 'Fuerte', color: '#059669'};
-    return {score: 100, label: 'Muy fuerte', color: '#047857'};
-}
-
 function PageShell({children}) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
