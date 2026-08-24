@@ -104,7 +104,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Locaciones" pageTitle="Locaciones">
+                                                <DashboardLayout title="Gestión de Detalles de Ubicación" pageTitle="Detalles de Ubicación">
                                                     <LocationPage />
                                                 </DashboardLayout>
                                             }

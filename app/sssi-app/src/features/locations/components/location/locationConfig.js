@@ -48,8 +48,8 @@ export const LOCATION_CONFIG = {
         ],
     },
     location: {
-        title: 'Locación',
-        pluralTitle: 'Locaciones',
+        title: 'Detalle de Ubicación',
+        pluralTitle: 'Detalles de Ubicación',
         baseUrl: LOCATION_ENDPOINTS.locations,
         icon: PlaceIcon,
         columnToBackendKey: {
@@ -59,7 +59,7 @@ export const LOCATION_CONFIG = {
             description: 'description',
         },
         columns: [
-            { accessorKey: 'description', header: 'Descripción', size: 180, grow: 2 },
+            { accessorKey: 'description', header: 'Detalle de Ubicación', size: 180, grow: 2 },
             {
                 id: 'campus',
                 header: 'Campus',
@@ -113,7 +113,7 @@ export const LOCATION_CONFIG = {
                 required: true,
                 getInitialValue: (row) => row?.floor?.name ? parseInt(row.floor.name) : '',
             },
-            { key: 'description', label: 'Descripción', type: 'textarea', required: true },
+            { key: 'description', label: 'Detalle de Ubicación', type: 'textarea', required: true },
         ],
     },
 };

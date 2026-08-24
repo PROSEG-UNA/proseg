@@ -867,7 +867,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                             />
 
                             <SearchableSelect
-                                label="Locación" value={formValues.locationId}
+                                label="Detalle de Ubicación" value={formValues.locationId}
                                 onChange={v => handleChange('locationId', v)}
                                 onBlur={() => handleBlur('locationId')}
                                 fullWidth size="small"
@@ -883,7 +883,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                                 getItemLabel={l => l.description + (l.floor?.name ? ` (Piso ${l.floor.name})` : '')}
                                 getItemValue={l => l.id}
                                 onCreate={() => openCatalogModal('locationId')}
-                                createLabel="Crear nueva Locación"
+                                createLabel="Crear nuevo Detalle de Ubicación"
                             />
                         </Box>
                     </Box>

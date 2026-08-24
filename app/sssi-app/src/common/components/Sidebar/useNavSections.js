@@ -169,7 +169,7 @@ export function useNavSections() {
                 items: [
                     { key: 'campus', icon: BusinessIcon, label: 'Campus', path: '/ubicaciones/campus' },
                     { key: 'buildings', icon: ApartmentIcon, label: 'Edificios', path: '/ubicaciones/edificios' },
-                    { key: 'locations', icon: PlaceIcon, label: 'Locaciones', path: '/ubicaciones/locaciones' },
+                    { key: 'locations', icon: PlaceIcon, label: 'Detalles de Ubicación', path: '/ubicaciones/locaciones' },
                     { key: 'emails', icon: EmailIcon, label: 'Correos', path: '/ubicaciones/correos' },
                 ],
             });

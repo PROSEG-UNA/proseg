@@ -71,8 +71,8 @@ export function getMaintenanceTicketColumns() {
         },
         {
             accessorKey: 'locationDescription',
-            header: 'Ubicación',
-            size: 200,
+            header: 'Detalle de Ubicación',
+            size: 220,
             grow: true,
         },
         {
