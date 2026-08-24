@@ -64,7 +64,7 @@ const DOMAIN_META = {
         lightBg:    '#fdf2f8',
         darkBg:     'rgba(131,24,67,0.35)',
         icon: PushPinIcon,
-        description: 'Gestión de campus, edificios y locaciones',
+        description: 'Gestión de campus, edificios y detalles de ubicación',
     },
     Archivos: {
         lightColor: '#7c3aed',

@@ -22,7 +22,7 @@ public class LocationRequestDto {
     @Min(value = 0, message = "El número de piso debe ser 0 o mayor")
     private Integer floorNumber;
 
-    @NotBlank(message = "La descripción de la ubicación es obligatoria")
-    @Size(min = 1, max = 255, message = "La descripción debe tener entre 2 y 255 caracteres")
+    @NotBlank(message = "El detalle de ubicación es obligatorio")
+    @Size(min = 1, max = 255, message = "El detalle de ubicación debe tener entre 2 y 255 caracteres")
     private String description;
 }

@@ -80,7 +80,7 @@ export default function MaintenanceTicketDetailPanel({ ticket }) {
                     <InfoRow label="Sede" value={ticket.siteName} />
                     <InfoRow label="Edificio" value={ticket.buildingName} />
                     <InfoRow label="Piso" value={ticket.floorName} />
-                    <InfoRow label="Ubicación" value={ticket.locationDescription} />
+                    <InfoRow label="Detalle de Ubicación" value={ticket.locationDescription} />
                     <InfoRow label="Creado por" value={ticket.createdBy} />
                     <InfoRow label="Rol asignado" value={ticket.assignedRole} />
                     <InfoRow label="Creado" value={formatDateTime(ticket.createdAt)} />
