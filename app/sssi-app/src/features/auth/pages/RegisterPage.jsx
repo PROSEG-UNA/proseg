@@ -22,24 +22,10 @@ import { useFormValidation } from '../../../common/hooks/useFormValidation';
 import { ValidatedTextField } from '../../../common/components/ValidatedTextField';
 import { Helmet } from 'react-helmet-async';
 import { APP_CONFIG } from '../../../config/appConfig.js';
+import { getPasswordStrength } from '../../../common/utils/password.js';
 
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAADEo_zmnakZDiJdz';
 const TURNSTILE_SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-
-function getPasswordStrength(password) {
-    if (!password) return { score: 0, label: '', color: 'transparent' };
-    let score = 0;
-    if (password.length >= 8)          score++;
-    if (password.length >= 12)         score++;
-    if (/[A-Z]/.test(password))        score++;
-    if (/[0-9]/.test(password))        score++;
-    if (/[^A-Za-z0-9]/.test(password)) score++;
-    if (score <= 1) return { score: 20,  label: 'Muy débil',  color: '#ef4444' };
-    if (score === 2) return { score: 40, label: 'Débil',      color: '#f59e0b' };
-    if (score === 3) return { score: 60, label: 'Regular',    color: '#d97706' };
-    if (score === 4) return { score: 80, label: 'Fuerte',     color: '#059669' };
-    return                 { score: 100, label: 'Muy fuerte', color: '#047857' };
-}
 
 function Req({ label, met }) {
     return (
