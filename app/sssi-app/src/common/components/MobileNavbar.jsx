@@ -102,11 +102,14 @@ export function MobileNavbar() {
 
   const maintenanceItems = canViewMaintenanceSection
     ? [
-        { key: 'module', icon: ConfirmationNumberIcon, label: 'Tickets', path: '/mantenimiento' },
-        { key: 'dashboard', icon: AnalyticsIcon, label: 'Dashboard', path: '/mantenimiento/dashboard' },
         { key: 'companies', icon: BuildIcon, label: 'Empresas', path: '/mantenimiento/empresas' },
         { key: 'requests', icon: BuildIcon, label: 'Solicitudes', path: '/mantenimiento/solicitudes' },
-        { key: 'technicians', icon: BuildIcon, label: 'Técnicos', path: '/mantenimiento/tecnicos' },
+      ]
+    : [];
+
+  const ticketsItems = canViewMaintenanceSection
+    ? [
+        { key: 'dashboard', icon: AnalyticsIcon, label: 'Dashboard', path: '/mantenimiento/dashboard' },
         { key: 'tickets', icon: ConfirmationNumberIcon, label: 'Gestión de tickets', path: '/mantenimiento/tickets' },
       ]
     : [];
@@ -344,9 +347,9 @@ export function MobileNavbar() {
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <ConfirmationNumberIcon sx={{ mr: 2, fontSize: 20 }} />
+                        <BuildIcon sx={{ mr: 2, fontSize: 20 }} />
                         <ListItemText
-                                                  primary="Gestión de Tickets"
+                          primary="Mantenimiento"
                           sx={{ '& .MuiListItemText-primary': { fontSize: '1.05rem', fontWeight: 600, lineHeight: 1.2 } }}
                         />
                       </Box>
@@ -360,6 +363,68 @@ export function MobileNavbar() {
                   <Collapse in={expandedMenu === 'maintenance'} timeout="auto" unmountOnExit>
                     <List component="div" disablePadding sx={(theme) => ({ backgroundColor: alpha(theme.palette.primary.main, 0.05) })}>
                       {maintenanceItems.map((item) => (
+                        <ListItem key={item.key} disablePadding>
+                          <ListItemButton
+                            onClick={() => handleNavigation(item.path)}
+                            sx={(theme) => ({
+                              '&&': {
+                                py: 2,
+                                minHeight: 56,
+                              },
+                              pl: 6,
+                              color: 'text.primary',
+                              '&:hover': {
+                                backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                                fontWeight: 600,
+                              },
+                            })}
+                          >
+                            <ListItemText
+                              primary={item.label}
+                              sx={{ '& .MuiListItemText-primary': { fontSize: '0.98rem', fontWeight: 500 } }}
+                            />
+                          </ListItemButton>
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Collapse>
+                </ListItem>
+              ) : null}
+
+              {showMaintenanceSection ? (
+                <ListItem disablePadding sx={{ display: 'block' }}>
+                  <ListItemButton
+                    onClick={() => toggleMenu('tickets')}
+                    sx={(theme) => ({
+                      '&&': {
+                        py: 3,
+                        minHeight: 72,
+                      },
+                      borderBottom: '1px solid rgba(0,0,0,0.1)',
+                      color: 'text.primary',
+                      '&:hover': {
+                        backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                      },
+                    })}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <ConfirmationNumberIcon sx={{ mr: 2, fontSize: 20 }} />
+                        <ListItemText
+                          primary="Tickets"
+                          sx={{ '& .MuiListItemText-primary': { fontSize: '1.05rem', fontWeight: 600, lineHeight: 1.2 } }}
+                        />
+                      </Box>
+                      {expandedMenu === 'tickets' ? (
+                        <ExpandLessIcon sx={{ color: 'text.primary' }} />
+                      ) : (
+                        <ExpandMoreIcon sx={{ color: 'text.primary' }} />
+                      )}
+                    </Box>
+                  </ListItemButton>
+                  <Collapse in={expandedMenu === 'tickets'} timeout="auto" unmountOnExit>
+                    <List component="div" disablePadding sx={(theme) => ({ backgroundColor: alpha(theme.palette.primary.main, 0.05) })}>
+                      {ticketsItems.map((item) => (
                         <ListItem key={item.key} disablePadding>
                           <ListItemButton
                             onClick={() => handleNavigation(item.path)}

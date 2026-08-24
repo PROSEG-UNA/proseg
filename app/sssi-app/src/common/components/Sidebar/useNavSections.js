@@ -178,14 +178,24 @@ export function useNavSections() {
         if (canViewMaintenanceSection) {
             result.push({
                 key: 'maintenance',
-                icon: ConfirmationNumberIcon,
-                label: 'Tickets',
+                icon: BuildIcon,
+                label: 'Mantenimiento',
                 items: [
-                    canViewTicketsSubmodule ? { key: 'tickets-dashboard', icon: AnalyticsIcon, label: 'Dashboard', path: '/mantenimiento/dashboard' } : null,
                     { key: 'companies', icon: BusinessIcon, label: 'Empresas', path: '/mantenimiento/empresas' },
                     { key: 'requests', icon: ConstructionIcon, label: 'Solicitud de mantenimiento', path: '/mantenimiento/solicitudes' },
                     canViewRegistersSubmodule ? { key: 'registers', icon: AssignmentIcon, label: 'Registro de mantenimiento', path: '/mantenimiento/registros' } : null,
-                    canViewTicketsSubmodule ? { key: 'tickets', icon: ConfirmationNumberIcon, label: 'Gestión de tickets', path: '/mantenimiento/tickets' } : null,
+                ].filter(Boolean),
+            });
+        }
+
+        if (canViewTicketsSubmodule) {
+            result.push({
+                key: 'tickets',
+                icon: ConfirmationNumberIcon,
+                label: 'Tickets',
+                items: [
+                    { key: 'tickets-dashboard', icon: AnalyticsIcon, label: 'Dashboard', path: '/mantenimiento/dashboard' },
+                    { key: 'tickets-management', icon: ConfirmationNumberIcon, label: 'Gestión de tickets', path: '/mantenimiento/tickets' },
                 ].filter(Boolean),
             });
         }
