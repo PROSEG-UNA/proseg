@@ -1,0 +1,13 @@
+services:
+
+  postgres:
+    ports:
+      - "127.0.0.1:5433:5432"
+
+  minio:
+    ports:
+      - "127.0.0.1:9101:9001"
+
+  keycloak:
+    ports:
+      - "127.0.0.1:8180:8080"

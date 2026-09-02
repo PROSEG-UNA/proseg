@@ -1,9 +1,3 @@
-eureka:
-  client:
-    register-with-eureka: false
-    service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://msvc-eureka:8761/eureka}
-
 server:
   port: 8081
 
@@ -15,14 +9,10 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:https://auth.devbychris.com/realms/sssi-realm}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://keycloak:8080/auth/realms/proseg-realm}
 
   cloud:
     gateway:
-      discovery:
-        locator:
-          enabled: true
-
       routes:
         - id: msvc-auth
           uri: http://msvc-auth:8090

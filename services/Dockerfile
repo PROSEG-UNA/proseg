@@ -2,27 +2,35 @@ FROM maven:3.9.9-eclipse-temurin-17 AS build
 WORKDIR /app
 
 ARG SERVICE_NAME
+ARG EXTRA_MODULE=msvc-common
 
 COPY pom.xml .
-COPY msvc-common ./msvc-common
-COPY msvc-config ./msvc-config
-COPY msvc-eureka ./msvc-eureka
-COPY msvc-gateway ./msvc-gateway
-COPY msvc-auth ./msvc-auth
-COPY msvc-email ./msvc-email
-COPY msvc-inventory ./msvc-inventory
-COPY msvc-archive ./msvc-archive
-COPY msvc-transport ./msvc-transport
-COPY msvc-document-processor ./msvc-document-processor
-COPY msvc-maintenance ./msvc-maintenance
+COPY msvc-common/pom.xml ./msvc-common/
+COPY msvc-config/pom.xml ./msvc-config/
+COPY msvc-gateway/pom.xml ./msvc-gateway/
+COPY msvc-auth/pom.xml ./msvc-auth/
+COPY msvc-email/pom.xml ./msvc-email/
+COPY msvc-inventory/pom.xml ./msvc-inventory/
+COPY msvc-archive/pom.xml ./msvc-archive/
+COPY msvc-transport/pom.xml ./msvc-transport/
+COPY msvc-document-processor/pom.xml ./msvc-document-processor/
+COPY msvc-maintenance/pom.xml ./msvc-maintenance/
 
-RUN --mount=type=cache,target=/root/.m2 \
-    mvn -U clean package -pl ${SERVICE_NAME} -am -DskipTests -Dmaven.test.skip=true -e
+RUN mvn -B -pl ${SERVICE_NAME} -am -DskipTests \
+      -Dmaven.repo.local=/app/.m2 dependency:go-offline || true
+
+COPY msvc-common/src ./msvc-common/src
+COPY ${EXTRA_MODULE}/src ./${EXTRA_MODULE}/src
+COPY ${SERVICE_NAME}/src ./${SERVICE_NAME}/src
+
+RUN mvn -B -pl ${SERVICE_NAME} -am -DskipTests -Dmaven.test.skip=true \
+      -Dmaven.repo.local=/app/.m2 clean package
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 
 ARG SERVICE_NAME
 

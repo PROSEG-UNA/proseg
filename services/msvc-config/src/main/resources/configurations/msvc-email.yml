@@ -8,20 +8,20 @@ spring:
         registration:
           keycloak:
             client-id: msvc-email
-            client-secret: 0wqysXJSiZurqXEE9TZSzDk4rhHq2kKY
+            client-secret: ${SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET:}
             authorization-grant-type: client_credentials
         provider:
           keycloak:
-            token-uri: https://auth.devbychris.com/realms/sssi-realm/protocol/openid-connect/token
+            token-uri: ${SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_TOKEN_URI:http://keycloak:8080/auth/realms/proseg-realm/protocol/openid-connect/token}
   application:
     name: msvc-email
   kafka:
-    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:76.13.124.126:9094}
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: noreply.prostep@gmail.com
-    password: rwuj zaeq hrgm znge
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -40,10 +40,3 @@ app:
   brand:
     name: ${APP_BRAND_NAME:PROSEG}
     full-name: ${APP_BRAND_FULL_NAME:Programa de Servicios Generales}
-
-eureka:
-  instance:
-    hostname: ${EUREKA_INSTANCE_HOSTNAME:msvc-email}
-  client:
-    service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://msvc-eureka:8761/eureka}

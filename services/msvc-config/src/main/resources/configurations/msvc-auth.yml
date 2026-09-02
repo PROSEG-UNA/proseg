@@ -5,24 +5,17 @@ spring:
   application:
     name: msvc-auth
   kafka:
-    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:76.13.124.126:9094}
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: https://auth.devbychris.com/realms/sssi-realm
+          issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:http://keycloak:8080/auth/realms/proseg-realm}
 
 logging:
   level:
     org.springframework.security: DEBUG
     org.springframework.security.oauth2.jwt: DEBUG
-
-eureka:
-  instance:
-    hostname: ${EUREKA_INSTANCE_HOSTNAME:msvc-auth}
-  client:
-    service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://msvc-eureka:8761/eureka}
 
 api:
   prefix: /api
@@ -33,11 +26,11 @@ routes:
   role: ${api.prefix}/role
 
 keycloak:
-  server-url: ${KEYCLOAK_SERVER_URL:https://auth.devbychris.com}
-  realm: ${KEYCLOAK_REALM:sssi-realm}
+  server-url: ${KEYCLOAK_SERVER_URL:http://keycloak:8080/auth}
+  realm: ${KEYCLOAK_REALM:proseg-realm}
   client:
-    id: ${KEYCLOAK_CLIENT_ID:sssi-app}
-    secret: ${KEYCLOAK_CLIENT_SECRET:Dl8QcQxHHmu6qERkUMmUJ0qWSulRRx6y}
+    id: ${KEYCLOAK_CLIENT_ID:proseg-app}
+    secret: ${KEYCLOAK_CLIENT_SECRET:}
   admin:
-    username: ${KEYCLOAK_ADMIN_USERNAME:admin}
-    password: ${KEYCLOAK_ADMIN_PASSWORD:sssi_user}
+    username: ${KEYCLOAK_ADMIN_USERNAME:}
+    password: ${KEYCLOAK_ADMIN_PASSWORD:}

@@ -1,0 +1,100 @@
+name: Build and push images
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  NAMESPACE: ${{ github.repository_owner }}
+
+jobs:
+  services:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: msvc-config
+            extra: msvc-common
+          - service: msvc-gateway
+            extra: msvc-common
+          - service: msvc-auth
+            extra: msvc-common
+          - service: msvc-email
+            extra: msvc-common
+          - service: msvc-inventory
+            extra: msvc-common
+          - service: msvc-archive
+            extra: msvc-common
+          - service: msvc-transport
+            extra: msvc-common
+          - service: msvc-document-processor
+            extra: msvc-common
+          - service: msvc-maintenance
+            extra: msvc-inventory
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ./services
+          file: ./services/Dockerfile
+          platforms: linux/amd64
+          push: true
+          build-args: |
+            SERVICE_NAME=${{ matrix.service }}
+            EXTRA_MODULE=${{ matrix.extra }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.service }}:main
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.service }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push proseg-app
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app/sssi-app
+          file: ./app/sssi-app/Dockerfile
+          platforms: linux/amd64
+          push: true
+          build-args: |
+            VITE_API_BASE_URL=
+            VITE_TURNSTILE_SITE_KEY=${{ vars.VITE_TURNSTILE_SITE_KEY }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/proseg-app:main
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/proseg-app:${{ github.sha }}
+          cache-from: type=gha,scope=proseg-app
+          cache-to: type=gha,mode=max,scope=proseg-app

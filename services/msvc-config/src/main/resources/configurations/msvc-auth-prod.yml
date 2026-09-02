@@ -4,19 +4,17 @@ server:
 spring:
   application:
     name: msvc-auth
-  config:
-    import: ${SPRING_CONFIG_IMPORT:optional:configserver:http://msvc-config:8888}
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:https://auth.example.com/realms/sssi-realm}
+          issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:https://auth.example.com/realms/proseg-realm}
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/sssi-bd}
-    username: ${SPRING_DATASOURCE_USERNAME:sssi_user}
-    password: ${SPRING_DATASOURCE_PASSWORD:sssi_user}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/proseg-bd}
+    username: ${SPRING_DATASOURCE_USERNAME:}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
     driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.postgresql.Driver}
   jpa:
     hibernate:
@@ -31,13 +29,6 @@ logging:
     org.springframework.security: ${LOG_LEVEL_SPRING_SECURITY:INFO}
     org.springframework.security.oauth2.jwt: ${LOG_LEVEL_SPRING_SECURITY_OAUTH2_JWT:INFO}
 
-eureka:
-  instance:
-    hostname: ${EUREKA_INSTANCE_HOSTNAME:msvc-auth}
-  client:
-    service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://msvc-eureka:8761/eureka/}
-
 api:
   prefix: /api
 
@@ -48,13 +39,13 @@ routes:
 
 keycloak:
   server-url: ${KEYCLOAK_SERVER_URL:https://auth.example.com}
-  realm: ${KEYCLOAK_REALM:sssi-realm}
+  realm: ${KEYCLOAK_REALM:proseg-realm}
   client:
-    id: ${KEYCLOAK_CLIENT_ID:sssi-app}
-    secret: ${KEYCLOAK_CLIENT_SECRET:Dl8QcQxHHmu6qERkUMmUJ0qWSulRRx6y}
+    id: ${KEYCLOAK_CLIENT_ID:proseg-app}
+    secret: ${KEYCLOAK_CLIENT_SECRET:}
   admin:
-    username: ${KEYCLOAK_ADMIN_USERNAME:admin}
-    password: ${KEYCLOAK_ADMIN_PASSWORD:sssi_user}
+    username: ${KEYCLOAK_ADMIN_USERNAME:}
+    password: ${KEYCLOAK_ADMIN_PASSWORD:}
 
 app:
   cookie:
@@ -64,6 +55,5 @@ app:
     notification-days: ${APP_PASSWORD_NOTIFICATION_DAYS:7,3,1}
 
 turnstile:
-  secret-key: ${TURNSTILE_SECRET_KEY:0x4AAAAAADEo_xVst3UEPKg1xo7CgackmKA}
+  secret-key: ${TURNSTILE_SECRET_KEY:}
   max-retries: ${TURNSTILE_MAX_RETRIES:3}
-  dev-mode: ${TURNSTILE_DEV_MODE:false}
