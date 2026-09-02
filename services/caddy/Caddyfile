@@ -1,0 +1,20 @@
+{
+	auto_https off
+	admin off
+}
+
+:80 {
+	encode gzip
+
+	handle /api/* {
+		reverse_proxy msvc-gateway:8081
+	}
+
+	handle /auth/* {
+		reverse_proxy keycloak:8080
+	}
+
+	handle {
+		reverse_proxy frontend:80
+	}
+}

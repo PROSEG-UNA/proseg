@@ -6,7 +6,7 @@
 )
 
 if (-not $KeycloakUrl) { $KeycloakUrl = "http://localhost:8080" }
-if (-not $Realm)       { $Realm       = "sssi-realm" }
+if (-not $Realm)       { $Realm       = "proseg-realm" }
 if (-not $AdminUser)   { $AdminUser   = "admin" }
 if (-not $AdminPass)   { $AdminPass   = "sssi-system" }
 
