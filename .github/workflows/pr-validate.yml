@@ -1,0 +1,81 @@
+name: Validate pull request
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.filter.outputs.changes }}
+      frontend: ${{ steps.frontend.outputs.any_changed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            msvc-config: ['services/msvc-config/**', 'services/msvc-common/**', 'services/pom.xml', 'services/Dockerfile']
+            msvc-gateway: ['services/msvc-gateway/**', 'services/msvc-common/**', 'services/pom.xml', 'services/Dockerfile']
+            msvc-auth: ['services/msvc-auth/**', 'services/msvc-common/**', 'services/pom.xml', 'services/Dockerfile']
+            msvc-email: ['services/msvc-email/**', 'services/msvc-common/**', 'services/pom.xml', 'services/Dockerfile']
+            msvc-inventory: ['services/msvc-inventory/**', 'services/msvc-common/**', 'services/pom.xml', 'services/Dockerfile']
+            msvc-archive: ['services/msvc-archive/**', 'services/msvc-common/**', 'services/pom.xml', 'services/Dockerfile']
+            msvc-transport: ['services/msvc-transport/**', 'services/msvc-common/**', 'services/pom.xml', 'services/Dockerfile']
+            msvc-document-processor: ['services/msvc-document-processor/**', 'services/msvc-common/**', 'services/pom.xml', 'services/Dockerfile']
+            msvc-maintenance: ['services/msvc-maintenance/**', 'services/msvc-inventory/**', 'services/msvc-common/**', 'services/pom.xml', 'services/Dockerfile']
+
+      - uses: tj-actions/changed-files@v45
+        id: frontend
+        with:
+          files: app/sssi-app/**
+
+  build-services:
+    needs: changes
+    if: needs.changes.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.changes.outputs.services) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ./services
+          file: ./services/Dockerfile
+          platforms: linux/amd64
+          push: false
+          build-args: |
+            SERVICE_NAME=${{ matrix.service }}
+            EXTRA_MODULE=${{ matrix.service == 'msvc-maintenance' && 'msvc-inventory' || 'msvc-common' }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+
+  build-frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build proseg-app
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app/sssi-app
+          file: ./app/sssi-app/Dockerfile
+          platforms: linux/amd64
+          push: false
+          build-args: |
+            VITE_API_BASE_URL=
+          cache-from: type=gha,scope=proseg-app
