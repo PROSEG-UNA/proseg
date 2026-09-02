@@ -8,6 +8,9 @@ on:
 jobs:
   changes:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       services: ${{ steps.filter.outputs.changes }}
       frontend: ${{ steps.frontend.outputs.any_changed }}
