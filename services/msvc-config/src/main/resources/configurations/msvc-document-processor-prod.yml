@@ -4,21 +4,12 @@ server:
 spring:
   application:
     name: msvc-document-processor
-  config:
-    import: ${SPRING_CONFIG_IMPORT:optional:configserver:http://msvc-config:8888}
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:https://auth.example.com/realms/sssi-realm}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:https://auth.example.com/realms/proseg-realm}
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 12MB
-
-eureka:
-  instance:
-    hostname: ${EUREKA_INSTANCE_HOSTNAME:msvc-document-processor}
-  client:
-    service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://msvc-eureka:8761/eureka/}

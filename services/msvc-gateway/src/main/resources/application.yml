@@ -10,12 +10,9 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:https://auth.devbychris.com/realms/sssi-realm}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://keycloak:8080/auth/realms/proseg-realm}
   cloud:
     gateway:
-      discovery:
-        locator:
-          enabled: true
       routes:
         - id: msvc-auth
           uri: ${AUTH_SERVICE_URL:http://localhost:8090}
@@ -91,4 +88,4 @@ cors:
   allowed-origins: http://localhost:5173,http://localhost:5174
 
 keycloak:
-  client-id: sssi-app
+  client-id: ${KEYCLOAK_CLIENT_ID:proseg-app}

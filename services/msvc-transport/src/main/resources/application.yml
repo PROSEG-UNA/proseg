@@ -10,14 +10,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/sssi-realm}
-
-eureka:
-  instance:
-    hostname: ${EUREKA_INSTANCE_HOSTNAME:msvc-transport}
-  client:
-    service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/proseg-realm}
 
 api:
   prefix: /api/v1/transport

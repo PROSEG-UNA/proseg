@@ -24,7 +24,7 @@ import { Helmet } from 'react-helmet-async';
 import { APP_CONFIG } from '../../../config/appConfig.js';
 import { getPasswordStrength } from '../../../common/utils/password.js';
 
-const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAADEo_zmnakZDiJdz';
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA';
 const TURNSTILE_SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
 
 function Req({ label, met }) {
