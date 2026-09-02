@@ -1,53 +1,47 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchCompanies } from '../../services/company/companiesService';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils';
+import { keepPreviousPage, queryKeys } from '../../../../common/query';
 
-export function useMaintenanceCompaniesData({ pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [], refreshKey = 0 } = {}) {
-    const [rows, setRows] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [totalElements, setTotalElements] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
+function mapCompanyToRow(company) {
+    return {
+        id: company.id,
+        name: company.name ?? '—',
+        legalId: company.legalId ?? '—',
+        contactEmail: company.contactEmail ?? '—',
+        contactPhone: company.contactPhone ?? '—',
+        address: company.address ?? '—',
+        keycloakUserIds: company.keycloakUserIds ?? [],
+        usersCount: Array.isArray(company.keycloakUserIds) ? company.keycloakUserIds.length : 0,
+        createdAt: company.createdAt ?? null,
+        updatedAt: company.updatedAt ?? null,
+    };
+}
 
-    const filtersKey = JSON.stringify(filters);
-    const sortKey = sort.join('|');
+export function useMaintenanceCompaniesData({ pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [] } = {}) {
+    const requestParams = { page: pageIndex, size: pageSize, search, filters, sort };
 
-    useEffect(() => {
-        let ignore = false;
+    const listQueryKey = queryKeys.maintenance.companyList(requestParams);
 
-        const load = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-                const response = await fetchCompanies({ page: pageIndex, size: pageSize, search, filters, sort });
-                if (ignore) return;
+    const { data, isLoading, isFetching, error } = useQuery({
+        queryKey: listQueryKey,
+        placeholderData: keepPreviousPage(listQueryKey),
+        queryFn: async () => {
+            const response = await fetchCompanies(requestParams);
+            return {
+                rows: (response.content ?? []).map(mapCompanyToRow),
+                totalElements: response.totalElements ?? 0,
+                totalPages: response.totalPages ?? 0,
+            };
+        },
+    });
 
-                setRows((response.content ?? []).map((company) => ({
-                    id: company.id,
-                    name: company.name ?? '—',
-                    legalId: company.legalId ?? '—',
-                    contactEmail: company.contactEmail ?? '—',
-                    contactPhone: company.contactPhone ?? '—',
-                    address: company.address ?? '—',
-                    keycloakUserIds: company.keycloakUserIds ?? [],
-                    usersCount: Array.isArray(company.keycloakUserIds) ? company.keycloakUserIds.length : 0,
-                    createdAt: company.createdAt ?? null,
-                    updatedAt: company.updatedAt ?? null,
-                })));
-                setTotalElements(response.totalElements ?? 0);
-                setTotalPages(response.totalPages ?? 0);
-            } catch (error) {
-                if (!ignore) setError(getFriendlyApiErrorMessage(error, 'Error al cargar empresas'));
-            } finally {
-                if (!ignore) setLoading(false);
-            }
-        };
-
-        void load();
-        return () => {
-            ignore = true;
-        };
-    }, [pageIndex, pageSize, search, filtersKey, sortKey, refreshKey]);
-
-    return { rows, loading, error, totalElements, totalPages };
+    return {
+        rows: data?.rows ?? [],
+        loading: isLoading,
+        fetching: isFetching,
+        error: error ? getFriendlyApiErrorMessage(error, 'Error al cargar empresas') : null,
+        totalElements: data?.totalElements ?? 0,
+        totalPages: data?.totalPages ?? 0,
+    };
 }

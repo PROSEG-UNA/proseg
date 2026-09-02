@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
     Avatar,
     Box,
@@ -31,6 +32,9 @@ import { formatDate, formatDateTime } from '../../../../common/utils/formatters.
 import { fetchAssetById, fetchLastKnownNetworkInterface } from '../../services/assetsService.js';
 import { fetchAssetArchives } from '../../services/assetArchiveService.js';
 import { fetchAssetComponents } from '../../services/assetComponentsService.js';
+import { queryKeys } from '../../../../common/query';
+
+const EMPTY_LIST = [];
 
 function buildAssetDisplayName(asset) {
     const parts = [
@@ -137,61 +141,34 @@ function SectionBlock({ icon, title, children }) {
 
 export default function AssetDetailModal({ open, onClose, assetId }) {
     const theme = useTheme();
-    const [loading, setLoading] = useState(true);
-    const [asset, setAsset] = useState(null);
-    const [archives, setArchives] = useState([]);
-    const [components, setComponents] = useState([]);
-    const [networkInterface, setNetworkInterface] = useState(null);
 
-    useEffect(() => {
-        let cancelled = false;
+    const detailEnabled = Boolean(open && assetId);
 
-        if (!open || !assetId) {
-            const resetHandle = window.setTimeout(() => {
-                setLoading(true);
-                setAsset(null);
-                setArchives([]);
-                setComponents([]);
-                setNetworkInterface(null);
-            }, 0);
-
-            return () => {
-                window.clearTimeout(resetHandle);
-            };
-        }
-
-        const loadHandle = window.setTimeout(() => {
-            setLoading(true);
-
-            Promise.all([
+    const { data, isPending } = useQuery({
+        queryKey: queryKeys.inventory.assetFullDetail(assetId),
+        queryFn: async () => {
+            const [assetData, archivesData, componentsData, lastKnown] = await Promise.all([
                 fetchAssetById(assetId),
-                fetchAssetArchives(assetId).catch(() => []),
-                fetchAssetComponents(assetId).catch(() => []),
-                fetchLastKnownNetworkInterface(assetId).catch(() => null),
-            ])
-                .then(([assetData, archivesData, componentsData, lastKnown]) => {
-                    if (cancelled) return;
-                    setAsset(assetData);
-                    setArchives(Array.isArray(archivesData) ? archivesData : []);
-                    setComponents(Array.isArray(componentsData) ? componentsData : []);
-                    setNetworkInterface(assetData?.networkInterface ?? lastKnown);
-                    setLoading(false);
-                })
-                .catch(() => {
-                    if (cancelled) return;
-                    setAsset(null);
-                    setArchives([]);
-                    setComponents([]);
-                    setNetworkInterface(null);
-                    setLoading(false);
-                });
-        }, 0);
+                fetchAssetArchives(assetId),
+                fetchAssetComponents(assetId),
+                fetchLastKnownNetworkInterface(assetId),
+            ]);
 
-        return () => {
-            cancelled = true;
-            window.clearTimeout(loadHandle);
-        };
-    }, [open, assetId]);
+            return {
+                asset: assetData,
+                archives: archivesData,
+                components: componentsData,
+                networkInterface: assetData?.networkInterface ?? lastKnown,
+            };
+        },
+        enabled: detailEnabled,
+    });
+
+    const loading = detailEnabled && isPending;
+    const asset = data?.asset ?? null;
+    const archives = data?.archives ?? EMPTY_LIST;
+    const components = data?.components ?? EMPTY_LIST;
+    const networkInterface = data?.networkInterface ?? null;
 
     const imageArchives = useMemo(() => archives.filter((archive) => !!archive.imageUrl), [archives]);
     const statusColor = asset?.status === 'APROBADO' ? 'success' : (asset?.status === 'DE_BAJA' ? 'error' : 'default');
@@ -350,9 +327,9 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
 
                             <SectionBlock icon={PersonOutlineOutlinedIcon} title="Responsable">
                                 <Grid container spacing={1.5}>
-                                    <Grid item xs={12} md={4}><DetailCard label="Unidad ejecutora" value={asset.executingUnit} icon={PersonOutlineOutlinedIcon} /></Grid>
-                                    <Grid item xs={12} md={4}><DetailCard label="Funcionario responsable" value={asset.responsibleEmployee} icon={PersonOutlineOutlinedIcon} /></Grid>
-                                    <Grid item xs={12} md={4}><DetailCard label="ID del funcionario" value={asset.responsibleEmployeeId} icon={PersonOutlineOutlinedIcon} /></Grid>
+                                    <Grid item xs={12} md={4}><DetailCard label="Unidad ejecutora" value={asset.executingUnit?.name} icon={PersonOutlineOutlinedIcon} /></Grid>
+                                    <Grid item xs={12} md={4}><DetailCard label="Funcionario responsable" value={asset.employee?.name} icon={PersonOutlineOutlinedIcon} /></Grid>
+                                    <Grid item xs={12} md={4}><DetailCard label="ID del funcionario" value={asset.employee?.identification} icon={PersonOutlineOutlinedIcon} /></Grid>
                                 </Grid>
                             </SectionBlock>
 

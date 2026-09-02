@@ -12,6 +12,7 @@ import PushPinIcon from '@mui/icons-material/PushPin';
 import PlaceIcon from '@mui/icons-material/Place';
 import ApartmentIcon from '@mui/icons-material/Apartment';
 import EmailIcon from '@mui/icons-material/Email';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
@@ -168,7 +169,7 @@ export function useNavSections() {
                 items: [
                     { key: 'campus', icon: BusinessIcon, label: 'Campus', path: '/ubicaciones/campus' },
                     { key: 'buildings', icon: ApartmentIcon, label: 'Edificios', path: '/ubicaciones/edificios' },
-                    { key: 'locations', icon: PlaceIcon, label: 'Locaciones', path: '/ubicaciones/locaciones' },
+                    { key: 'locations', icon: PlaceIcon, label: 'Detalles de Ubicación', path: '/ubicaciones/locaciones' },
                     { key: 'emails', icon: EmailIcon, label: 'Correos', path: '/ubicaciones/correos' },
                 ],
             });
@@ -183,7 +184,18 @@ export function useNavSections() {
                     { key: 'companies', icon: BusinessIcon, label: 'Empresas', path: '/mantenimiento/empresas' },
                     { key: 'requests', icon: ConstructionIcon, label: 'Solicitud de mantenimiento', path: '/mantenimiento/solicitudes' },
                     canViewRegistersSubmodule ? { key: 'registers', icon: AssignmentIcon, label: 'Registro de mantenimiento', path: '/mantenimiento/registros' } : null,
-                    canViewTicketsSubmodule ? { key: 'tickets', icon: ConfirmationNumberIcon, label: 'Tickets', path: '/mantenimiento/tickets' } : null,
+                ].filter(Boolean),
+            });
+        }
+
+        if (canViewTicketsSubmodule) {
+            result.push({
+                key: 'tickets',
+                icon: ConfirmationNumberIcon,
+                label: 'Tickets',
+                items: [
+                    { key: 'tickets-dashboard', icon: AnalyticsIcon, label: 'Dashboard', path: '/mantenimiento/dashboard' },
+                    { key: 'tickets-management', icon: ConfirmationNumberIcon, label: 'Gestión de tickets', path: '/mantenimiento/tickets' },
                 ].filter(Boolean),
             });
         }

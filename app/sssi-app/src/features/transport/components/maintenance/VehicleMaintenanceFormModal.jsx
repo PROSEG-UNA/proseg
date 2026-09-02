@@ -5,8 +5,9 @@ import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
 import { createVehicleMaintenance, fetchVehicleMaintenanceById, updateVehicleMaintenance } from '../../services/maintenance/maintenanceService';
-import { fetchVehicles } from '../../services/vehicles/vehiclesService';
 import { VEHICLE_MAINTENANCE_STATUS_OPTIONS } from '../../transportUtils';
+import { useVehicleOptions } from '../../hooks/useTransportOptions';
+import { useQueryAlert } from '../../../../common/hooks/index.js';
 
 const INITIAL_VALUES = {
     vehicleId: '',
@@ -25,38 +26,14 @@ export default function VehicleMaintenanceFormModal({ open, onClose, onSaved, ma
     const [touched, setTouched] = useState({});
     const [saving, setSaving] = useState(false);
     const [loadingMaintenance, setLoadingMaintenance] = useState(false);
-    const [loadingVehicles, setLoadingVehicles] = useState(false);
-    const [vehicleOptions, setVehicleOptions] = useState([]);
-    const [alert, setAlert] = useState(null);
+    const vehicles = useVehicleOptions(open);
 
-    useEffect(() => {
-        if (!open) return undefined;
+    const vehicleOptions = vehicles.options;
+    const loadingVehicles = vehicles.loading;
 
-        let cancelled = false;
-        const loadVehicles = async () => {
-            setLoadingVehicles(true);
-            try {
-                const response = await fetchVehicles({ page: 0, size: 300 });
-                if (cancelled) return;
-                setVehicleOptions((response?.content ?? []).map((vehicle) => ({
-                    id: vehicle.id,
-                    label: vehicle.plate ? `${vehicle.plate}${vehicle.model ? ` - ${vehicle.model}` : ''}` : 'Vehículo',
-                })));
-            } catch (error) {
-                if (!cancelled) {
-                    setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudieron cargar los vehículos') });
-                }
-            } finally {
-                if (!cancelled) setLoadingVehicles(false);
-            }
-        };
-
-        void loadVehicles();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [open]);
+    const { alert, setAlert, closeAlert } = useQueryAlert(
+        vehicles.error ? getFriendlyApiErrorMessage(vehicles.error, 'No se pudieron cargar los vehículos') : null
+    );
 
     useEffect(() => {
         if (!open || !maintenanceId) return undefined;
@@ -90,7 +67,7 @@ export default function VehicleMaintenanceFormModal({ open, onClose, onSaved, ma
         return () => {
             cancelled = true;
         };
-    }, [open, maintenanceId]);
+    }, [open, maintenanceId, setAlert]);
 
     const validateField = (key, value) => {
         const trimmedValue = typeof value === 'string' ? value.trim() : value;
@@ -278,7 +255,7 @@ export default function VehicleMaintenanceFormModal({ open, onClose, onSaved, ma
                 open={!!alert}
                 type={alert?.type}
                 message={alert?.message}
-                onClose={() => setAlert(null)}
+                onClose={closeAlert}
             />
         </>
     );

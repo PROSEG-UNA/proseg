@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchRegisterAssets } from '../../services/register/registerService';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils';
+import { keepPreviousPage, queryKeys } from '../../../../common/query';
 
 function mapStatusToSpanish(status) {
     switch (status) {
@@ -38,55 +39,29 @@ function mapAssetRow(asset) {
     };
 }
 
-export function useRegisterAssetsData({ registerId = null, pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [], refreshKey = 0 } = {}) {
-    const [rows, setRows] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [totalElements, setTotalElements] = useState(0);
+export function useRegisterAssetsData({ registerId = null, pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [] } = {}) {
+    const requestParams = { page: pageIndex, size: pageSize, search, filters, sort };
 
-    const filtersKey = JSON.stringify(filters);
-    const sortKey = sort.join('|');
+    const listQueryKey = queryKeys.maintenance.registerAssets(registerId, requestParams);
 
-    const fetchAndSetAssets = () => {
-        if (!registerId) {
-            setRows([]);
-            setTotalElements(0);
-            setLoading(false);
-            return undefined;
-        }
+    const { data, isLoading, isFetching, error } = useQuery({
+        queryKey: listQueryKey,
+        placeholderData: keepPreviousPage(listQueryKey),
+        queryFn: async () => {
+            const response = await fetchRegisterAssets(registerId, requestParams);
+            return {
+                rows: (response.content ?? []).map(mapAssetRow),
+                totalElements: response.totalElements ?? 0,
+            };
+        },
+        enabled: Boolean(registerId),
+    });
 
-        let ignore = false;
-
-        const loadAssets = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-
-                const response = await fetchRegisterAssets(registerId, { page: pageIndex, size: pageSize, search, filters, sort });
-
-                if (ignore) return;
-
-                setRows((response.content ?? []).map(mapAssetRow));
-                setTotalElements(response.totalElements ?? 0);
-            } catch (err) {
-                if (!ignore) {
-                    setError(getFriendlyApiErrorMessage(err, 'Error al cargar los activos'));
-                }
-            } finally {
-                if (!ignore) {
-                    setLoading(false);
-                }
-            }
-        };
-
-        void loadAssets();
-
-        return () => {
-            ignore = true;
-        };
+    return {
+        rows: data?.rows ?? [],
+        loading: isLoading,
+        fetching: isFetching,
+        error: error ? getFriendlyApiErrorMessage(error, 'Error al cargar los activos') : null,
+        totalElements: data?.totalElements ?? 0,
     };
-
-    useEffect(fetchAndSetAssets, [registerId, pageIndex, pageSize, search, filtersKey, sortKey, refreshKey]);
-
-    return { rows, loading, error, totalElements };
 }

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-    Box, Typography, Chip, IconButton, Button, Checkbox, useTheme,
+    Box, Typography, Chip, IconButton, Button, Checkbox, useTheme, CircularProgress,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -25,6 +25,7 @@ export default function ImportAssetsModal({ open, onClose, onImported }) {
     const [result, setResult]       = useState(null);
     const [alert, setAlert]         = useState(null);
     const [isDragOver, setIsDragOver] = useState(false);
+    const [downloadingTemplate, setDownloadingTemplate] = useState(false);
     const fileInputRef = useRef(null);
     const templatePromiseRef = useRef(null);
 
@@ -36,6 +37,7 @@ export default function ImportAssetsModal({ open, onClose, onImported }) {
         setResult(null);
         setAlert(null);
         setIsDragOver(false);
+        setDownloadingTemplate(false);
         templatePromiseRef.current = null;
     };
 
@@ -124,6 +126,7 @@ export default function ImportAssetsModal({ open, onClose, onImported }) {
     };
 
     const handleDownloadTemplate = async () => {
+        setDownloadingTemplate(true);
         try {
             if (!templatePromiseRef.current) {
                 templatePromiseRef.current = downloadAssetsTemplate();
@@ -140,6 +143,8 @@ export default function ImportAssetsModal({ open, onClose, onImported }) {
         } catch {
             templatePromiseRef.current = null;
             setAlert({ type: 'error', message: 'No fue posible descargar la plantilla' });
+        } finally {
+            setDownloadingTemplate(false);
         }
     };
 
@@ -244,9 +249,11 @@ export default function ImportAssetsModal({ open, onClose, onImported }) {
                 <Button
                     variant="outlined"
                     size="small"
-                    startIcon={<DownloadOutlinedIcon />}
+                    startIcon={downloadingTemplate
+                        ? <CircularProgress size={14} sx={{ color: accentColor }} />
+                        : <DownloadOutlinedIcon />}
                     onClick={handleDownloadTemplate}
-                    disabled={importing}
+                    disabled={importing || downloadingTemplate}
                     sx={{
                         textTransform: 'none', fontWeight: 600, fontSize: 12.5,
                         color: accentColor, borderColor: accentColor, whiteSpace: 'nowrap',
@@ -256,7 +263,7 @@ export default function ImportAssetsModal({ open, onClose, onImported }) {
                         },
                     }}
                 >
-                    Descargar
+                    {downloadingTemplate ? 'Descargando' : 'Descargar'}
                 </Button>
             </Box>
             <Box

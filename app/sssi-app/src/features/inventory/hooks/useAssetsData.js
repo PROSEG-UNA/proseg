@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchAssets } from '../services/assetsService';
 import { getFriendlyApiErrorMessage } from '../../../common/utils';
+import { keepPreviousPage, queryKeys } from '../../../common/query';
 
 function mapStatusToSpanish(status) {
     switch (status) {
@@ -10,76 +11,62 @@ function mapStatusToSpanish(status) {
     }
 }
 
-export function useAssetsData({ pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [], refreshKey = 0 } = {}) {
-    const [rows, setRows] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [totalElements, setTotalElements] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
+function hasDetailContent(asset) {
+    if (asset.componentsCount == null) return true;
+    return Boolean(asset.networkInterface) || asset.imagesCount > 0 || asset.componentsCount > 0;
+}
 
-    const filtersKey = JSON.stringify(filters);
-    const sortKey = sort.join('|');
-
-    const fetchAndSetAssets = () => {
-        let ignore = false;
-
-        const loadAssets = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-
-                const response = await fetchAssets({ page: pageIndex, size: pageSize, search, filters, sort });
-
-                if (ignore) return;
-
-                const mappedRows = (response.content ?? []).map((asset) => {
-                    const statusRaw = asset.status || '';
-                    return {
-                        id: asset.id,
-                        kind: asset.kind || '—',
-                        assetNumber: asset.assetNumber ?? '—',
-                        serialNumber: asset.serialNumber ?? '—',
-                        executingUnit: asset.executingUnit || '—',
-                        responsibleEmployee: asset.responsibleEmployee || '—',
-                        responsibleEmployeeId: asset.responsibleEmployeeId || '—',
-                        brand: asset.model?.brand?.name || '—',
-                        model: asset.model?.name || '—',
-                        type: asset.model?.type?.name || '—',
-                        location: asset.location?.description || '—',
-                        campus: asset.location?.floor?.building?.campus?.name || '—',
-                        status: mapStatusToSpanish(statusRaw),
-                        statusRaw,
-                        acquisitionDate: asset.acquisitionDate || null,
-                        warrantyEndDate: asset.warrantyEndDate || null,
-                        firmwareSupportEndDate: asset.firmwareSupportEndDate || null,
-                        decommissionDate: asset.decommissionDate || null,
-                        latitude: asset.latitude ?? null,
-                        longitude: asset.longitude ?? null,
-                    };
-                });
-
-                setRows(mappedRows);
-                setTotalElements(response.totalElements ?? 0);
-                setTotalPages(response.totalPages ?? 0);
-            } catch (err) {
-                if (!ignore) {
-                    setError(getFriendlyApiErrorMessage(err, 'Error al cargar activos'));
-                }
-            } finally {
-                if (!ignore) {
-                    setLoading(false);
-                }
-            }
-        };
-
-        void loadAssets();
-
-        return () => {
-            ignore = true;
-        };
+function mapAssetToRow(asset) {
+    const statusRaw = asset.status || '';
+    return {
+        id: asset.id,
+        kind: asset.kind || '—',
+        assetNumber: asset.assetNumber ?? '—',
+        serialNumber: asset.serialNumber ?? '—',
+        executingUnit: asset.executingUnit?.name || '—',
+        responsibleEmployee: asset.employee?.name || '—',
+        responsibleEmployeeId: asset.employee?.identification || '—',
+        brand: asset.model?.brand?.name || '—',
+        model: asset.model?.name || '—',
+        type: asset.model?.type?.name || '—',
+        location: asset.location?.description || '—',
+        campus: asset.location?.floor?.building?.campus?.name || '—',
+        status: mapStatusToSpanish(statusRaw),
+        statusRaw,
+        acquisitionDate: asset.acquisitionDate || null,
+        warrantyEndDate: asset.warrantyEndDate || null,
+        firmwareSupportEndDate: asset.firmwareSupportEndDate || null,
+        decommissionDate: asset.decommissionDate || null,
+        latitude: asset.latitude ?? null,
+        longitude: asset.longitude ?? null,
+        hasDetailContent: hasDetailContent(asset),
     };
+}
 
-    useEffect(fetchAndSetAssets, [pageIndex, pageSize, search, filtersKey, sortKey, refreshKey]);
+export function useAssetsData({ pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [] } = {}) {
+    const requestParams = { page: pageIndex, size: pageSize, search, filters, sort };
 
-    return { rows, loading, error, totalElements, totalPages };
+    const listQueryKey = queryKeys.inventory.assetList(requestParams);
+
+    const { data, isLoading, isFetching, error } = useQuery({
+        queryKey: listQueryKey,
+        placeholderData: keepPreviousPage(listQueryKey),
+        queryFn: async () => {
+            const response = await fetchAssets(requestParams);
+            return {
+                rows: (response.content ?? []).map(mapAssetToRow),
+                totalElements: response.totalElements ?? 0,
+                totalPages: response.totalPages ?? 0,
+            };
+        },
+    });
+
+    return {
+        rows: data?.rows ?? [],
+        loading: isLoading,
+        fetching: isFetching,
+        error: error ? getFriendlyApiErrorMessage(error, 'Error al cargar activos') : null,
+        totalElements: data?.totalElements ?? 0,
+        totalPages: data?.totalPages ?? 0,
+    };
 }

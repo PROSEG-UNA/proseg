@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
     Box, Typography,
     TextField, FormControlLabel, Switch,
@@ -7,6 +7,7 @@ import {
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import { createLocationItem, updateLocationItem, fetchLocationOptions } from '../../services/locationService.js';
+import { queryKeys, useSelectOptions } from '../../../../common/query';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
 
 export default function LocationFormModal({ open, onClose, onSaved, config, row, initialValues }) {
@@ -22,8 +23,6 @@ export default function LocationFormModal({ open, onClose, onSaved, config, row,
     const [touched, setTouched] = useState({});
     const [saving, setSaving] = useState(false);
     const [alert, setAlert] = useState(null);
-    const [selectOptions, setSelectOptions] = useState({});
-    const [loadingOptions, setLoadingOptions] = useState(false);
     const [pendingBooleanChange, setPendingBooleanChange] = useState(null);
 
     const initForm = () => {
@@ -54,35 +53,14 @@ export default function LocationFormModal({ open, onClose, onSaved, config, row,
 
     useEffect(initForm, [open, row]);
 
-    const loadSelectOptions = () => {
-        if (!open || !config) return;
-        const selectFields = formFields.filter((f) => f.type === 'select');
-        if (selectFields.length === 0) return;
+    const selectFields = useMemo(() => formFields.filter((field) => field.type === 'select'), [formFields]);
 
-        let cancelled = false;
-        setLoadingOptions(true);
-
-        Promise.all(
-            selectFields.map((field) =>
-                fetchLocationOptions(field.optionsUrl).then((opts) => ({ key: field.key, opts }))
-            )
-        )
-            .then((results) => {
-                if (!cancelled) {
-                    const options = {};
-                    results.forEach(({ key, opts }) => { options[key] = opts; });
-                    setSelectOptions(options);
-                }
-            })
-            .catch(() => {})
-            .finally(() => {
-                if (!cancelled) setLoadingOptions(false);
-            });
-
-        return () => { cancelled = true; };
-    };
-
-    useEffect(loadSelectOptions, [open, config]);
+    const { options: selectOptions, loading: loadingOptions } = useSelectOptions({
+        fields: selectFields,
+        fetchOptions: fetchLocationOptions,
+        buildQueryKey: (field) => queryKeys.locations.options(field.optionsUrl),
+        enabled: Boolean(open && config),
+    });
 
     const validateSingleField = (key, value) => {
         const field = formFields.find((f) => f.key === key);

@@ -57,8 +57,8 @@ export function getAssetsColumns() {
         },
         {
             accessorKey: 'location',
-            header: 'Ubicación',
-            size: 180,
+            header: 'Detalle de Ubicación',
+            size: 220,
             grow: true,
         },
         {

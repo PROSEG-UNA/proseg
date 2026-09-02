@@ -1,19 +1,3 @@
-/**
- * useValidationField Hook
- * Maneja la validación y estado de error para un campo individual
- * 
- * Uso en un componente:
- * const { value, error, touched, handleChange, handleBlur } = useValidationField('email');
- * 
- * <TextField
- *   value={value}
- *   onChange={handleChange}
- *   onBlur={handleBlur}
- *   error={touched && !!error}
- *   helperText={touched && error}
- * />
- */
-
 import { useState } from 'react';
 import { validateField, getValidationRule } from '../utils/validationRegex';
 
@@ -28,7 +12,6 @@ export function useValidationField(fieldName, initialValue = '') {
     const newValue = e.target.value;
     setValue(newValue);
 
-    // Validar en tiempo real si el campo ya fue tocado
     if (touched && rule) {
       const { isValid, error: validationError } = validateField(newValue, rule);
       setError(validationError);

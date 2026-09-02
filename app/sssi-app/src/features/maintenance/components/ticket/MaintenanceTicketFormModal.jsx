@@ -1658,7 +1658,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                 />
 
                                                 <SearchableSelect
-                                                    label="Locación"
+                                                    label="Detalle de Ubicación"
                                                     value={formValues.locationId}
                                                     onChange={(value) => handleChange('locationId', value)}
                                                     onBlur={() => handleBlur('locationId')}

@@ -7,7 +7,7 @@ spring:
   config:
     import: ${SPRING_CONFIG_IMPORT:optional:configserver:http://localhost:8888}
   kafka:
-    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:76.13.124.126:9094}
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
 
 api:
   prefix: /api/v1/maintenance

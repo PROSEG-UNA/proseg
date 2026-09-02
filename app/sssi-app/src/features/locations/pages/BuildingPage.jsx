@@ -10,7 +10,7 @@ export function BuildingPage() {
             pageDescription="Administración de los edificios dentro de cada campus."
             cards={[
                 { entityName: 'campus', title: 'Campus', icon: BusinessIcon, description: 'Campus universitario' },
-                { entityName: 'location', title: 'Locaciones', icon: PlaceIcon, description: 'Espacio físico interno' },
+                { entityName: 'location', title: 'Detalles de Ubicación', icon: PlaceIcon, description: 'Espacio físico interno' },
             ]}
         />
     );

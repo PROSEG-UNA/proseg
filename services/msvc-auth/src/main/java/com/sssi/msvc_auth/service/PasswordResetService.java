@@ -4,7 +4,9 @@ import com.sssi.common.kafka.events.PasswordChangedEvent;
 import com.sssi.common.kafka.events.PasswordExpiredResetRequiredEvent;
 import com.sssi.common.kafka.events.PasswordResetRequestedEvent;
 import com.sssi.common.kafka.topics.KafkaTopics;
+import com.sssi.msvc_auth.dto.KeycloakUserResponseDto;
 import com.sssi.msvc_auth.entity.PasswordResetToken;
+import com.sssi.msvc_auth.exception.PasswordChangeException;
 import com.sssi.msvc_auth.exception.PasswordResetException;
 import com.sssi.msvc_auth.repository.PasswordResetTokenRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,7 @@ public class PasswordResetService {
     private static final long EXPIRY_SECONDS = 3600; // 1 hora
 
     private final KeycloakAdminService keycloakAdminService;
+    private final KeycloakAuthService keycloakAuthService;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordPolicyService passwordPolicyService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
@@ -89,6 +92,37 @@ public class PasswordResetService {
         } catch (Exception e) {
             log.error("Error enviando PasswordChangedEvent userId={}: {}",
                     resetToken.getKeycloakUserId(), e.getMessage(), e);
+        }
+    }
+
+    @Transactional
+    public void changePassword(String keycloakUserId, String currentPassword, String newPassword, String confirmPassword) {
+        if (!newPassword.equals(confirmPassword)) {
+            throw PasswordChangeException.confirmationMismatch();
+        }
+
+        if (currentPassword.equals(newPassword)) {
+            throw PasswordChangeException.sameAsCurrent();
+        }
+
+        KeycloakUserResponseDto keycloakUser = keycloakAdminService.getUserById(keycloakUserId);
+        keycloakAuthService.getToken(keycloakUser.getUsername(), currentPassword);
+
+        keycloakAdminService.resetPassword(keycloakUserId, newPassword);
+        passwordPolicyService.recordPasswordChange(keycloakUserId);
+
+        try {
+            kafkaTemplate.send(
+                    KafkaTopics.PASSWORD_CHANGED_TOPIC,
+                    PasswordChangedEvent.builder()
+                            .keycloakUserId(keycloakUserId)
+                            .timestamp(System.currentTimeMillis())
+                            .build()
+            );
+            log.info("PasswordChangedEvent enviado para userId={}", keycloakUserId);
+        } catch (Exception e) {
+            log.error("Error enviando PasswordChangedEvent userId={}: {}",
+                    keycloakUserId, e.getMessage(), e);
         }
     }
 

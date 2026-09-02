@@ -2,7 +2,7 @@ import { Box, Button, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
-export function FeatureCard({ icon, title, description, buttonLabel, onNavigate }) {
+export function FeatureCard({ icon, title, description, buttonLabel, onNavigate, fullHeight = false, sx: customSx }) {
     const theme = useTheme();
     const t = theme.palette.tones.rose;
 
@@ -15,6 +15,9 @@ export function FeatureCard({ icon, title, description, buttonLabel, onNavigate 
                 flexDirection: 'column',
                 gap: 2,
                 p: 2.5,
+                flex: fullHeight ? 1 : undefined,
+                height: fullHeight ? '100%' : undefined,
+                minHeight: { md: 220 },
                 flexGrow: { xs: 0, md: 1 },
                 flexShrink: { xs: 0, md: 1 },
                 flexBasis: { xs: '100%', md: 0 },
@@ -45,6 +48,7 @@ export function FeatureCard({ icon, title, description, buttonLabel, onNavigate 
                     borderColor: t.ring,
                     transform: 'rotate(-4deg) scale(1.06)',
                 },
+                ...(typeof customSx === 'function' ? customSx(th) : (customSx || {})),
             })}
             onClick={onNavigate}
         >

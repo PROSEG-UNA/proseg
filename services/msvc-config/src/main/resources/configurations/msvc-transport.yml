@@ -8,11 +8,11 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:https://auth.devbychris.com/realms/sssi-realm}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://keycloak:8080/auth/realms/proseg-realm}
   datasource:
-    url: jdbc:postgresql://76.13.124.126:5432/sssi-bd
-    username: sssi_user
-    password: sssi_user
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/proseg-bd}
+    username: ${SPRING_DATASOURCE_USERNAME:}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -30,12 +30,6 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
-eureka:
-  instance:
-    hostname: ${EUREKA_INSTANCE_HOSTNAME:msvc-transport}
-  client:
-    service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://msvc-eureka:8761/eureka}
 api:
   prefix: /api/v1/transport
 

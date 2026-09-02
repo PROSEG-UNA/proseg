@@ -24,16 +24,16 @@ import java.util.Base64;
 @Slf4j
 public class KeycloakAuthService {
 
-    @Value("${keycloak.server-url:https://auth.devbychris.com}")
+    @Value("${keycloak.server-url}")
     private String keycloakServerUrl;
 
-    @Value("${keycloak.realm:sssi-realm}")
+    @Value("${keycloak.realm:proseg-realm}")
     private String realm;
 
     @Value("${keycloak.client.id:sssi-app}")
     private String clientId;
 
-    @Value("${keycloak.client.secret:Dl8QcQxHHmu6qERkUMmUJ0qWSulRRx6y}")
+    @Value("${keycloak.client.secret}")
     private String clientSecret;
 
     private final RestTemplate restTemplate;
@@ -112,7 +112,9 @@ public class KeycloakAuthService {
                     }
 
                     if ("unauthorized_client".equals(error)) {
-                        throw new IllegalStateException("El cliente no tiene habilitado Direct Access Grants");
+                        throw new IllegalStateException(
+                                "Keycloak rechazo al cliente. Revise el client secret y que el cliente"
+                                        + " tenga habilitado Direct Access Grants. Detalle: " + description);
                     }
 
                     throw new IllegalStateException("Error de Keycloak: " + error + " - " + description);

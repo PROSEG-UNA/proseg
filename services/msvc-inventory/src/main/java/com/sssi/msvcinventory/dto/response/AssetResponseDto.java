@@ -30,9 +30,8 @@ public class AssetResponseDto {
     private ModelResponseDto model;
     private LocationResponseDto location;
     private AssetStatus status;
-    private String executingUnit;
-    private String responsibleEmployee;
-    private String responsibleEmployeeId;
+    private ExecutingUnitResponseDto executingUnit;
+    private EmployeeResponseDto employee;
     private LocalDate acquisitionDate;
     private LocalDate warrantyEndDate;
     private LocalDate firmwareSupportEndDate;
@@ -45,4 +44,6 @@ public class AssetResponseDto {
     private String serialNumber;
     private BigDecimal latitude;
     private BigDecimal longitude;
+    private int imagesCount;
+    private int componentsCount;
 }

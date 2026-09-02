@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchCatalogOptions } from '../services/catalogService.js';
 import { INVENTORY_ENDPOINTS } from '../services/endpoints.js';
+import { queryKeys } from '../../../common/query';
 
 const CATALOG_SOURCES = [
     ['brands', INVENTORY_ENDPOINTS.brands],
@@ -9,14 +11,11 @@ const CATALOG_SOURCES = [
     ['campuses', INVENTORY_ENDPOINTS.campuses],
     ['buildings', INVENTORY_ENDPOINTS.buildings],
     ['locations', INVENTORY_ENDPOINTS.locations],
+    ['executingUnits', INVENTORY_ENDPOINTS.executingUnits],
+    ['employees', INVENTORY_ENDPOINTS.employees],
 ];
 
 const EMPTY_OPTIONS = Object.fromEntries(CATALOG_SOURCES.map(([collection]) => [collection, []]));
-
-const mergeKeepingLocalOnly = (fetched, current) => {
-    const fetchedIds = new Set(fetched.map(option => option.id));
-    return [...fetched, ...current.filter(option => !fetchedIds.has(option.id))];
-};
 
 const withOption = (current, option) => (
     current.some(existing => existing.id === option.id)
@@ -24,53 +23,48 @@ const withOption = (current, option) => (
         : [option, ...current]
 );
 
+const mergeWithLocalOverrides = (fetched, local) => {
+    if (local.length === 0) return fetched;
+    const localById = new Map(local.map(option => [option.id, option]));
+    const fetchedIds = new Set(fetched.map(option => option.id));
+    return [
+        ...fetched.map(option => localById.get(option.id) ?? option),
+        ...local.filter(option => !fetchedIds.has(option.id)),
+    ];
+};
+
 export function useAssetCatalogOptions(open) {
-    const [options, setOptions] = useState(EMPTY_OPTIONS);
-    const [loadingOptions, setLoadingOptions] = useState(false);
+    const [localOptions, setLocalOptions] = useState(EMPTY_OPTIONS);
+
+    const { data, isLoading } = useQuery({
+        queryKey: queryKeys.inventory.catalogOptions(),
+        queryFn: async () => {
+            const results = await Promise.all(CATALOG_SOURCES.map(([, url]) => fetchCatalogOptions(url)));
+            return Object.fromEntries(
+                CATALOG_SOURCES.map(([collection], index) => [collection, results[index] ?? []])
+            );
+        },
+        enabled: Boolean(open),
+    });
 
     const upsertOption = useCallback((collection, option) => {
         if (!option?.id) return;
-        setOptions(prev => ({ ...prev, [collection]: withOption(prev[collection], option) }));
+        setLocalOptions(current => ({
+            ...current,
+            [collection]: withOption(current[collection] ?? [], option),
+        }));
     }, []);
 
-    const loadCatalogOptions = useCallback(() => {
-        if (!open) return undefined;
-
-        let cancelled = false;
-
-        const requestAllOptions = () => {
-            setLoadingOptions(true);
-
-            Promise.all(CATALOG_SOURCES.map(([, url]) => fetchCatalogOptions(url)))
-                .then(results => {
-                    if (cancelled) return;
-                    setOptions(prev => {
-                        const next = { ...prev };
-                        CATALOG_SOURCES.forEach(([collection], index) => {
-                            next[collection] = mergeKeepingLocalOnly(results[index], prev[collection]);
-                        });
-                        return next;
-                    });
-                })
-                .catch(() => {})
-                .finally(() => {
-                    if (!cancelled) setLoadingOptions(false);
-                });
-        };
-
-        const loadHandle = window.setTimeout(requestAllOptions, 500);
-
-        return () => {
-            cancelled = true;
-            window.clearTimeout(loadHandle);
-        };
-    }, [open]);
-
-    useEffect(loadCatalogOptions, [loadCatalogOptions]);
+    const options = useMemo(() => Object.fromEntries(
+        CATALOG_SOURCES.map(([collection]) => [
+            collection,
+            mergeWithLocalOverrides(data?.[collection] ?? [], localOptions[collection] ?? []),
+        ])
+    ), [data, localOptions]);
 
     return {
         options,
         upsertOption,
-        loadingOptions,
+        loadingOptions: isLoading,
     };
 }

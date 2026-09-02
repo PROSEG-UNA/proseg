@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import TableBase from '../../../../common/components/TablaBase.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { useAssetsData } from '../../hooks/useAssetsData';
@@ -11,6 +12,7 @@ import { deleteAsset } from '../../services/assetsService.js';
 import { useDebounce } from '../../../../common/hooks/useDebounce.js';
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
+import { queryKeys } from '../../../../common/query';
 
 const STORAGE_KEY = 'asset-table-column-visibility';
 
@@ -31,9 +33,9 @@ const DEFAULT_COLUMN_VISIBILITY = {
 const COLUMN_TO_BACKEND_KEY = {
     assetNumber: 'assetNumber',
     serialNumber: 'serialNumber',
-    executingUnit: 'executingUnit',
-    responsibleEmployee: 'responsibleEmployee',
-    responsibleEmployeeId: 'responsibleEmployeeId',
+    executingUnit: 'executingUnit.name',
+    responsibleEmployee: 'employee.name',
+    responsibleEmployeeId: 'employee.identification',
     type: 'model.type.name',
     brand: 'model.brand.name',
     model: 'model.name',
@@ -45,7 +47,7 @@ const COLUMN_TO_BACKEND_KEY = {
     firmwareSupportEndDate: 'firmwareSupportEndDate',
 };
 
-export default function AssetTable({ refreshKey = 0, onRefresh }) {
+export default function AssetTable() {
     const [columnVisibility, setColumnVisibility] = useState(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
@@ -62,7 +64,7 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
     const [viewAssetId, setViewAssetId] = useState(null);
     const [assetToDelete, setAssetToDelete] = useState(null);
     const [historyTarget, setHistoryTarget] = useState(null);
-    const [deleting, setDeleting] = useState(false);
+    const queryClient = useQueryClient();
     const { hasPermission } = usePermissions();
     const canManageAssets = hasPermission(PERMISSIONS.INVENTORY.MANAGE);
     const canDeleteAssets = hasPermission(PERMISSIONS.INVENTORY.DELETE);
@@ -106,13 +108,12 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
 
     useEffect(resetPageOnFilterChange, [debouncedGlobalFilter, backendFilters, backendSort]);
 
-    const { rows, loading, error, totalElements } = useAssetsData({
+    const { rows, loading, fetching, error, totalElements } = useAssetsData({
         pageIndex: pagination.pageIndex,
         pageSize: pagination.pageSize,
         search: debouncedGlobalFilter,
         filters: backendFilters,
         sort: backendSort,
-        refreshKey,
     });
 
     const columns = useMemo(
@@ -150,36 +151,45 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
 
     const handleEditClose = useCallback(() => setEditAssetId(null), []);
 
+    const invalidateAssets = useCallback(
+        () => queryClient.invalidateQueries({ queryKey: queryKeys.inventory.assets() }),
+        [queryClient]
+    );
+
     const handleEditSaved = useCallback(() => {
         setAlert({ type: 'success', message: 'Activo actualizado correctamente' });
-        onRefresh?.();
-    }, [onRefresh]);
+        void invalidateAssets();
+    }, [invalidateAssets]);
+
+    const deleteAssetMutation = useMutation({
+        mutationFn: (assetId) => deleteAsset(assetId),
+        onSuccess: async () => {
+            setAssetToDelete(null);
+            setAlert({ type: 'success', message: 'Activo eliminado correctamente' });
+            await invalidateAssets();
+        },
+        onError: (deleteError) => {
+            const data = deleteError?.response?.data;
+            const mainMsg = data?.message ?? deleteError?.message ?? 'Error al eliminar';
+            const fieldErrors = data?.errors;
+            const fullMsg = fieldErrors?.length
+                ? `${mainMsg}:\n${fieldErrors.map((err) => `• ${err}`).join('\n')}`
+                : mainMsg;
+            setAlert({ type: 'error', message: fullMsg });
+        },
+    });
+
+    const deleting = deleteAssetMutation.isPending;
 
     const handleDeleteCancel = useCallback(() => {
         if (deleting) return;
         setAssetToDelete(null);
     }, [deleting]);
 
-    const handleDeleteConfirm = useCallback(async () => {
+    const handleDeleteConfirm = useCallback(() => {
         if (!assetToDelete) return;
-        setDeleting(true);
-        try {
-            await deleteAsset(assetToDelete.id);
-            setAssetToDelete(null);
-            setAlert({ type: 'success', message: 'Activo eliminado correctamente' });
-            onRefresh?.();
-        } catch (e) {
-            const data = e?.response?.data;
-            const mainMsg = data?.message ?? e?.message ?? 'Error al eliminar';
-            const fieldErrors = data?.errors;
-            const fullMsg = fieldErrors?.length
-                ? `${mainMsg}:\n${fieldErrors.map((err) => `• ${err}`).join('\n')}`
-                : mainMsg;
-            setAlert({ type: 'error', message: fullMsg });
-        } finally {
-            setDeleting(false);
-        }
-    }, [assetToDelete, onRefresh]);
+        deleteAssetMutation.mutate(assetToDelete.id);
+    }, [assetToDelete, deleteAssetMutation]);
 
     return (
         <>
@@ -187,6 +197,7 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
                 columns={columns}
                 data={rows}
                 loading={loading}
+                fetching={fetching}
                 error={error}
                 enableRowActions={canUseActions}
                 renderRowActions={canUseActions ? renderAssetActions({
@@ -225,10 +236,12 @@ export default function AssetTable({ refreshKey = 0, onRefresh }) {
                 }}
                 enableGlobalFilter
                 renderDetailPanel={({ row }) => (
-                    <AssetDetailPanel
-                        assetId={row.original.id}
-                        canManageAssets={canManageAssets}
-                    />
+                    row.original.hasDetailContent ? (
+                        <AssetDetailPanel
+                            assetId={row.original.id}
+                            canManageAssets={canManageAssets}
+                        />
+                    ) : null
                 )}
             />
 

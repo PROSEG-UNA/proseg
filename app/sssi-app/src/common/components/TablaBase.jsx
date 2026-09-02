@@ -23,6 +23,7 @@ export default function TableBase({
                                       columns,
                                       data,
                                       loading = false,
+                                      fetching = false,
                                       error = null,
                                       enableRowActions = false,
                                       renderRowActions,
@@ -58,7 +59,7 @@ export default function TableBase({
         ...tableOptionsState,
         isLoading: loading,
         showLoadingOverlay: false,
-        showProgressBars: loading,
+        showProgressBars: loading || fetching,
         showAlertBanner: !!error,
         ...(enableRowSelection && rowSelection != null ? { rowSelection } : {}),
     };
@@ -73,19 +74,24 @@ export default function TableBase({
         enableRowActions,
         renderRowActions,
         renderDetailPanel: renderDetailPanel
-            ? (props) => (
-                <Box
-                    sx={{
-                        width: '100%',
-                        borderBottom: '1px solid',
-                        borderBottomColor: 'divider',
-                        borderTop: '1px solid',
-                        borderTopColor: 'divider',
-                    }}
-                >
-                    {renderDetailPanel(props)}
-                </Box>
-            )
+            ? (props) => {
+                const detailContent = renderDetailPanel(props);
+                if (!detailContent) return null;
+
+                return (
+                    <Box
+                        sx={{
+                            width: '100%',
+                            borderBottom: '1px solid',
+                            borderBottomColor: 'divider',
+                            borderTop: '1px solid',
+                            borderTopColor: 'divider',
+                        }}
+                    >
+                        {detailContent}
+                    </Box>
+                );
+            }
             : undefined,
         positionActionsColumn: tableOptions.positionActionsColumn ?? 'last',
         enableRowSelection,

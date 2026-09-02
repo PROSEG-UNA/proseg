@@ -64,7 +64,7 @@ const DOMAIN_META = {
         lightBg:    '#fdf2f8',
         darkBg:     'rgba(131,24,67,0.35)',
         icon: PushPinIcon,
-        description: 'Gestión de campus, edificios y locaciones',
+        description: 'Gestión de campus, edificios y detalles de ubicación',
     },
     Archivos: {
         lightColor: '#7c3aed',
@@ -351,7 +351,7 @@ export default function RoleFormModal({ open, onClose, onSaved, role = null }) {
     const isDark = (mode === 'system' ? systemMode : mode) === 'dark';
     const accentColor = theme.vars.palette.tones.rose.fg;
 
-    const { allPrivileges, selectedIds, setSelectedIds, roleName, setRoleName, description, setDescription, save, isEditMode } = useRoleFormData(role);
+    const { allPrivileges, selectedIds, setSelectedIds, roleName, setRoleName, description, setDescription, save, resetDraft, isEditMode } = useRoleFormData(role);
 
     const [alert, setAlert]               = useState(null);
     const [saving, setSaving]             = useState(false);
@@ -428,6 +428,11 @@ export default function RoleFormModal({ open, onClose, onSaved, role = null }) {
         }
     };
 
+    const handleClose = () => {
+        resetDraft();
+        onClose?.();
+    };
+
     const handleSave = async () => {
         const roleNameRule        = getValidationRule('roleName');
         const roleDescriptionRule = getValidationRule('roleDescription');
@@ -462,7 +467,7 @@ export default function RoleFormModal({ open, onClose, onSaved, role = null }) {
         <>
             <GeneralModal
                 open={open}
-                onClose={onClose}
+                onClose={handleClose}
                 maxWidth="md"
                 icon={AdminPanelSettingsIcon}
                 title={isEditMode ? 'Editar rol' : 'Nuevo rol'}
@@ -481,7 +486,7 @@ export default function RoleFormModal({ open, onClose, onSaved, role = null }) {
                             : `${selectedCount} privilegio${selectedCount !== 1 ? 's' : ''} asignado${selectedCount !== 1 ? 's' : ''}`}
                     </Typography>
                 }
-                secondaryButton={{ label: 'Cancelar', onClick: onClose }}
+                secondaryButton={{ label: 'Cancelar', onClick: handleClose }}
                 primaryButton={{
                     label: saving ? 'Guardando…' : isEditMode ? 'Guardar cambios' : 'Crear rol',
                     onClick: handleSave,

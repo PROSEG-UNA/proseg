@@ -6,7 +6,7 @@ export function LocationPage() {
     return (
         <LocationBrowserPage
             mainEntity="location"
-            pageTitle="Locaciones"
+            pageTitle="Detalles de Ubicación"
             pageDescription="Administración de los espacios físicos internos de cada edificio."
             cards={[
                 { entityName: 'campus', title: 'Campus', icon: BusinessIcon, description: 'Campus universitario' },

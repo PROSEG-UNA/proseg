@@ -1,347 +1,459 @@
 services:
 
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    container_name: zookeeper
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    restart: unless-stopped
     environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    mem_limit: 512m
     networks:
-      - sssi-net
+      - proseg-net
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.8
+    container_name: keycloak
+    restart: unless-stopped
+    command: start --import-realm
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/${KEYCLOAK_DB_NAME}
+      KC_DB_USERNAME: ${POSTGRES_USER}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KC_HOSTNAME: ${APP_URL}/auth
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_SECRET_PROSEG_APP: ${KEYCLOAK_CLIENT_SECRET}
+      KC_SECRET_MSVC_EMAIL: ${KEYCLOAK_EMAIL_CLIENT_SECRET}
+      KC_SECRET_MSVC_MAINTENANCE: ${KEYCLOAK_MAINTENANCE_CLIENT_SECRET}
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    mem_limit: 768m
+    networks:
+      - proseg-net
+
+  keycloak-init:
+    image: quay.io/keycloak/keycloak:26.0.8
+    container_name: keycloak-init
+    entrypoint: ["bash", "-c", "bash /config/sync-client-secrets.sh && bash /config/sync-roles.sh"]
+    environment:
+      KEYCLOAK_URL: http://keycloak:8080/auth
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      KEYCLOAK_EMAIL_CLIENT_SECRET: ${KEYCLOAK_EMAIL_CLIENT_SECRET}
+      KEYCLOAK_MAINTENANCE_CLIENT_SECRET: ${KEYCLOAK_MAINTENANCE_CLIENT_SECRET}
+    volumes:
+      - ./keycloak:/config:ro
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    mem_limit: 256m
+    networks:
+      - proseg-net
+
+  minio:
+    image: minio/minio:${MINIO_VERSION}
+    container_name: minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/minio/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    mem_limit: 256m
+    networks:
+      - proseg-net
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "
+      mc alias set local http://minio:9000 ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY} &&
+      mc mb --ignore-existing local/${MINIO_BUCKET} &&
+      echo bucket ${MINIO_BUCKET} listo
+      "
+    networks:
+      - proseg-net
 
   kafka:
-    image: confluentinc/cp-kafka:7.5.0
+    image: apache/kafka:3.9.0
     container_name: kafka
-    depends_on:
-      - zookeeper
-    ports:
-      - "9094:9094"
+    restart: unless-stopped
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://76.13.124.126:9094
-      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:9094
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      CLUSTER_ID: ${KAFKA_CLUSTER_ID}
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_HEAP_OPTS: -Xmx512m -Xms512m
+    volumes:
+      - kafkadata:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 10s
       retries: 20
-      start_period: 40s
+      start_period: 30s
+    mem_limit: 768m
     networks:
-      - sssi-net
+      - proseg-net
+
+  frontend:
+    image: ghcr.io/${GHCR_NAMESPACE}/proseg-app:${IMAGE_TAG}
+    container_name: frontend
+    restart: unless-stopped
+    mem_limit: 64m
+    networks:
+      - proseg-net
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on:
+      - frontend
+      - msvc-gateway
+      - keycloak
+    mem_limit: 64m
+    networks:
+      - proseg-net
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CF_TUNNEL_TOKEN}
+    depends_on:
+      - caddy
+    mem_limit: 64m
+    networks:
+      - proseg-net
 
   msvc-config:
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-      args:
-        SERVICE_NAME: msvc-config
+    image: ghcr.io/${GHCR_NAMESPACE}/msvc-config:${IMAGE_TAG}
     container_name: msvc-config
+    restart: unless-stopped
     environment:
-      - SPRING_PROFILES_ACTIVE=${CONFIG_SERVER_PROFILES_ACTIVE:-prod,native}
+      - SPRING_PROFILES_ACTIVE=${CONFIG_SERVER_PROFILES_ACTIVE}
+      - JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75
     healthcheck:
       test: ["CMD-SHELL", "curl -s http://localhost:8888 >/dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 20
       start_period: 40s
+    mem_limit: 256m
     networks:
-      - sssi-net
-
-  msvc-eureka:
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-      args:
-        SERVICE_NAME: msvc-eureka
-    container_name: msvc-eureka
-    environment:
-      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
-      - SPRING_CONFIG_IMPORT=${SPRING_CONFIG_IMPORT:-optional:configserver:http://msvc-config:8888}
-      - EUREKA_INSTANCE_HOSTNAME=${EUREKA_INSTANCE_HOSTNAME:-msvc-eureka}
-      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
-      - EUREKA_CLIENT_FETCH_REGISTRY=false
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:-http://msvc-eureka:8761/eureka/}
-    healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:8761 >/dev/null || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-      start_period: 40s
-    depends_on:
-      msvc-config:
-        condition: service_healthy
-    networks:
-      - sssi-net
+      - proseg-net
 
   msvc-gateway:
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-      args:
-        SERVICE_NAME: msvc-gateway
+    image: ghcr.io/${GHCR_NAMESPACE}/msvc-gateway:${IMAGE_TAG}
     container_name: msvc-gateway
-    ports:
-      - "127.0.0.1:8081:8081"
+    restart: unless-stopped
     environment:
-      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
-      - SPRING_CONFIG_IMPORT=${SPRING_CONFIG_IMPORT:-optional:configserver:http://msvc-config:8888}
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+      - SPRING_CONFIG_IMPORT=${SPRING_CONFIG_IMPORT}
       - SERVER_PORT=8081
       - SPRING_APPLICATION_NAME=msvc-gateway
-      - KEYCLOAK_ISSUER_URI=${KEYCLOAK_ISSUER_URI:-https://auth.devbychris.com/realms/sssi-realm}
-      - SERVICES_AUTH_URL=${SERVICES_AUTH_URL:-http://msvc-auth:8090}
-      - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://msvc-auth:8090}
-      - GATEWAY_BASE_URL=${GATEWAY_BASE_URL:-http://msvc-gateway:8081}
-      - EMAIL_SERVICE_URL=${EMAIL_SERVICE_URL:-http://msvc-email:9090}
-      - INVENTORY_SERVICE_URL=${INVENTORY_SERVICE_URL:-http://msvc-inventory:8095}
-      - ARCHIVE_SERVICE_URL=${ARCHIVE_SERVICE_URL:-http://msvc-archive:8096}
-      - TRANSPORT_SERVICE_URL=${TRANSPORT_SERVICE_URL:-http://msvc-transport:8097}
-      - DOCUMENT_PROCESSOR_SERVICE_URL=${DOCUMENT_PROCESSOR_SERVICE_URL:-http://msvc-document-processor:8098}
-      - MAINTENANCE_SERVICE_URL=${MAINTENANCE_SERVICE_URL:-http://msvc-maintenance:8099}
-      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-https://proseg.devbychris.com}
-      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
-      - EUREKA_CLIENT_FETCH_REGISTRY=false
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:-http://msvc-eureka:8761/eureka/}
+      - KEYCLOAK_ISSUER_URI=${APP_URL}/auth/realms/${KEYCLOAK_REALM}
+      - SERVICES_AUTH_URL=http://msvc-auth:8090
+      - AUTH_SERVICE_URL=http://msvc-auth:8090
+      - GATEWAY_BASE_URL=http://msvc-gateway:8081
+      - EMAIL_SERVICE_URL=http://msvc-email:9090
+      - INVENTORY_SERVICE_URL=http://msvc-inventory:8095
+      - ARCHIVE_SERVICE_URL=http://msvc-archive:8096
+      - TRANSPORT_SERVICE_URL=http://msvc-transport:8097
+      - DOCUMENT_PROCESSOR_SERVICE_URL=http://msvc-document-processor:8098
+      - MAINTENANCE_SERVICE_URL=http://msvc-maintenance:8099
+      - CORS_ALLOWED_ORIGINS=${APP_URL}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
+      - JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75
     depends_on:
       msvc-config:
-        condition: service_healthy
-      msvc-eureka:
         condition: service_healthy
       msvc-auth:
         condition: service_started
+    mem_limit: 384m
     networks:
-      - sssi-net
+      - proseg-net
 
   msvc-auth:
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-      args:
-        SERVICE_NAME: msvc-auth
+    image: ghcr.io/${GHCR_NAMESPACE}/msvc-auth:${IMAGE_TAG}
     container_name: msvc-auth
+    restart: unless-stopped
     environment:
-      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
-      - SPRING_CONFIG_IMPORT=${SPRING_CONFIG_IMPORT:-optional:configserver:http://msvc-config:8888}
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+      - SPRING_CONFIG_IMPORT=${SPRING_CONFIG_IMPORT}
       - SERVER_PORT=8090
       - SPRING_APPLICATION_NAME=msvc-auth
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=${SPRING_KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=${KEYCLOAK_ISSUER_URI:-https://auth.devbychris.com/realms/sssi-realm}
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:-http://msvc-eureka:8761/eureka/}
-      - EUREKA_INSTANCE_HOSTNAME=${EUREKA_INSTANCE_HOSTNAME:-msvc-auth}
-      - GATEWAY_BASE_URL=${GATEWAY_BASE_URL:-http://msvc-gateway:8081}
-      - KEYCLOAK_SERVER_URL=${KEYCLOAK_SERVER_URL:-https://auth.devbychris.com}
-      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-sssi-realm}
-      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-sssi-app}
-      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-Dl8QcQxHHmu6qERkUMmUJ0qWSulRRx6y}
-      - KEYCLOAK_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USERNAME:-admin}
-      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-sssi_user}
-      - COOKIE_SECURE=${COOKIE_SECURE:-true}
-      - TURNSTILE_SECRET_KEY=${TURNSTILE_SECRET_KEY:-0x4AAAAAADEo_xVst3UEPKg1xo7CgackmKA}
-      - TURNSTILE_MAX_RETRIES=${TURNSTILE_MAX_RETRIES:-3}
-      - TURNSTILE_DEV_MODE=${TURNSTILE_DEV_MODE:-false}
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=${APP_URL}/auth/realms/${KEYCLOAK_REALM}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO}
+      - GATEWAY_BASE_URL=http://msvc-gateway:8081
+      - KEYCLOAK_SERVER_URL=http://keycloak:8080/auth
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+      - KEYCLOAK_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USERNAME}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+      - COOKIE_SECURE=${COOKIE_SECURE}
+      - TURNSTILE_SECRET_KEY=${TURNSTILE_SECRET_KEY}
+      - TURNSTILE_MAX_RETRIES=${TURNSTILE_MAX_RETRIES}
+      - JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75
     depends_on:
       kafka:
         condition: service_healthy
+      keycloak:
+        condition: service_healthy
       msvc-config:
         condition: service_healthy
-      msvc-eureka:
-        condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "curl -sS -X POST http://localhost:8090/api/auth/login -H 'Content-Type: application/json' -d '{}' -o /dev/null -w '%{http_code}' | grep -E '200|400|401|403' >/dev/null || exit 1" ]
+      test: ["CMD-SHELL", "curl -sS -X POST http://localhost:8090/api/auth/login -H 'Content-Type: application/json' -d '{}' -o /dev/null -w '%{http_code}' | grep -E '200|400|401|403' >/dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 20
       start_period: 40s
+    mem_limit: 384m
     networks:
-      - sssi-net
+      - proseg-net
 
   msvc-inventory:
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-      args:
-        SERVICE_NAME: msvc-inventory
+    image: ghcr.io/${GHCR_NAMESPACE}/msvc-inventory:${IMAGE_TAG}
     container_name: msvc-inventory
+    restart: unless-stopped
     environment:
-      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
-      - SPRING_CONFIG_IMPORT=${SPRING_CONFIG_IMPORT:-optional:configserver:http://msvc-config:8888}
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+      - SPRING_CONFIG_IMPORT=${SPRING_CONFIG_IMPORT}
       - SERVER_PORT=8095
       - SPRING_APPLICATION_NAME=msvc-inventory
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=${KEYCLOAK_ISSUER_URI:-https://auth.devbychris.com/realms/sssi-realm}
-      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL:-jdbc:postgresql://76.13.124.126:5432/sssi-bd?sslmode=disable}
-      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-sssi_user}
-      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-sssi_user}
-      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=${SPRING_DATASOURCE_DRIVER_CLASS_NAME:-org.postgresql.Driver}
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
-      - SPRING_JPA_SHOW_SQL=${SPRING_JPA_SHOW_SQL:-false}
-      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=${SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT:-org.hibernate.dialect.PostgreSQLDialect}
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:-http://msvc-eureka:8761/eureka/}
-      - EUREKA_INSTANCE_HOSTNAME=${EUREKA_INSTANCE_HOSTNAME:-msvc-inventory}
-      - ARCHIVE_BASE_URL=${ARCHIVE_BASE_URL:-http://msvc-gateway:8081}
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=${APP_URL}/auth/realms/${KEYCLOAK_REALM}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO}
+      - SPRING_JPA_SHOW_SQL=false
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - ARCHIVE_BASE_URL=http://msvc-gateway:8081
+      - JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75
     depends_on:
+      postgres:
+        condition: service_healthy
       msvc-config:
         condition: service_healthy
-      msvc-eureka:
-        condition: service_healthy
+    mem_limit: 512m
     networks:
-      - sssi-net
+      - proseg-net
 
   msvc-archive:
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-      args:
-        SERVICE_NAME: msvc-archive
+    image: ghcr.io/${GHCR_NAMESPACE}/msvc-archive:${IMAGE_TAG}
     container_name: msvc-archive
+    restart: unless-stopped
     environment:
-      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
-      - SPRING_CONFIG_IMPORT=${SPRING_CONFIG_IMPORT:-optional:configserver:http://msvc-config:8888}
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+      - SPRING_CONFIG_IMPORT=${SPRING_CONFIG_IMPORT}
       - SERVER_PORT=8096
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:-http://msvc-eureka:8761/eureka/}
-      - EUREKA_INSTANCE_HOSTNAME=${EUREKA_INSTANCE_HOSTNAME:-msvc-archive}
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=${KEYCLOAK_ISSUER_URI:-https://auth.devbychris.com/realms/sssi-realm}
-      - KEYCLOAK_ISSUER_URI=${KEYCLOAK_ISSUER_URI:-https://auth.devbychris.com/realms/sssi-realm}
-      - MINIO_URL=${MINIO_URL:-http://minio.devbychris.com:9000}
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-admin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-admin12345}
-      - MINIO_BUCKET=${MINIO_BUCKET:-sssi-prod}
-      - MINIO_REGION=${MINIO_REGION:-us-east-1}
-      - MINIO_SECURE=${MINIO_SECURE:-false}
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=${APP_URL}/auth/realms/${KEYCLOAK_REALM}
+      - KEYCLOAK_ISSUER_URI=${APP_URL}/auth/realms/${KEYCLOAK_REALM}
+      - MINIO_URL=http://minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET=${MINIO_BUCKET}
+      - MINIO_REGION=${MINIO_REGION}
+      - MINIO_SECURE=false
+      - JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75
     depends_on:
+      minio:
+        condition: service_healthy
       msvc-config:
         condition: service_healthy
-      msvc-eureka:
-        condition: service_healthy
+    mem_limit: 320m
     networks:
-      - sssi-net
+      - proseg-net
 
   msvc-transport:
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-      args:
-        SERVICE_NAME: msvc-transport
+    image: ghcr.io/${GHCR_NAMESPACE}/msvc-transport:${IMAGE_TAG}
     container_name: msvc-transport
+    restart: unless-stopped
     environment:
-      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
-      - SPRING_CONFIG_IMPORT=${SPRING_CONFIG_IMPORT:-optional:configserver:http://msvc-config:8888}
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+      - SPRING_CONFIG_IMPORT=${SPRING_CONFIG_IMPORT}
       - SERVER_PORT=8097
       - SPRING_APPLICATION_NAME=msvc-transport
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=${KEYCLOAK_ISSUER_URI:-https://auth.devbychris.com/realms/sssi-realm}
-      - KEYCLOAK_ISSUER_URI=${KEYCLOAK_ISSUER_URI:-https://auth.devbychris.com/realms/sssi-realm}
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:-http://msvc-eureka:8761/eureka/}
-      - EUREKA_INSTANCE_HOSTNAME=${EUREKA_INSTANCE_HOSTNAME:-msvc-transport}
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=${APP_URL}/auth/realms/${KEYCLOAK_REALM}
+      - KEYCLOAK_ISSUER_URI=${APP_URL}/auth/realms/${KEYCLOAK_REALM}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO}
+      - JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75
     depends_on:
+      postgres:
+        condition: service_healthy
       msvc-config:
         condition: service_healthy
-      msvc-eureka:
-        condition: service_healthy
+    mem_limit: 384m
     networks:
-      - sssi-net
+      - proseg-net
 
   msvc-document-processor:
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-      args:
-        SERVICE_NAME: msvc-document-processor
+    image: ghcr.io/${GHCR_NAMESPACE}/msvc-document-processor:${IMAGE_TAG}
     container_name: msvc-document-processor
+    restart: unless-stopped
     environment:
-      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
-      - SPRING_CONFIG_IMPORT=${SPRING_CONFIG_IMPORT:-optional:configserver:http://msvc-config:8888}
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+      - SPRING_CONFIG_IMPORT=${SPRING_CONFIG_IMPORT}
       - SERVER_PORT=8098
       - SPRING_APPLICATION_NAME=msvc-document-processor
-      - KEYCLOAK_ISSUER_URI=${KEYCLOAK_ISSUER_URI:-https://auth.devbychris.com/realms/sssi-realm}
-      - GATEWAY_BASE_URL=${GATEWAY_BASE_URL:-http://msvc-gateway:8081}
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:-http://msvc-eureka:8761/eureka/}
-      - EUREKA_INSTANCE_HOSTNAME=${EUREKA_INSTANCE_HOSTNAME:-msvc-document-processor}
+      - KEYCLOAK_ISSUER_URI=${APP_URL}/auth/realms/${KEYCLOAK_REALM}
+      - GATEWAY_BASE_URL=http://msvc-gateway:8081
+      - JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75
     depends_on:
       msvc-config:
         condition: service_healthy
-      msvc-eureka:
-        condition: service_healthy
+    mem_limit: 640m
     networks:
-      - sssi-net
+      - proseg-net
 
   msvc-email:
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-      args:
-        SERVICE_NAME: msvc-email
+    image: ghcr.io/${GHCR_NAMESPACE}/msvc-email:${IMAGE_TAG}
     container_name: msvc-email
+    restart: unless-stopped
     environment:
-      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
-      - SPRING_CONFIG_IMPORT=${SPRING_CONFIG_IMPORT:-optional:configserver:http://msvc-config:8888}
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+      - SPRING_CONFIG_IMPORT=${SPRING_CONFIG_IMPORT}
       - SERVER_PORT=9090
       - SPRING_APPLICATION_NAME=msvc-email
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:-http://msvc-eureka:8761/eureka/}
-      - EUREKA_INSTANCE_HOSTNAME=${EUREKA_INSTANCE_HOSTNAME:-msvc-email}
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=${SPRING_KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
-      - SPRING_MAIL_HOST=${SPRING_MAIL_HOST:-smtp.gmail.com}
-      - SPRING_MAIL_PORT=${SPRING_MAIL_PORT:-587}
-      - SPRING_MAIL_USERNAME=${SPRING_MAIL_USERNAME:-noreply.prostep@gmail.com}
-      - SPRING_MAIL_PASSWORD=${SPRING_MAIL_PASSWORD:-rwuj zaeq hrgm znge}
-      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:-true}
-      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:-true}
-      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED=${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED:-true}
-      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_CONNECTIONTIMEOUT=${SPRING_MAIL_PROPERTIES_MAIL_SMTP_CONNECTIONTIMEOUT:-5000}
-      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_TIMEOUT=${SPRING_MAIL_PROPERTIES_MAIL_SMTP_TIMEOUT:-5000}
-      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_WRITETIMEOUT=${SPRING_MAIL_PROPERTIES_MAIL_SMTP_WRITETIMEOUT:-5000}
-      - SPRING_MAIL_PROPERTIES_MAIL_DEBUG=${SPRING_MAIL_PROPERTIES_MAIL_DEBUG:-false}
-      - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID=${SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID:-msvc-email}
-      - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET=${SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET:-0wqysXJSiZurqXEE9TZSzDk4rhHq2kKY}
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_MAIL_HOST=${SPRING_MAIL_HOST}
+      - SPRING_MAIL_PORT=${SPRING_MAIL_PORT}
+      - SPRING_MAIL_USERNAME=${SPRING_MAIL_USERNAME}
+      - SPRING_MAIL_PASSWORD=${SPRING_MAIL_PASSWORD}
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED=true
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_CONNECTIONTIMEOUT=5000
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_TIMEOUT=5000
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_WRITETIMEOUT=5000
+      - SPRING_MAIL_PROPERTIES_MAIL_DEBUG=false
+      - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID=msvc-email
+      - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_EMAIL_CLIENT_SECRET}
       - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_AUTHORIZATION_GRANT_TYPE=client_credentials
-      - SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_TOKEN_URI=${SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_TOKEN_URI:-https://auth.devbychris.com/realms/sssi-realm/protocol/openid-connect/token}
-      - GATEWAY_BASE_URL=${GATEWAY_BASE_URL:-http://msvc-gateway:8081}
-      - APP_URLS_LOGIN=${APP_URLS_LOGIN:-https://proseg.devbychris.com/login}
-      - APP_URLS_APPROVALS=${APP_URLS_APPROVALS:-https://proseg.devbychris.com/login}
-      - APP_URLS_SET_PASSWORD=${APP_URLS_SET_PASSWORD:-https://proseg.devbychris.com/set-password}
-      - APP_URLS_RESET_PASSWORD=${APP_URLS_RESET_PASSWORD:-https://proseg.devbychris.com/reset-password}
+      - SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_TOKEN_URI=http://keycloak:8080/auth/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token
+      - GATEWAY_BASE_URL=http://msvc-gateway:8081
+      - APP_URLS_LOGIN=${APP_URL}/login
+      - APP_URLS_APPROVALS=${APP_URL}/login
+      - APP_URLS_SET_PASSWORD=${APP_URL}/set-password
+      - APP_URLS_RESET_PASSWORD=${APP_URL}/reset-password
+      - JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75
     depends_on:
       kafka:
         condition: service_healthy
+      keycloak:
+        condition: service_healthy
       msvc-config:
         condition: service_healthy
-      msvc-eureka:
-        condition: service_healthy
+    mem_limit: 320m
     networks:
-      - sssi-net
+      - proseg-net
 
   msvc-maintenance:
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-      args:
-        SERVICE_NAME: msvc-maintenance
+    image: ghcr.io/${GHCR_NAMESPACE}/msvc-maintenance:${IMAGE_TAG}
     container_name: msvc-maintenance
+    restart: unless-stopped
     environment:
-      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
-      - SPRING_CONFIG_IMPORT=${SPRING_CONFIG_IMPORT:-optional:configserver:http://msvc-config:8888}
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+      - SPRING_CONFIG_IMPORT=${SPRING_CONFIG_IMPORT}
       - SERVER_PORT=8099
       - SPRING_APPLICATION_NAME=msvc-maintenance
-      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL:-jdbc:postgresql://76.13.124.126:5432/sssi-bd?sslmode=disable}
-      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-sssi_user}
-      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-sssi_user}
-      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=${SPRING_DATASOURCE_DRIVER_CLASS_NAME:-org.postgresql.Driver}
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
-      - SPRING_JPA_SHOW_SQL=${SPRING_JPA_SHOW_SQL:-false}
-      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=${SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT:-org.hibernate.dialect.PostgreSQLDialect}
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:-http://msvc-eureka:8761/eureka/}
-      - EUREKA_INSTANCE_HOSTNAME=${EUREKA_INSTANCE_HOSTNAME:-msvc-maintenance}
-      - GATEWAY_BASE_URL=${GATEWAY_BASE_URL:-http://msvc-gateway:8081}
-# Descomentar en producción real para enviar notificaciones a destinatarios adicionales (separados por comas)
-#      - MAINTENANCE_EXTRA_EMAILS=${MAINTENANCE_EXTRA_EMAILS:-seguridad@una.cr}
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=${APP_URL}/auth/realms/${KEYCLOAK_REALM}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO}
+      - SPRING_JPA_SHOW_SQL=false
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+      - GATEWAY_BASE_URL=http://msvc-gateway:8081
+      - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID=msvc-maintenance
+      - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_MAINTENANCE_CLIENT_SECRET}
+      - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_AUTHORIZATION_GRANT_TYPE=client_credentials
+      - SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_TOKEN_URI=http://keycloak:8080/auth/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token
+      - MAINTENANCE_EXTRA_EMAILS=${MAINTENANCE_EXTRA_EMAILS}
+      - JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75
     depends_on:
+      postgres:
+        condition: service_healthy
       msvc-config:
         condition: service_healthy
-      msvc-eureka:
-        condition: service_healthy
+    mem_limit: 448m
     networks:
-      - sssi-net
+      - proseg-net
+
+volumes:
+  pgdata:
+  kafkadata:
+  miniodata:
+  caddydata:
+  caddyconfig:
 
 networks:
-  sssi-net:
+  proseg-net:
     driver: bridge

@@ -8,20 +8,11 @@ spring:
     multipart:
       max-file-size: 30MB
       max-request-size: 60MB
-  config:
-    import: ${SPRING_CONFIG_IMPORT:optional:configserver:http://msvc-config:8888}
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:https://auth.example.com/realms/sssi-realm}
-
-eureka:
-  instance:
-    hostname: ${EUREKA_INSTANCE_HOSTNAME:msvc-archive}
-  client:
-    service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://msvc-eureka:8761/eureka/}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:https://auth.example.com/realms/proseg-realm}
 
 api:
   prefix: /api/v1/archive
@@ -31,9 +22,9 @@ routes:
 
 minio:
   url: ${MINIO_URL:http://minio:9000}
-  access-key: ${MINIO_ACCESS_KEY:admin}
-  secret-key: ${MINIO_SECRET_KEY:admin12345}
-  bucket: ${MINIO_BUCKET:sssi-prod}
+  access-key: ${MINIO_ACCESS_KEY:}
+  secret-key: ${MINIO_SECRET_KEY:}
+  bucket: ${MINIO_BUCKET:proseg}
   region: ${MINIO_REGION:us-east-1}
   secure: ${MINIO_SECURE:false}
 

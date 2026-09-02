@@ -4,17 +4,15 @@ server:
 spring:
   application:
     name: msvc-inventory
-  config:
-    import: ${SPRING_CONFIG_IMPORT:optional:configserver:http://msvc-config:8888}
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:https://auth.example.com/realms/sssi-realm}
+          issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:https://auth.example.com/realms/proseg-realm}
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/sssi-bd}
-    username: ${SPRING_DATASOURCE_USERNAME:sssi_user}
-    password: ${SPRING_DATASOURCE_PASSWORD:sssi_user}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/proseg-bd}
+    username: ${SPRING_DATASOURCE_USERNAME:}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
     driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.postgresql.Driver}
     hikari:
       maximum-pool-size: ${SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE:10}
@@ -36,13 +34,6 @@ spring:
         jdbc:
           batch_size: ${SPRING_JPA_PROPERTIES_HIBERNATE_JDBC_BATCH_SIZE:20}
 
-eureka:
-  instance:
-    hostname: ${EUREKA_INSTANCE_HOSTNAME:msvc-inventory}
-  client:
-    service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://msvc-eureka:8761/eureka/}
-
 api:
   prefix: /api/v1/inventory
 
@@ -51,6 +42,8 @@ archive:
 
 routes:
   brands: ${api.prefix}/brands
+  executing-units: ${api.prefix}/executing-units
+  employees: ${api.prefix}/employees
   locations: ${api.prefix}/locations
   campuses: ${api.prefix}/campuses
   types: ${api.prefix}/types

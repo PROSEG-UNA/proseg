@@ -25,6 +25,7 @@ import BuildingPage from './features/locations/pages/BuildingPage';
 import LocationPage from './features/locations/pages/LocationPage';
 import EmailPage from './features/locations/pages/EmailPage';
 import TicketsPage from './features/maintenance/pages/TicketsPage.jsx';
+import TicketsDashboard from './features/maintenance/pages/TicketsDashboard.jsx';
 import TransportPage from './features/transport/pages/TransportPage.jsx';
 import DriversPage from './features/transport/pages/drivers/DriversPage.jsx';
 import VehiclesPage from './features/transport/pages/vehicles/VehiclesPage.jsx';
@@ -103,7 +104,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Locaciones" pageTitle="Locaciones">
+                                                <DashboardLayout title="Gestión de Detalles de Ubicación" pageTitle="Detalles de Ubicación">
                                                     <LocationPage />
                                                 </DashboardLayout>
                                             }
@@ -127,7 +128,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Mantenimiento" pageTitle="Mantenimiento">
+                                                <DashboardLayout title="Gestión de Tickets" pageTitle="Tickets">
                                                     <MaintenancePage />
                                                 </DashboardLayout>
                                             }
@@ -309,6 +310,19 @@ function App() {
                                             element={
                                                 <DashboardLayout title="Gestión de Tickets" pageTitle="Tickets">
                                                     <TicketsPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+
+                                <Route
+                                    path="/mantenimiento/dashboard"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Dashboard de Tickets" pageTitle="Dashboard">
+                                                    <TicketsDashboard />
                                                 </DashboardLayout>
                                             }
                                         />

@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDebounce } from '../../../../common/hooks/useDebounce.js';
 import { Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -15,6 +16,7 @@ import CatalogFormModal from './CatalogFormModal.jsx';
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
+import { queryKeys } from '../../../../common/query';
 
 const getInventoryPermissionGroup = () => PERMISSIONS.INVENTORY.CATALOG ?? PERMISSIONS.INVENTORY;
 
@@ -25,13 +27,12 @@ export default function CatalogTableModal({ open, onClose, config }) {
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
     const [sorting, setSorting] = useState([]);
-    const [localRefreshKey, setLocalRefreshKey] = useState(0);
     const [formOpen, setFormOpen] = useState(false);
     const [formRow, setFormRow] = useState(null);
     const [deletingRow, setDeletingRow] = useState(null);
-    const [deleting, setDeleting] = useState(false);
     const [alert, setAlert] = useState(null);
 
+    const queryClient = useQueryClient();
     const { hasPermission } = usePermissions();
     const inventoryPermissions = useMemo(() => getInventoryPermissionGroup(), []);
     const canViewCatalog = hasPermission(inventoryPermissions.READ)
@@ -72,7 +73,10 @@ export default function CatalogTableModal({ open, onClose, config }) {
         [sorting, columnToBackendKey]
     );
 
-    const triggerRefresh = useCallback(() => setLocalRefreshKey((k) => k + 1), []);
+    const triggerRefresh = useCallback(
+        () => { void queryClient.invalidateQueries({ queryKey: queryKeys.inventory.catalog() }); },
+        [queryClient]
+    );
 
     const resetOnOpen = () => {
         if (!open) return;
@@ -89,33 +93,37 @@ export default function CatalogTableModal({ open, onClose, config }) {
     };
     useEffect(resetPageOnFilterChange, [debouncedGlobalFilter, backendFilters, backendSort]);
 
-    const { rows, loading, error, totalElements } = useCatalogData({
+    const { rows, loading, fetching, error, totalElements } = useCatalogData({
         baseUrl,
         pageIndex: pagination.pageIndex,
         pageSize: pagination.pageSize,
         search: debouncedGlobalFilter,
         filters: backendFilters,
         sort: backendSort,
-        refreshKey: localRefreshKey,
     });
 
     const handleCreate = () => { setFormRow(null); setFormOpen(true); };
     const handleEdit   = useCallback((row) => { setFormRow(row); setFormOpen(true); }, []);
     const handleDelete = useCallback((row) => setDeletingRow(row), []);
 
-    const handleConfirmDelete = async () => {
-        setDeleting(true);
-        try {
-            await deleteCatalogItem(baseUrl, deletingRow.id);
+    const deleteCatalogItemMutation = useMutation({
+        mutationFn: (itemId) => deleteCatalogItem(baseUrl, itemId),
+        onSuccess: () => {
             setDeletingRow(null);
             triggerRefresh();
             setAlert({ type: 'success', message: `${title} eliminado correctamente` });
-        } catch (e) {
+        },
+        onError: (deleteError) => {
             setDeletingRow(null);
-            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(e, 'Error al eliminar') });
-        } finally {
-            setDeleting(false);
-        }
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(deleteError, 'Error al eliminar') });
+        },
+    });
+
+    const deleting = deleteCatalogItemMutation.isPending;
+
+    const handleConfirmDelete = () => {
+        if (!deletingRow) return;
+        deleteCatalogItemMutation.mutate(deletingRow.id);
     };
 
     const handleFormSaved = () => {
@@ -184,6 +192,7 @@ export default function CatalogTableModal({ open, onClose, config }) {
                 title={pluralTitle}
                 subtitle={`Gestión de ${pluralTitle.toLowerCase()}`}
                 loading={loading}
+                fetching={fetching}
                 footerLeft={footerLeft}
                 secondaryButton={{ label: 'Cerrar', onClick: onClose }}
                 primaryButton={canCreateCatalog ? { label: `Crear ${title}`, onClick: handleCreate, startIcon: <AddIcon /> } : null}
@@ -195,6 +204,7 @@ export default function CatalogTableModal({ open, onClose, config }) {
                         columns={columns}
                         data={rows}
                         loading={loading}
+                        fetching={fetching}
                         error={error}
                         enableRowActions={hasRowActions}
                         renderRowActions={hasRowActions ? renderRowActions : undefined}

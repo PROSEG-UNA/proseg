@@ -1,39 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchCatalogPage } from '../services/catalogService';
+import { keepPreviousPage, queryKeys } from '../../../common/query';
 
-export function useCatalogData({ baseUrl, pageIndex, pageSize, search = '', filters = {}, sort = [], refreshKey }) {
-    const [rows, setRows] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [totalElements, setTotalElements] = useState(0);
+export function useCatalogData({ baseUrl, pageIndex, pageSize, search = '', filters = {}, sort = [] }) {
+    const requestParams = { page: pageIndex, size: pageSize, search, filters, sort };
 
-    const filtersKey = JSON.stringify(filters);
-    const sortKey = sort.join('|');
+    const listQueryKey = queryKeys.inventory.catalogList(baseUrl, requestParams);
 
-    const loadData = () => {
-        if (!baseUrl) return;
-        let cancelled = false;
-        setLoading(true);
+    const { data, isLoading, isFetching, error } = useQuery({
+        queryKey: listQueryKey,
+        placeholderData: keepPreviousPage(listQueryKey),
+        queryFn: () => fetchCatalogPage(baseUrl, requestParams),
+        enabled: Boolean(baseUrl),
+    });
 
-        fetchCatalogPage(baseUrl, { page: pageIndex, size: pageSize, search, filters, sort })
-            .then((result) => {
-                if (!cancelled) {
-                    setRows(result.content);
-                    setTotalElements(result.totalElements);
-                    setError(null);
-                }
-            })
-            .catch((err) => {
-                if (!cancelled) setError(err?.response?.data?.message ?? err?.message ?? 'Error al cargar datos');
-            })
-            .finally(() => {
-                if (!cancelled) setLoading(false);
-            });
-
-        return () => { cancelled = true; };
+    return {
+        rows: data?.content ?? [],
+        loading: isLoading,
+        fetching: isFetching,
+        error: error ? (error?.response?.data?.message ?? error?.message ?? 'Error al cargar datos') : null,
+        totalElements: data?.totalElements ?? 0,
     };
-
-    useEffect(loadData, [baseUrl, pageIndex, pageSize, search, filtersKey, sortKey, refreshKey]);
-
-    return { rows, loading, error, totalElements };
 }

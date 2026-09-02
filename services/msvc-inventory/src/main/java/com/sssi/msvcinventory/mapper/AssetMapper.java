@@ -5,12 +5,15 @@ import com.sssi.msvcinventory.dto.response.AssetResponseDto;
 import com.sssi.msvcinventory.entity.Asset;
 import org.mapstruct.*;
 
-@Mapper(componentModel = "spring", uses = {ModelMapper.class, LocationMapper.class, NetworkInterfaceMapper.class})
+@Mapper(componentModel = "spring", uses = {ModelMapper.class, LocationMapper.class, NetworkInterfaceMapper.class,
+        ExecutingUnitMapper.class, EmployeeMapper.class})
 public interface AssetMapper {
 
     @Mapping(target = "model", ignore = true)
     @Mapping(target = "location", ignore = true)
     @Mapping(target = "networkInterface", ignore = true)
+    @Mapping(target = "executingUnit", ignore = true)
+    @Mapping(target = "employee", ignore = true)
     Asset toEntity(AssetRequestDto request);
 
     @Mapping(target = "kind", constant = "GENERIC")
@@ -20,6 +23,8 @@ public interface AssetMapper {
     @Mapping(target = "model", ignore = true)
     @Mapping(target = "location", ignore = true)
     @Mapping(target = "networkInterface", ignore = true)
+    @Mapping(target = "executingUnit", ignore = true)
+    @Mapping(target = "employee", ignore = true)
     @Mapping(target = "serialNumber", source = "serialNumber",
             nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.SET_TO_NULL)
     void updateEntityFromRequest(AssetRequestDto request, @MappingTarget Asset asset);

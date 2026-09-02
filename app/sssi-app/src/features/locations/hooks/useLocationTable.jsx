@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EmailIcon from '@mui/icons-material/Email';
@@ -9,6 +10,7 @@ import { PERMISSIONS } from '../../../common/constants/permissions';
 import { getFriendlyApiErrorMessage } from '../../../common/utils/index.js';
 import { useLocationData } from './useLocationData.js';
 import { deleteLocationItem } from '../services/locationService.js';
+import { queryKeys } from '../../../common/query';
 
 const getLocationPermissionGroup = (baseUrl = '') => {
     if (baseUrl.includes('/campuses') || baseUrl.includes('/locations')) {
@@ -27,12 +29,11 @@ export function useLocationTable(config, { enabled = true } = {}) {
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
     const [sorting, setSorting] = useState([]);
-    const [localRefreshKey, setLocalRefreshKey] = useState(0);
     const [formOpen, setFormOpen] = useState(false);
     const [formRow, setFormRow] = useState(null);
     const [deletingRow, setDeletingRow] = useState(null);
-    const [deleting, setDeleting] = useState(false);
     const [alert, setAlert] = useState(null);
+    const queryClient = useQueryClient();
 
     const [buildingEmailsRow, setBuildingEmailsRow] = useState(null);
     const [campusEmailsRow, setCampusEmailsRow] = useState(null);
@@ -81,7 +82,10 @@ export function useLocationTable(config, { enabled = true } = {}) {
         [sorting, columnToBackendKey]
     );
 
-    const triggerRefresh = useCallback(() => setLocalRefreshKey((k) => k + 1), []);
+    const triggerRefresh = useCallback(
+        () => { void queryClient.invalidateQueries({ queryKey: queryKeys.locations.root }); },
+        [queryClient]
+    );
 
     const resetState = useCallback(() => {
         setPagination({ pageIndex: 0, pageSize: 10 });
@@ -95,33 +99,37 @@ export function useLocationTable(config, { enabled = true } = {}) {
     };
     useEffect(resetPageOnFilterChange, [debouncedGlobalFilter, backendFilters, backendSort]);
 
-    const { rows, loading, error, totalElements } = useLocationData({
+    const { rows, loading, fetching, error, totalElements } = useLocationData({
         baseUrl: enabled ? baseUrl : '',
         pageIndex: pagination.pageIndex,
         pageSize: pagination.pageSize,
         search: debouncedGlobalFilter,
         filters: backendFilters,
         sort: backendSort,
-        refreshKey: localRefreshKey,
     });
 
     const handleCreate = useCallback(() => { setFormRow(null); setFormOpen(true); }, []);
     const handleEdit   = useCallback((row) => { setFormRow(row); setFormOpen(true); }, []);
     const handleDelete = useCallback((row) => setDeletingRow(row), []);
 
-    const handleConfirmDelete = async () => {
-        setDeleting(true);
-        try {
-            await deleteLocationItem(baseUrl, deletingRow.id);
+    const deleteLocationMutation = useMutation({
+        mutationFn: (itemId) => deleteLocationItem(baseUrl, itemId),
+        onSuccess: () => {
             setDeletingRow(null);
             triggerRefresh();
             setAlert({ type: 'success', message: `${title} eliminado correctamente` });
-        } catch (e) {
+        },
+        onError: (deleteError) => {
             setDeletingRow(null);
-            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(e, 'Error al eliminar') });
-        } finally {
-            setDeleting(false);
-        }
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(deleteError, 'Error al eliminar') });
+        },
+    });
+
+    const deleting = deleteLocationMutation.isPending;
+
+    const handleConfirmDelete = () => {
+        if (!deletingRow) return;
+        deleteLocationMutation.mutate(deletingRow.id);
     };
 
     const handleFormSaved = () => {
@@ -190,7 +198,7 @@ export function useLocationTable(config, { enabled = true } = {}) {
     return {
         config,
         title, pluralTitle, icon, columns,
-        rows, loading, error, totalElements,
+        rows, loading, fetching, error, totalElements,
         pagination, setPagination,
         globalFilter, setGlobalFilter,
         columnFilters, setColumnFilters,

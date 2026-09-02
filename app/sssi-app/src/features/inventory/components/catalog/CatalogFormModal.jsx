@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
     Box, Typography,
     TextField, FormControlLabel, Switch,
@@ -7,6 +7,7 @@ import {
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import { createCatalogItem, updateCatalogItem, fetchCatalogOptions } from '../../services/catalogService';
+import { queryKeys, useSelectOptions } from '../../../../common/query';
 import SearchableSelect from '../../../../common/components/SearchableSelect.jsx';
 
 const toBoundedNumberValue = (rawValue, min) => {
@@ -18,8 +19,11 @@ const toBoundedNumberValue = (rawValue, min) => {
 export default function CatalogFormModal({ open, onClose, onSaved, config, row, initialValues }) {
     const theme = useTheme();
 
-    const { title = '', icon: Icon = null, formFields = [], baseUrl = '' } = config ?? {};
+    const { title = '', icon: Icon = null, formFields = [], baseUrl = '', gender = 'f' } = config ?? {};
     const isEditMode = !!row;
+
+    const newLabel = gender === 'm' ? 'Nuevo' : 'Nueva';
+    const ofLabel = gender === 'm' ? 'del' : 'de la';
 
     const accentColor = theme.vars.palette.tones.rose.fg;
 
@@ -28,8 +32,6 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row, 
     const [touched, setTouched] = useState({});
     const [saving, setSaving] = useState(false);
     const [alert, setAlert] = useState(null);
-    const [selectOptions, setSelectOptions] = useState({});
-    const [loadingOptions, setLoadingOptions] = useState(false);
     const [pendingBooleanChange, setPendingBooleanChange] = useState(null);
 
     const initForm = () => {
@@ -58,37 +60,16 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row, 
         setAlert(null);
     };
 
-    useEffect(initForm, [open, row]);
+    useEffect(initForm, [open, row, config, initialValues]);
 
-    const loadSelectOptions = () => {
-        if (!open || !config) return;
-        const selectFields = formFields.filter((f) => f.type === 'select');
-        if (selectFields.length === 0) return;
+    const selectFields = useMemo(() => formFields.filter((field) => field.type === 'select'), [formFields]);
 
-        let cancelled = false;
-        setLoadingOptions(true);
-
-        Promise.all(
-            selectFields.map((field) =>
-                fetchCatalogOptions(field.optionsUrl).then((opts) => ({ key: field.key, opts }))
-            )
-        )
-            .then((results) => {
-                if (!cancelled) {
-                    const options = {};
-                    results.forEach(({ key, opts }) => { options[key] = opts; });
-                    setSelectOptions(options);
-                }
-            })
-            .catch(() => {})
-            .finally(() => {
-                if (!cancelled) setLoadingOptions(false);
-            });
-
-        return () => { cancelled = true; };
-    };
-
-    useEffect(loadSelectOptions, [open, config]);
+    const { options: selectOptions, loading: loadingOptions } = useSelectOptions({
+        fields: selectFields,
+        fetchOptions: fetchCatalogOptions,
+        buildQueryKey: (field) => [...queryKeys.inventory.catalogOptions(), field.optionsUrl],
+        enabled: Boolean(open && config),
+    });
 
     const validateSingleField = (key, value) => {
         const field = formFields.find((f) => f.key === key);
@@ -185,9 +166,9 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row, 
                 open={open}
                 onClose={onClose}
                 icon={Icon}
-                title={isEditMode ? `Editar ${title}` : `Nueva ${title}`}
+                title={isEditMode ? `Editar ${title}` : `${newLabel} ${title}`}
                 subtitle={isEditMode
-                    ? `Modifica los datos de la ${title.toLowerCase()}`
+                    ? `Modifica los datos ${ofLabel} ${title.toLowerCase()}`
                     : `Completa los datos para crear ${title.toLowerCase()}`}
                 loading={saving}
                 secondaryButton={{ label: 'Cancelar', onClick: onClose, disabled: saving }}
@@ -294,6 +275,7 @@ export default function CatalogFormModal({ open, onClose, onSaved, config, row, 
                                 rows={field.type === 'textarea' ? 3 : undefined}
                                 required={field.required}
                                 disabled={saving}
+                                slotProps={{ input: { readOnly: !!field.readOnly } }}
                                 error={touched[field.key] && !!errors[field.key]}
                                 helperText={touched[field.key] ? (errors[field.key] || ' ') : ' '}
                                 sx={fieldSx}

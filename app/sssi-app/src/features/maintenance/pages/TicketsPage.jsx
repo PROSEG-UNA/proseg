@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Box, Button, Container, Menu, MenuItem, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import DownloadForOfflineOutlinedIcon from '@mui/icons-material/DownloadForOfflineOutlined';
+import ExportIcon from '../../../common/components/icons/ExportIcon.jsx';
 import { NavDrawer } from '../../../common/components/Sidebar';
 import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
 import DialogModal from '../../../common/components/DialogModal.jsx';
@@ -12,13 +13,14 @@ import MaintenanceTicketFormModal from '../components/ticket/MaintenanceTicketFo
 import MaintenanceTicketTable from '../components/ticket/MaintenanceTicketTable.jsx';
 import { fetchMaintenanceTicketById } from '../services/ticketsService';
 import { exportMaintenanceTickets, triggerBrowserDownload } from '../services/maintenanceExportService.js';
+import { queryKeys } from '../../../common/query';
 
 export default function TicketsPage() {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [formOpen, setFormOpen] = useState(false);
     const [selectedTicket, setSelectedTicket] = useState(null);
     const [viewMode, setViewMode] = useState(false);
-    const [refreshKey, setRefreshKey] = useState(0);
+    const queryClient = useQueryClient();
     const [loadingTicketDetail, setLoadingTicketDetail] = useState(false);
     const [exportAnchorEl, setExportAnchorEl] = useState(null);
     const [exporting, setExporting] = useState(false);
@@ -34,7 +36,10 @@ export default function TicketsPage() {
     const canExportTickets = hasPermission(PERMISSIONS.MAINTENANCE.TICKETS.READ);
     const exportMenuOpen = Boolean(exportAnchorEl);
 
-    const handleRefresh = useCallback(() => setRefreshKey((value) => value + 1), []);
+    const handleRefresh = useCallback(
+        () => { void queryClient.invalidateQueries({ queryKey: queryKeys.maintenance.tickets() }); },
+        [queryClient]
+    );
 
     const handleOpenCreate = () => {
         setSelectedTicket(null);
@@ -133,7 +138,7 @@ export default function TicketsPage() {
                             <>
                                 <Button
                                     variant="outlined"
-                                    startIcon={<DownloadForOfflineOutlinedIcon />}
+                                    startIcon={<ExportIcon style={{ fontSize: 16, marginRight: 2 }} />}
                                     onClick={handleOpenExportMenu}
                                     sx={{
                                         textTransform: 'none',
@@ -170,8 +175,6 @@ export default function TicketsPage() {
                 </Box>
 
                 <MaintenanceTicketTable
-                    refreshKey={refreshKey}
-                    onRefresh={handleRefresh}
                     onEdit={handleOpenEdit}
                     onView={handleOpenView}
                 />

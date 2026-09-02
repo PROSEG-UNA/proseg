@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
     Box,
     Container,
@@ -27,6 +28,7 @@ import ToursTable from '../components/tours/ToursTable.jsx';
 import TourFormModal from '../components/tours/TourFormModal.jsx';
 import AssignmentPanel from '../components/assignment/AssignmentPanel.jsx';
 import CleaningPanel from '../components/cleaning/CleaningPanel.jsx';
+import { queryKeys } from '../../../common/query';
 
 export default function TransportPage() {
     const [tabIndex, setTabIndex] = useState(0);
@@ -38,12 +40,8 @@ export default function TransportPage() {
     const [maintenanceFormId, setMaintenanceFormId] = useState(null);
     const [tourFormOpen, setTourFormOpen] = useState(false);
     const [tourFormId, setTourFormId] = useState(null);
-    const [driversRefresh, setDriversRefresh] = useState(0);
-    const [vehiclesRefresh, setVehiclesRefresh] = useState(0);
-    const [maintenanceRefresh, setMaintenanceRefresh] = useState(0);
-    const [toursRefresh, setToursRefresh] = useState(0);
-    const [assignmentRefresh, setAssignmentRefresh] = useState(0);
 
+    const queryClient = useQueryClient();
     const { hasPermission, hasAnyPermission } = usePermissions();
 
     const canViewDrivers = hasAnyPermission([
@@ -131,11 +129,15 @@ export default function TransportPage() {
         setTourFormOpen(true);
     };
 
-    const refreshDrivers = () => setDriversRefresh((value) => value + 1);
-    const refreshVehicles = () => setVehiclesRefresh((value) => value + 1);
-    const refreshMaintenance = () => setMaintenanceRefresh((value) => value + 1);
-    const refreshTours = () => setToursRefresh((value) => value + 1);
-    const refreshAssignment = () => setAssignmentRefresh((value) => value + 1);
+    const invalidateTransport = (queryKey) => {
+        void queryClient.invalidateQueries({ queryKey });
+    };
+
+    const refreshDrivers = () => invalidateTransport(queryKeys.transport.drivers());
+    const refreshVehicles = () => invalidateTransport(queryKeys.transport.vehicles());
+    const refreshMaintenance = () => invalidateTransport(queryKeys.transport.maintenance());
+    const refreshTours = () => invalidateTransport(queryKeys.transport.tours());
+    const refreshAssignment = () => invalidateTransport(queryKeys.transport.assignment());
 
     if (!canViewCleaning && !canViewDrivers && !canViewVehicles && !canViewMaintenance && !canViewTours && !canViewAssignment) {
         return <AccessDeniedState />;
@@ -199,11 +201,7 @@ export default function TransportPage() {
                             <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.icon', mb: 2 }}>
                                 Lista de choferes
                             </Typography>
-                            <DriversTable
-                                refreshKey={driversRefresh}
-                                onRefresh={refreshDrivers}
-                                onEditDriver={openEditDriver}
-                            />
+                            <DriversTable onEditDriver={openEditDriver} />
                         </Box>
                     )}
 
@@ -212,11 +210,7 @@ export default function TransportPage() {
                             <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.icon', mb: 2 }}>
                                 Lista de vehículos
                             </Typography>
-                            <VehiclesTable
-                                refreshKey={vehiclesRefresh}
-                                onRefresh={refreshVehicles}
-                                onEditVehicle={openEditVehicle}
-                            />
+                            <VehiclesTable onEditVehicle={openEditVehicle} />
                         </Box>
                     )}
 
@@ -225,11 +219,7 @@ export default function TransportPage() {
                             <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.icon', mb: 2 }}>
                                 Lista de mantenimientos
                             </Typography>
-                            <TransportMaintenanceTable
-                                refreshKey={maintenanceRefresh}
-                                onRefresh={refreshMaintenance}
-                                onEditMaintenance={openEditMaintenance}
-                            />
+                            <TransportMaintenanceTable onEditMaintenance={openEditMaintenance} />
                         </Box>
                     )}
 
@@ -238,16 +228,12 @@ export default function TransportPage() {
                             <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.icon', mb: 2 }}>
                                 Lista de giras
                             </Typography>
-                            <ToursTable
-                                refreshKey={toursRefresh}
-                                onRefresh={refreshTours}
-                                onEditTour={openEditTour}
-                            />
+                            <ToursTable onEditTour={openEditTour} />
                         </Box>
                     )}
 
                     {currentTab?.key === 'assignment' && (
-                        <AssignmentPanel refreshKey={assignmentRefresh} onRefresh={refreshAssignment} />
+                        <AssignmentPanel />
                     )}
                 </Box>
             </Container>

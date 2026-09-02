@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import {
     Box,
     Typography,
@@ -15,7 +15,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { useTheme } from '@mui/material/styles';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
-import {fetchEmailsByCampus} from "../../services/buildingMailService.js";
+import { useCampusEmails } from '../../hooks/useLocationEmails.js';
 
 function EmailSkeleton() {
     return (
@@ -108,26 +108,7 @@ export default function CampusEmailsModal({ open, onClose, campus }) {
     const theme = useTheme();
     const accentColor = theme.vars.palette.tones.rose.fg;
 
-    const [emails, setEmails] = useState([]);
-    const [loading, setLoading] = useState(false);
-
-    const loadEmails = useCallback(() => {
-        if (!open || !campus?.id) return;
-        let cancelled = false;
-        setLoading(true);
-        setEmails([]);
-
-        fetchEmailsByCampus(campus.id)
-            .then((data) => { if (!cancelled) setEmails(data); })
-            .catch(() => { if (!cancelled) setEmails([]); })
-            .finally(() => { if (!cancelled) setLoading(false); });
-
-        return () => { cancelled = true; };
-    }, [open, campus?.id]);
-
-    useEffect(() => {
-        if (open) loadEmails();
-    }, [open, loadEmails]);
+    const { emails, loading } = useCampusEmails(campus?.id, open);
 
     const grouped = emails.reduce((acc, email) => {
         const bid = email.building?.id ?? 'unknown';

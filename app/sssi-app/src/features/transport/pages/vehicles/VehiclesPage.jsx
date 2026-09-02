@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Box, Container } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { PageHeader } from '../../../../common/components/index.js';
@@ -8,11 +9,12 @@ import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { usePermissions } from '../../../../common/hooks/index.js';
 import VehiclesTable from '../../components/vehicles/VehiclesTable.jsx';
 import VehicleFormModal from '../../components/vehicles/VehicleFormModal.jsx';
+import { queryKeys } from '../../../../common/query';
 
 export default function VehiclesPage() {
     const [vehicleFormOpen, setVehicleFormOpen] = useState(false);
     const [vehicleFormId, setVehicleFormId] = useState(null);
-    const [vehiclesRefresh, setVehiclesRefresh] = useState(0);
+    const queryClient = useQueryClient();
     const { hasPermission, hasAnyPermission } = usePermissions();
 
     const canViewVehicles = hasAnyPermission([
@@ -31,7 +33,9 @@ export default function VehiclesPage() {
         setVehicleFormOpen(true);
     };
 
-    const refreshVehicles = () => setVehiclesRefresh((value) => value + 1);
+    const refreshVehicles = () => {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.transport.vehicles() });
+    };
 
     if (!canViewVehicles) return <AccessDeniedState />;
 
@@ -49,11 +53,7 @@ export default function VehiclesPage() {
                 />
 
                 <Box sx={{ pt: 3 }}>
-                    <VehiclesTable
-                        refreshKey={vehiclesRefresh}
-                        onRefresh={refreshVehicles}
-                        onEditVehicle={openEditVehicle}
-                    />
+                    <VehiclesTable onEditVehicle={openEditVehicle} />
                 </Box>
             </Container>
 

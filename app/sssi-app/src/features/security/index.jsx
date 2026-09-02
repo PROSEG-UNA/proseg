@@ -1,2 +1,1 @@
-// Security Feature Module
 export {};

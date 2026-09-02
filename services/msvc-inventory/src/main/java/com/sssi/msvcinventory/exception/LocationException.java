@@ -21,7 +21,7 @@ public class LocationException extends BaseException {
         return new LocationException(
                 HttpStatus.CONFLICT,
                 "LOCATION_DUPLICATE_DESCRIPTION",
-                "Ya existe una ubicación con la descripción '" + description + "' en el piso indicado"
+                "Ya existe el detalle de ubicación '" + description + "' en el piso indicado"
         );
     }
 
@@ -29,7 +29,7 @@ public class LocationException extends BaseException {
         return new LocationException(
                 HttpStatus.BAD_REQUEST,
                 "LOCATION_IN_USE",
-                "No se puede eliminar la ubicación '" + description + "' porque tiene activos asociados"
+                "No se puede eliminar el detalle de ubicación '" + description + "' porque tiene activos asociados"
         );
     }
 }

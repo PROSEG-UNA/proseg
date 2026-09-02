@@ -109,25 +109,35 @@ public class SecurityConfig {
                                 "/api/v1/inventory/asset-models",
                                 "/api/v1/inventory/asset-models/**",
                                 "/api/v1/inventory/asset-types",
-                                "/api/v1/inventory/asset-types/**"
+                                "/api/v1/inventory/asset-types/**",
+                                "/api/v1/inventory/executing-units",
+                                "/api/v1/inventory/executing-units/**",
+                                "/api/v1/inventory/employees",
+                                "/api/v1/inventory/employees/**"
                         ).hasAuthority(Privileges.Activos.LEER)
 
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/inventory/brands",
                                 "/api/v1/inventory/asset-models",
-                                "/api/v1/inventory/asset-types"
+                                "/api/v1/inventory/asset-types",
+                                "/api/v1/inventory/executing-units",
+                                "/api/v1/inventory/employees"
                         ).hasAuthority(Privileges.Activos.GESTIONAR)
 
                         .requestMatchers(HttpMethod.PUT,
                                 "/api/v1/inventory/brands/**",
                                 "/api/v1/inventory/asset-models/**",
-                                "/api/v1/inventory/asset-types/**"
+                                "/api/v1/inventory/asset-types/**",
+                                "/api/v1/inventory/executing-units/**",
+                                "/api/v1/inventory/employees/**"
                         ).hasAuthority(Privileges.Activos.GESTIONAR)
 
                         .requestMatchers(HttpMethod.DELETE,
                                 "/api/v1/inventory/brands/**",
                                 "/api/v1/inventory/asset-models/**",
-                                "/api/v1/inventory/asset-types/**"
+                                "/api/v1/inventory/asset-types/**",
+                                "/api/v1/inventory/executing-units/**",
+                                "/api/v1/inventory/employees/**"
                         ).hasAuthority(Privileges.Activos.ELIMINAR)
 
                         .anyRequest().authenticated()

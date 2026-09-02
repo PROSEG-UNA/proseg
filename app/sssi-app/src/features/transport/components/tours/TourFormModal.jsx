@@ -5,9 +5,9 @@ import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
 import { createTour, fetchTourById, updateTour } from '../../services/tours/toursService';
-import { fetchDrivers } from '../../services/drivers/driversService';
-import { fetchVehicles } from '../../services/vehicles/vehiclesService';
 import { TOUR_STATUS_OPTIONS } from '../../transportUtils';
+import { useDriverOptions, useVehicleOptions } from '../../hooks/useTransportOptions';
+import { useQueryAlert } from '../../../../common/hooks/index.js';
 
 const INITIAL_VALUES = {
     name: '',
@@ -27,47 +27,17 @@ export default function TourFormModal({ open, onClose, onSaved, tourId = null })
     const [touched, setTouched] = useState({});
     const [saving, setSaving] = useState(false);
     const [loadingTour, setLoadingTour] = useState(false);
-    const [loadingReferences, setLoadingReferences] = useState(false);
-    const [driverOptions, setDriverOptions] = useState([]);
-    const [vehicleOptions, setVehicleOptions] = useState([]);
-    const [alert, setAlert] = useState(null);
+    const drivers = useDriverOptions(open);
+    const vehicles = useVehicleOptions(open);
 
-    useEffect(() => {
-        if (!open) return undefined;
+    const driverOptions = drivers.options;
+    const vehicleOptions = vehicles.options;
+    const loadingReferences = drivers.loading || vehicles.loading;
 
-        let cancelled = false;
-        const loadReferences = async () => {
-            setLoadingReferences(true);
-            try {
-                const [driversResponse, vehiclesResponse] = await Promise.all([
-                    fetchDrivers({ page: 0, size: 300 }),
-                    fetchVehicles({ page: 0, size: 300 }),
-                ]);
-                if (cancelled) return;
-
-                setDriverOptions((driversResponse?.content ?? []).map((driver) => ({
-                    id: driver.id,
-                    label: [driver.firstName, driver.lastName].filter(Boolean).join(' ').trim() || 'Chofer',
-                })));
-                setVehicleOptions((vehiclesResponse?.content ?? []).map((vehicle) => ({
-                    id: vehicle.id,
-                    label: vehicle.plate ? `${vehicle.plate}${vehicle.model ? ` - ${vehicle.model}` : ''}` : 'Vehículo',
-                })));
-            } catch (error) {
-                if (!cancelled) {
-                    setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudieron cargar choferes y vehículos') });
-                }
-            } finally {
-                if (!cancelled) setLoadingReferences(false);
-            }
-        };
-
-        void loadReferences();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [open]);
+    const referencesError = drivers.error ?? vehicles.error;
+    const { alert, setAlert, closeAlert } = useQueryAlert(
+        referencesError ? getFriendlyApiErrorMessage(referencesError, 'No se pudieron cargar choferes y vehículos') : null
+    );
 
     useEffect(() => {
         if (!open || !tourId) return undefined;
@@ -102,7 +72,7 @@ export default function TourFormModal({ open, onClose, onSaved, tourId = null })
         return () => {
             cancelled = true;
         };
-    }, [open, tourId]);
+    }, [open, tourId, setAlert]);
 
     const validateField = (key, value) => {
         const trimmedValue = typeof value === 'string' ? value.trim() : value;
@@ -301,7 +271,7 @@ export default function TourFormModal({ open, onClose, onSaved, tourId = null })
                 open={!!alert}
                 type={alert?.type}
                 message={alert?.message}
-                onClose={() => setAlert(null)}
+                onClose={closeAlert}
             />
         </>
     );

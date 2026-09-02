@@ -8,15 +8,13 @@ spring:
     multipart:
       max-file-size: 30MB
       max-request-size: 60MB
-  config:
-    import: ${SPRING_CONFIG_IMPORT:optional:configserver:http://msvc-config:8888}
   web:
     resources:
       add-mappings: false
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/sssi-bd}
-    username: ${SPRING_DATASOURCE_USERNAME:sssi_user}
-    password: ${SPRING_DATASOURCE_PASSWORD:sssi_user}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/proseg-bd}
+    username: ${SPRING_DATASOURCE_USERNAME:}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
     driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.postgresql.Driver}
     hikari:
       maximum-pool-size: ${SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE:10}
@@ -34,13 +32,6 @@ spring:
     properties:
       hibernate:
         dialect: ${SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT:org.hibernate.dialect.PostgreSQLDialect}
-
-eureka:
-  instance:
-    hostname: ${EUREKA_INSTANCE_HOSTNAME:msvc-maintenance}
-  client:
-    service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://msvc-eureka:8761/eureka/}
 
 routes:
   test: ${ROUTES_TEST:/test}

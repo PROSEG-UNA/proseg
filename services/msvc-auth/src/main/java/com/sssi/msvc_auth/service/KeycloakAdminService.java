@@ -32,16 +32,16 @@ public class KeycloakAdminService {
     private static final String PROFILE_IMAGE_OBJECT_NAME_ATTRIBUTE = "profileImageObjectName";
     private static final String ARCHIVE_FILE_ROUTE_PREFIX = "/api/v1/archive/files/";
 
-    @Value("${keycloak.server-url:https://auth.devbychris.com}")
+    @Value("${keycloak.server-url}")
     private String keycloakServerUrl;
 
-    @Value("${keycloak.realm:sssi-realm}")
+    @Value("${keycloak.realm:proseg-realm}")
     private String realm;
 
-    @Value("${keycloak.admin.username:admin}")
+    @Value("${keycloak.admin.username}")
     private String adminUsername;
 
-    @Value("${keycloak.admin.password:sssi_user}")
+    @Value("${keycloak.admin.password}")
     private String adminPassword;
 
     private final RestTemplate restTemplate;

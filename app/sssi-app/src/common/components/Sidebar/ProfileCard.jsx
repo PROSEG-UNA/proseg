@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import {
     Alert,
     Avatar,
@@ -15,6 +15,7 @@ import { uploadArchiveFile } from '../../services/archiveService';
 import { updateCurrentUserProfileImage } from '../../../features/auth/services/authService';
 import { getFriendlyApiErrorMessage } from '../../utils';
 import { AuthContext } from '../../context/AuthContext';
+import { ChangePasswordModal } from '../../../features/security/components/ChangePasswordModal';
 
 const normalizeText = (value) => (typeof value === 'string' ? value.trim() : '');
 
@@ -85,8 +86,11 @@ const resolveProfileImageUrl = (user) =>
 
 export function ProfileCard({ user, minimized = false }) {
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [isPasswordChangeOpen, setIsPasswordChangeOpen] = useState(false);
+    const [pendingPasswordChange, setPendingPasswordChange] = useState(false);
     const [profileModalVersion, setProfileModalVersion] = useState(0);
     const [latestProfileImageUrl, setLatestProfileImageUrl] = useState('');
+    const passwordChangeTimerRef = useRef(null);
     const displayName = resolveFullName(user);
     const email = normalizeText(user?.email);
     const role = resolveRole(user);
@@ -94,10 +98,34 @@ export function ProfileCard({ user, minimized = false }) {
     const hasInfo = Boolean(displayName || email || role);
     const avatarFallback = resolveInitial(displayName);
     const openProfileModal = () => setIsProfileOpen(true);
+    const openPasswordChangeModal = () => {
+        setPendingPasswordChange(true);
+        setIsProfileOpen(false);
+        if (passwordChangeTimerRef.current) {
+            clearTimeout(passwordChangeTimerRef.current);
+        }
+        passwordChangeTimerRef.current = setTimeout(() => {
+            setPendingPasswordChange(false);
+            setIsPasswordChangeOpen(true);
+            passwordChangeTimerRef.current = null;
+        }, 300);
+    };
     const closeProfileModal = () => {
         setIsProfileOpen(false);
+        setPendingPasswordChange(false);
         setProfileModalVersion((current) => current + 1);
+        setIsPasswordChangeOpen(false);
+        if (passwordChangeTimerRef.current) {
+            clearTimeout(passwordChangeTimerRef.current);
+            passwordChangeTimerRef.current = null;
+        }
     };
+
+    useEffect(() => () => {
+        if (passwordChangeTimerRef.current) {
+            clearTimeout(passwordChangeTimerRef.current);
+        }
+    }, []);
 
     if (!hasInfo) return null;
 
@@ -131,6 +159,7 @@ export function ProfileCard({ user, minimized = false }) {
                     key={profileModalVersion}
                     open={isProfileOpen}
                     onClose={closeProfileModal}
+                    onOpenPasswordChange={openPasswordChangeModal}
                     onProfileImageSaved={setLatestProfileImageUrl}
                     user={user}
                     displayName={displayName}
@@ -138,6 +167,10 @@ export function ProfileCard({ user, minimized = false }) {
                     role={role}
                     profileImageUrl={profileImageUrl}
                     avatarFallback={avatarFallback}
+                />
+                <ChangePasswordModal
+                    open={isPasswordChangeOpen}
+                    onClose={() => setIsPasswordChangeOpen(false)}
                 />
             </>
         );
@@ -235,6 +268,7 @@ export function ProfileCard({ user, minimized = false }) {
                 key={profileModalVersion}
                 open={isProfileOpen}
                 onClose={closeProfileModal}
+                onOpenPasswordChange={openPasswordChangeModal}
                 onProfileImageSaved={setLatestProfileImageUrl}
                 user={user}
                 displayName={displayName}
@@ -243,6 +277,10 @@ export function ProfileCard({ user, minimized = false }) {
                 profileImageUrl={profileImageUrl}
                 avatarFallback={avatarFallback}
             />
+            <ChangePasswordModal
+                open={isPasswordChangeOpen}
+                onClose={() => setIsPasswordChangeOpen(false)}
+            />
         </>
     );
 }
@@ -250,6 +288,7 @@ export function ProfileCard({ user, minimized = false }) {
 function ProfileReadOnlyModal({
     open,
     onClose,
+    onOpenPasswordChange,
     onProfileImageSaved,
     user,
     displayName,
@@ -407,6 +446,18 @@ function ProfileReadOnlyModal({
                             <Chip label={role} sx={{ width: 'fit-content', maxWidth: '100%' }} />
                         </Box>
                     )}
+                    <Box sx={{ display: 'grid', gap: 0.75 }}>
+                        <Typography sx={{ fontSize: '0.72rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'text.disabled', fontWeight: 700 }}>
+                            Seguridad
+                        </Typography>
+                        <Button
+                            variant="outlined"
+                            onClick={onOpenPasswordChange}
+                            sx={{ justifyContent: 'flex-start', textTransform: 'none' }}
+                        >
+                            Cambiar contraseña
+                        </Button>
+                    </Box>
                     <Box sx={{ display: 'grid', gap: 0.75 }}>
                         <Typography sx={{ fontSize: '0.72rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'text.disabled', fontWeight: 700 }}>
                             Imagen de perfil

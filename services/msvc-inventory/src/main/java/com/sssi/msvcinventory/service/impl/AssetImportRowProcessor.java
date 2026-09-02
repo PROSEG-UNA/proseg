@@ -8,6 +8,9 @@ import com.sssi.msvcinventory.entity.enums.AssetStatus;
 import com.sssi.msvcinventory.exception.AssetImportException;
 import com.sssi.msvcinventory.importer.AssetStatusResolver;
 import com.sssi.msvcinventory.importer.ImportNameNormalizer;
+import com.sssi.msvcinventory.importer.ImportPeopleContext;
+import com.sssi.msvcinventory.importer.ResponsibleResolution;
+import com.sssi.msvcinventory.importer.ResponsibleResolver;
 import com.sssi.msvcinventory.repository.*;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -35,8 +38,7 @@ public class AssetImportRowProcessor {
 
     private static final UUID VALIDATION_REFERENCE_PLACEHOLDER = new UUID(0L, 0L);
     private static final List<String> FIELD_VALIDATION_ORDER = List.of(
-            "assetNumber", "serialNumber", "responsibleEmployee",
-            "responsibleEmployeeId", "executingUnit", "latitude", "longitude");
+            "assetNumber", "serialNumber", "latitude", "longitude");
 
     private final AssetRepository assetRepository;
     private final TypeRepository typeRepository;
@@ -47,13 +49,21 @@ public class AssetImportRowProcessor {
     private final FloorRepository floorRepository;
     private final LocationRepository locationRepository;
     private final NetworkInterfaceRepository networkInterfaceRepository;
+    private final EmployeeRepository employeeRepository;
+    private final ExecutingUnitRepository executingUnitRepository;
+    private final ResponsibleResolver responsibleResolver;
     private final Validator validator;
+
+    public ImportPeopleContext newPeopleContext(boolean persist) {
+        return new ImportPeopleContext(employeeRepository, executingUnitRepository, persist);
+    }
 
     public void validateRow(AssetImportRowDto row,
                             Set<String> duplicateAssetNumbers,
                             Set<String> duplicateSerials,
                             Set<String> duplicateIpsInFile,
-                            Set<String> duplicateMacsInFile) {
+                            Set<String> duplicateMacsInFile,
+                            ImportPeopleContext peopleContext) {
         requireNonBlank(row.getStatus(), "Estado");
 
         AssetStatus status = AssetStatusResolver.resolve(row.getStatus())
@@ -64,6 +74,12 @@ public class AssetImportRowProcessor {
         validateNetworkInterface(row, duplicateIpsInFile, duplicateMacsInFile);
 
         validateFieldRules(row, status);
+
+        responsibleResolver.resolveExecutingUnit(row.getExecutingUnit(), peopleContext);
+        responsibleResolver.apply(
+                responsibleResolver.resolveEmployee(
+                        row.getResponsibleEmployee(), row.getResponsibleEmployeeId(), peopleContext),
+                peopleContext);
 
         String assetNumber = row.getAssetNumber().trim();
         if (duplicateAssetNumbers.contains(assetNumber)) {
@@ -86,19 +102,26 @@ public class AssetImportRowProcessor {
 
     public void persistRows(List<AssetImportRowDto> rows) {
         LocationMatchCache cache = new LocationMatchCache();
+        ImportPeopleContext peopleContext = newPeopleContext(true);
         for (AssetImportRowDto row : rows) {
-            persistRow(row, cache);
+            persistRow(row, cache, peopleContext);
         }
     }
 
-    private void persistRow(AssetImportRowDto row, LocationMatchCache cache) {
+    private void persistRow(AssetImportRowDto row, LocationMatchCache cache, ImportPeopleContext peopleContext) {
         AssetStatus status = AssetStatusResolver.resolve(row.getStatus())
                 .orElseThrow(AssetImportException::invalidStatus);
 
         Model model = resolveModel(row);
         Location location = resolveLocation(row, cache);
 
-        Asset asset = buildAsset(row, model, location, status);
+        ExecutingUnit executingUnit = responsibleResolver.resolveExecutingUnit(row.getExecutingUnit(), peopleContext);
+        Employee employee = responsibleResolver.apply(
+                responsibleResolver.resolveEmployee(
+                        row.getResponsibleEmployee(), row.getResponsibleEmployeeId(), peopleContext),
+                peopleContext);
+
+        Asset asset = buildAsset(row, model, location, status, executingUnit, employee);
         Asset saved = assetRepository.save(asset);
 
         resolveNetworkInterface(row, saved);
@@ -125,9 +148,6 @@ public class AssetImportRowProcessor {
                 .status(status)
                 .assetNumber(trimToNull(row.getAssetNumber()))
                 .serialNumber(trimToNull(row.getSerialNumber()))
-                .executingUnit(trimToNull(row.getExecutingUnit()))
-                .responsibleEmployee(trimToNull(row.getResponsibleEmployee()))
-                .responsibleEmployeeId(trimToNull(row.getResponsibleEmployeeId()))
                 .acquisitionDate(row.getAcquisitionDate())
                 .warrantyEndDate(row.getWarrantyEndDate())
                 .firmwareSupportEndDate(row.getFirmwareSupportEndDate())
@@ -152,11 +172,40 @@ public class AssetImportRowProcessor {
         Set<String> planned = new LinkedHashSet<>();
         List<PendingCreationDto> pending = new ArrayList<>();
         LocationMatchCache cache = new LocationMatchCache();
+        ImportPeopleContext peopleContext = newPeopleContext(false);
         for (AssetImportRowDto row : rows) {
             planModelCreations(row, planned, pending);
             planLocationCreations(row, planned, pending, cache);
+            planPeopleCreations(row, planned, pending, peopleContext);
         }
         return pending;
+    }
+
+    private void planPeopleCreations(AssetImportRowDto row, Set<String> planned, List<PendingCreationDto> pending,
+                                     ImportPeopleContext peopleContext) {
+        String executingUnitName = trimToNull(row.getExecutingUnit());
+        if (executingUnitName != null && !peopleContext.executingUnitExists(executingUnitName)) {
+            addPending(planned, pending, key("EXECUTING_UNIT", executingUnitName),
+                    "Unidad Ejecutora", "Se creará la unidad ejecutora '" + executingUnitName + "'");
+        }
+        responsibleResolver.resolveExecutingUnit(row.getExecutingUnit(), peopleContext);
+
+        ResponsibleResolution resolution = responsibleResolver.resolveEmployee(
+                row.getResponsibleEmployee(), row.getResponsibleEmployeeId(), peopleContext);
+
+        if (resolution instanceof ResponsibleResolution.Create create) {
+            String message = create.identification() == null
+                    ? "Se creará el funcionario '" + create.name() + "'"
+                    : "Se creará el funcionario '" + create.name() + "' con identificación '"
+                            + create.identification() + "'";
+            addPending(planned, pending, key("EMPLOYEE", create.name()), "Funcionario", message);
+        } else if (resolution instanceof ResponsibleResolution.AssignIdentification assign) {
+            addPending(planned, pending, key("EMPLOYEE_IDENTIFICATION", assign.employee().getName()),
+                    "Funcionario", "Se asignará la identificación '" + assign.identification()
+                            + "' al funcionario '" + assign.employee().getName() + "'");
+        }
+
+        responsibleResolver.apply(resolution, peopleContext);
     }
 
     private void planModelCreations(AssetImportRowDto row, Set<String> planned, List<PendingCreationDto> pending) {
@@ -561,16 +610,16 @@ public class AssetImportRowProcessor {
         throw AssetImportException.missingLocation();
     }
 
-    private Asset buildAsset(AssetImportRowDto row, Model model, Location location, AssetStatus status) {
+    private Asset buildAsset(AssetImportRowDto row, Model model, Location location, AssetStatus status,
+                             ExecutingUnit executingUnit, Employee employee) {
         Asset asset = new Asset();
         asset.setModel(model);
         asset.setLocation(location);
         asset.setStatus(status);
         asset.setAssetNumber(row.getAssetNumber().trim());
         asset.setSerialNumber(trimToNull(row.getSerialNumber()));
-        asset.setExecutingUnit(trimToNull(row.getExecutingUnit()));
-        asset.setResponsibleEmployee(trimToNull(row.getResponsibleEmployee()));
-        asset.setResponsibleEmployeeId(trimToNull(row.getResponsibleEmployeeId()));
+        asset.setExecutingUnit(executingUnit);
+        asset.setEmployee(employee);
         asset.setAcquisitionDate(row.getAcquisitionDate());
         asset.setWarrantyEndDate(row.getWarrantyEndDate());
         asset.setFirmwareSupportEndDate(row.getFirmwareSupportEndDate());

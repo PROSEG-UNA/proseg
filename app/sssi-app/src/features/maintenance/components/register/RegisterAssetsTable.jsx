@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import BuildIcon from '@mui/icons-material/Build';
 import HistoryIcon from '@mui/icons-material/History';
 import TableBase from '../../../../common/components/TablaBase.jsx';
@@ -8,6 +9,7 @@ import { useRegisterAssetsData } from '../../hooks/register/useRegisterAssetsDat
 import { getRegisterAssetColumns } from './registerAssetColumns.jsx';
 import RecordFormModal from './RecordFormModal.jsx';
 import AssetRecordsModal from './AssetRecordsModal.jsx';
+import { queryKeys } from '../../../../common/query';
 
 const STORAGE_KEY = 'register-assets-table-column-visibility';
 
@@ -34,9 +36,9 @@ const COLUMN_TO_BACKEND_KEY = {
     building: 'location.floor.building.name',
     floor: 'location.floor.name',
     location: 'location.description',
-    executingUnit: 'executingUnit',
-    responsibleEmployee: 'responsibleEmployee',
-    responsibleEmployeeId: 'responsibleEmployeeId',
+    executingUnit: 'executingUnit.name',
+    responsibleEmployee: 'employee.name',
+    responsibleEmployeeId: 'employee.identification',
     status: 'status',
     acquisitionDate: 'acquisitionDate',
     warrantyEndDate: 'warrantyEndDate',
@@ -57,7 +59,7 @@ export default function RegisterAssetsTable({ registerId, canRegister }) {
     const [sorting, setSorting] = useState([]);
     const [recordTarget, setRecordTarget] = useState(null);
     const [historyTarget, setHistoryTarget] = useState(null);
-    const [recordsRefresh, setRecordsRefresh] = useState(0);
+    const queryClient = useQueryClient();
 
     const debouncedGlobalFilter = useDebounce(globalFilter, 350);
     const debouncedColumnFilters = useDebounce(columnFilters, 350);
@@ -96,7 +98,7 @@ export default function RegisterAssetsTable({ registerId, canRegister }) {
 
     useEffect(resetPageOnFilterChange, [debouncedGlobalFilter, backendFilters, backendSort]);
 
-    const { rows, loading, error, totalElements } = useRegisterAssetsData({
+    const { rows, loading, fetching, error, totalElements } = useRegisterAssetsData({
         registerId,
         pageIndex: pagination.pageIndex,
         pageSize: pagination.pageSize,
@@ -148,6 +150,7 @@ export default function RegisterAssetsTable({ registerId, canRegister }) {
                 columns={columns}
                 data={rows}
                 loading={loading}
+                fetching={fetching}
                 error={error}
                 enableRowActions
                 renderRowActions={renderActions}
@@ -180,14 +183,15 @@ export default function RegisterAssetsTable({ registerId, canRegister }) {
                 registerId={registerId}
                 asset={recordTarget}
                 onClose={() => setRecordTarget(null)}
-                onSaved={() => setRecordsRefresh((v) => v + 1)}
+                onSaved={() => {
+                    void queryClient.invalidateQueries({ queryKey: queryKeys.maintenance.register() });
+                }}
             />
 
             <AssetRecordsModal
                 open={!!historyTarget}
                 registerId={registerId}
                 asset={historyTarget}
-                refreshKey={recordsRefresh}
                 onClose={() => setHistoryTarget(null)}
             />
         </>

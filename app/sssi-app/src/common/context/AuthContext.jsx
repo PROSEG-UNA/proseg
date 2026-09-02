@@ -1,5 +1,6 @@
-import { createContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
+import { useQueryClient } from '@tanstack/react-query';
 import { getCurrentUser, refreshAccessToken } from '../../features/auth/services/authService';
 
 let isRefreshing = false;
@@ -29,6 +30,8 @@ export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const wasAuthenticatedRef = useRef(false);
 
   const isUserLikePayload = (value) =>
     Boolean(
@@ -171,6 +174,15 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     return setupResponseInterceptor();
   }, []);
+
+  const discardCachedDataOnSessionEnd = () => {
+    if (wasAuthenticatedRef.current && !isAuthenticated) {
+      queryClient.clear();
+    }
+    wasAuthenticatedRef.current = isAuthenticated;
+  };
+
+  useEffect(discardCachedDataOnSessionEnd, [isAuthenticated, queryClient]);
 
   const logout = async () => {
     setIsAuthenticated(false);

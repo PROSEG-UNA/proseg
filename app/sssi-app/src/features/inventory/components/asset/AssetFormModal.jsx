@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
     Box, Typography, TextField, MenuItem,
     Divider, IconButton, useTheme,
@@ -31,6 +32,7 @@ import { useAssetFormState } from '../../hooks/useAssetFormState.js';
 import { useAssetCatalogOptions } from '../../hooks/useAssetCatalogOptions.js';
 import { useAssetComponents } from '../../hooks/useAssetComponents.js';
 import { useAssetPhotos } from '../../hooks/useAssetPhotos.js';
+import { queryKeys } from '../../../../common/query';
 
 const STATUS_OPTIONS = [
     { value: 'APROBADO', label: 'Aprobado' },
@@ -66,14 +68,24 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
 
     const [catalogModal, setCatalogModal] = useState(null);
     const fileInputRef = useRef(null);
+    const queryClient = useQueryClient();
 
     const { formValues, setFormValues, errors, setErrors, touched, setTouched, saving, setSaving, alert, setAlert, loadingAsset, setLoadingAsset, assetNumberExists, setAssetNumberExists, showAssetNumberConfirm, setShowAssetNumberConfirm, pendingTypeChange, setPendingTypeChange } = formState;
     const { options, upsertOption, loadingOptions } = catalogOptions;
-    const { brands, types, models, campuses, buildings, locations } = options;
+    const { brands, types, models, campuses, buildings, locations, executingUnits, employees } = options;
     const { components, setComponents, componentErrors, setComponentErrors, componentsToDelete, setComponentsToDelete } = assetComponents;
 
     const selectedType             = types.find(t => t.id === formValues.typeId) ?? null;
     const requiresNetworkInterface = selectedType?.requiresNetworkInterface ?? false;
+
+    const selectedExecutingUnit = executingUnits.find(u => u.id === formValues.executingUnitId) ?? null;
+    const selectedEmployee      = employees.find(e => e.id === formValues.employeeId) ?? null;
+
+    const employeesWithIdentification  = employees.filter(e => !!e.identification);
+    const employeeIdentificationValue  = selectedEmployee?.identification ? selectedEmployee.id : '';
+    const employeeIdentificationAction = selectedEmployee?.identification
+        ? 'Editar identificación'
+        : 'Crear nueva Identificación';
 
     const filteredModels = models.filter(m => {
         const matchBrand = !formValues.brandId || m.brand?.id === formValues.brandId;
@@ -114,9 +126,8 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     if (cancelled) return;
                     if (asset) {
                         setFormValues({
-                            executingUnit:          asset.executingUnit ?? '',
-                            responsibleEmployee:    asset.responsibleEmployee ?? '',
-                            responsibleEmployeeId:  asset.responsibleEmployeeId ?? '',
+                            executingUnitId:        asset.executingUnit?.id ?? '',
+                            employeeId:             asset.employee?.id ?? '',
                             brandId:                asset.model?.brand?.id ?? '',
                             typeId:                 asset.model?.type?.id ?? '',
                             modelId:                asset.model?.id ?? '',
@@ -142,6 +153,8 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                         upsertOption('campuses', asset.location?.floor?.building?.campus);
                         upsertOption('buildings', asset.location?.floor?.building);
                         upsertOption('locations', asset.location);
+                        upsertOption('executingUnits', asset.executingUnit);
+                        upsertOption('employees', asset.employee);
                     }
                 })
                 .catch(() => {
@@ -350,7 +363,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         });
     };
 
-    const openCatalogModal = (fieldKey) => {
+    const openCatalogModal = (fieldKey, row) => {
         const configByField = {
             brandId:    CATALOG_CONFIG.brand,
             typeId:     CATALOG_CONFIG.type,
@@ -358,6 +371,10 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
             campusId:   LOCATION_CATALOG_CONFIG.campus,
             buildingId: LOCATION_CATALOG_CONFIG.building,
             locationId: LOCATION_CATALOG_CONFIG.location,
+            executingUnitId:            CATALOG_CONFIG.executingUnit,
+            employeeId:                 CATALOG_CONFIG.employee,
+            employeeWithIdentification: CATALOG_CONFIG.employeeWithIdentification,
+            employeeIdentification:     CATALOG_CONFIG.employeeIdentification,
         };
         const initialValuesByField = {
             modelId: {
@@ -377,7 +394,16 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
             config: configByField[fieldKey],
             fieldKey,
             initialValues: initialValuesByField[fieldKey],
+            row,
         });
+    };
+
+    const openEmployeeIdentificationModal = () => {
+        if (!selectedEmployee) {
+            openCatalogModal('employeeWithIdentification');
+            return;
+        }
+        openCatalogModal('employeeIdentification', selectedEmployee);
     };
 
     const selectCreatedBrand = (brand) => {
@@ -436,6 +462,16 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         clearErrorsFor(['campusId', 'buildingId', 'locationId']);
     };
 
+    const selectCreatedExecutingUnit = (executingUnit) => {
+        upsertOption('executingUnits', executingUnit);
+        setFormValues(prev => ({ ...prev, executingUnitId: executingUnit.id }));
+    };
+
+    const selectCreatedEmployee = (employee) => {
+        upsertOption('employees', employee);
+        setFormValues(prev => ({ ...prev, employeeId: employee.id }));
+    };
+
     const handleCatalogSaved = (created) => {
         const fieldKey = catalogModal?.fieldKey;
         setCatalogModal(null);
@@ -448,8 +484,14 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
             campusId:   selectCreatedCampus,
             buildingId: selectCreatedBuilding,
             locationId: selectCreatedLocation,
+            executingUnitId:            selectCreatedExecutingUnit,
+            employeeId:                 selectCreatedEmployee,
+            employeeWithIdentification: selectCreatedEmployee,
+            employeeIdentification:     selectCreatedEmployee,
         };
         selectByField[fieldKey]?.(created);
+
+        queryClient.invalidateQueries({ queryKey: queryKeys.inventory.catalog() });
     };
 
     const resolveLocationId = async () => {
@@ -477,9 +519,8 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
             const finalLocationId = await resolveLocationId();
 
             const payload = {
-                executingUnit:           formValues.executingUnit?.trim()         || null,
-                responsibleEmployee:     formValues.responsibleEmployee?.trim()   || null,
-                responsibleEmployeeId:   formValues.responsibleEmployeeId?.trim() || null,
+                executingUnitId:         formValues.executingUnitId               || null,
+                employeeId:              formValues.employeeId                    || null,
                 modelId:                 formValues.modelId,
                 locationId:              finalLocationId,
                 status:                  formValues.status,
@@ -867,7 +908,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                             />
 
                             <SearchableSelect
-                                label="Locación" value={formValues.locationId}
+                                label="Detalle de Ubicación" value={formValues.locationId}
                                 onChange={v => handleChange('locationId', v)}
                                 onBlur={() => handleBlur('locationId')}
                                 fullWidth size="small"
@@ -883,7 +924,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                                 getItemLabel={l => l.description + (l.floor?.name ? ` (Piso ${l.floor.name})` : '')}
                                 getItemValue={l => l.id}
                                 onCreate={() => openCatalogModal('locationId')}
-                                createLabel="Crear nueva Locación"
+                                createLabel="Crear nuevo Detalle de Ubicación"
                             />
                         </Box>
                     </Box>
@@ -1032,23 +1073,50 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     <Box>
                         {sectionLabel('Responsable')}
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2 }}>
-                            <TextField
-                                label="Unidad Ejecutora" value={formValues.executingUnit}
-                                onChange={e => handleChange('executingUnit', e.target.value)}
-                                fullWidth size="small" disabled={saving}
+                            <SearchableSelect
+                                label="Unidad Ejecutora" value={formValues.executingUnitId}
+                                onChange={v => handleChange('executingUnitId', v)}
+                                fullWidth size="small" disabled={saving || loadingOptions}
+                                helperText=" "
                                 sx={fieldSx}
+                                clearable
+                                items={executingUnits}
+                                getItemLabel={u => u.name}
+                                getItemValue={u => u.id}
+                                onCreate={() => openCatalogModal('executingUnitId')}
+                                createLabel="Crear nueva Unidad Ejecutora"
+                                onEdit={() => openCatalogModal('executingUnitId', selectedExecutingUnit)}
+                                editLabel="Editar Unidad Ejecutora"
                             />
-                            <TextField
-                                label="Identificación Funcionario" value={formValues.responsibleEmployeeId}
-                                onChange={e => handleChange('responsibleEmployeeId', e.target.value)}
-                                fullWidth size="small" disabled={saving}
+
+                            <SearchableSelect
+                                label="Identificación Funcionario" value={employeeIdentificationValue}
+                                onChange={v => handleChange('employeeId', v)}
+                                fullWidth size="small" disabled={saving || loadingOptions}
+                                helperText=" "
                                 sx={fieldSx}
+                                clearable
+                                items={employeesWithIdentification}
+                                getItemLabel={e => e.identification}
+                                getItemValue={e => e.id}
+                                onCreate={openEmployeeIdentificationModal}
+                                createLabel={employeeIdentificationAction}
                             />
-                            <TextField
-                                label="Nombre Funcionario" value={formValues.responsibleEmployee}
-                                onChange={e => handleChange('responsibleEmployee', e.target.value)}
-                                fullWidth size="small" disabled={saving}
+
+                            <SearchableSelect
+                                label="Nombre Funcionario" value={formValues.employeeId}
+                                onChange={v => handleChange('employeeId', v)}
+                                fullWidth size="small" disabled={saving || loadingOptions}
+                                helperText=" "
                                 sx={fieldSx}
+                                clearable
+                                items={employees}
+                                getItemLabel={e => e.name}
+                                getItemValue={e => e.id}
+                                onCreate={() => openCatalogModal('employeeId')}
+                                createLabel="Crear nuevo Funcionario"
+                                onEdit={() => openCatalogModal('employeeId', selectedEmployee)}
+                                editLabel="Editar Funcionario"
                             />
                         </Box>
                     </Box>
@@ -1300,6 +1368,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     onSaved={handleCatalogSaved}
                     config={catalogModal.config}
                     initialValues={catalogModal.initialValues}
+                    row={catalogModal.row}
                 />
             )}
 

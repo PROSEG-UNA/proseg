@@ -11,9 +11,16 @@ import com.sssi.msvcinventory.exception.ModelException;
 import com.sssi.msvcinventory.exception.TypeException;
 import com.sssi.msvcinventory.exception.LocationException;
 import com.sssi.msvcinventory.exception.NetworkInterfaceException;
+import com.sssi.msvcinventory.exception.ExecutingUnitException;
+import com.sssi.msvcinventory.exception.EmployeeException;
 import com.sssi.msvcinventory.mapper.*;
 import com.sssi.msvcinventory.repository.ModelRepository;
+import com.sssi.msvcinventory.repository.ExecutingUnitRepository;
+import com.sssi.msvcinventory.repository.EmployeeRepository;
 import com.sssi.msvcinventory.repository.AssetRepository;
+import com.sssi.msvcinventory.repository.AssetArchiveRepository;
+import com.sssi.msvcinventory.repository.AssetComponentRepository;
+import com.sssi.msvcinventory.repository.projection.AssetCountProjection;
 import com.sssi.msvcinventory.specification.GenericSpecifications;
 import com.sssi.msvcinventory.repository.TypeRepository;
 import com.sssi.msvcinventory.repository.LocationRepository;
@@ -27,9 +34,12 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -40,6 +50,10 @@ public class AssetServiceImpl implements AssetService {
     private final LocationRepository locationRepository;
     private final TypeRepository typeRepository;
     private final NetworkInterfaceRepository networkInterfaceRepository;
+    private final AssetArchiveRepository assetArchiveRepository;
+    private final AssetComponentRepository assetComponentRepository;
+    private final ExecutingUnitRepository executingUnitRepository;
+    private final EmployeeRepository employeeRepository;
     private final AssetMapper assetMapper;
     private final AlarmSensorMapper alarmSensorMapper;
     private final NetworkInterfaceMapper networkInterfaceMapper;
@@ -66,6 +80,8 @@ public class AssetServiceImpl implements AssetService {
         Asset asset = assetMapper.toEntity(request);
         asset.setModel(model);
         asset.setLocation(location);
+        asset.setExecutingUnit(resolveExecutingUnit(request.getExecutingUnitId()));
+        asset.setEmployee(resolveEmployee(request.getEmployeeId()));
         Asset saved = assetRepository.save(asset);
 
         if (hasNetworkData(request.getNetworkInterface())) {
@@ -96,7 +112,7 @@ public class AssetServiceImpl implements AssetService {
                 GenericSpecifications.sanitizeSort(Asset.class, pageable.getSort())
         );
 
-        return assetRepository.findAll(spec, sanitized).map(this::toPolymorphicResponse);
+        return enrichWithDetailCounts(assetRepository.findAll(spec, sanitized).map(this::toPolymorphicResponse));
     }
 
     @Override
@@ -105,8 +121,8 @@ public class AssetServiceImpl implements AssetService {
         if (!locationRepository.existsById(locationId)) {
             throw LocationException.notFound(locationId.toString());
         }
-        return assetRepository.findByLocationId(locationId, pageable)
-                .map(this::toPolymorphicResponse);
+        return enrichWithDetailCounts(assetRepository.findByLocationId(locationId, pageable)
+                .map(this::toPolymorphicResponse));
     }
 
     @Override
@@ -124,7 +140,7 @@ public class AssetServiceImpl implements AssetService {
                 GenericSpecifications.sanitizeSort(Asset.class, pageable.getSort())
         );
 
-        return assetRepository.findAll(spec, sanitized).map(this::toPolymorphicResponse);
+        return enrichWithDetailCounts(assetRepository.findAll(spec, sanitized).map(this::toPolymorphicResponse));
     }
 
     @Override
@@ -142,7 +158,7 @@ public class AssetServiceImpl implements AssetService {
                 GenericSpecifications.sanitizeSort(Asset.class, pageable.getSort())
         );
 
-        return assetRepository.findAll(spec, sanitized).map(this::toPolymorphicResponse);
+        return enrichWithDetailCounts(assetRepository.findAll(spec, sanitized).map(this::toPolymorphicResponse));
     }
 
     @Override
@@ -151,8 +167,8 @@ public class AssetServiceImpl implements AssetService {
         if (!typeRepository.existsById(typeId)) {
             throw TypeException.notFound(typeId.toString());
         }
-        return assetRepository.findByModelTypeId(typeId, pageable)
-                .map(this::toPolymorphicResponse);
+        return enrichWithDetailCounts(assetRepository.findByModelTypeId(typeId, pageable)
+                .map(this::toPolymorphicResponse));
     }
 
     @Override
@@ -183,6 +199,8 @@ public class AssetServiceImpl implements AssetService {
         assetMapper.updateEntityFromRequest(request, asset);
         asset.setModel(model);
         asset.setLocation(location);
+        asset.setExecutingUnit(resolveExecutingUnit(request.getExecutingUnitId()));
+        asset.setEmployee(resolveEmployee(request.getEmployeeId()));
         assetRepository.save(asset);
 
         if (!type.isRequiresNetworkInterface() || !hasNetworkData(request.getNetworkInterface())) {
@@ -213,6 +231,18 @@ public class AssetServiceImpl implements AssetService {
         if (value == null) return null;
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private ExecutingUnit resolveExecutingUnit(UUID executingUnitId) {
+        if (executingUnitId == null) return null;
+        return executingUnitRepository.findById(executingUnitId)
+                .orElseThrow(() -> ExecutingUnitException.notFound(executingUnitId.toString()));
+    }
+
+    private Employee resolveEmployee(UUID employeeId) {
+        if (employeeId == null) return null;
+        return employeeRepository.findById(employeeId)
+                .orElseThrow(() -> EmployeeException.notFound(employeeId.toString()));
     }
 
     @Override
@@ -309,5 +339,28 @@ public class AssetServiceImpl implements AssetService {
             return alarmSensorMapper.toResponse(alarmSensor);
         }
         return assetMapper.toResponse(asset);
+    }
+
+    private Page<AssetResponseDto> enrichWithDetailCounts(Page<AssetResponseDto> page) {
+        List<UUID> assetIds = page.getContent().stream()
+                .map(AssetResponseDto::getId)
+                .filter(Objects::nonNull)
+                .toList();
+
+        if (assetIds.isEmpty()) return page;
+
+        Map<UUID, Long> imagesByAsset = toCountMap(assetArchiveRepository.countByAssetIds(assetIds));
+        Map<UUID, Long> componentsByAsset = toCountMap(assetComponentRepository.countByAssetIds(assetIds));
+
+        page.getContent().forEach(asset -> {
+            asset.setImagesCount(imagesByAsset.getOrDefault(asset.getId(), 0L).intValue());
+            asset.setComponentsCount(componentsByAsset.getOrDefault(asset.getId(), 0L).intValue());
+        });
+
+        return page;
+    }
+
+    private Map<UUID, Long> toCountMap(List<AssetCountProjection> counts) {
+        return counts.stream().collect(Collectors.toMap(AssetCountProjection::getAssetId, AssetCountProjection::getTotal));
     }
 }

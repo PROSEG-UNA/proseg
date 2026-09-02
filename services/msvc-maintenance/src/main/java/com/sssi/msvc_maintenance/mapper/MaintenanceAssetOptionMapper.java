@@ -1,6 +1,8 @@
 package com.sssi.msvc_maintenance.mapper;
 
 import com.sssi.msvc_maintenance.dto.response.InventoryAssetBuildingResponseDto;
+import com.sssi.msvc_maintenance.dto.response.InventoryAssetEmployeeResponseDto;
+import com.sssi.msvc_maintenance.dto.response.InventoryAssetExecutingUnitResponseDto;
 import com.sssi.msvc_maintenance.dto.response.InventoryAssetFloorResponseDto;
 import com.sssi.msvc_maintenance.dto.response.InventoryAssetLocationResponseDto;
 import com.sssi.msvc_maintenance.dto.response.InventoryAssetModelResponseDto;
@@ -17,6 +19,8 @@ public final class MaintenanceAssetOptionMapper {
         InventoryAssetLocationResponseDto location = asset.getLocation();
         InventoryAssetFloorResponseDto floor = location != null ? location.getFloor() : null;
         InventoryAssetBuildingResponseDto building = floor != null ? floor.getBuilding() : null;
+        InventoryAssetExecutingUnitResponseDto executingUnit = asset.getExecutingUnit();
+        InventoryAssetEmployeeResponseDto employee = asset.getEmployee();
 
         return MaintenanceAssetOptionDto.builder()
                 .id(asset.getId())
@@ -31,9 +35,9 @@ public final class MaintenanceAssetOptionMapper {
                 .buildingName(building != null ? building.getName() : null)
                 .floorName(floor != null ? floor.getName() : null)
                 .locationName(location != null ? location.getDescription() : null)
-                .executingUnit(asset.getExecutingUnit())
-                .responsibleEmployee(asset.getResponsibleEmployee())
-                .responsibleEmployeeId(asset.getResponsibleEmployeeId())
+                .executingUnit(executingUnit != null ? executingUnit.getName() : null)
+                .responsibleEmployee(employee != null ? employee.getName() : null)
+                .responsibleEmployeeId(employee != null ? employee.getIdentification() : null)
                 .acquisitionDate(asset.getAcquisitionDate())
                 .warrantyEndDate(asset.getWarrantyEndDate())
                 .firmwareSupportEndDate(asset.getFirmwareSupportEndDate())

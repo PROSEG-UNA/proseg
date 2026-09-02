@@ -10,22 +10,22 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:https://auth.devbychris.com/realms/sssi-realm}
+          issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:http://keycloak:8080/auth/realms/proseg-realm}
       client:
         registration:
           keycloak:
             client-id: msvc-maintenance
-            client-secret: kIaiPowoVB4hYy7MVJnQvdQW8wv4VDuz
+            client-secret: ${SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET:}
             authorization-grant-type: client_credentials
         provider:
           keycloak:
-            token-uri: https://auth.devbychris.com/realms/sssi-realm/protocol/openid-connect/token
+            token-uri: ${SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_TOKEN_URI:http://keycloak:8080/auth/realms/proseg-realm/protocol/openid-connect/token}
   application:
     name: msvc-maintenance
   datasource:
-    url: jdbc:postgresql://76.13.124.126:5432/sssi-bd
-    username: sssi_user
-    password: sssi_user
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/proseg-bd}
+    username: ${SPRING_DATASOURCE_USERNAME:}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
     driver-class-name: org.postgresql.Driver
 
     hikari:
@@ -44,11 +44,3 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-
-eureka:
-  instance:
-    hostname: ${EUREKA_INSTANCE_HOSTNAME:msvc-maintenance}
-  client:
-    service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka}
-  
