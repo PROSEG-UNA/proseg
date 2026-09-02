@@ -1,0 +1,5 @@
+* text=auto
+
+*.sh text eol=lf
+*.conf text eol=lf
+services/initdb/*.sql text eol=lf
