@@ -34,7 +34,7 @@ jobs:
       - uses: tj-actions/changed-files@v45
         id: frontend
         with:
-          files: app/sssi-app/**
+          files: app/proseg-app/**
 
   build-services:
     needs: changes
@@ -75,8 +75,8 @@ jobs:
       - name: Build proseg-app
         uses: docker/build-push-action@v6
         with:
-          context: ./app/sssi-app
-          file: ./app/sssi-app/Dockerfile
+          context: ./app/proseg-app
+          file: ./app/proseg-app/Dockerfile
           platforms: linux/amd64
           push: false
           build-args: |
