@@ -28,7 +28,7 @@ Use these rules for coding, debugging, refactoring, code review, and technical q
 - Avoid unnecessary error handling.
 - Keep code copy-paste safe.
 
-## Data fetching (app/sssi-app)
+## Data fetching (app/proseg-app)
 - Use TanStack Query for reads where the server is the source of truth: lists, catalogs, detail panels, dashboards.
 - Use useState + useEffect to load one entity into an editable form. Copy the data into a local draft and reset it when the modal closes.
 - Never derive an input value from the query cache through overrides. That is what made unsaved drafts reappear on reopen.

@@ -1,6 +1,6 @@
 # Cómo ejecutar PROSEG en local
 
-Todos los comandos se ejecutan **desde la raíz del proyecto**.
+Los comandos del paso 1 se ejecutan desde la raíz del proyecto. A partir del paso 2 se trabaja dentro de `services/`, y el frontend del paso 5 en `app/proseg-app/`. Cada sección lo indica.
 
 El entorno local es autónomo: Postgres, Keycloak, MinIO y Kafka corren en tu máquina. No depende de ningún servidor externo.
 
@@ -37,7 +37,7 @@ cp services/.env.example services/.env
 ```
 
 ```bash
-cp app/sssi-app/.env.example app/sssi-app/.env
+cp app/proseg-app/.env.example app/proseg-app/.env
 ```
 
 **Eso es todo. No hay que completar nada**: las plantillas traen valores por omisión que funcionan tal cual en local. Podés cambiarlos cuando quieras.
@@ -56,23 +56,29 @@ Las llaves de Turnstile sí vienen puestas, pero son las **llaves de prueba púb
 Los puertos que se publican al host son configurables desde `services/.env`. Por omisión:
 
 ```
-POSTGRES_HOST_PORT=5432
+POSTGRES_HOST_PORT=5433
 KEYCLOAK_HOST_PORT=8180
-MINIO_CONSOLE_HOST_PORT=9001
+MINIO_CONSOLE_HOST_PORT=9101
 ```
 
-Si tenés un PostgreSQL instalado en la máquina, el 5432 va a estar tomado. Cambialo a 5433 y listo.
+Esos valores evitan los choques mas comunes: el 5432 lo suele tomar un PostgreSQL instalado en la maquina, y el 9001 lo usa Docker Desktop.
 
 ## 2. Compilar y levantar
 
+Todos los comandos de esta sección y de las siguientes se corren desde `services/`:
+
 ```bash
-docker compose -f services/docker-compose.yml build
+cd services
+```
+
+```bash
+docker compose -f docker-compose.yml build
 ```
 
 La primera vez tarda: son 9 servicios Java compilando sin caché.
 
 ```bash
-docker compose -f services/docker-compose.yml up -d
+docker compose -f docker-compose.yml up -d
 ```
 
 ## 3. Credenciales y accesos
@@ -81,8 +87,8 @@ docker compose -f services/docker-compose.yml up -d
 |---|---|---|---|
 | Aplicación | `http://localhost:5173` | `dev` | `dev12345` |
 | Panel de Keycloak | `http://localhost:8180/auth` | `proseg-admin` | `proseg-local-dev` |
-| Panel de MinIO | `http://localhost:9001` | `proseg` | `proseg-local-dev` |
-| Postgres | `localhost:5432`, base `proseg-bd` | `proseg` | `proseg-local-dev` |
+| Panel de MinIO | `http://localhost:9101` | `proseg` | `proseg-local-dev` |
+| Postgres | `localhost:5433`, base `proseg-bd` | `proseg` | `proseg-local-dev` |
 | API (gateway) | `http://localhost:8081` | — | — |
 
 Esas contraseñas son deliberadamente obvias: sirven para levantar el entorno en tu máquina y **no deben usarse en producción**.
@@ -107,16 +113,22 @@ Si volvés a levantar el entorno, el usuario no se pisa: si ya existe, no se le 
 
 ## 5. Levantar el frontend
 
+Esto va en una segunda terminal, porque el servidor de desarrollo queda ocupando la que uses. Desde la raíz del repositorio:
+
+```bash
+cd app/proseg-app
+```
+
 Instalar las dependencias. Solo hace falta la primera vez, y cada vez que alguien cambie `package.json`:
 
 ```bash
-npm --prefix app/sssi-app install
+npm install
 ```
 
 Levantar el servidor de desarrollo, con recarga automática:
 
 ```bash
-npm --prefix app/sssi-app run dev
+npm run dev
 ```
 
 Queda en `http://localhost:5173` y habla con el gateway en `http://localhost:8081`.
@@ -126,7 +138,7 @@ Queda en `http://localhost:5173` y habla con el gateway en `http://localhost:808
 Comprobá que los contenedores quedaron arriba:
 
 ```bash
-docker compose -f services/docker-compose.yml ps
+docker compose -f docker-compose.yml ps
 ```
 
 Postgres, Keycloak, Kafka y MinIO deben decir `healthy`. Los servicios Java tardan un par de minutos más.
@@ -134,7 +146,7 @@ Postgres, Keycloak, Kafka y MinIO deben decir `healthy`. Los servicios Java tard
 Los cuatro contenedores de inicialización no aparecen acá, porque ya terminaron. Para verlos:
 
 ```bash
-docker compose -f services/docker-compose.yml ps -a
+docker compose -f docker-compose.yml ps -a
 ```
 
 Deben figurar como `Exited (0)`. Cualquier otro código de salida es un fallo.
@@ -142,7 +154,7 @@ Deben figurar como `Exited (0)`. Cualquier otro código de salida es un fallo.
 Revisá que hicieron lo suyo:
 
 ```bash
-docker compose -f services/docker-compose.yml logs keycloak-init dev-user-init dev-user-approve
+docker compose -f docker-compose.yml logs keycloak-init dev-user-init dev-user-approve
 ```
 
 Lo que tendrías que leer:
@@ -158,7 +170,7 @@ La prueba final: entrar a `http://localhost:5173` con `dev` / `dev12345`.
 Recompilá solo el servicio que tocaste:
 
 ```bash
-docker compose -f services/docker-compose.yml up -d --build msvc-auth
+docker compose -f docker-compose.yml up -d --build msvc-auth
 ```
 
 Reemplazá `msvc-auth` por el servicio correspondiente.
@@ -168,13 +180,13 @@ El frontend no necesita nada: con `npm run dev` el cambio se ve al guardar.
 ## 8. Apagar
 
 ```bash
-docker compose -f services/docker-compose.yml down
+docker compose -f docker-compose.yml down
 ```
 
 Conserva los datos. Para borrar todo y volver a foja cero:
 
 ```bash
-docker compose -f services/docker-compose.yml down -v
+docker compose -f docker-compose.yml down -v
 ```
 
 Eso elimina tu usuario, la base y los archivos de MinIO. El siguiente arranque reimporta el realm desde cero.
@@ -202,7 +214,7 @@ En cada `up`, el contenedor `keycloak-init` ajusta Keycloak a lo que diga el arc
 
 Dos cosas que **nunca** borra: los roles, aunque no estén en el archivo, y los internos de Keycloak (`offline_access`, `uma_authorization`, `default-roles-proseg-realm`).
 
-Para que un compañero reciba el cambio le alcanza con hacer `docker compose -f services/docker-compose.yml up -d`. No necesita borrar su volumen. Los borrados quedan listados en el log, con un `-` adelante.
+Para que un compañero reciba el cambio le alcanza con hacer `docker compose -f docker-compose.yml up -d`. No necesita borrar su volumen. Los borrados quedan listados en el log, con un `-` adelante.
 
 > El borrado **solo ocurre en desarrollo**. Lo activa `SYNC_DELETE: "true"`, que únicamente pone el compose de desarrollo; sin esa variable el script solo agrega.
 
@@ -214,12 +226,30 @@ Para que un compañero reciba el cambio le alcanza con hacer `docker compose -f 
 
 **Bloqueo por intentos fallidos.** A los 10 intentos fallidos Keycloak bloquea la cuenta temporalmente, empezando en 1 minuto.
 
+**Los volúmenes sobreviven a los cambios del `.env`.** Es la causa de casi todos los arranques fallidos, y da errores que apuntan a otro lado:
+
+| Síntoma | Qué pasó |
+|---|---|
+| Kafka sale con `Invalid cluster.id` | El volumen se formateó con otro `KAFKA_CLUSTER_ID` |
+| Keycloak sale con `password authentication failed for user "proseg"` | El volumen de Postgres se creó con otra `POSTGRES_PASSWORD` |
+
+Postgres y Kafka solo leen esas variables **la primera vez**, cuando inicializan su volumen. Si después cambian en el `.env`, el volumen sigue con los valores viejos y el arranque falla.
+
+Se arregla borrando el volumen afectado. En desarrollo no se pierde nada que importe: la base la reconstruye Hibernate y Kafka solo guarda eventos y offsets.
+
+```bash
+docker compose -f docker-compose.yml down
+docker volume rm proseg-dev_pgdata proseg-dev_kafkadata
+```
+
+Si preferís empezar de cero del todo, `down -v` borra todos los volúmenes del proyecto de una.
+
 ## Levantar el stack de producción en local
 
 Para verificar cómo queda el sistema tal como corre en el servidor —con el frontend dockerizado y Caddy al frente— hay un compose aparte:
 
 ```bash
-docker compose -f services/docker-compose.prod.yml -f services/docker-compose.local.yml up -d
+docker compose -f docker-compose.prod.yml -f docker-compose.local.yml up -d
 ```
 
 Usa imágenes de GHCR en vez de compilar, y expone todo en `http://localhost:8080`. No es para el día a día.
