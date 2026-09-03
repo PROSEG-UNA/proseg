@@ -37,6 +37,14 @@ El sistema integra tecnologías modernas para facilitar:
 
 ---
 
+## Ejecución del proyecto
+
+Para conocer los requisitos y pasos para ejecutar PROSEG:
+
+[Ver HOW_TO_RUN.md](./HOW_TO_RUN.md)
+
+---
+
 ## <img src="https://cdn.simpleicons.org/diagramsdotnet/8B0000" width="22" valign="middle"/> &nbsp;Arquitectura
 
 El proyecto sigue una arquitectura basada en **microservicios** dentro de un enfoque **monorepo**, permitiendo mantener una integración centralizada sin perder independencia entre módulos.
