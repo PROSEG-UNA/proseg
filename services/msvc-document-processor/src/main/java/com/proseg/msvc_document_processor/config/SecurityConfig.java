@@ -1,0 +1,60 @@
+package com.proseg.msvc_document_processor.config;
+
+import com.proseg.msvc_document_processor.security.Privileges;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+public class SecurityConfig {
+
+    private static final String AUTH_COOKIE_NAME = "auth_token";
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
+        JwtAuthenticationConverter jwtConverter = new JwtAuthenticationConverter();
+        jwtConverter.setJwtGrantedAuthoritiesConverter(new KeycloakJwtConverter());
+
+        http
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/document-processor/imports/assets/**"
+                        ).hasAuthority(Privileges.Activos.IMPORTAR)
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/document-processor/imports/assets/**"
+                        ).hasAuthority(Privileges.Activos.IMPORTAR)
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/document-processor/exports/assets/**"
+                        ).hasAnyAuthority(Privileges.Activos.IMPORTAR, Privileges.Activos.EXPORTAR)
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/document-processor/exports/tickets/**"
+                        ).hasAuthority(Privileges.TicketsMantenimiento.LEER)
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/document-processor/exports/maintenance-requests/**"
+                        ).hasAuthority(Privileges.SolicitudesMantenimiento.LEER)
+
+                        .anyRequest().authenticated()
+                )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(new JwtAuthenticationEntryPoint())
+                        .accessDeniedHandler(new JwtAccessDeniedHandler())
+                )
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .bearerTokenResolver(new CookieBearerTokenResolver(AUTH_COOKIE_NAME))
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtConverter))
+                );
+
+        return http.build();
+    }
+}

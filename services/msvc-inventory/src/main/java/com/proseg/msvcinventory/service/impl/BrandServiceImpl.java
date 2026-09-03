@@ -1,0 +1,95 @@
+package com.proseg.msvcinventory.service.impl;
+
+import com.proseg.msvcinventory.dto.request.BrandRequestDto;
+import com.proseg.msvcinventory.dto.response.BrandResponseDto;
+import com.proseg.msvcinventory.entity.Brand;
+import com.proseg.msvcinventory.exception.BrandException;
+import com.proseg.msvcinventory.mapper.BrandMapper;
+import com.proseg.msvcinventory.repository.ModelRepository;
+import com.proseg.msvcinventory.repository.BrandRepository;
+import com.proseg.msvcinventory.service.BrandService;
+import com.proseg.msvcinventory.specification.GenericSpecifications;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Map;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+public class BrandServiceImpl implements BrandService {
+
+    private final BrandRepository brandRepository;
+    private final ModelRepository modelRepository;
+    private final BrandMapper brandMapper;
+
+    @Override
+    @Transactional
+    public BrandResponseDto create(BrandRequestDto request) {
+
+        if (brandRepository.existsByNameIgnoreCase(request.getName())) {
+            throw BrandException.duplicateName(request.getName());
+        }
+
+        Brand brand = brandMapper.toEntity(request);
+        return brandMapper.toResponse(brandRepository.save(brand));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BrandResponseDto findById(UUID id) {
+        return brandRepository.findById(id)
+                .map(brandMapper::toResponse)
+                .orElseThrow(() -> BrandException.notFound(id.toString()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<BrandResponseDto> findAll(String search, Map<String, String> filters, Pageable pageable) {
+        Specification<Brand> spec = Specification
+                .where(GenericSpecifications.<Brand>withSearch(Brand.class, search))
+                .and(GenericSpecifications.<Brand>withColumnFilters(Brand.class, filters));
+
+        Pageable sanitized = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                GenericSpecifications.sanitizeSort(Brand.class, pageable.getSort())
+        );
+
+        return brandRepository.findAll(spec, sanitized).map(brandMapper::toResponse);
+    }
+
+    @Override
+    @Transactional
+    public BrandResponseDto update(UUID id, BrandRequestDto request) {
+
+        Brand brand = brandRepository.findById(id)
+                .orElseThrow(() -> BrandException.notFound(id.toString()));
+
+        if (brandRepository.existsByNameIgnoreCaseAndIdNot(request.getName(), id)) {
+            throw BrandException.duplicateName(request.getName());
+        }
+
+        brandMapper.updateEntityFromRequest(request, brand);
+        return brandMapper.toResponse(brandRepository.save(brand));
+    }
+
+    @Override
+    @Transactional
+    public void delete(UUID id) {
+
+        Brand brand = brandRepository.findById(id)
+                .orElseThrow(() -> BrandException.notFound(id.toString()));
+
+        if (modelRepository.existsByBrandId(id)) {
+            throw BrandException.inUse(brand.getName());
+        }
+
+        brandRepository.delete(brand);
+    }
+}

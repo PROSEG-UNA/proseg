@@ -9,7 +9,7 @@
         <version>3.3.5</version>
     </parent>
 
-    <groupId>com.sssi</groupId>
+    <groupId>com.proseg</groupId>
     <artifactId>services</artifactId>
     <version>1.0-SNAPSHOT</version>
 
