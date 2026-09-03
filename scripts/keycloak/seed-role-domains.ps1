@@ -7,8 +7,8 @@
 
 if (-not $KeycloakUrl) { $KeycloakUrl = "http://localhost:8080" }
 if (-not $Realm)       { $Realm       = "proseg-realm" }
-if (-not $AdminUser)   { $AdminUser   = "admin" }
-if (-not $AdminPass)   { $AdminPass   = "sssi-system" }
+if (-not $AdminUser)   { throw "Falta KEYCLOAK_ADMIN_USERNAME o el parametro -AdminUser" }
+if (-not $AdminPass)   { throw "Falta KEYCLOAK_ADMIN_PASSWORD o el parametro -AdminPass" }
 
 Write-Host "Conectando a $KeycloakUrl (realm: $Realm)..."
 

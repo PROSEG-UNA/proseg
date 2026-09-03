@@ -1,0 +1,31 @@
+package com.proseg.msvc_maintenance.service;
+
+import com.proseg.msvc_maintenance.dto.request.CompanyRequestDto;
+import com.proseg.msvc_maintenance.dto.request.CreateManagedUserRequestDto;
+import com.proseg.msvc_maintenance.dto.response.CompanyResponseDto;
+import com.proseg.msvc_maintenance.dto.response.CreateManagedUserResponseDto;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import java.util.Map;
+import java.util.UUID;
+
+public interface CompanyService {
+
+    CompanyResponseDto create(CompanyRequestDto request);
+
+    CreateManagedUserResponseDto createManagedUser(CreateManagedUserRequestDto request);
+
+    CompanyResponseDto findById(UUID id);
+
+    CompanyResponseDto findByKeycloakUserId(String keycloakUserId);
+
+    boolean hasCompany(String keycloakUserId);
+
+    Page<CompanyResponseDto> findAll(String search, Map<String, String> filters, Pageable pageable);
+
+    CompanyResponseDto update(UUID id, CompanyRequestDto request);
+
+    void delete(UUID id);
+}
+

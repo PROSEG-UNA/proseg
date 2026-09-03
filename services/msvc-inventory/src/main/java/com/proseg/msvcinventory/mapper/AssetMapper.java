@@ -1,0 +1,31 @@
+package com.proseg.msvcinventory.mapper;
+
+import com.proseg.msvcinventory.dto.request.AssetRequestDto;
+import com.proseg.msvcinventory.dto.response.AssetResponseDto;
+import com.proseg.msvcinventory.entity.Asset;
+import org.mapstruct.*;
+
+@Mapper(componentModel = "spring", uses = {ModelMapper.class, LocationMapper.class, NetworkInterfaceMapper.class,
+        ExecutingUnitMapper.class, EmployeeMapper.class})
+public interface AssetMapper {
+
+    @Mapping(target = "model", ignore = true)
+    @Mapping(target = "location", ignore = true)
+    @Mapping(target = "networkInterface", ignore = true)
+    @Mapping(target = "executingUnit", ignore = true)
+    @Mapping(target = "employee", ignore = true)
+    Asset toEntity(AssetRequestDto request);
+
+    @Mapping(target = "kind", constant = "GENERIC")
+    AssetResponseDto toResponse(Asset asset);
+
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "model", ignore = true)
+    @Mapping(target = "location", ignore = true)
+    @Mapping(target = "networkInterface", ignore = true)
+    @Mapping(target = "executingUnit", ignore = true)
+    @Mapping(target = "employee", ignore = true)
+    @Mapping(target = "serialNumber", source = "serialNumber",
+            nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.SET_TO_NULL)
+    void updateEntityFromRequest(AssetRequestDto request, @MappingTarget Asset asset);
+}
