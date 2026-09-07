@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Box, Button, Container, Menu, MenuItem, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -22,6 +22,7 @@ export default function TicketsPage() {
     const [viewMode, setViewMode] = useState(false);
     const queryClient = useQueryClient();
     const [loadingTicketDetail, setLoadingTicketDetail] = useState(false);
+    const detailRequestRef = useRef(0);
     const [exportAnchorEl, setExportAnchorEl] = useState(null);
     const [exporting, setExporting] = useState(false);
     const [alert, setAlert] = useState(null);
@@ -47,33 +48,31 @@ export default function TicketsPage() {
         setFormOpen(true);
     };
 
-    const handleOpenEdit = async (ticket) => {
-        setViewMode(false);
+    const openTicketDetail = async (ticket, openAsReadOnly) => {
+        const requestId = detailRequestRef.current + 1;
+        detailRequestRef.current = requestId;
+
+        setViewMode(openAsReadOnly);
         setFormOpen(true);
         setLoadingTicketDetail(true);
 
         try {
             const detail = await fetchMaintenanceTicketById(ticket.id);
+            if (detailRequestRef.current !== requestId) return;
             setSelectedTicket(detail);
         } finally {
-            setLoadingTicketDetail(false);
+            if (detailRequestRef.current === requestId) {
+                setLoadingTicketDetail(false);
+            }
         }
     };
 
-    const handleOpenView = async (ticket) => {
-        setViewMode(true);
-        setFormOpen(true);
-        setLoadingTicketDetail(true);
+    const handleOpenEdit = (ticket) => openTicketDetail(ticket, false);
 
-        try {
-            const detail = await fetchMaintenanceTicketById(ticket.id);
-            setSelectedTicket(detail);
-        } finally {
-            setLoadingTicketDetail(false);
-        }
-    };
+    const handleOpenView = (ticket) => openTicketDetail(ticket, true);
 
     const handleCloseForm = () => {
+        detailRequestRef.current += 1;
         setSelectedTicket(null);
         setViewMode(false);
         setFormOpen(false);
@@ -81,6 +80,7 @@ export default function TicketsPage() {
     };
 
     const handleSaved = () => {
+        detailRequestRef.current += 1;
         setSelectedTicket(null);
         setViewMode(false);
         setFormOpen(false);
