@@ -2,6 +2,7 @@ package com.proseg.msvc_maintenance.dto.request;
 
 import com.proseg.common.utils.ValidationUtils;
 import com.proseg.msvc_maintenance.entity.enums.TicketPriority;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -46,4 +47,9 @@ public class TicketCreateRequestDto {
     private UUID locationId;
     private List<UUID> assetIds;
     private List<UUID> removedPhotoIds;
+
+    @AssertTrue(message = "La sede es requerida cuando el ticket no tiene activos asociados")
+    public boolean isSiteProvidedWhenThereAreNoAssets() {
+        return siteId != null || (assetIds != null && !assetIds.isEmpty());
+    }
 }

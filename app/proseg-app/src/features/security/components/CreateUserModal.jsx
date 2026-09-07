@@ -53,7 +53,7 @@ export default function CreateUserModal({ open, onClose, onSaved }) {
         setSaving(true);
         try {
             await createUser(formData);
-            setAlert({ type: 'success', message: 'Usuario creado correctamente. Se envió la contraseña al correo indicado.' });
+            setAlert({ type: 'success', message: 'Usuario creado correctamente. Se envió un correo al usuario para que configure su contraseña.' });
             onSaved?.();
         } catch (err) {
             setAlert({ type: 'error', message: getFriendlyApiErrorMessage(err, 'No se pudo crear el usuario.') });

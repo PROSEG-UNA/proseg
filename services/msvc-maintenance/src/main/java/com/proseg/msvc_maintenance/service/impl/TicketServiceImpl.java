@@ -1676,6 +1676,7 @@ public class TicketServiceImpl implements TicketService {
 
             return names;
         } catch (Exception exception) {
+            log.error("No se pudieron resolver los nombres de {} autores contra msvc-auth", ids.size(), exception);
             return ids.stream().collect(Collectors.toMap(
                     Function.identity(),
                     id -> "Usuario"

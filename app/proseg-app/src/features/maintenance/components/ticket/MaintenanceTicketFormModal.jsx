@@ -1065,6 +1065,14 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             return;
         }
 
+        if (formValues.requiresAsset === 'true' && selectedAssets.length === 0) {
+            setAlert({
+                type: 'warning',
+                message: 'Selecciona al menos un activo o cambia "¿Se requiere activo?" a No',
+            });
+            return;
+        }
+
         setSaving(true);
 
         try {
@@ -1205,7 +1213,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                 maxWidth="lg"
                 fillHeight
                 icon={ConstructionIcon}
-                title={isReadOnly ? 'Detalle de ticket de mantenimiento' : isEditing ? 'Editar ticket de mantenimiento' : 'Crear ticket de mantenimiento'}
+                title={isReadOnly ? 'Detalle de ticket de mantenimiento' : isEditing ? 'Editar ticket de mantenimiento' : 'Crear ticket'}
                 subtitle={isReadOnly ? 'Visualiza los datos del ticket' : isEditing ? 'Actualiza la información del ticket' : 'Registra una incidencia en el ticket'}
                 loading={saving || loadingCatalogs || loadingDetail}
                 secondaryButton={isReadOnly ? undefined : { label: 'Cancelar', onClick: onClose, disabled: saving }}
@@ -1608,7 +1616,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                         ) : (
                                             <Stack spacing={2} sx={{ mt: 1.5 }}>
                                                 <SearchableSelect
-                                                    label="Sede"
+                                                    label="Campus"
                                                     value={formValues.siteId}
                                                     onChange={(value) => handleChange('siteId', value)}
                                                     onBlur={() => handleBlur('siteId')}

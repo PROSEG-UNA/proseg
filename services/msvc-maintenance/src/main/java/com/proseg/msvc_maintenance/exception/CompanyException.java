@@ -57,6 +57,14 @@ public class CompanyException extends BaseException {
         );
     }
 
+    public static CompanyException userLookupFailed() {
+        return new CompanyException(
+                HttpStatus.BAD_GATEWAY,
+                "USER_LOOKUP_FAILED",
+                "No se pudo verificar el usuario contra el servicio de autenticacion. Intentalo de nuevo en unos minutos."
+        );
+    }
+
     public static CompanyException inviteUserFailed(String detail) {
         return new CompanyException(
                 HttpStatus.BAD_REQUEST,

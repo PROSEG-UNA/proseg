@@ -3,6 +3,7 @@ package com.proseg.msvc_maintenance.exception;
 import com.proseg.common.api.exception.BaseException;
 import com.proseg.common.api.response.ApiErrorResponse;
 import com.proseg.common.api.util.ApiResponseBuilder;
+import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -68,6 +69,18 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(FeignException.class)
+    public ResponseEntity<ApiErrorResponse> handleFeign(FeignException ex) {
+
+        log.error("Fallo la llamada a un servicio interno (HTTP {}): {}", ex.status(), ex.getMessage());
+
+        return ApiResponseBuilder.error(
+                "No se pudo completar la operacion porque un servicio interno no respondio correctamente. Intentalo de nuevo en unos minutos.",
+                List.of("UPSTREAM_SERVICE_ERROR"),
+                HttpStatus.BAD_GATEWAY
+        );
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGeneric(Exception ex) {
 
@@ -106,7 +119,7 @@ public class GlobalExceptionHandler {
         }
 
         return ApiResponseBuilder.error(
-                ex.getMessage() != null ? ex.getMessage() : ex.getClass().getName(),
+                "Ocurrio un error inesperado al procesar la solicitud.",
                 List.of("SPRING_ERROR"),
                 HttpStatus.INTERNAL_SERVER_ERROR
         );

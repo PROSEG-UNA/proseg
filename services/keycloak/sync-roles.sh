@@ -17,8 +17,10 @@ default-roles-${REALM}"
 privilegios_creados=0
 roles_creados=0
 asignaciones_creadas=0
+asignaciones_servicio_creadas=0
 privilegios_borrados=0
 asignaciones_revocadas=0
+asignaciones_servicio_revocadas=0
 errores=0
 
 kc() {
@@ -87,6 +89,48 @@ revocar_privilegio() {
   return 1
 }
 
+clave_variable() {
+  local nombre=$1
+  printf '%s' "${nombre//[^a-zA-Z0-9]/_}"
+}
+
+usuario_de_servicio() {
+  printf 'service-account-%s' "$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+}
+
+roles_actuales_servicio() {
+  local usuario=$1 id
+  id=$(kc get users -r "$REALM" -q "username=$usuario" -q exact=true         --fields id --format csv --noquotes 2>/dev/null | tr -d '' | head -1)
+  [ -z "$id" ] && return 1
+  kc get "users/$id/role-mappings/realm" -r "$REALM"      --fields name --format csv --noquotes 2>/dev/null | tr -d ''
+}
+
+asignar_rol_servicio_si_falta() {
+  local usuario=$1 privilegio=$2 existentes=$3 salida
+  if printf '%s
+' "$existentes" | grep -qxF "$privilegio"; then
+    return 1
+  fi
+  if salida=$(kc add-roles -r "$REALM" --uusername "$usuario" --rolename "$privilegio" 2>&1); then
+    echo "  + cuenta de servicio '$usuario' gana el privilegio $privilegio"
+    return 0
+  fi
+  echo "  ! error asignando $privilegio a '$usuario': $salida" >&2
+  errores=$((errores + 1))
+  return 1
+}
+
+revocar_rol_servicio() {
+  local usuario=$1 privilegio=$2 salida
+  if salida=$(kc remove-roles -r "$REALM" --uusername "$usuario" --rolename "$privilegio" 2>&1); then
+    echo "  - cuenta de servicio '$usuario' pierde el privilegio $privilegio"
+    return 0
+  fi
+  echo "  ! error revocando $privilegio de '$usuario': $salida" >&2
+  errores=$((errores + 1))
+  return 1
+}
+
 privilegios_del_realm() {
   kc get roles -r "$REALM" --fields name,composite --format csv --noquotes 2>/dev/null \
     | tr -d '\r' \
@@ -112,6 +156,7 @@ leer_archivo() {
   local seccion="" linea
   privilegios=()
   roles=()
+  servicios=()
   while IFS= read -r linea || [ -n "$linea" ]; do
     linea=${linea%$'\r'}
     linea=${linea%"${linea##*[![:space:]]}"}
@@ -130,6 +175,13 @@ leer_archivo() {
         seccion="rol:$seccion"
         continue
         ;;
+      \[servicio\ *\])
+        seccion=${linea#\[servicio }
+        seccion=${seccion%\]}
+        servicios+=("$seccion")
+        seccion="servicio:$seccion"
+        continue
+        ;;
       \[*\])
         echo "Sección desconocida: $linea" >&2
         errores=$((errores + 1))
@@ -142,11 +194,18 @@ leer_archivo() {
       local rol=${seccion#rol:}
       local clave="miembros_${rol// /_}"
       eval "$clave+=(\"\$linea\")"
+    elif [ "${seccion#servicio:}" != "$seccion" ]; then
+      local servicio=${seccion#servicio:}
+      local clave="servicio_$(clave_variable "$servicio")"
+      eval "$clave+=(\"\$linea\")"
     fi
   done < "$ARCHIVO"
 }
 
-declare -a privilegios roles
+declare -a privilegios roles servicios
+for servicio_declarado in $(grep -o '^\[servicio .*\]$' "$ARCHIVO" | sed -e 's/^\[servicio //' -e 's/\]$//' -e 's/[^a-zA-Z0-9]/_/g'); do
+  eval "declare -a servicio_${servicio_declarado}=()"
+done
 for rol_declarado in $(grep -o '^\[rol .*\]$' "$ARCHIVO" | sed -e 's/^\[rol //' -e 's/\]$//' -e 's/ /_/g'); do
   eval "declare -a miembros_${rol_declarado}=()"
 done
@@ -198,6 +257,32 @@ for rol in "${roles[@]}"; do
   done <<< "$existentes"
 done
 
+for servicio in "${servicios[@]+"${servicios[@]}"}"; do
+  clave="servicio_$(clave_variable "$servicio")"
+  eval "miembros=(\"\${${clave}[@]}\")"
+  usuario=$(usuario_de_servicio "$servicio")
+  if ! existentes=$(roles_actuales_servicio "$usuario"); then
+    echo "  ! no existe la cuenta de servicio '$usuario'; revisá que el cliente $servicio tenga service accounts habilitado" >&2
+    errores=$((errores + 1))
+    continue
+  fi
+  for privilegio in "${miembros[@]+"${miembros[@]}"}"; do
+    if asignar_rol_servicio_si_falta "$usuario" "$privilegio" "$existentes"; then
+      asignaciones_servicio_creadas=$((asignaciones_servicio_creadas + 1))
+    fi
+  done
+  [ "$SINCRONIZAR_BORRADO" = "true" ] || continue
+  declarados=$(printf '%s\n' "${miembros[@]+"${miembros[@]}"}")
+  while IFS= read -r sobrante; do
+    [ -z "$sobrante" ] && continue
+    esta_protegido "$sobrante" && continue
+    printf '%s\n' "$declarados" | grep -qxF "$sobrante" && continue
+    if revocar_rol_servicio "$usuario" "$sobrante"; then
+      asignaciones_servicio_revocadas=$((asignaciones_servicio_revocadas + 1))
+    fi
+  done <<< "$existentes"
+done
+
 if [ "$SINCRONIZAR_BORRADO" = "true" ]; then
   declarados=$(printf '%s\n' "${privilegios[@]}")
   while IFS= read -r sobrante; do
@@ -210,10 +295,10 @@ if [ "$SINCRONIZAR_BORRADO" = "true" ]; then
   done <<< "$(privilegios_del_realm)"
 fi
 
-echo "Listo: ${#privilegios[@]} privilegios y ${#roles[@]} roles revisados"
-echo "Agregados: $privilegios_creados privilegios, $roles_creados roles, $asignaciones_creadas asignaciones"
+echo "Listo: ${#privilegios[@]} privilegios, ${#roles[@]} roles y ${#servicios[@]} cuentas de servicio revisadas"
+echo "Agregados: $privilegios_creados privilegios, $roles_creados roles, $asignaciones_creadas asignaciones, $asignaciones_servicio_creadas asignaciones de servicio"
 if [ "$SINCRONIZAR_BORRADO" = "true" ]; then
-  echo "Borrados: $privilegios_borrados privilegios, $asignaciones_revocadas asignaciones revocadas"
+  echo "Borrados: $privilegios_borrados privilegios, $asignaciones_revocadas asignaciones revocadas, $asignaciones_servicio_revocadas de servicio revocadas"
 fi
 
 if [ "$errores" -gt 0 ]; then
