@@ -39,6 +39,8 @@ const STATUS_OPTIONS = [
     { value: 'DE_BAJA',  label: 'De baja' },
 ];
 
+const UNSPECIFIED_LOCATION_NAME = '-';
+
 const MIN_FLOOR_NUMBER = 1;
 
 const FLOOR_NUMBER_ERROR = `El piso debe ser ${MIN_FLOOR_NUMBER} o mayor`;
@@ -94,12 +96,12 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
     });
 
     const filteredBuildings = buildings.filter(b => {
-        if (b.name === '-') return false;
+        if (b.name === UNSPECIFIED_LOCATION_NAME) return false;
         return !formValues.campusId || b.campus?.id === formValues.campusId;
     });
 
     const filteredLocations = locations.filter(l => {
-        if (l.description === '-') return false;
+        if (l.description === UNSPECIFIED_LOCATION_NAME) return false;
         if (!formValues.buildingId) return false;
         return l.floor?.building?.id === formValues.buildingId;
     });
@@ -500,15 +502,30 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
 
         let resolvedBuildingId = buildingId;
         if (!resolvedBuildingId) {
-            const created = await createCatalogItem(INVENTORY_ENDPOINTS.buildings, { name: '-', campusId });
-            resolvedBuildingId = created.id;
+            const reusableBuilding = buildings.find(
+                (b) => b.name === UNSPECIFIED_LOCATION_NAME && b.campus?.id === campusId,
+            );
+            resolvedBuildingId = reusableBuilding
+                ? reusableBuilding.id
+                : (await createCatalogItem(
+                    INVENTORY_ENDPOINTS.buildings,
+                    { name: UNSPECIFIED_LOCATION_NAME, campusId },
+                )).id;
         }
 
+        const resolvedFloorNumber = floorNumber || MIN_FLOOR_NUMBER;
+        const reusableLocation = locations.find(
+            (l) => l.description === UNSPECIFIED_LOCATION_NAME
+                && l.floor?.building?.id === resolvedBuildingId
+                && String(l.floor?.name) === String(resolvedFloorNumber),
+        );
+        if (reusableLocation) return reusableLocation.id;
+
         const created = await createCatalogItem(INVENTORY_ENDPOINTS.locations, {
-            description: '-',
+            description: UNSPECIFIED_LOCATION_NAME,
             campusId,
             buildingId: resolvedBuildingId,
-            floorNumber: floorNumber || 1,
+            floorNumber: resolvedFloorNumber,
         });
         return created.id;
     };
