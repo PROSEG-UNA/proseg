@@ -10,6 +10,7 @@ import com.proseg.msvc_maintenance.exception.CompanyException;
 import com.proseg.msvc_maintenance.exception.UserCompanyException;
 import com.proseg.msvc_maintenance.repository.CompanyRepository;
 import com.proseg.msvc_maintenance.repository.UserCompanyRepository;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -49,8 +50,14 @@ public class CompanyUserManagementService {
             keycloakUser = response.getData();
         } catch (CompanyException ex) {
             throw ex;
-        } catch (Exception ex) {
+        } catch (FeignException.NotFound ex) {
             throw CompanyException.invalidKeycloakUser(keycloakUserId);
+        } catch (FeignException ex) {
+            log.error("Fallo la consulta del usuario {} contra msvc-auth (HTTP {})", keycloakUserId, ex.status());
+            throw CompanyException.userLookupFailed();
+        } catch (Exception ex) {
+            log.error("Error inesperado consultando el usuario {} contra msvc-auth", keycloakUserId, ex);
+            throw CompanyException.userLookupFailed();
         }
 
         Optional<UserCompany> existing = userCompanyRepository
