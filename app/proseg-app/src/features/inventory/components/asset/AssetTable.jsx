@@ -235,6 +235,10 @@ export default function AssetTable() {
                     },
                 }}
                 enableGlobalFilter
+                muiExpandButtonProps={({ row }) => ({
+                    disabled: !row.original.hasDetailContent,
+                    sx: { visibility: row.original.hasDetailContent ? 'visible' : 'hidden' },
+                })}
                 renderDetailPanel={({ row }) => (
                     row.original.hasDetailContent ? (
                         <AssetDetailPanel

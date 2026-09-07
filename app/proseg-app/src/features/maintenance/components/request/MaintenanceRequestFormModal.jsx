@@ -515,7 +515,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
                             helperText={touched.companyId ? (errors.companyId || ' ') : ' '}
                             sx={fieldSx}
                             items={companies}
-                            getItemLabel={(company) => `${company.name} — ${company.legalId}`}
+                            getItemLabel={(company) => (company.legalId ? `${company.name} — ${company.legalId}` : company.name)}
                             getItemValue={(company) => company.id}
                         />
                     </Box>

@@ -17,6 +17,7 @@ import com.proseg.msvc_maintenance.service.CompanyService;
 import com.proseg.msvc_maintenance.specification.GenericSpecifications;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -29,6 +30,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CompanyServiceImpl implements CompanyService {
 
     private final CompanyRepository companyRepository;
@@ -157,8 +159,16 @@ public class CompanyServiceImpl implements CompanyService {
                 if (response == null || response.getData() == null) {
                     throw CompanyException.invalidKeycloakUser(userId);
                 }
-            } catch (Exception ex) {
+            } catch (CompanyException ex) {
+                throw ex;
+            } catch (FeignException.NotFound ex) {
                 throw CompanyException.invalidKeycloakUser(userId);
+            } catch (FeignException ex) {
+                log.error("Fallo la validacion del usuario {} contra msvc-auth (HTTP {})", userId, ex.status());
+                throw CompanyException.userLookupFailed();
+            } catch (Exception ex) {
+                log.error("Error inesperado validando el usuario {} contra msvc-auth", userId, ex);
+                throw CompanyException.userLookupFailed();
             }
         }
     }
