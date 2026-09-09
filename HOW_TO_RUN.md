@@ -1,6 +1,6 @@
 # Cómo ejecutar PROSEG en local
 
-Los comandos del paso 1 se ejecutan desde la raíz del proyecto. A partir del paso 2 se trabaja dentro de `services/`, y el frontend del paso 5 en `app/proseg-app/`. Cada sección lo indica.
+Los comandos del paso 1 se ejecutan desde la raíz del proyecto. A partir del paso 2 se trabaja dentro de `services/`, y el frontend del paso 3 en `app/proseg-app/`. Cada sección lo indica.
 
 El entorno local es autónomo: Postgres, Keycloak, MinIO y Kafka corren en tu máquina. No depende de ningún servidor externo.
 
@@ -81,37 +81,7 @@ La primera vez tarda: son 9 servicios Java compilando sin caché.
 docker compose -f docker-compose.yml up -d
 ```
 
-## 3. Credenciales y accesos
-
-| Qué | Dirección | Usuario | Contraseña |
-|---|---|---|---|
-| Aplicación | `http://localhost:5173` | `dev` | `dev12345` |
-| Panel de Keycloak | `http://localhost:8180/auth` | `proseg-admin` | `proseg-local-dev` |
-| Panel de MinIO | `http://localhost:9101` | `proseg` | `proseg-local-dev` |
-| Postgres | `localhost:5433`, base `proseg-bd` | `proseg` | `proseg-local-dev` |
-| API (gateway) | `http://localhost:8081` | — | — |
-
-Esas contraseñas son deliberadamente obvias: sirven para levantar el entorno en tu máquina y **no deben usarse en producción**.
-
-Para cambiarlas hay que editar `services/.env` y volver a levantar con `down -v`, porque Postgres, Keycloak y MinIO se crean con esos valores la primera vez y después los ignoran.
-
-Una regla al inventar valores: evitá el signo `$`, que Docker Compose interpreta como variable. Y la clave de MinIO necesita al menos 8 caracteres.
-
-## 4. El usuario de desarrollo
-
-No hay que crear nada a mano: el entorno local se levanta con un usuario listo para entrar.
-
-| | |
-|---|---|
-| Usuario | `dev` |
-| Contraseña | `dev12345` |
-| Rol | `SUPER_ADMINISTRADOR` |
-
-Se puede cambiar en `services/.env` con `DEV_USER_USERNAME`, `DEV_USER_PASSWORD`, `DEV_USER_EMAIL` y `DEV_USER_ROLE`.
-
-Si volvés a levantar el entorno, el usuario no se pisa: si ya existe, no se le toca la contraseña. Cambiarla en `.env` no la actualiza — para eso hay que borrar el usuario desde el panel de Keycloak, o hacer `down -v`.
-
-## 5. Levantar el frontend
+## 3. Levantar el frontend
 
 Esto va en una segunda terminal, porque el servidor de desarrollo queda ocupando la que uses. Desde la raíz del repositorio:
 
@@ -133,7 +103,27 @@ npm run dev
 
 Queda en `http://localhost:5173` y habla con el gateway en `http://localhost:8081`.
 
-## 6. Verificación
+## 4. Credenciales y accesos
+
+| Qué | Dirección | Usuario | Contraseña |
+|---|---|---|---|
+| Aplicación | `http://localhost:5173` | `dev` | `dev12345` |
+| Panel de Keycloak | `http://localhost:8180/auth` | `proseg-admin` | `proseg-local-dev` |
+| Panel de MinIO | `http://localhost:9101` | `proseg` | `proseg-local-dev` |
+| Postgres | `localhost:5433`, base `proseg-bd` | `proseg` | `proseg-local-dev` |
+| API (gateway) | `http://localhost:8081` | — | — |
+
+Esas contraseñas son deliberadamente obvias: sirven para levantar el entorno en tu máquina y **no deben usarse en producción**.
+
+Para cambiarlas hay que editar `services/.env` y volver a levantar con `down -v`, porque Postgres, Keycloak y MinIO se crean con esos valores la primera vez y después los ignoran.
+
+Una regla al inventar valores: evitá el signo `$`, que Docker Compose interpreta como variable. Y la clave de MinIO necesita al menos 8 caracteres.
+
+No hay que crear nada a mano: el entorno local se levanta con el usuario `dev` de la tabla, con rol `SUPER_ADMINISTRADOR`, listo para entrar. Se puede cambiar en `services/.env` con `DEV_USER_USERNAME`, `DEV_USER_PASSWORD`, `DEV_USER_EMAIL` y `DEV_USER_ROLE`.
+
+Si volvés a levantar el entorno, el usuario no se pisa: si ya existe, no se le toca la contraseña. Cambiarla en `.env` no la actualiza — para eso hay que borrar el usuario desde el panel de Keycloak, o hacer `down -v`.
+
+## 5. Verificación
 
 Comprobá que los contenedores quedaron arriba:
 
@@ -159,13 +149,13 @@ docker compose -f docker-compose.yml logs keycloak-init dev-user-init dev-user-a
 
 Lo que tendrías que leer:
 
-- `keycloak-init` — el resumen de roles y privilegios. Si el realm se importó bien, dice `0 privilegios, 0 roles, 0 asignaciones`
+- `keycloak-init` — el resumen del ajuste del realm, que arranca con `Listo:` y no debe traer ninguna línea con `!`
 - `dev-user-init` — `usuario creado` y `rol SUPER_ADMINISTRADOR asignado`, o que ya existía
 - `dev-user-approve` — `Usuario de desarrollo aprobado (estado: APPROVED)`
 
 La prueba final: entrar a `http://localhost:5173` con `dev` / `dev12345`.
 
-## 7. Después de cambiar código
+## 6. Después de cambiar código
 
 Recompilá solo el servicio que tocaste:
 
@@ -177,7 +167,7 @@ Reemplazá `msvc-auth` por el servicio correspondiente.
 
 El frontend no necesita nada: con `npm run dev` el cambio se ve al guardar.
 
-## 8. Apagar
+## 7. Apagar
 
 ```bash
 docker compose -f docker-compose.yml down
@@ -191,38 +181,11 @@ docker compose -f docker-compose.yml down -v
 
 Eso elimina tu usuario, la base y los archivos de MinIO. El siguiente arranque reimporta el realm desde cero.
 
-## 9. Agregar o quitar un rol o un privilegio
-
-Se declaran en `services/keycloak/roles-privilegios.conf`:
-
-```
-[privilegios]
-LEER_ACTIVOS
-EXPORTAR_REPORTES
-
-[rol SUPER_ADMINISTRADOR]
-LEER_ACTIVOS
-EXPORTAR_REPORTES
-```
-
-En cada `up`, el contenedor `keycloak-init` ajusta Keycloak a lo que diga el archivo:
-
-- **Un privilegio que agregás** se crea, y se asigna a los roles que lo listen
-- **Un privilegio que quitás** se borra del realm, y con él desaparece de todos los roles que lo tuvieran
-- **Un rol que agregás** se crea con los privilegios que le pongas debajo
-- **Un rol existente** queda con exactamente los privilegios que diga el archivo: se agregan los que falten y se revocan los que sobren
-
-Dos cosas que **nunca** borra: los roles, aunque no estén en el archivo, y los internos de Keycloak (`offline_access`, `uma_authorization`, `default-roles-proseg-realm`).
-
-Para que un compañero reciba el cambio le alcanza con hacer `docker compose -f docker-compose.yml up -d`. No necesita borrar su volumen. Los borrados quedan listados en el log, con un `-` adelante.
-
-> El borrado **solo ocurre en desarrollo**. Lo activa `SYNC_DELETE: "true"`, que únicamente pone el compose de desarrollo; sin esa variable el script solo agrega.
-
 ## Cosas que conviene saber
 
 **La base arranca vacía.** Sin catálogos: tipos de activo, estados y unidades se cargan desde la aplicación.
 
-**Los datos son tuyos.** Cada quien tiene su propia base, su propio Keycloak y su propio MinIO. Un usuario o un rol que crees a mano no lo ve nadie más. Los cambios que deban compartirse van en `roles-privilegios.conf`.
+**Los datos son tuyos.** Cada quien tiene su propia base, su propio Keycloak y su propio MinIO. Un usuario o un rol que crees a mano no lo ve nadie más. Los privilegios y roles que deban compartirse se declaran en `services/keycloak/roles-privilegios.conf`: [ver HOW_TO_MANAGE_KEYCLOAK_PRIVILEGES.md](./HOW_TO_MANAGE_KEYCLOAK_PRIVILEGES.md).
 
 **Bloqueo por intentos fallidos.** A los 10 intentos fallidos Keycloak bloquea la cuenta temporalmente, empezando en 1 minuto.
 
