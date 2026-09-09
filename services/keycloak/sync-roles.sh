@@ -60,7 +60,7 @@ crear_rol_si_falta() {
 }
 
 dominios_actuales() {
-  kc get roles -r "$REALM" --fields name,attributes 2>/dev/null \
+  kc get roles -r "$REALM" -q briefRepresentation=false 2>/dev/null \
     | tr -d '\r\n' \
     | awk '{
         total = split($0, bloques, /"name"[[:space:]]*:[[:space:]]*"/)
