@@ -16,6 +16,7 @@ default-roles-${REALM}"
 
 privilegios_creados=0
 roles_creados=0
+dominios_aplicados=0
 asignaciones_creadas=0
 asignaciones_servicio_creadas=0
 privilegios_borrados=0
@@ -54,6 +55,36 @@ crear_rol_si_falta() {
     return 1
   fi
   echo "  ! error creando $tipo '$nombre': $salida" >&2
+  errores=$((errores + 1))
+  return 1
+}
+
+dominios_actuales() {
+  kc get roles -r "$REALM" --fields name,attributes 2>/dev/null \
+    | tr -d '\r\n' \
+    | awk '{
+        total = split($0, bloques, /"name"[[:space:]]*:[[:space:]]*"/)
+        for (i = 2; i <= total; i++) {
+          bloque = bloques[i]
+          nombre = bloque
+          sub(/".*/, "", nombre)
+          if (match(bloque, /"domain"[[:space:]]*:[[:space:]]*\[[[:space:]]*"[^"]*"/)) {
+            dominio = substr(bloque, RSTART, RLENGTH)
+            sub(/.*\[[[:space:]]*"/, "", dominio)
+            sub(/"$/, "", dominio)
+            print nombre "\t" dominio
+          }
+        }
+      }'
+}
+
+aplicar_dominio() {
+  local nombre=$1 dominio=$2 salida
+  if salida=$(kc update "roles/${nombre// /%20}" -r "$REALM" -s "attributes.domain=[\"$dominio\"]" 2>&1); then
+    echo "  ~ privilegio $nombre queda en el dominio '$dominio'"
+    return 0
+  fi
+  echo "  ! error moviendo $nombre al dominio '$dominio': $salida" >&2
   errores=$((errores + 1))
   return 1
 }
@@ -157,6 +188,8 @@ leer_archivo() {
   privilegios=()
   roles=()
   servicios=()
+  dominios_declarados=()
+  dominios=()
   while IFS= read -r linea || [ -n "$linea" ]; do
     linea=${linea%$'\r'}
     linea=${linea%"${linea##*[![:space:]]}"}
@@ -164,8 +197,11 @@ leer_archivo() {
     [ -z "$linea" ] && continue
     case "$linea" in
       \#*) continue ;;
-      "[privilegios]")
-        seccion="privilegios"
+      \[dominio\ *\])
+        seccion=${linea#\[dominio }
+        seccion=${seccion%\]}
+        dominios_declarados+=("$seccion")
+        seccion="dominio:$seccion"
         continue
         ;;
       \[rol\ *\])
@@ -188,8 +224,9 @@ leer_archivo() {
         continue
         ;;
     esac
-    if [ "$seccion" = "privilegios" ]; then
+    if [ "${seccion#dominio:}" != "$seccion" ]; then
       privilegios+=("$linea")
+      dominios["$linea"]=${seccion#dominio:}
     elif [ "${seccion#rol:}" != "$seccion" ]; then
       local rol=${seccion#rol:}
       local clave="miembros_${rol// /_}"
@@ -202,7 +239,8 @@ leer_archivo() {
   done < "$ARCHIVO"
 }
 
-declare -a privilegios roles servicios
+declare -a privilegios roles servicios dominios_declarados
+declare -A dominios dominios_remotos
 for servicio_declarado in $(grep -o '^\[servicio .*\]$' "$ARCHIVO" | sed -e 's/^\[servicio //' -e 's/\]$//' -e 's/[^a-zA-Z0-9]/_/g'); do
   eval "declare -a servicio_${servicio_declarado}=()"
 done
@@ -225,6 +263,11 @@ echo "Sincronizando roles y privilegios del realm $REALM"
 autenticar || exit 1
 leer_archivo
 
+if [ "$errores" -gt 0 ]; then
+  echo "El archivo $ARCHIVO tiene secciones inválidas; no se toca el realm" >&2
+  exit 1
+fi
+
 for privilegio in "${privilegios[@]}"; do
   if crear_rol_si_falta "$privilegio" "privilegio"; then
     privilegios_creados=$((privilegios_creados + 1))
@@ -234,6 +277,19 @@ done
 for rol in "${roles[@]}"; do
   if crear_rol_si_falta "$rol" "rol"; then
     roles_creados=$((roles_creados + 1))
+  fi
+done
+
+while IFS=$'\t' read -r nombre_remoto dominio_remoto; do
+  [ -z "$nombre_remoto" ] && continue
+  dominios_remotos["$nombre_remoto"]=$dominio_remoto
+done <<< "$(dominios_actuales)"
+
+for privilegio in "${privilegios[@]}"; do
+  dominio=${dominios["$privilegio"]}
+  [ "${dominios_remotos["$privilegio"]:-}" = "$dominio" ] && continue
+  if aplicar_dominio "$privilegio" "$dominio"; then
+    dominios_aplicados=$((dominios_aplicados + 1))
   fi
 done
 
@@ -295,8 +351,9 @@ if [ "$SINCRONIZAR_BORRADO" = "true" ]; then
   done <<< "$(privilegios_del_realm)"
 fi
 
-echo "Listo: ${#privilegios[@]} privilegios, ${#roles[@]} roles y ${#servicios[@]} cuentas de servicio revisadas"
+echo "Listo: ${#privilegios[@]} privilegios en ${#dominios_declarados[@]} dominios, ${#roles[@]} roles y ${#servicios[@]} cuentas de servicio revisadas"
 echo "Agregados: $privilegios_creados privilegios, $roles_creados roles, $asignaciones_creadas asignaciones, $asignaciones_servicio_creadas asignaciones de servicio"
+echo "Dominios actualizados: $dominios_aplicados"
 if [ "$SINCRONIZAR_BORRADO" = "true" ]; then
   echo "Borrados: $privilegios_borrados privilegios, $asignaciones_revocadas asignaciones revocadas, $asignaciones_servicio_revocadas de servicio revocadas"
 fi
