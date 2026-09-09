@@ -18,6 +18,7 @@ import ConstructionIcon from '@mui/icons-material/Construction';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import GeneralModal from '../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../common/components/DialogModal.jsx';
 import { useRoleFormData } from '../hooks/useRoleFormData';
@@ -114,7 +115,17 @@ const DOMAIN_META = {
         icon: ConfirmationNumberIcon,
         description: 'Gestión de empresas, solicitudes, técnicos y tickets',
     },
+    Transporte: {
+        lightColor: '#0891b2',
+        darkColor:  '#22d3ee',
+        lightBg:    '#ecfeff',
+        darkBg:     'rgba(22,78,99,0.35)',
+        icon: LocalShippingIcon,
+        description: 'Choferes, vehículos, giras y asignaciones',
+    },
 };
+
+const DOMINIO_SIN_ASIGNAR = 'Sin dominio';
 
 const ROLE_PRESETS = [
     {
@@ -145,21 +156,6 @@ const ROLE_PRESETS = [
         privileges: ['CREAR_ROL','EDITAR_ROL','ELIMINAR_ROL','LEER_ROLES_BASE','LEER_ROLES_COMPUESTOS','LEER_COMPOSITES_ROL','ASIGNAR_ROL_USUARIO','REMOVER_ROL_USUARIO'],
     },
     {
-        id: 'gestion-mantenimiento',
-        name: 'Gestión de Mantenimiento',
-        description: 'Permisos de empresas, solicitudes, técnicos y tickets',
-        color: '#0f766e',
-        darkColor: '#2dd4bf',
-        icon: ConfirmationNumberIcon,
-        privileges: [
-            'LEER_EMPRESAS', 'GESTIONAR_EMPRESAS', 'ELIMINAR_EMPRESAS',
-            'LEER_SOLICITUDES_MANTENIMIENTO', 'GESTIONAR_SOLICITUDES_MANTENIMIENTO', 'ELIMINAR_SOLICITUDES_MANTENIMIENTO',
-            'LEER_TECNICOS_MANTENIMIENTO', 'GESTIONAR_TECNICOS_MANTENIMIENTO', 'ELIMINAR_TECNICOS_MANTENIMIENTO',
-            'LEER_USUARIOS_EMPRESAS', 'GESTIONAR_USUARIOS_EMPRESAS', 'ELIMINAR_USUARIOS_EMPRESAS',
-            'LEER_TICKET_MANTENIMIENTO', 'CREAR_TICKETS_MANTENIMIENTO', 'EDITAR_TICKETS_MANTENIMIENTO', 'ELIMINAR_TICKETS_MANTENIMIENTO',
-        ],
-    },
-    {
         id: 'administrador',
         name: 'Administrador',
         description: 'Acceso total — todos los privilegios del sistema',
@@ -171,22 +167,20 @@ const ROLE_PRESETS = [
 ];
 
 const groupPrivilegesByDomain = (privileges) => {
-    const groups = {
-        Usuarios: [],
-        Roles: [],
-        'Roles de Usuario': [],
-        Inventario: [],
-        Ubicaciones: [],
-        Archivos: [],
-        Empresas: [],
-        'Solicitud de mantenimiento': [],
-        'Registro de mantenimiento': [],
-        Tickets: [],
-    };
+    const groups = {};
+    Object.keys(DOMAIN_META).forEach(domain => { groups[domain] = []; });
+
+    const sinDominio = [];
     privileges.forEach(p => {
-        const target = p.domain && groups[p.domain] !== undefined ? p.domain : 'Usuarios';
-        groups[target].push(p);
+        if (!p.domain) {
+            sinDominio.push(p);
+            return;
+        }
+        if (!groups[p.domain]) groups[p.domain] = [];
+        groups[p.domain].push(p);
     });
+
+    if (sinDominio.length > 0) groups[DOMINIO_SIN_ASIGNAR] = sinDominio;
     return groups;
 };
 
