@@ -43,6 +43,10 @@ Para conocer los requisitos y pasos para ejecutar PROSEG:
 
 [Ver HOW_TO_RUN.md](./HOW_TO_RUN.md)
 
+Para agregar o quitar privilegios, dominios y roles en Keycloak:
+
+[Ver HOW_TO_MANAGE_KEYCLOAK_PRIVILEGES.md](./HOW_TO_MANAGE_KEYCLOAK_PRIVILEGES.md)
+
 ---
 
 ## <img src="https://cdn.simpleicons.org/diagramsdotnet/8B0000" width="22" valign="middle"/> &nbsp;Arquitectura
