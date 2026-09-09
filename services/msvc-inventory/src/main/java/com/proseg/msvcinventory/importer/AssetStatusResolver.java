@@ -24,8 +24,11 @@ public final class AssetStatusResolver {
         if (normalized.isEmpty()) {
             return Optional.empty();
         }
-        if (normalized.equals("baja")) {
+        if (normalized.equals("baja") || normalized.equals("en desuso") || normalized.equals("desuso")) {
             return Optional.of(AssetStatus.DE_BAJA);
+        }
+        if (normalized.equals("en uso") || normalized.equals("uso")) {
+            return Optional.of(AssetStatus.APROBADO);
         }
         return Optional.ofNullable(VALUES_BY_NAME.get(normalized));
     }
