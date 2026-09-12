@@ -23,8 +23,8 @@ COPY msvc-common/src ./msvc-common/src
 COPY ${EXTRA_MODULE}/src ./${EXTRA_MODULE}/src
 COPY ${SERVICE_NAME}/src ./${SERVICE_NAME}/src
 
-RUN mvn -B -pl ${SERVICE_NAME} -am -DskipTests -Dmaven.test.skip=true \
-      -Dmaven.repo.local=/app/.m2 clean package
+RUN mvn -B -pl ${SERVICE_NAME} -am \
+      -Dmaven.repo.local=/app/.m2 clean verify
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app
