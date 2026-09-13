@@ -1,13 +1,14 @@
 package com.proseg.msvcinventory;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+import static org.assertj.core.api.Assertions.assertThatCode;
+
 class MsvcInventoryApplicationTests {
 
     @Test
-    void contextLoads() {
+    void mainClass_instantiationDoesNotRequireSpringContext() {
+        assertThatCode(MsvcInventoryApplication::new).doesNotThrowAnyException();
     }
 
 }
