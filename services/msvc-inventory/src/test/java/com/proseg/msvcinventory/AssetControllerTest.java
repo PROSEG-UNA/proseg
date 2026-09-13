@@ -33,7 +33,6 @@ class AssetControllerTest {
     @DisplayName("POST /assets crea activo y responde 201 con body")
     void postAssets_creaActivo_responde201() throws Exception {
         AssetService service = Mockito.mock(AssetService.class);
-        // controller constructor expects (AssetService assetService, AssetArchiveService assetArchiveService, AssetImportService assetImportService)
         AssetController controller = new AssetController(service, null, null);
         MockMvc mvc = MockMvcBuilders.standaloneSetup(controller).build();
 

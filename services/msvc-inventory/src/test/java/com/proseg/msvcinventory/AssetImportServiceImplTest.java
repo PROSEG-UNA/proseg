@@ -81,7 +81,6 @@ class AssetImportServiceImplTest {
         when(rowProcessor.planCreations(any())).thenReturn(List.of(PendingCreationDto.builder().key("K").build()));
 
         AssetImportResponseDto res = service.confirm(req);
-        // When there are no errors and all approved, created == received
         assertThat(res.isCancelled()).isFalse();
         assertThat(res.getCreated()).isEqualTo(req.getRows().size());
     }
