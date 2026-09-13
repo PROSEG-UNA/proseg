@@ -10,6 +10,8 @@ collections:
     path: "collections/msvc-maintenance"
   - name: "msvc-inventory"
     path: "collections/msvc-inventory"
+  - name: "msvc-forms"
+    path: "collections/msvc-forms"
 
 specs:
 
