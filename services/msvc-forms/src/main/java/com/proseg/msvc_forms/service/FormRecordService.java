@@ -14,7 +14,7 @@ public interface FormRecordService {
 
     FormRecordResponseDto getById(UUID id);
 
-    Page<FormRecordResponseDto> findAll(UUID formTypeId, String createdBy, Pageable pageable);
+    Page<FormRecordResponseDto> findAll(UUID formTypeId, String createdBy, Pageable pageable, Authentication authentication);
 
     Page<FormRecordResponseDto> findByFormTypeCode(String formTypeCode, Pageable pageable);
 

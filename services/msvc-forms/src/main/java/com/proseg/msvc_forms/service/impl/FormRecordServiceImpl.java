@@ -1,7 +1,9 @@
 package com.proseg.msvc_forms.service.impl;
 
+import com.proseg.msvc_forms.client.AuthUserClient;
 import com.proseg.msvc_forms.dto.request.FormRecordCreateRequestDto;
 import com.proseg.msvc_forms.dto.response.FormRecordResponseDto;
+import com.proseg.msvc_forms.dto.response.KeycloakUserResponseDto;
 import com.proseg.msvc_forms.entity.FormRecord;
 import com.proseg.msvc_forms.entity.FormType;
 import com.proseg.msvc_forms.exception.FormRecordNotFoundException;
@@ -19,7 +21,13 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +37,7 @@ public class FormRecordServiceImpl implements FormRecordService {
     private final FormTypeRepository formTypeRepository;
     private final FormRecordMapper formRecordMapper;
     private final FormValidatorRegistry formValidatorRegistry;
+    private final AuthUserClient authUserClient;
 
     @Override
     @Transactional
@@ -62,9 +71,15 @@ public class FormRecordServiceImpl implements FormRecordService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<FormRecordResponseDto> findAll(UUID formTypeId, String createdBy, Pageable pageable) {
-        return formRecordRepository.findWithFilters(formTypeId, createdBy, pageable)
+    public Page<FormRecordResponseDto> findAll(UUID formTypeId, String createdBy, Pageable pageable, Authentication authentication) {
+        Page<FormRecordResponseDto> page = formRecordRepository.findWithFilters(formTypeId, createdBy, pageable)
             .map(formRecordMapper::toResponse);
+
+        Map<String, String> authorNames = resolveAuthorNames(page.getContent(), authentication);
+        page.getContent().forEach(dto ->
+            dto.setCreatedByName(authorNames.getOrDefault(dto.getCreatedBy(), "Usuario")));
+
+        return page;
     }
 
     @Override
@@ -109,5 +124,50 @@ public class FormRecordServiceImpl implements FormRecordService {
             return jwt.getToken().getSubject();
         }
         return authentication == null ? "" : authentication.getName();
+    }
+
+    private String extractToken(Authentication authentication) {
+        if (authentication instanceof JwtAuthenticationToken jwt) {
+            return jwt.getToken().getTokenValue();
+        }
+        return null;
+    }
+
+    private Map<String, String> resolveAuthorNames(List<FormRecordResponseDto> records, Authentication authentication) {
+        Set<String> authorIds = records.stream()
+            .map(FormRecordResponseDto::getCreatedBy)
+            .filter(id -> id != null && !id.isBlank())
+            .collect(Collectors.toCollection(HashSet::new));
+
+        if (authorIds.isEmpty()) {
+            return Map.of();
+        }
+
+        List<KeycloakUserResponseDto> users = authUserClient.findUsersByIds(
+            new java.util.ArrayList<>(authorIds), extractToken(authentication));
+
+        return users.stream()
+            .filter(user -> user.id() != null && !user.id().isBlank())
+            .collect(Collectors.toMap(
+                KeycloakUserResponseDto::id,
+                this::buildAuthorName,
+                (current, replacement) -> current
+            ));
+    }
+
+    private String buildAuthorName(KeycloakUserResponseDto user) {
+        String fullName = ((user.firstName() != null ? user.firstName() : "") + " "
+            + (user.lastName() != null ? user.lastName() : "")).trim();
+
+        if (!fullName.isBlank()) {
+            return fullName;
+        }
+        if (user.username() != null && !user.username().isBlank()) {
+            return user.username();
+        }
+        if (user.email() != null && !user.email().isBlank()) {
+            return user.email();
+        }
+        return user.id();
     }
 }

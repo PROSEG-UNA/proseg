@@ -25,6 +25,8 @@ public class FormRecordResponseDto {
 
     private String createdBy;
 
+    private String createdByName;
+
     private OffsetDateTime createdAt;
 
     private String updatedBy;

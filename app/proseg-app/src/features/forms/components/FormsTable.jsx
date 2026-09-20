@@ -26,10 +26,11 @@ export default function FormsTable({ selectedFormTypeId = '' }) {
             Cell: ({ row }) => row.original.formTypeName || formTypeLabel(row.original.formTypeCode),
         },
         {
-            accessorKey: 'createdBy',
+            accessorKey: 'createdByName',
             header: 'Creado por',
             size: 220,
             grow: true,
+            Cell: ({ row }) => row.original.createdByName || row.original.createdBy || '—',
         },
         {
             accessorKey: 'createdAt',

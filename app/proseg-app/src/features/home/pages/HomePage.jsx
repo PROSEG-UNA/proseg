@@ -27,6 +27,7 @@ import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownR
 import CleaningServicesOutlinedIcon from '@mui/icons-material/CleaningServicesOutlined';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import EmailIcon from '@mui/icons-material/Email';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import { FeatureCard } from '../../../common/components/FeatureCard.jsx';
 import { APP_CONFIG } from '../../../config/appConfig.js';
 import { usePermissions } from '../../../common/hooks/usePermissions.js';
@@ -435,6 +436,19 @@ export function HomePage() {
                                     description="Gestión de correos institucionales"
                                     buttonLabel="Ir a Correos"
                                     onNavigate={() => navigate('/ubicaciones/correos')}
+                                />
+                            ));
+                        }
+
+                        if (hasPath('/formularios')) {
+                            pushCard('formularios', (
+                                <FeatureCard
+                                    fullHeight
+                                    icon={<DescriptionOutlinedIcon fontSize="inherit" />}
+                                    title="Formularios"
+                                    description="Registro y gestión de formularios de seguridad"
+                                    buttonLabel="Ir a Formularios"
+                                    onNavigate={() => navigate('/formularios')}
                                 />
                             ));
                         }

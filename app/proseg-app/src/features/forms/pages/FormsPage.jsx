@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { Box, Container, MenuItem, TextField } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import DescriptionIcon from '@mui/icons-material/Description';
 import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
 import DialogModal from '../../../common/components/DialogModal.jsx';
-import { PageHeader, PrimaryButton, FeatureCard } from '../../../common/components';
+import { PageHeader, PrimaryButton } from '../../../common/components';
 import { usePermissions } from '../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../common/constants/permissions';
 import { useQueryClient } from '@tanstack/react-query';
@@ -51,17 +50,6 @@ export default function FormsPage() {
                         </PrimaryButton>
                     ) : null}
                 />
-
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
-                    <FeatureCard
-                        icon={<DescriptionIcon fontSize="inherit" />}
-                        title="Registro unificado"
-                        description="Un solo módulo para múltiples tipos de formularios físicos."
-                        buttonLabel="Ver listado"
-                        onNavigate={() => {}}
-                        sx={{ maxWidth: { xs: '100%', lg: '380px' }, cursor: 'default' }}
-                    />
-                </Box>
 
                 <Box sx={{ mb: 2, maxWidth: 420 }}>
                     <TextField

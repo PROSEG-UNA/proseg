@@ -42,9 +42,10 @@ public class FormRecordController {
     public ResponseEntity<ApiResponse<PageResponse<FormRecordResponseDto>>> findAll(
             @RequestParam(required = false) UUID formTypeId,
             @RequestParam(required = false) String createdBy,
-            @PageableDefault(size = 10, page = 0) Pageable pageable) {
+            @PageableDefault(size = 10, page = 0) Pageable pageable,
+            Authentication authentication) {
         return ApiResponseBuilder.ok(
-                PageMapper.from(formRecordService.findAll(formTypeId, createdBy, pageable)),
+                PageMapper.from(formRecordService.findAll(formTypeId, createdBy, pageable, authentication)),
                 "Lista de formularios"
         );
     }

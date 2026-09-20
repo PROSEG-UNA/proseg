@@ -10,6 +10,7 @@ function mapRecordToRow(record) {
         formTypeName: record.formTypeName ?? '—',
         formTypeCode: record.formTypeCode ?? '',
         createdBy: record.createdBy ?? '—',
+        createdByName: record.createdByName ?? record.createdBy ?? '—',
         createdAt: record.createdAt ?? null,
         updatedAt: record.updatedAt ?? null,
         data: record.data ?? {},

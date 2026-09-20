@@ -40,6 +40,9 @@ spring:
 routes:
   forms: /api/v1/forms
 
+gateway:
+  base-url: ${GATEWAY_BASE_URL:http://msvc-gateway:8081}
+
 management:
   endpoints:
     web:

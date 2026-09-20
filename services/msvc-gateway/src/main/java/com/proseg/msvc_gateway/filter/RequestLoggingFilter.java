@@ -21,26 +21,44 @@ public class RequestLoggingFilter implements WebFilter {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         String path = exchange.getRequest().getPath().value();
+
         if (!path.startsWith("/api/v1/forms")) {
             return chain.filter(exchange);
         }
 
         return ReactiveSecurityContextHolder.getContext()
                 .map(securityContext -> securityContext.getAuthentication())
-                .defaultIfEmpty(null)
-                .flatMap(authentication -> {
-                    log.info("Gateway request start path={} principal={} authorities={}",
-                            path,
-                            authentication == null ? "anonymous" : authentication.getName(),
-                            extractAuthorities(authentication));
+                .flatMap(authentication ->
+                        logRequest(exchange, chain, path, authentication)
+                )
+                .switchIfEmpty(
+                        logRequest(exchange, chain, path, null)
+                );
+    }
 
-                    return chain.filter(exchange)
-                            .doFinally(signalType -> {
-                                HttpStatusCode statusCode = exchange.getResponse().getStatusCode();
-                                log.info("Gateway request end path={} status={}",
-                                        path,
-                                        statusCode == null ? "null" : statusCode.value());
-                            });
+    private Mono<Void> logRequest(
+            ServerWebExchange exchange,
+            WebFilterChain chain,
+            String path,
+            Authentication authentication
+    ) {
+        log.info(
+                "Gateway request start path={} principal={} authorities={}",
+                path,
+                authentication == null ? "anonymous" : authentication.getName(),
+                extractAuthorities(authentication)
+        );
+
+        return chain.filter(exchange)
+                .doFinally(signalType -> {
+                    HttpStatusCode statusCode =
+                            exchange.getResponse().getStatusCode();
+
+                    log.info(
+                            "Gateway request end path={} status={}",
+                            path,
+                            statusCode == null ? "null" : statusCode.value()
+                    );
                 });
     }
 
