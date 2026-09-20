@@ -33,6 +33,7 @@ import VehicleMaintenancePage from './features/transport/pages/maintenance/Vehic
 import ToursPage from './features/transport/pages/tours/ToursPage.jsx';
 import AssignmentPage from './features/transport/pages/assignment/AssignmentPage.jsx';
 import CleaningPage from './features/transport/pages/cleaning/CleaningPage.jsx';
+import FormsPage from './features/forms/pages/FormsPage.jsx';
 
 function App() {
     return (
@@ -226,6 +227,18 @@ function App() {
                                             element={
                                                 <DashboardLayout title="Gestión de Asignaciones" pageTitle="Asignaciones">
                                                     <AssignmentPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/formularios"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Registro de Formularios" pageTitle="Formularios">
+                                                    <FormsPage />
                                                 </DashboardLayout>
                                             }
                                         />
