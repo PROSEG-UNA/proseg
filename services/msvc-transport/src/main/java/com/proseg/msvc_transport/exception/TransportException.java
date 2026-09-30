@@ -24,4 +24,8 @@ public class TransportException extends BaseException {
     public static TransportException badRequest(String code, String message) {
         return new TransportException(HttpStatus.BAD_REQUEST, code, message);
     }
+
+    public static TransportException unprocessable(String code, String message) {
+        return new TransportException(HttpStatus.UNPROCESSABLE_ENTITY, code, message);
+    }
 }

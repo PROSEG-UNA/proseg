@@ -13,7 +13,6 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CleaningDuplicateGroupDto {
-    private String key;
-    private List<Integer> rowIndexes;
+public class CleaningImportSchemaDto {
+    private List<CleaningImportColumnDto> columns;
 }

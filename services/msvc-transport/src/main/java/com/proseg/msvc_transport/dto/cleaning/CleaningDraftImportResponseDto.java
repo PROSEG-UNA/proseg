@@ -7,15 +7,17 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.List;
+import java.util.UUID;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CleaningFinalizeResponseDto {
-    private List<CleaningRowDto> cleanedRows;
-    private int originalRows;
-    private int removedRows;
-    private int remainingRows;
+public class CleaningDraftImportResponseDto {
+    private UUID draftId;
+    private int received;
+    private int duplicateRows;
+    private int conflictingRows;
+    private List<CleaningDraftRowIssueDto> errors;
 }
