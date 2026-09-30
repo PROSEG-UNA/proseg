@@ -33,6 +33,8 @@ import VehicleMaintenancePage from './features/transport/pages/maintenance/Vehic
 import ToursPage from './features/transport/pages/tours/ToursPage.jsx';
 import AssignmentPage from './features/transport/pages/assignment/AssignmentPage.jsx';
 import CleaningPage from './features/transport/pages/cleaning/CleaningPage.jsx';
+import CleaningImportPage from './features/transport/pages/cleaning/CleaningImportPage.jsx';
+import CleaningDraftPage from './features/transport/pages/cleaning/CleaningDraftPage.jsx';
 
 function App() {
     return (
@@ -166,6 +168,30 @@ function App() {
                                             element={
                                                 <DashboardLayout title="Depuración de Giras" pageTitle="Depuración">
                                                     <CleaningPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/transporte/depuracion/nueva"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Nueva Depuración" pageTitle="Depuración">
+                                                    <CleaningImportPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/transporte/depuracion/borradores/:draftId"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Borrador de Depuración" pageTitle="Depuración">
+                                                    <CleaningDraftPage />
                                                 </DashboardLayout>
                                             }
                                         />

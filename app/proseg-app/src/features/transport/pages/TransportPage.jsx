@@ -137,7 +137,6 @@ export default function TransportPage() {
     const refreshVehicles = () => invalidateTransport(queryKeys.transport.vehicles());
     const refreshMaintenance = () => invalidateTransport(queryKeys.transport.maintenance());
     const refreshTours = () => invalidateTransport(queryKeys.transport.tours());
-    const refreshAssignment = () => invalidateTransport(queryKeys.transport.assignment());
 
     if (!canViewCleaning && !canViewDrivers && !canViewVehicles && !canViewMaintenance && !canViewTours && !canViewAssignment) {
         return <AccessDeniedState />;
@@ -193,7 +192,7 @@ export default function TransportPage() {
 
                 <Box sx={{ pt: 3 }}>
                     {currentTab?.key === 'cleaning' && (
-                        <CleaningPanel onImported={() => { refreshTours(); refreshAssignment(); }} />
+                        <CleaningPanel />
                     )}
 
                     {currentTab?.key === 'drivers' && (

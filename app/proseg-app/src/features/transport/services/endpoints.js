@@ -6,4 +6,10 @@ export const TRANSPORT_ENDPOINTS = {
     assignment: '/api/v1/transport/assignments',
     cleaning: '/api/v1/transport/cleaning',
     cleaningHistory: '/api/v1/transport/cleaning/history',
+    cleaningDrafts: '/api/v1/transport/cleaning/drafts',
+};
+
+export const TRANSPORT_DOCUMENT_ENDPOINTS = {
+    cleaningImport: '/api/v1/document-processor/imports/tours',
+    cleaningImportTemplate: '/api/v1/document-processor/imports/tours/template',
 };

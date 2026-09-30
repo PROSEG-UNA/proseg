@@ -25,8 +25,8 @@ export default function CleaningPage() {
     ]);
 
     const tabs = useMemo(() => [
-        canReadHistory ? { key: 'history', label: 'Historial' } : null,
         canExecuteCleaning ? { key: 'new', label: 'Nueva depuración' } : null,
+        canReadHistory ? { key: 'history', label: 'Historial' } : null,
     ].filter(Boolean), [canExecuteCleaning, canReadHistory]);
 
     if (!tabs.length) return <AccessDeniedState />;
