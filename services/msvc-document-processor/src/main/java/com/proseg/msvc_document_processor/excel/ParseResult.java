@@ -15,6 +15,8 @@ public class ParseResult {
 
     private int totalRows;
 
+    private int blocksDetected;
+
     private List<Map<String, Object>> rows;
 
     private List<RowIssueDto> errors;

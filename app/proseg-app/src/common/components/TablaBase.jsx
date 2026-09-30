@@ -1,8 +1,7 @@
-import { useMemo, useState } from 'react';
+import { startTransition, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
     MaterialReactTable,
     useMaterialReactTable,
-    MRT_ToggleFiltersButton,
     MRT_ShowHideColumnsButton,
     MRT_ToggleDensePaddingButton,
     MRT_ToggleFullScreenButton,
@@ -10,7 +9,7 @@ import {
     MRT_LinearProgressBar,
     MRT_BottomToolbar,
 } from 'material-react-table';
-import { Box, IconButton, TextField, useMediaQuery } from '@mui/material';
+import { Box, IconButton, TextField, Tooltip, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
@@ -18,6 +17,135 @@ import { MRT_Localization_ES } from 'material-react-table/locales/es';
 import { headerSurfaceSx } from '../theme/sxStyles';
 import TableHorizontalScrollbar from './TableHorizontalScrollbar.jsx';
 import { useFillToBottom, TOP_GAP, BOTTOM_GAP } from '../hooks/useFillToBottom.js';
+
+const GLOBAL_FILTER_DEBOUNCE_MS = 300;
+const INTERACTIVE_ELEMENTS_SELECTOR = 'button, a, input, textarea, select, label, [role="button"], [role="checkbox"], [role="menuitem"]';
+
+function applyGlobalFilter(table, value) {
+    const nextValue = value || undefined;
+    if (nextValue === (table.getState().globalFilter || undefined)) return;
+    table.setGlobalFilter(nextValue);
+}
+
+function DebouncedSearchField({ table, onRequestClose, ...textFieldProps }) {
+    const [value, setValue] = useState(() => table.getState().globalFilter ?? '');
+
+    useEffect(() => {
+        const timeoutId = setTimeout(() => applyGlobalFilter(table, value), GLOBAL_FILTER_DEBOUNCE_MS);
+        return () => clearTimeout(timeoutId);
+    }, [value, table]);
+
+    return (
+        <TextField
+            autoFocus
+            size="small"
+            variant="outlined"
+            placeholder="Buscar..."
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            slotProps={{
+                input: {
+                    endAdornment: (
+                        <IconButton
+                            size="small"
+                            edge="end"
+                            onClick={() => {
+                                setValue('');
+                                applyGlobalFilter(table, '');
+                                onRequestClose?.();
+                            }}
+                        >
+                            <CloseIcon fontSize="small" />
+                        </IconButton>
+                    ),
+                },
+            }}
+            {...textFieldProps}
+        />
+    );
+}
+
+function createValueStore(initialValue) {
+    let value = initialValue;
+    const listeners = new Set();
+    return {
+        get: () => value,
+        set: (nextValue) => {
+            if (nextValue === value) return;
+            value = nextValue;
+            listeners.forEach((listener) => listener());
+        },
+        subscribe: (listener) => {
+            listeners.add(listener);
+            return () => listeners.delete(listener);
+        },
+    };
+}
+
+function useStoreValue(store) {
+    return useSyncExternalStore(store.subscribe, store.get);
+}
+
+function FiltersToggleButton({ table, store, onToggle }) {
+    const isVisible = useStoreValue(store);
+    const { icons: { FilterListIcon, FilterListOffIcon }, localization } = table.options;
+
+    return (
+        <Tooltip title={localization.showHideFilters}>
+            <IconButton aria-label={localization.showHideFilters} onClick={() => onToggle(!isVisible)}>
+                {isVisible ? <FilterListOffIcon /> : <FilterListIcon />}
+            </IconButton>
+        </Tooltip>
+    );
+}
+
+function HiddenFiltersStyle({ store, scopeId }) {
+    const isVisible = useStoreValue(store);
+    if (isVisible) return null;
+    return <style>{`[data-table-scope="${scopeId}"] thead th > .MuiCollapse-root { display: none; }`}</style>;
+}
+
+function useSearchOpenState(table) {
+    return useState(() => Boolean(table.getState().globalFilter));
+}
+
+function DesktopToolbarSearch({ table }) {
+    const [isOpen, setIsOpen] = useSearchOpenState(table);
+
+    if (isOpen) {
+        return <DebouncedSearchField table={table} sx={{ width: 250 }} onRequestClose={() => setIsOpen(false)} />;
+    }
+    return (
+        <IconButton size="small" onClick={() => setIsOpen(true)}>
+            <SearchIcon fontSize="small" />
+        </IconButton>
+    );
+}
+
+function MobileToolbarContent({ table, enableGlobalFilter, actionIcons }) {
+    const [isOpen, setIsOpen] = useSearchOpenState(table);
+
+    if (isOpen) {
+        return (
+            <Box sx={{ display: 'flex', flexDirection: 'column', p: 1, gap: 1 }}>
+                <DebouncedSearchField table={table} fullWidth onRequestClose={() => setIsOpen(false)} />
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    {actionIcons}
+                </Box>
+            </Box>
+        );
+    }
+    return (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', px: 1, py: 0.5 }}>
+            {enableGlobalFilter && (
+                <IconButton size="small" onClick={() => setIsOpen(true)}>
+                    <SearchIcon fontSize="small" />
+                </IconButton>
+            )}
+            {actionIcons}
+        </Box>
+    );
+}
 
 export default function TableBase({
                                       columns,
@@ -31,6 +159,7 @@ export default function TableBase({
                                       enableRowSelection = false,
                                       rowSelection,
                                       onRowSelectionChange,
+                                      onRowClick,
                                       enablePagination = true,
                                       enableColumnFilters = true,
                                       enableGlobalFilter = true,
@@ -47,13 +176,29 @@ export default function TableBase({
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const isTouch = useMediaQuery('(pointer: coarse)');
-    const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-    const [isDesktopSearchOpen, setIsDesktopSearchOpen] = useState(false);
+    const tableElRef = useRef(null);
+    const tableScopeId = useId();
     const fillsToBottom = fillToBottom && !maxHeight;
 
     const stableColumns = useMemo(() => columns, [columns]);
     const tableOptionsState = tableOptions.state ?? {};
     const tableOptionsInitialState = tableOptions.initialState ?? {};
+
+    const initialFiltersVisible = Boolean(tableOptionsState.showColumnFilters ?? tableOptionsInitialState.showColumnFilters);
+    const [filtersVisibilityStore] = useState(() => createValueStore(initialFiltersVisible));
+    const [areFiltersMounted, setAreFiltersMounted] = useState(initialFiltersVisible);
+
+    useEffect(() => {
+        if (enableColumnFilters) startTransition(() => setAreFiltersMounted(true));
+    }, [enableColumnFilters]);
+
+    const setFiltersVisible = (isVisible) => {
+        filtersVisibilityStore.set(isVisible);
+        if (isVisible) setAreFiltersMounted(true);
+        if (tableOptions.onShowColumnFiltersChange) {
+            startTransition(() => tableOptions.onShowColumnFiltersChange(isVisible));
+        }
+    };
 
     const mergedState = {
         ...tableOptionsState,
@@ -61,6 +206,7 @@ export default function TableBase({
         showLoadingOverlay: false,
         showProgressBars: loading || fetching,
         showAlertBanner: !!error,
+        showColumnFilters: enableColumnFilters && areFiltersMounted,
         ...(enableRowSelection && rowSelection != null ? { rowSelection } : {}),
     };
 
@@ -98,6 +244,9 @@ export default function TableBase({
         onRowSelectionChange,
         enablePagination,
         enableColumnFilters,
+        onShowColumnFiltersChange: (updater) => {
+            setFiltersVisible(typeof updater === 'function' ? updater(filtersVisibilityStore.get()) : updater);
+        },
         columnFilterDisplayMode: 'subheader',
         enableGlobalFilter,
         enableDensityToggle,
@@ -108,7 +257,7 @@ export default function TableBase({
         enableStickyHeader,
         enableStickyFooter,
         enableTopToolbar: true,
-        enableBottomToolbar: enablePagination,
+        enableBottomToolbar: enablePagination || !isTouch,
 
         muiTableContainerProps: ({ table }) => ({
             sx: {
@@ -141,11 +290,16 @@ export default function TableBase({
         }),
 
         muiTableProps: {
-            sx: { backgroundColor: 'background.paperWarm' },
+            ref: tableElRef,
+            sx: {
+                backgroundColor: 'background.paperWarm',
+                willChange: isTouch ? undefined : 'transform',
+            },
         },
 
         muiTablePaperProps: ({ table }) => ({
             elevation: 0,
+            'data-table-scope': tableScopeId,
             sx: {
                 backgroundColor: 'background.paperWarm',
                 border: '1px solid',
@@ -174,106 +328,40 @@ export default function TableBase({
 
         renderTopToolbar: ({ table }) => {
             const toolbarSx = (t) => ({ ...headerSurfaceSx(t), position: 'relative' });
+            const hiddenFiltersStyle = enableColumnFilters && (
+                <HiddenFiltersStyle store={filtersVisibilityStore} scopeId={tableScopeId} />
+            );
             const actionIcons = (
                 <>
-                    {enableColumnFilters && <MRT_ToggleFiltersButton table={table} />}
+                    {enableColumnFilters && (
+                        <FiltersToggleButton table={table} store={filtersVisibilityStore} onToggle={setFiltersVisible} />
+                    )}
                     {enableHiding && <MRT_ShowHideColumnsButton table={table} />}
                     {enableDensityToggle && <MRT_ToggleDensePaddingButton table={table} />}
                     {enableFullScreenToggle && <MRT_ToggleFullScreenButton table={table} />}
                 </>
             );
-            if (isMobile && isMobileSearchOpen) {
-                return (
-                    <Box sx={toolbarSx}>
-                        <MRT_LinearProgressBar isTopToolbar table={table} />
-                        <Box sx={{ display: 'flex', flexDirection: 'column', p: 1, gap: 1 }}>
-                            <TextField
-                                autoFocus
-                                fullWidth
-                                size="small"
-                                variant="outlined"
-                                placeholder="Buscar..."
-                                value={table.getState().globalFilter ?? ''}
-                                onChange={(e) => table.setGlobalFilter(e.target.value)}
-                                slotProps={{
-                                    input: {
-                                        endAdornment: (
-                                            <IconButton
-                                                size="small"
-                                                edge="end"
-                                                onClick={() => {
-                                                    table.setGlobalFilter('');
-                                                    setIsMobileSearchOpen(false);
-                                                }}
-                                            >
-                                                <CloseIcon fontSize="small" />
-                                            </IconButton>
-                                        ),
-                                    },
-                                }}
-                            />
-                            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                                {actionIcons}
-                            </Box>
-                        </Box>
-                        <MRT_ToolbarAlertBanner stackAlertBanner table={table} />
-                    </Box>
-                );
-            }
             if (isMobile) {
                 return (
                     <Box sx={toolbarSx}>
+                        {hiddenFiltersStyle}
                         <MRT_LinearProgressBar isTopToolbar table={table} />
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', px: 1, py: 0.5 }}>
-                            {enableGlobalFilter && (
-                                <IconButton size="small" onClick={() => setIsMobileSearchOpen(true)}>
-                                    <SearchIcon fontSize="small" />
-                                </IconButton>
-                            )}
-                            {actionIcons}
-                        </Box>
+                        <MobileToolbarContent
+                            table={table}
+                            enableGlobalFilter={enableGlobalFilter}
+                            actionIcons={actionIcons}
+                        />
                         <MRT_ToolbarAlertBanner stackAlertBanner table={table} />
                     </Box>
                 );
             }
             return (
                 <Box sx={toolbarSx}>
+                    {hiddenFiltersStyle}
                     <MRT_LinearProgressBar isTopToolbar table={table} />
                     <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 0.5 }}>
                         <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center' }}>
-                            {enableGlobalFilter && (
-                                isDesktopSearchOpen ? (
-                                    <TextField
-                                        autoFocus
-                                        size="small"
-                                        variant="outlined"
-                                        placeholder="Buscar..."
-                                        value={table.getState().globalFilter ?? ''}
-                                        onChange={(e) => table.setGlobalFilter(e.target.value)}
-                                        sx={{ width: 250 }}
-                                        slotProps={{
-                                            input: {
-                                                endAdornment: (
-                                                    <IconButton
-                                                        size="small"
-                                                        edge="end"
-                                                        onClick={() => {
-                                                            table.setGlobalFilter('');
-                                                            setIsDesktopSearchOpen(false);
-                                                        }}
-                                                    >
-                                                        <CloseIcon fontSize="small" />
-                                                    </IconButton>
-                                                ),
-                                            },
-                                        }}
-                                    />
-                                ) : (
-                                    <IconButton size="small" onClick={() => setIsDesktopSearchOpen(true)}>
-                                        <SearchIcon fontSize="small" />
-                                    </IconButton>
-                                )
-                            )}
+                            {enableGlobalFilter && <DesktopToolbarSearch table={table} />}
                             {actionIcons}
                         </Box>
                     </Box>
@@ -282,7 +370,7 @@ export default function TableBase({
             );
         },
 
-        renderBottomToolbar: enablePagination
+        renderBottomToolbar: (enablePagination || !isTouch)
             ? ({ table }) => (
                 <Box
                     sx={(t) => ({
@@ -298,8 +386,13 @@ export default function TableBase({
                             : { position: 'sticky', bottom: 0 }),
                     })}
                 >
-                    {!isTouch && <TableHorizontalScrollbar containerRef={table.refs.tableContainerRef} />}
-                    <MRT_BottomToolbar table={table} />
+                    {!isTouch && (
+                        <TableHorizontalScrollbar
+                            containerRef={table.refs.tableContainerRef}
+                            tableElRef={tableElRef}
+                        />
+                    )}
+                    {enablePagination && <MRT_BottomToolbar table={table} />}
                 </Box>
             )
             : undefined,
@@ -331,8 +424,16 @@ export default function TableBase({
             },
         },
 
-        muiTableBodyRowProps: {
+        muiTableBodyRowProps: ({ row }) => ({
+            onClick: onRowClick
+                ? (event) => {
+                    const clickedInsideRow = event.currentTarget.contains(event.target);
+                    const clickedInteractive = event.target.closest?.(INTERACTIVE_ELEMENTS_SELECTOR);
+                    if (clickedInsideRow && !clickedInteractive) onRowClick(row);
+                }
+                : undefined,
             sx: (t) => ({
+                cursor: onRowClick ? 'pointer' : 'default',
                 backgroundColor: 'background.paperWarm',
                 '&:hover td': { backgroundColor: 'action.hover' },
                 '&:last-of-type td': {
@@ -346,7 +447,7 @@ export default function TableBase({
                     }),
                 },
             }),
-        },
+        }),
 
         muiDetailPanelProps: {
             sx: {
@@ -378,11 +479,20 @@ export default function TableBase({
             shape: 'rounded',
             variant: 'outlined',
             size: 'small',
+            ...(tableOptions.muiPaginationProps ?? {}),
         },
 
         muiToolbarAlertBannerProps: error
             ? { color: 'error', children: error }
-            : undefined,
+            : {
+                sx: (t) => ({
+                    backgroundColor: t.vars.palette.tones.rose.soft,
+                    color: t.vars.palette.tones.rose.fg,
+                    border: `1px solid ${t.vars.palette.tones.rose.ring}`,
+                    '& .MuiAlert-icon': { color: t.vars.palette.tones.rose.fg },
+                    '& .MuiButtonBase-root': { color: t.vars.palette.tones.rose.fg },
+                }),
+            },
 
         displayColumnDefOptions: {
             'mrt-row-expand': {

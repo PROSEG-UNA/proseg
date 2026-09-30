@@ -1,6 +1,5 @@
 package com.proseg.msvc_transport.dto.cleaning;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,12 +13,9 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CleaningRegisterRequestDto {
-    @NotNull
-    private List<CleaningRowDto> rows;
-
-    @Builder.Default
-    private boolean replaceExistingInRange = false;
-
-    private CleaningAuditMetadataDto audit;
+public class CleaningImportColumnDto {
+    private String attribute;
+    private List<String> names;
+    private String type;
+    private boolean required;
 }

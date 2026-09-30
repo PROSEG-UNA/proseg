@@ -70,5 +70,9 @@ export const queryKeys = {
         cleaning: () => [...queryKeys.transport.root, 'cleaning'],
         cleaningList: (params) => [...queryKeys.transport.cleaning(), 'list', params],
         cleaningDetail: (cleaningId) => [...queryKeys.transport.cleaning(), 'detail', cleaningId],
+        cleaningDrafts: () => [...queryKeys.transport.cleaning(), 'drafts'],
+        cleaningDraftList: (params) => [...queryKeys.transport.cleaningDrafts(), 'list', params],
+        cleaningDraftDetail: (draftId) => [...queryKeys.transport.cleaningDrafts(), 'detail', draftId],
+        cleaningDraftRows: (draftId, params) => [...queryKeys.transport.cleaningDrafts(), 'rows', draftId, params],
     },
 };

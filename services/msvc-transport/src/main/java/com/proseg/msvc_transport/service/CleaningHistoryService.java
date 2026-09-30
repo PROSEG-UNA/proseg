@@ -3,11 +3,9 @@ package com.proseg.msvc_transport.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.proseg.msvc_transport.dto.cleaning.CleaningAuditMetadataDto;
 import com.proseg.msvc_transport.dto.cleaning.CleaningExecutionDetailResponseDto;
 import com.proseg.msvc_transport.dto.cleaning.CleaningExecutionDetailViewResponseDto;
 import com.proseg.msvc_transport.dto.cleaning.CleaningExecutionSummaryResponseDto;
-import com.proseg.msvc_transport.dto.cleaning.CleaningRegisterRequestDto;
 import com.proseg.msvc_transport.dto.cleaning.CleaningRegisterResponseDto;
 import com.proseg.msvc_transport.entity.CleaningExecution;
 import com.proseg.msvc_transport.entity.CleaningExecutionDetail;
@@ -69,7 +67,7 @@ public class CleaningHistoryService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public UUID recordSuccess(
-            CleaningRegisterRequestDto request,
+            CleaningAuditData audit,
             CleaningRegisterResponseDto response,
             String executedBy,
             LocalDateTime processStartedAt,
@@ -82,7 +80,7 @@ public class CleaningHistoryService {
                 ? CleaningExecutionStatus.PARTIAL
                 : CleaningExecutionStatus.SUCCESS;
         CleaningExecution execution = buildExecution(
-                request,
+                audit,
                 response,
                 executedBy,
                 processStartedAt,
@@ -99,7 +97,7 @@ public class CleaningHistoryService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public UUID recordFailure(
-            CleaningRegisterRequestDto request,
+            CleaningAuditData audit,
             String executedBy,
             LocalDateTime processStartedAt,
             LocalDateTime processFinishedAt,
@@ -107,7 +105,7 @@ public class CleaningHistoryService {
             List<CleaningDetailDraft> details
     ) {
         CleaningRegisterResponseDto failed = CleaningRegisterResponseDto.builder()
-                .requestedRows(request.getRows() != null ? request.getRows().size() : 0)
+                .requestedRows(audit.requestedRows())
                 .importedRows(0)
                 .replacedRows(0)
                 .createdDrivers(0)
@@ -116,7 +114,7 @@ public class CleaningHistoryService {
                 .updatedVehicles(0)
                 .build();
         CleaningExecution execution = buildExecution(
-                request,
+                audit,
                 failed,
                 executedBy,
                 processStartedAt,
@@ -181,7 +179,7 @@ public class CleaningHistoryService {
     }
 
     private CleaningExecution buildExecution(
-            CleaningRegisterRequestDto request,
+            CleaningAuditData audit,
             CleaningRegisterResponseDto response,
             String executedBy,
             LocalDateTime processStartedAt,
@@ -191,14 +189,12 @@ public class CleaningHistoryService {
             LocalDateTime replacedRangeStart,
             LocalDateTime replacedRangeEnd
     ) {
-        CleaningAuditMetadataDto audit = request.getAudit();
-        int requestedRows = response.getRequestedRows();
-        int totalReadRecords = coalescePositive(audit != null ? audit.getTotalRowsRead() : null, requestedRows);
-        int validRecords = coalescePositive(audit != null ? audit.getValidRows() : null, requestedRows);
-        int invalidRecords = coalescePositive(audit != null ? audit.getInvalidRows() : null, Math.max(0, totalReadRecords - validRecords));
-        int duplicatesDetected = coalescePositive(audit != null ? audit.getDuplicateRowsDetected() : null, 0);
-        String fileName = safe(audit != null ? audit.getFileName() : null, "archivo_desconocido");
-        String fileType = safe(audit != null ? audit.getFileType() : null, "DESCONOCIDO").toUpperCase(Locale.ROOT);
+        int totalReadRecords = Math.max(0, audit.totalRowsRead());
+        int validRecords = Math.max(0, audit.validRows());
+        int invalidRecords = Math.max(0, audit.invalidRows());
+        int duplicatesDetected = Math.max(0, audit.duplicatesDetected());
+        String fileName = safe(audit.fileName(), "archivo_desconocido");
+        String fileType = safe(audit.fileType(), "DESCONOCIDO").toUpperCase(Locale.ROOT);
         long duration = Math.max(0L, java.time.Duration.between(processStartedAt, processFinishedAt).toMillis());
 
         return CleaningExecution.builder()
@@ -219,7 +215,7 @@ public class CleaningHistoryService {
                 .updatedVehicles(response.getUpdatedVehicles())
                 .createdTours(response.getImportedRows())
                 .updatedTours(0)
-                .replacedExistingTours(request.isReplaceExistingInRange())
+                .replacedExistingTours(audit.replaceExistingInRange())
                 .replacedRangeStart(replacedRangeStart)
                 .replacedRangeEnd(replacedRangeEnd)
                 .finalStatus(status)
@@ -349,13 +345,6 @@ public class CleaningHistoryService {
         return Sort.by(valid);
     }
 
-    private int coalescePositive(Integer value, int fallback) {
-        if (value == null) {
-            return fallback;
-        }
-        return Math.max(0, value);
-    }
-
     private String safe(String value, String fallback) {
         if (value == null || value.isBlank()) {
             return fallback;
@@ -418,6 +407,17 @@ public class CleaningHistoryService {
             throw TransportException.badRequest("CLEANING_HISTORY_JSON_READ_ERROR", "No se pudo deserializar el detalle de depuración");
         }
     }
+
+    public record CleaningAuditData(
+            String fileName,
+            String fileType,
+            int totalRowsRead,
+            int validRows,
+            int invalidRows,
+            int duplicatesDetected,
+            int requestedRows,
+            boolean replaceExistingInRange
+    ) {}
 
     @Getter
     @Setter
