@@ -25,6 +25,38 @@ public class DocumentProcessorException extends BaseException {
         );
     }
 
+    public static DocumentProcessorException invalidTourFileType() {
+        return new DocumentProcessorException(
+                HttpStatus.BAD_REQUEST,
+                "INVALID_FILE_TYPE",
+                "El archivo debe tener extensión .xlsx, .xls, .xlsm o .csv"
+        );
+    }
+
+    public static DocumentProcessorException unsupportedFileFormat() {
+        return new DocumentProcessorException(
+                HttpStatus.BAD_REQUEST,
+                "UNSUPPORTED_FILE_FORMAT",
+                "El contenido del archivo no corresponde a un Excel, un CSV ni una tabla HTML"
+        );
+    }
+
+    public static DocumentProcessorException htmlTableNotFound() {
+        return new DocumentProcessorException(
+                HttpStatus.BAD_REQUEST,
+                "HTML_TABLE_NOT_FOUND",
+                "El archivo no contiene una tabla"
+        );
+    }
+
+    public static DocumentProcessorException transportUnavailable() {
+        return new DocumentProcessorException(
+                HttpStatus.BAD_GATEWAY,
+                "TRANSPORT_UNAVAILABLE",
+                "No fue posible registrar las giras en transporte"
+        );
+    }
+
     public static DocumentProcessorException unreadableWorkbook() {
         return new DocumentProcessorException(
                 HttpStatus.BAD_REQUEST,
