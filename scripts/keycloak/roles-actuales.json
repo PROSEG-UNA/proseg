@@ -1,0 +1,587 @@
+﻿{
+    "value":  [
+                  {
+                      "id":  "6d52d910-6429-4c64-b4fe-8296e986ef73",
+                      "name":  "LEER_REGISTROS_MANTENIMIENTO",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "a6b22dc4-76cb-4b40-81f1-28a739497fb0",
+                      "name":  "ACEPTAR_SOLICITUDES_MANTENIMIENTO",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "2b7b3f5c-060d-464d-a7f0-1285d681b3a4",
+                      "name":  "LEER_ROLES_COMPUESTOS",
+                      "description":  "Consultar roles compuestos (roles que agrupan otros roles/permisos).",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "58add947-e26c-42df-852c-cf2680de67b7",
+                      "name":  "ELIMINAR_TECNICOS_MANTENIMIENTO",
+                      "description":  "Eliminación de técnicos de mantenimiento registrados.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "926572a1-6181-49ab-92f7-87cfc0ae7504",
+                      "name":  "ELIMINAR_UBICACIONES",
+                      "description":  "Eliminar sedes y ubicaciones",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "564c18f3-ce1f-4389-a267-9d0405d26fb3",
+                      "name":  "GESTIONAR_CHOFERES",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "9aca9574-eecc-4389-86b6-a414b0577cf9",
+                      "name":  "ELIMINAR_ACTIVOS",
+                      "description":  "Eliminar activos del inventario",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "29081adf-23d8-4f05-b80c-a90ecce2ee1d",
+                      "name":  "TECNICO_EMPRESA",
+                      "composite":  true,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "04d332c3-1526-498e-b6f6-7baa17136a8f",
+                      "name":  "EDITAR_TICKETS_MANTENIMIENTO",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "29fc48f1-7169-45de-8ac9-6e1b6b4ff16d",
+                      "name":  "ELIMINAR_SOLICITUDES_MANTENIMIENTO",
+                      "description":  "Eliminación de solicitudes de mantenimiento registradas.\n",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "44821965-d806-42eb-9f2d-1f2039ff8944",
+                      "name":  "LEER_SOLICITUDES_MANTENIMIENTO",
+                      "description":  "Consulta de solicitudes de mantenimiento registradas.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "6395014d-ca43-4973-bbd5-e20a1567a41e",
+                      "name":  "LEER_ACTIVOS",
+                      "description":  "Consultar activos del inventario",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "2a04aee2-bbc3-4d3f-bceb-3b9ae628bc22",
+                      "name":  "ASIGNAR_PRIORIDAD_TICKETS_MANTENIMIENTO",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "ab138f44-bdf0-4756-93fc-2f070bec098e",
+                      "name":  "GESTIONAR_EMPRESAS",
+                      "description":  "Creación y actualización de empresas registradas en el sistema.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "968da6cf-1c47-4b55-8b7e-96a99e67b703",
+                      "name":  "default-roles-proseg-realm",
+                      "description":  "${role_default-roles}",
+                      "composite":  true,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "5492b49e-5aeb-41e5-91d9-ed96821c2a9a",
+                      "name":  "ACTUALIZAR_ASIGNACIONES",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "c6f8b87f-b898-40c1-acc3-aaef39a4c500",
+                      "name":  "LEER_USUARIOS_EMPRESAS",
+                      "description":  "Consulta de asignaciones entre usuarios y empresas.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "a7605541-9843-43f5-aa16-830dcf1ee28d",
+                      "name":  "LEER_MANTENIMIENTO_VEHICULOS",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "02fe82d0-9252-401b-b1ce-dc1b36c70717",
+                      "name":  "SELECCIONAR_EMPRESA_EN_SOLICITUD_MANTENIMIENTO",
+                      "description":  "Elegir cualquier empresa al solicitar mantenimiento",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "ef44bec4-d9cc-4592-98a5-308ccf140d6e",
+                      "name":  "LEER_ARCHIVOS",
+                      "description":  "Descargar archivos del sistema.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "aa168331-040c-4df3-9ff0-a54ef54a5f81",
+                      "name":  "LEER_INVITACIONES_PENDIENTES",
+                      "description":  "Consulta los usuarios que fueron invitados",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "a8d22769-4ce5-4afc-9e86-49df6d9ef843",
+                      "name":  "LEER_ROLES_BASE",
+                      "description":  "Consultar los roles base definidos en el sistema.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "eced1203-43ce-4e96-aef8-3dcaf7419b60",
+                      "name":  "ASIGNAR_ROL_USUARIO",
+                      "description":  "Asignar un rol a un usuario.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "08336ba2-9eac-4c9e-8279-f26731a14c86",
+                      "name":  "ELIMINAR_ROL",
+                      "description":  "Eliminar roles del sistema.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "4cb9bef5-6a87-4d5e-87fb-eedbf062e85e",
+                      "name":  "SOLICITAR_MANTENIMIENTO",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "49610a78-4d73-4e1f-ba22-9f2a0cf1111b",
+                      "name":  "uma_authorization",
+                      "description":  "${role_uma_authorization}",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "d9befaf4-49fc-4b01-b0f9-c9b4b6e39cff",
+                      "name":  "ADMINISTRADOR_ACTIVOS",
+                      "composite":  true,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "9f8fb350-6493-4901-af1e-753a976371f3",
+                      "name":  "LEER_HISTORIAL_REGISTROS_MANTENIMIENTO",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "ed86d26b-768e-48bd-bb5e-728cc32d8319",
+                      "name":  "IMPORTAR_ACTIVOS",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "e02a53cd-2c56-4fbd-802d-128df749b896",
+                      "name":  "GESTIONAR_GIRAS",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "9864fc6e-f869-4cbd-8e98-cab21822a71f",
+                      "name":  "ELIMINAR_EMPRESAS",
+                      "description":  "Eliminación de empresas registradas en el sistema.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "81e88efa-be4c-4925-ad74-c7fe6259dbba",
+                      "name":  "GESTIONAR_TECNICOS_MANTENIMIENTO",
+                      "description":  "Creación y actualización de técnicos de mantenimiento.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "280d9ac9-da8d-4256-a791-b7134e9b7e9b",
+                      "name":  "COMENTAR_TICKETS_MANTENIMIENTO",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "b41e06d6-2be3-4f1f-9d36-03d707f7e9a7",
+                      "name":  "ELIMINAR_VEHICULOS",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "6394ca7e-5997-46a1-8b3b-bf32179679f6",
+                      "name":  "ASIGNAR_TICKETS_MANTENIMIENTO",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "1f79a913-9bbb-4304-8750-dd06f772620a",
+                      "name":  "LEER_ROLES_USUARIO",
+                      "description":  "Consultar los roles asignados a un usuario.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "6aeab8ba-2b9d-4b79-91ea-85ab035bc3cd",
+                      "name":  "CANCELAR_SOLICITUDES_MANTENIMIENTO",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "c8213089-cad2-4f65-ab9e-bc66a5e9d5c3",
+                      "name":  "ELIMINAR_GIRAS",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "580ff691-f0f2-4f6b-90cf-4ded3654d24a",
+                      "name":  "GESTIONAR_UBICACIONES",
+                      "description":  "Crear y editar ubicaciones",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "dfaa3b49-ba66-4d51-8dbc-775f19012102",
+                      "name":  "LEER_COMPOSITES_ROL",
+                      "description":  "Consultar los permisos o roles asociados a un rol específico.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "8cdc7dc5-0d1c-41a8-b920-402e89046562",
+                      "name":  "GESTIONAR_USUARIOS_EMPRESAS",
+                      "description":  "Creación y actualización de asignaciones entre usuarios y empresas.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "f5fc12d1-2a32-47a1-95a7-268791e1ec22",
+                      "name":  "EXPORTAR_ACTIVOS",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "fa44c7a8-c2d2-4a58-9ef5-1862ce2c456e",
+                      "name":  "EDITAR_SOLICITUDES_MANTENIMIENTO",
+                      "description":  "Actualizar solicitudes de mantenimiento existentes",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "b40dfd9a-522a-4455-9e38-c8400f5e2b31",
+                      "name":  "GESTIONAR_VEHICULOS",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "ebd43961-8e3a-44ac-8bfb-d6fa82794a1e",
+                      "name":  "LEER_TECNICOS_MANTENIMIENTO",
+                      "description":  "Consulta de técnicos de mantenimiento registrados.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "dcf3fd65-5c74-4f88-b5eb-9e1c3aeb2d83",
+                      "name":  "LEER_TICKET_MANTENIMIENTO",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "51770ad6-5d68-45e9-a1c2-7ca7364b6cf6",
+                      "name":  "LEER_TICKETS_MANTENIMIENTO",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "8b5031ee-24b7-4695-abce-38efe0761d0f",
+                      "name":  "CREAR_ROL",
+                      "description":  "Crear nuevos roles dentro del sistema.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "efb96f19-32db-48c5-865c-d990ba390922",
+                      "name":  "LEER_VEHICULOS",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "e1e0b38c-f0c1-4c9f-b280-301a895f7357",
+                      "name":  "LEER_USUARIOS_POR_ROL",
+                      "description":  "Consultar lista de usuarios asociados a un rol específico.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "fcf840ed-3f28-4407-a488-8899888c8f9c",
+                      "name":  "GESTIONAR_MANTENIMIENTO_VEHICULOS",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "e8b459a5-fe30-4b0d-b328-1c7e1433b294",
+                      "name":  "EDITAR_ROL",
+                      "description":  "Modificar la configuración o permisos de un rol existente.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "6d6a3493-c352-40b3-90ef-2d6d8a8b9529",
+                      "name":  "GENERAR_ASIGNACIONES",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "edb14f08-0eaf-4493-9826-44e14af874d3",
+                      "name":  "APROBAR_USUARIO",
+                      "description":  "Aprobar o cambiar el estado de un usuario pendiente.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "a093a8fd-17b1-42f9-b91f-cdb0f703b5b8",
+                      "name":  "ELIMINAR_TICKETS_MANTENIMIENTO",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "34e7afdb-0be1-4e38-b33d-078310b2e12b",
+                      "name":  "LEER_GIRAS",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "0c76df99-8a99-4ed4-802e-b68ab7c0abbd",
+                      "name":  "LEER_CHOFERES",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "b48a70d5-70e8-449e-8860-420b4b440e63",
+                      "name":  "CREAR_USUARIO",
+                      "description":  "Crear nuevos usuarios en el sistema.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "4dff94d1-902f-430d-9eca-5133736208fd",
+                      "name":  "CREAR_TICKETS_MANTENIMIENTO",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "826571d6-3c9a-4f23-b7c9-6547cb52b60c",
+                      "name":  "offline_access",
+                      "description":  "${role_offline-access}",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "75fdcee1-9bca-433f-b4f6-dbd8a7eb1be7",
+                      "name":  "ELIMINAR_USUARIOS_EMPRESAS",
+                      "description":  "Eliminación de asignaciones entre usuarios y empresas.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "a236effc-d445-45c0-a76b-c1789606e3e0",
+                      "name":  "ELIMINAR_CHOFERES",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "13aff295-e8b5-4bc1-8d43-efccea07bdc0",
+                      "name":  "ELIMINAR_MANTENIMIENTO_VEHICULOS",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "64d7e8df-5006-4b17-a7d3-31dc1e77117f",
+                      "name":  "LEER_USUARIO",
+                      "description":  "Consultar la información de un usuario específico.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "c1147158-afa8-45eb-9573-9d4af21862bb",
+                      "name":  "LEER_UBICACIONES",
+                      "description":  "Consultar sedes y ubicaciones",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "e434dfc0-2747-4f52-a82b-c267aa903f8c",
+                      "name":  "SUBIR_ARCHIVOS",
+                      "description":  "Subir archivos al sistema.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "c666c71e-987f-4ee6-9012-f4e989c9cab7",
+                      "name":  "ELIMINAR_ROL_USUARIO",
+                      "description":  "Eliminar un rol previamente asignado a un usuario.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "7cdce5be-c1ba-4184-9044-de5ea11b2930",
+                      "name":  "GESTIONAR_ACTIVOS",
+                      "description":  "Crear y editar activos",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "16647448-f540-481c-93e0-6304ac4057d1",
+                      "name":  "SUPER_ADMINISTRADOR",
+                      "description":  "Acceso completo al sistema con permisos administrativos globales.",
+                      "composite":  true,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "ab76772c-4ea5-4a98-923f-18ff3c762b98",
+                      "name":  "GESTIONAR_REGISTROS_MANTENIMIENTO",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "b02f99fe-a9a8-4e88-a6b8-41cf93141f64",
+                      "name":  "LEER_EMPRESAS",
+                      "description":  "Consulta de la información y listado de empresas registradas en el sistema.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "6ef87f3b-3cde-4b7d-aa2a-3e23c872e40b",
+                      "name":  "LEER_TODOS_TICKETS_MANTENIMIENTO",
+                      "description":  "",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  },
+                  {
+                      "id":  "1b32283f-55d0-4838-8d71-809d329d3ec1",
+                      "name":  "LEER_USUARIOS",
+                      "description":  "Consultar todos los usuarios del sistema.",
+                      "composite":  false,
+                      "clientRole":  false,
+                      "containerId":  "1658bd8f-a712-44ca-bc57-dc929bed5f8d"
+                  }
+              ],
+    "Count":  73
+}
