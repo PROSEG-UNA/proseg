@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
+import AssignmentIcon from '@mui/icons-material/Assignment';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import GeneralModal from '../../../common/components/GeneralModal.jsx';
@@ -306,6 +307,7 @@ export default function FormRecordCreateModal({ open, formType, onClose, onSaved
             <GeneralModal
                 open={open}
                 onClose={onClose}
+                icon={AssignmentIcon}
                 title={title}
                 subtitle="Registro de formulario físico"
                 maxWidth="lg"
