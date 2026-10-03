@@ -1,3 +1,5 @@
+import { formRegistry } from './formRegistry';
+
 export function formatDate(value) {
     if (!value) return '—';
     const [year, month, day] = String(value).split('T')[0].split('-');
@@ -24,6 +26,6 @@ export function formTypeLabel(code) {
         case 'LATE_ARRIVAL_REPORT':
             return 'Reporte por Llegada Tardía';
         default:
-            return code ?? '—';
+            return formRegistry.find((item) => item.code === code)?.name ?? code ?? '—';
     }
 }

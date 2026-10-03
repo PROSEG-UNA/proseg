@@ -20,6 +20,8 @@ import dayjs from 'dayjs';
 import GeneralModal from '../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../common/components/DialogModal.jsx';
 import { createFormRecord } from '../services/formsService';
+import DynamicFormFields from './DynamicFormFields.jsx';
+import { FORM_DEFINITIONS, buildDefinitionPayload, buildInitialData, validateDefinition } from '../formDefinitions';
 
 const INITIAL_VALUES = {
     date: null,
@@ -73,6 +75,10 @@ function normalizeOvertimeRows(rows, formDate) {
 }
 
 function buildPayload(formType, values, overtimeRows) {
+    if (FORM_DEFINITIONS[formType?.code]) {
+        return buildDefinitionPayload(FORM_DEFINITIONS[formType.code], values);
+    }
+
     const isoDate = values.date ? dayjs(values.date).format('YYYY-MM-DD') : null;
 
     switch (formType?.code) {
@@ -182,6 +188,9 @@ export default function FormRecordCreateModal({ open, formType, onClose, onSaved
     const [rowErrors, setRowErrors] = useState({});
     const [saving, setSaving] = useState(false);
     const [alert, setAlert] = useState(null);
+    const [dynamicData, setDynamicData] = useState({});
+    const [dynamicErrors, setDynamicErrors] = useState({});
+    const definition = FORM_DEFINITIONS[formType?.code];
 
     useEffect(() => {
         if (!open) {
@@ -189,8 +198,16 @@ export default function FormRecordCreateModal({ open, formType, onClose, onSaved
             setOvertimeRows([]);
             setErrors({});
             setRowErrors({});
+            setDynamicData({});
+            setDynamicErrors({});
             setSaving(false);
             setAlert(null);
+            return;
+        }
+
+        if (definition) {
+            setDynamicData(buildInitialData(definition));
+            setDynamicErrors({});
             return;
         }
 
@@ -199,7 +216,7 @@ export default function FormRecordCreateModal({ open, formType, onClose, onSaved
         } else {
             setOvertimeRows([]);
         }
-    }, [open, formType]);
+    }, [open, formType, definition]);
 
     const title = useMemo(() => formType?.name ?? 'Nuevo formulario', [formType]);
 
@@ -245,22 +262,10 @@ export default function FormRecordCreateModal({ open, formType, onClose, onSaved
         });
     };
 
-    const handleSubmit = async () => {
-        const normalizedRows = normalizeOvertimeRows(overtimeRows, values.date);
-        const { nextErrors, rowErrors: nextRowErrors } = validate(formType, values, normalizedRows);
-        setErrors(nextErrors);
-        setRowErrors(nextRowErrors);
-
-        if (Object.keys(nextErrors).length > 0 || Object.keys(nextRowErrors).length > 0 || !formType?.id) {
-            return;
-        }
-
+    const submitRecord = async (data) => {
         setSaving(true);
         try {
-            await createFormRecord({
-                formTypeId: formType.id,
-                data: buildPayload(formType, values, normalizedRows),
-            });
+            await createFormRecord({ formTypeId: formType.id, data });
             setAlert({ type: 'success', message: 'Formulario registrado correctamente' });
             onSaved?.();
         } catch (error) {
@@ -271,6 +276,29 @@ export default function FormRecordCreateModal({ open, formType, onClose, onSaved
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleSubmit = async () => {
+        if (definition) {
+            const nextDynamicErrors = validateDefinition(definition, dynamicData);
+            setDynamicErrors(nextDynamicErrors);
+            if (Object.keys(nextDynamicErrors).length > 0 || !formType?.id) {
+                return;
+            }
+            await submitRecord(buildDefinitionPayload(definition, dynamicData));
+            return;
+        }
+
+        const normalizedRows = normalizeOvertimeRows(overtimeRows, values.date);
+        const { nextErrors, rowErrors: nextRowErrors } = validate(formType, values, normalizedRows);
+        setErrors(nextErrors);
+        setRowErrors(nextRowErrors);
+
+        if (Object.keys(nextErrors).length > 0 || Object.keys(nextRowErrors).length > 0 || !formType?.id) {
+            return;
+        }
+
+        await submitRecord(buildPayload(formType, values, normalizedRows));
     };
 
     return (
@@ -293,6 +321,15 @@ export default function FormRecordCreateModal({ open, formType, onClose, onSaved
                 }}
                 contentSx={{ p: 3 }}
             >
+                {definition ? (
+                    <DynamicFormFields
+                        definition={definition}
+                        data={dynamicData}
+                        setData={setDynamicData}
+                        errors={dynamicErrors}
+                        setErrors={setDynamicErrors}
+                    />
+                ) : (
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
                     <DatePicker
                         label="Fecha"
@@ -437,6 +474,7 @@ export default function FormRecordCreateModal({ open, formType, onClose, onSaved
                         </>
                     ) : null}
                 </Box>
+                )}
             </GeneralModal>
 
             <DialogModal

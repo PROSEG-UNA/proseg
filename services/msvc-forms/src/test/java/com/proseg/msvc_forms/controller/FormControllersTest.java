@@ -61,7 +61,7 @@ class FormControllersTest {
 
     @Test
     void getForms_should_return_ok() throws Exception {
-        when(formRecordService.findAll(isNull(), isNull(), any())).thenReturn(new PageImpl<>(List.of(FormRecordResponseDto.builder().id(UUID.randomUUID()).build()), PageRequest.of(0, 10), 1));
+        when(formRecordService.findAll(isNull(), isNull(), any(), any())).thenReturn(new PageImpl<>(List.of(FormRecordResponseDto.builder().id(UUID.randomUUID()).build()), PageRequest.of(0, 10), 1));
 
         mockMvc.perform(get("/api/v1/forms"))
                 .andExpect(status().isOk())

@@ -46,6 +46,8 @@ class FormRecordServiceImplTest {
     private FormRecordMapper formRecordMapper;
     @Mock
     private FormValidatorRegistry formValidatorRegistry;
+    @Mock
+    private com.proseg.msvc_forms.client.AuthUserClient authUserClient;
 
     @InjectMocks
     private FormRecordServiceImpl service;
@@ -209,10 +211,11 @@ class FormRecordServiceImplTest {
     @Test
     void findAll_should_map_page() {
         FormRecord record = FormRecord.builder().id(UUID.randomUUID()).formType(overtimeType).data(overtimePayloadOneRow()).build();
+        record.setCreatedBy("user-1");
         when(formRecordRepository.findWithFilters(null, null, PageRequest.of(0, 10))).thenReturn(new PageImpl<>(List.of(record)));
-        when(formRecordMapper.toResponse(record)).thenReturn(FormRecordResponseDto.builder().id(record.getId()).build());
+        when(formRecordMapper.toResponse(record)).thenReturn(FormRecordResponseDto.builder().id(record.getId()).createdBy("user-1").build());
 
-        assertThat(service.findAll(null, null, PageRequest.of(0, 10)).getTotalElements()).isEqualTo(1);
+        assertThat(service.findAll(null, null, PageRequest.of(0, 10), null).getTotalElements()).isEqualTo(1);
     }
 
     private FormType buildType(UUID id, String code, boolean active) {

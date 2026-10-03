@@ -24,12 +24,26 @@ public class FormTypeDataInitializer implements CommandLineRunner {
                 "Registro de ausencias del personal de seguridad.");
         seedType("LATE_ARRIVAL_REPORT", "Reporte por Llegada Tardía",
                 "Registro de llegadas tardías del personal de seguridad.");
+        seedType("EQUIPMENT_DELIVERY", "Entrega de Equipo",
+                "Registro de la entrega de equipo al personal de seguridad.");
+        seedType("POST_ANOMALIES", "Anomalías en los Puestos",
+                "Reporte de anomalías detectadas en los puestos.");
+        seedType("SUPERVISOR_REPORT", "Reporte del/de la Supervisor/a",
+                "Reporte realizado por el/la supervisor/a de turno.");
+        seedType("SHIFT_CHANGE", "Cambio de Jornada",
+                "Solicitud de cambio de jornada entre oficiales de seguridad.");
+        seedType("VACATION_PERMIT_REQUEST", "Solicitud de Vacaciones y Otros Permisos",
+                "Solicitud de vacaciones, permisos y otros trámites.");
+        seedType("SERVICE_ROSTER", "Rol de Servicio",
+                "Asignación de puestos y oficiales de seguridad por turno.");
+        seedType("ACCESS_CONTROL", "Control de Acceso e Ingreso",
+                "Registro de personas y vehículos que ingresan.");
+        seedType("DAILY_ROUNDS_CONTROL", "Control de Rondas Diarias",
+                "Supervisores de la Sección de Vigilancia.");
+        seedType("LOGBOOK", "Bitácora",
+                "Bitácora de puesto con verificación de equipo y novedades.");
 
-        log.info("Tipos de formulario verificados: {}", List.of(
-                "OVERTIME_REPORT",
-                "ABSENCE_REPORT",
-                "LATE_ARRIVAL_REPORT"
-        ));
+        log.info("Tipos de formulario verificados");
     }
 
     private void seedType(String code, String name, String description) {

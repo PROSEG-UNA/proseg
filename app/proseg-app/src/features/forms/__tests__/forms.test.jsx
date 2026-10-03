@@ -8,6 +8,7 @@ import AppTheme from '../../../common/theme/AppTheme.jsx';
 import FormSelectorModal from '../components/FormSelectorModal.jsx';
 import FormRecordCreateModal, { buildFormPayload } from '../components/FormRecordCreateModal.jsx';
 import { formRegistry } from '../formRegistry.js';
+import { FORM_DEFINITIONS, buildInitialData, validateDefinition } from '../formDefinitions.js';
 import { AuthContext } from '../../../common/context/AuthContext.jsx';
 import { SidebarContext } from '../../../common/context/SidebarContext.jsx';
 import { useNavSections } from '../../../common/components/Sidebar/useNavSections.js';
@@ -56,12 +57,78 @@ describe('forms module', () => {
         formsService.createFormRecord.mockResolvedValue({ id: 'record-1' });
     });
 
-    it('formRegistry contiene los tres tipos', () => {
+    it('formRegistry contiene los tipos existentes y los nuevos', () => {
         expect(formRegistry.map((item) => item.code)).toEqual([
             'OVERTIME_REPORT',
             'ABSENCE_REPORT',
             'LATE_ARRIVAL_REPORT',
+            'EQUIPMENT_DELIVERY',
+            'POST_ANOMALIES',
+            'SUPERVISOR_REPORT',
+            'SHIFT_CHANGE',
+            'VACATION_PERMIT_REQUEST',
+            'SERVICE_ROSTER',
+            'ACCESS_CONTROL',
+            'DAILY_ROUNDS_CONTROL',
+            'LOGBOOK',
         ]);
+    });
+
+    it('todos los tipos nuevos tienen definición de formulario', () => {
+        formRegistry.slice(3).forEach((item) => expect(FORM_DEFINITIONS[item.code]).toBeDefined());
+    });
+
+    it('Rol de Servicio precarga 26 filas y permite agregar y eliminar sin afectar otras', async () => {
+        const user = userEvent.setup();
+        renderWithProviders(
+            <FormRecordCreateModal
+                open
+                formType={{ id: '6', code: 'SERVICE_ROSTER', name: 'Rol de Servicio' }}
+                onClose={vi.fn()}
+                onSaved={vi.fn()}
+            />
+        );
+
+        expect(screen.getAllByRole('row')).toHaveLength(27);
+        await user.click(screen.getByRole('button', { name: /agregar fila/i }));
+        expect(screen.getAllByRole('row')).toHaveLength(28);
+        await user.click(screen.getAllByRole('button', { name: /eliminar fila/i })[0]);
+        expect(screen.getAllByRole('row')).toHaveLength(27);
+        expect(screen.queryByDisplayValue('Edificio Administrativo')).not.toBeInTheDocument();
+        expect(screen.getByDisplayValue('Ciencias Sociales')).toBeInTheDocument();
+    });
+
+    it('Solicitud de Vacaciones exige especificar Otro y arma el payload', () => {
+        const definition = FORM_DEFINITIONS.VACATION_PERMIT_REQUEST;
+        const data = buildInitialData(definition);
+        Object.assign(data, {
+            nombreSolicitante: 'Ana', cedula: '1-1', fechaDesde: '2026-10-01', fechaHasta: '2026-10-03',
+            cantidadDias: '3', tramiteSolicitado: 'OTRO',
+        });
+        expect(validateDefinition(definition, data).otroEspecifique).toBeDefined();
+
+        data.otroEspecifique = 'Matrimonio';
+        data.autorizado = 'SI';
+        expect(validateDefinition(definition, data)).toEqual({});
+        expect(buildFormPayload({ code: 'VACATION_PERMIT_REQUEST' }, data)).toMatchObject({
+            tramiteSolicitado: 'OTRO', otroEspecifique: 'Matrimonio', cantidadDias: 3, autorizado: 'SI', fechaRegreso: null,
+        });
+    });
+
+    it('Bitácora arma payload anidado con Sí/No, serie y cantidad', () => {
+        const definition = FORM_DEFINITIONS.LOGBOOK;
+        const data = buildInitialData(definition);
+        Object.assign(data, { numeroBitacora: '5', puesto: 'Deportes', vigenciaDesde: '2026-10-01', vigenciaHasta: '2026-12-31' });
+        data.registros[0].nombre = 'Luis';
+        data.registros[0].fecha = '2026-10-02';
+        data.registros[0].equipoSeguridad.armaFuego9mm = { valor: 'SI', serie: 'ABC123', cantidad: '' };
+        data.registros[0].equipoVario.llavesPuesto = { valor: 'SI', serie: '', cantidad: '2' };
+        expect(validateDefinition(definition, data)).toEqual({});
+
+        const payload = buildFormPayload({ code: 'LOGBOOK' }, data);
+        expect(payload.registros[0].equipoSeguridad.armaFuego9mm).toEqual({ valor: 'SI', serie: 'ABC123' });
+        expect(payload.registros[0].equipoVario.llavesPuesto).toEqual({ valor: 'SI', cantidad: 2 });
+        expect(payload.registros[0].materialesLimpieza.cloro).toEqual({ valor: null });
     });
 
     it('selector renderiza los tres formularios', async () => {
