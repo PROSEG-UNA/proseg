@@ -27,6 +27,7 @@
         <module>msvc-transport</module>
         <module>msvc-document-processor</module>
         <module>msvc-maintenance</module>
+        <module>msvc-forms</module>
     </modules>
 
     <properties>

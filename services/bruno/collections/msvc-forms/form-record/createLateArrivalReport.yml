@@ -1,0 +1,30 @@
+info:
+  name: createLateArrivalReport
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{gatewayUrl}}/api/{{apiVersion}}/forms"
+  body:
+    type: json
+    data: |-
+      {
+        "formTypeId": "{{lateArrivalFormTypeId}}",
+        "data": {
+          "fecha": "2026-09-13",
+          "oficialSeguridad": "Luis Mora",
+          "operadorAcceso": "Ana Solis",
+          "horaLlegada": "08:15",
+          "puesto": "Puerta Principal",
+          "motivo": "Congestion vehicular",
+          "supervisor": "Supervisor Tres"
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

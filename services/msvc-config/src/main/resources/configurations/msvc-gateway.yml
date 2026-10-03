@@ -83,3 +83,10 @@ spring:
             - Path=/api/v1/maintenance/**
           filters:
             - StripPrefix=0
+
+        - id: msvc-forms
+          uri: http://msvc-forms:8092
+          predicates:
+            - Path=/api/v1/forms/**
+          filters:
+            - StripPrefix=0

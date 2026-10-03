@@ -52,6 +52,12 @@ export const queryKeys = {
         userStatuses: () => [...queryKeys.security.users(), 'statuses'],
         roleForm: (roleName) => [...queryKeys.security.roles(), 'form', roleName],
     },
+    forms: {
+        root: ['forms'],
+        types: () => [...queryKeys.forms.root, 'types'],
+        records: () => [...queryKeys.forms.root, 'records'],
+        recordList: (params) => [...queryKeys.forms.records(), 'list', params],
+    },
     transport: {
         root: ['transport'],
         vehicles: () => [...queryKeys.transport.root, 'vehicles'],
