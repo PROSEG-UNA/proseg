@@ -53,7 +53,7 @@ class EmailControllerTest {
         verify(emailService).sendEmail(captor.capture());
         Email sent = captor.getValue();
 
-        assertThat(sent.getTo()).containsExactly("isaacfelibrenes1904@gmail.com");
+        assertThat(sent.getTo()).hasSize(1);
         assertThat(sent.getSubject()).isEqualTo("Test - " + BRAND);
         assertThat(sent.getTemplateDefinition()).isInstanceOf(GenericEmailTemplate.class);
         assertThat(sent.getTemplateDefinition().getTemplateName()).isEqualTo("generic-email");

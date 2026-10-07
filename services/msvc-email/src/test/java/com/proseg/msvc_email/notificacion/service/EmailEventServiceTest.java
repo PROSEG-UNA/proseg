@@ -159,7 +159,9 @@ class EmailEventServiceTest {
 
         emailEventService.sendApprovalEmails(registeredEvent());
 
-        verify(emailService, times(2)).sendEmail(any());
+        ArgumentCaptor<Email> captor = ArgumentCaptor.forClass(Email.class);
+        verify(emailService, times(2)).sendEmail(captor.capture());
+        assertThat(captor.getAllValues().get(1).getTo()).containsExactly("two@test.com");
     }
 
     private Email captureSingleEmail() {
