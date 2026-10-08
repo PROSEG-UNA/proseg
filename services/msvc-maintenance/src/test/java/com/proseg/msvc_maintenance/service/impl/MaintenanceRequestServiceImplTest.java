@@ -1,6 +1,8 @@
 package com.proseg.msvc_maintenance.service.impl;
 
+import com.proseg.common.api.response.ApiResponse;
 import com.proseg.msvc_maintenance.dto.request.MaintenanceRequestRequestDto;
+import com.proseg.msvc_maintenance.dto.response.InventoryBuildingEmailResponseDto;
 import com.proseg.msvc_maintenance.entity.Company;
 import com.proseg.msvc_maintenance.entity.MaintenanceEmail;
 import com.proseg.msvc_maintenance.entity.MaintenanceRequest;
@@ -26,6 +28,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -89,9 +92,14 @@ class MaintenanceRequestServiceImplTest {
 
     @Test
     void update_transition_to_cancelled_should_publish_rejected_once() {
+        UUID companyId = UUID.randomUUID();
+        UUID campusId = UUID.randomUUID();
+        UUID technicianId = UUID.randomUUID();
+
         existingRequest.setStatus(MaintenanceStatus.PENDING);
         when(maintenanceRequestRepository.findById(requestId)).thenReturn(Optional.of(existingRequest));
         when(maintenanceRequestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        stubUpdateDependencies(companyId, campusId, technicianId);
 
         // Simulate mapper updating entity from request to set status CANCELLED and cancellation reason
         doAnswer(inv -> {
@@ -103,13 +111,13 @@ class MaintenanceRequestServiceImplTest {
         }).when(maintenanceRequestMapper).updateEntityFromRequest(any(), any());
 
         MaintenanceRequestRequestDto reqDto = MaintenanceRequestRequestDto.builder()
-                .companyId(UUID.randomUUID().toString())
+                .companyId(companyId.toString())
                 .startDate(LocalDate.now())
                 .endDate(LocalDate.now())
                 .startTime(LocalTime.now())
                 .endTime(LocalTime.now())
-                .campusId(UUID.randomUUID().toString())
-                .assignedTechnicianIds(List.of(UUID.randomUUID()))
+                .campusId(campusId.toString())
+                .assignedTechnicianIds(List.of(technicianId))
                 .emails(List.of("a@b.com"))
                 .status(MaintenanceStatus.CANCELLED)
                 .build();
@@ -126,21 +134,26 @@ class MaintenanceRequestServiceImplTest {
 
     @Test
     void update_when_already_cancelled_should_not_publish_rejection_again() {
+        UUID companyId = UUID.randomUUID();
+        UUID campusId = UUID.randomUUID();
+        UUID technicianId = UUID.randomUUID();
+
         existingRequest.setStatus(MaintenanceStatus.CANCELLED);
         existingRequest.setCancellationReason("already");
         when(maintenanceRequestRepository.findById(requestId)).thenReturn(Optional.of(existingRequest));
         when(maintenanceRequestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        stubUpdateDependencies(companyId, campusId, technicianId);
 
         doNothing().when(maintenanceRequestMapper).updateEntityFromRequest(any(), any());
 
         MaintenanceRequestRequestDto reqDto = MaintenanceRequestRequestDto.builder()
-                .companyId(UUID.randomUUID().toString())
+                .companyId(companyId.toString())
                 .startDate(LocalDate.now())
                 .endDate(LocalDate.now())
                 .startTime(LocalTime.now())
                 .endTime(LocalTime.now())
-                .campusId(UUID.randomUUID().toString())
-                .assignedTechnicianIds(List.of(UUID.randomUUID()))
+                .campusId(campusId.toString())
+                .assignedTechnicianIds(List.of(technicianId))
                 .emails(List.of("a@b.com"))
                 .status(MaintenanceStatus.CANCELLED)
                 .build();
@@ -148,5 +161,28 @@ class MaintenanceRequestServiceImplTest {
         service.update(requestId, reqDto);
 
         verify(eventPublisher, times(0)).publishEvent(any());
+    }
+
+    private void stubUpdateDependencies(UUID companyId, UUID campusId, UUID technicianId) {
+        Company company = Company.builder().id(companyId).build();
+        when(companyRepository.findById(companyId)).thenReturn(Optional.of(company));
+
+        UserCompany technician = UserCompany.builder()
+                .id(technicianId)
+                .company(company)
+                .build();
+        when(userCompanyRepository.findAllById(List.of(technicianId))).thenReturn(List.of(technician));
+
+        ApiResponse<List<InventoryBuildingEmailResponseDto>> campusEmails = new ApiResponse<>(
+                null,
+                List.of(InventoryBuildingEmailResponseDto.builder().email("a@b.com").build()),
+                200);
+        when(inventoryClient.findCampusEmails(campusId)).thenReturn(campusEmails);
+
+        when(maintenanceEmailRepository.findByEmail(eq("a@b.com")))
+                .thenReturn(Optional.of(MaintenanceEmail.builder().email("a@b.com").build()));
+
+        when(maintenanceRequestMapper.toResponse(any(MaintenanceRequest.class)))
+                .thenReturn(com.proseg.msvc_maintenance.dto.response.MaintenanceRequestResponseDto.builder().build());
     }
 }
