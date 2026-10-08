@@ -164,25 +164,14 @@ class MaintenanceRequestServiceImplTest {
     }
 
     private void stubUpdateDependencies(UUID companyId, UUID campusId, UUID technicianId) {
-        Company company = Company.builder().id(companyId).build();
-        when(companyRepository.findById(companyId)).thenReturn(Optional.of(company));
-
-        UserCompany technician = UserCompany.builder()
-                .id(technicianId)
-                .company(company)
-                .build();
-        when(userCompanyRepository.findAllById(List.of(technicianId))).thenReturn(List.of(technician));
-
-        ApiResponse<List<InventoryBuildingEmailResponseDto>> campusEmails = new ApiResponse<>(
-                null,
-                List.of(InventoryBuildingEmailResponseDto.builder().email("a@b.com").build()),
-                200);
-        when(inventoryClient.findCampusEmails(campusId)).thenReturn(campusEmails);
-
-        when(maintenanceEmailRepository.findByEmail(eq("a@b.com")))
-                .thenReturn(Optional.of(MaintenanceEmail.builder().email("a@b.com").build()));
-
-        when(maintenanceRequestMapper.toResponse(any(MaintenanceRequest.class)))
-                .thenReturn(com.proseg.msvc_maintenance.dto.response.MaintenanceRequestResponseDto.builder().build());
+        MaintenanceRequestServiceImplTestSupport.stubUpdateDependencies(
+                companyRepository,
+                userCompanyRepository,
+                maintenanceEmailRepository,
+                inventoryClient,
+                maintenanceRequestMapper,
+                companyId,
+                campusId,
+                technicianId);
     }
 }
