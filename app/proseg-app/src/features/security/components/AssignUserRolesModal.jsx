@@ -142,6 +142,7 @@ export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
                 title="Asignar rol"
                 subtitle="Seleccione el rol que tendrá el usuario"
                 loading={saving}
+                fillHeight
                 contentSx={{ display: 'flex', flexDirection: 'column' }}
                 footerLeft={
                     <Typography sx={{ fontSize: 11.5, color: 'text.disabled', fontWeight: 500 }}>

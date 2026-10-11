@@ -155,14 +155,14 @@ export default function TableBase({
                 borderColor: 'divider',
                 borderRadius: `${theme.shape.borderRadius}px`,
                 overflow: table.getState().isFullScreen ? 'hidden' : 'clip',
-                marginBottom:                 table.getState().isFullScreen || flexLayout ? 0 : '2rem',
-                                ...(flexLayout
+                marginBottom: table.getState().isFullScreen || flexLayout ? 0 : '2rem',
+                ...(flexLayout
                     ? {
                         display: 'flex',
                         flexDirection: 'column',
                         position: 'relative',
                         boxSizing: 'border-box',
-                        ...(table.getState().isFullScreen ? {} : fitsParent ? { minHeight: 0 } : { height: '100%', minHeight: 0 }),
+                        ...(table.getState().isFullScreen ? {} : fitsParent ? { flex: '1 1 auto', minHeight: 0 } : { height: '100%', minHeight: 0 }),
                     }
                     : {}),
                 '& .Mui-TableHeadCell-Content-Actions': {
@@ -411,7 +411,7 @@ export default function TableBase({
 
     if (fitsParent) {
         return (
-            <Box sx={{ display: 'flex', flexDirection: 'column', flex: '0 1 auto', minHeight: isFullScreen ? undefined : 280 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: isFullScreen ? undefined : 280 }}>
                 <MaterialReactTable table={table} />
             </Box>
         );

@@ -33,6 +33,7 @@ export default function LocationTableModal({ open, onClose, config }) {
             title={pluralTitle}
             subtitle={`Gestión de ${pluralTitle.toLowerCase()}`}
             loading={loading}
+            fillHeight
             contentSx={{ display: 'flex', flexDirection: 'column' }}
             footerLeft={footerLeft}
             secondaryButton={{ label: 'Cerrar', onClick: onClose }}
