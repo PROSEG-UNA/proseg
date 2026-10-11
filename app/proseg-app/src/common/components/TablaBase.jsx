@@ -42,6 +42,7 @@ export default function TableBase({
                                       enableStickyFooter = true,
                                       maxHeight,
                                       fillToBottom = true,
+                                      fitParent = false,
                                       tableOptions = {},
                                   }) {
     const theme = useTheme();
@@ -50,6 +51,8 @@ export default function TableBase({
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
     const [isDesktopSearchOpen, setIsDesktopSearchOpen] = useState(false);
     const fillsToBottom = fillToBottom && !maxHeight;
+    const fitsParent = fitParent && !fillsToBottom && !maxHeight;
+    const flexLayout = fillsToBottom || fitsParent;
 
     const stableColumns = useMemo(() => columns, [columns]);
     const tableOptionsState = tableOptions.state ?? {};
@@ -116,7 +119,7 @@ export default function TableBase({
                 overflowY: 'auto',
                 ...(maxHeight
                     ? { maxHeight }
-                    : fillsToBottom
+                    : flexLayout
                         ? { flex: '1 1 auto', minHeight: 0, height: 'auto', maxHeight: 'none' }
                         : {
                             height: table.getState().isFullScreen
@@ -152,14 +155,14 @@ export default function TableBase({
                 borderColor: 'divider',
                 borderRadius: `${theme.shape.borderRadius}px`,
                 overflow: table.getState().isFullScreen ? 'hidden' : 'clip',
-                marginBottom: table.getState().isFullScreen || fillsToBottom ? 0 : '2rem',
-                ...(fillsToBottom
+                marginBottom:                 table.getState().isFullScreen || flexLayout ? 0 : '2rem',
+                                ...(flexLayout
                     ? {
                         display: 'flex',
                         flexDirection: 'column',
                         position: 'relative',
                         boxSizing: 'border-box',
-                        ...(table.getState().isFullScreen ? {} : { height: '100%', minHeight: 0 }),
+                        ...(table.getState().isFullScreen ? {} : fitsParent ? { minHeight: 0 } : { height: '100%', minHeight: 0 }),
                     }
                     : {}),
                 '& .Mui-TableHeadCell-Content-Actions': {
@@ -288,7 +291,7 @@ export default function TableBase({
                     sx={(t) => ({
                         ...headerSurfaceSx(t),
                         zIndex: 3,
-                        ...(fillsToBottom
+                        ...(flexLayout
                             ? {
                                 flex: '0 0 auto',
                                 position: 'relative',
@@ -307,7 +310,7 @@ export default function TableBase({
         muiBottomToolbarProps: {
             sx: (t) => ({
                 ...headerSurfaceSx(t),
-                ...(fillsToBottom ? { position: 'relative', boxShadow: 'none' } : {}),
+                ...(flexLayout ? { position: 'relative', boxShadow: 'none' } : {}),
             }),
         },
 
@@ -405,6 +408,14 @@ export default function TableBase({
 
     const isFullScreen = table.getState().isFullScreen;
     const { slotRef, paneRef } = useFillToBottom(fillsToBottom && !isFullScreen);
+
+    if (fitsParent) {
+        return (
+            <Box sx={{ display: 'flex', flexDirection: 'column', flex: '0 1 auto', minHeight: isFullScreen ? undefined : 280 }}>
+                <MaterialReactTable table={table} />
+            </Box>
+        );
+    }
 
     if (!fillsToBottom) return <MaterialReactTable table={table} />;
 

@@ -33,13 +33,14 @@ export default function LocationTableModal({ open, onClose, config }) {
             title={pluralTitle}
             subtitle={`Gestión de ${pluralTitle.toLowerCase()}`}
             loading={loading}
+            contentSx={{ display: 'flex', flexDirection: 'column' }}
             footerLeft={footerLeft}
             secondaryButton={{ label: 'Cerrar', onClick: onClose }}
             primaryButton={permissions.canCreate
                 ? { label: `Crear ${title}`, onClick: handleCreate, startIcon: <AddIcon /> }
                 : null}
         >
-            <LocationTableView table={table} fillToBottom={false} />
+            <LocationTableView table={table} fillToBottom={false} fitParent />
         </GeneralModal>
     );
 }
