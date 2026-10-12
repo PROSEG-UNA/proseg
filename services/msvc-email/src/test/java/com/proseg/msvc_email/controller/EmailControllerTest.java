@@ -46,7 +46,7 @@ class EmailControllerTest {
 
         mockMvc.perform(get("/email/test"))
                 .andExpect(status().isOk())
-                // Comportamiento real: el cuerpo no incluye el destinatario (literal del controlador).
+                
                 .andExpect(content().string("Email enviado a "));
 
         ArgumentCaptor<Email> captor = ArgumentCaptor.forClass(Email.class);
