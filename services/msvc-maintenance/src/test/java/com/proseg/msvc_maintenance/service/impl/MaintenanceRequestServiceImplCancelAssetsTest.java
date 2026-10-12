@@ -115,7 +115,7 @@ class MaintenanceRequestServiceImplCancelAssetsTest {
     @Test
     @DisplayName("cancel con solicitud ya CANCELLED permite la transición (mismo estado)")
     void cancel_cuandoYaCancelada_permiteRepetirCancelacion() {
-        // Comportamiento real: validateOrThrow(CANCELLED, CANCELLED) no lanza (mismo estado).
+        
         UUID requestId = UUID.randomUUID();
         MaintenanceRequest request = MaintenanceRequest.builder()
                 .id(requestId)
