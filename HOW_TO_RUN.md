@@ -216,3 +216,22 @@ docker compose -f docker-compose.prod.yml -f docker-compose.local.yml up -d
 ```
 
 Usa imágenes de GHCR en vez de compilar, y expone todo en `http://localhost:8080`. No es para el día a día.
+
+## Pruebas unitarias
+
+Requieren **JDK 17**, la versión que usa el proyecto. Con una más nueva (por ejemplo la 24), Mockito puede fallar al mockear clases de librerías externas como `MinioClient`. Verificalo con `java -version` y `mvn -version`.
+
+Desde la raíz del repositorio, entrá al directorio `services/` y ejecutá Maven sobre el módulo que quieras probar. El flag `-am` compila también las dependencias del monorepo (por ejemplo `msvc-common`).
+
+```bash
+cd services
+mvn -pl msvc-archive -am verify
+```
+
+Sustituí `msvc-archive` por otro microservicio que ya tenga pruebas (por ejemplo `msvc-inventory`) para correr las suyas.
+
+El reporte de cobertura JaCoCo se genera al final de `verify` (con `mvn test` no se genera) y queda en:
+
+`services/<modulo>/target/site/jacoco/index.html`
+
+Ejemplo para archive: `services/msvc-archive/target/site/jacoco/index.html`.
