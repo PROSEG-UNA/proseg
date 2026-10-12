@@ -101,7 +101,7 @@ class MaintenanceRequestServiceImplTest {
         when(maintenanceRequestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         stubUpdateDependencies(companyId, campusId, technicianId);
 
-        // Simulate mapper updating entity from request to set status CANCELLED and cancellation reason
+        
         doAnswer(inv -> {
             MaintenanceRequestRequestDto req = inv.getArgument(0);
             MaintenanceRequest entity = inv.getArgument(1);
