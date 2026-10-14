@@ -135,9 +135,10 @@ Set-RoleDomain "IMPORTAR_ACTIVOS"  "Inventario"
 
 Write-Host ""
 Write-Host "--- Ubicaciones ---"
-Set-RoleDomain "LEER_UBICACIONES"      "Ubicaciones"
-Set-RoleDomain "GESTIONAR_UBICACIONES" "Ubicaciones"
+Set-RoleDomain "CREAR_UBICACIONES"     "Ubicaciones"
+Set-RoleDomain "EDITAR_UBICACIONES"    "Ubicaciones"
 Set-RoleDomain "ELIMINAR_UBICACIONES"  "Ubicaciones"
+Set-RoleDomain "LEER_UBICACIONES"      "Ubicaciones"
 
 Write-Host ""
 Write-Host "--- Archivos ---"
