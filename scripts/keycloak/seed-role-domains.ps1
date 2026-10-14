@@ -175,7 +175,6 @@ Set-RoleDomain "ELIMINAR_TECNICOS_MANTENIMIENTO"        "Registro de mantenimien
 Write-Host ""
 Write-Host "--- Tickets ---"
 Set-RoleDomain "LEER_TICKET_MANTENIMIENTO"               "Tickets"
-Set-RoleDomain "LEER_TICKETS_MANTENIMIENTO"              "Tickets"
 Set-RoleDomain "LEER_TODOS_TICKETS_MANTENIMIENTO"        "Tickets"
 Set-RoleDomain "CREAR_TICKETS_MANTENIMIENTO"             "Tickets"
 Set-RoleDomain "EDITAR_TICKETS_MANTENIMIENTO"            "Tickets"
