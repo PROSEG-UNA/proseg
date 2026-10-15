@@ -141,11 +141,6 @@ Set-RoleDomain "ELIMINAR_UBICACIONES"  "Ubicaciones"
 Set-RoleDomain "LEER_UBICACIONES"      "Ubicaciones"
 
 Write-Host ""
-Write-Host "--- Archivos ---"
-Set-RoleDomain "LEER_ARCHIVOS"  "Archivos"
-Set-RoleDomain "SUBIR_ARCHIVOS" "Archivos"
-
-Write-Host ""
 Write-Host "--- Empresas ---"
 Set-RoleDomain "LEER_EMPRESAS"               "Empresas"
 Set-RoleDomain "GESTIONAR_EMPRESAS"          "Empresas"
