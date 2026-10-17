@@ -193,6 +193,8 @@ export default function CatalogTableModal({ open, onClose, config }) {
                 subtitle={`Gestión de ${pluralTitle.toLowerCase()}`}
                 loading={loading}
                 fetching={fetching}
+                fillHeight
+                contentSx={{ display: 'flex', flexDirection: 'column' }}
                 footerLeft={footerLeft}
                 secondaryButton={{ label: 'Cerrar', onClick: onClose }}
                 primaryButton={canCreateCatalog ? { label: `Crear ${title}`, onClick: handleCreate, startIcon: <AddIcon /> } : null}
@@ -209,6 +211,7 @@ export default function CatalogTableModal({ open, onClose, config }) {
                         enableRowActions={hasRowActions}
                         renderRowActions={hasRowActions ? renderRowActions : undefined}
                         fillToBottom={false}
+                        fitParent
                         tableOptions={{
                             positionActionsColumn: 'last',
                             manualPagination: true,

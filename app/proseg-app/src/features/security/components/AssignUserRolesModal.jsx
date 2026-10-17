@@ -142,6 +142,8 @@ export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
                 title="Asignar rol"
                 subtitle="Seleccione el rol que tendrá el usuario"
                 loading={saving}
+                fillHeight
+                contentSx={{ display: 'flex', flexDirection: 'column' }}
                 footerLeft={
                     <Typography sx={{ fontSize: 11.5, color: 'text.disabled', fontWeight: 500 }}>
                         {selectedRoleId ? 'Rol seleccionado' : 'Sin rol seleccionado'}
@@ -159,6 +161,7 @@ export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
                         loading={loading}
                         error={error}
                         fillToBottom={false}
+                        fitParent
                         tableOptions={{ positionToolbarAlertBanner: 'none' }}
                     />
                 )}
