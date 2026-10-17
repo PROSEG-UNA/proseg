@@ -4,7 +4,6 @@ import com.proseg.msvc_transport.dto.request.DriverRequestDto;
 import com.proseg.msvc_transport.dto.response.DriverResponseDto;
 import com.proseg.msvc_transport.entity.Driver;
 import com.proseg.msvc_transport.exception.TransportException;
-import com.proseg.msvc_transport.repository.AssignmentRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
 import com.proseg.msvc_transport.specification.GenericSpecifications;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +14,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.Map;
 import java.util.UUID;
 
@@ -23,12 +23,11 @@ import java.util.UUID;
 public class DriverService {
 
     private final DriverRepository driverRepository;
-    private final AssignmentRepository assignmentRepository;
 
     @Transactional
     public DriverResponseDto create(DriverRequestDto request) {
-        if (driverRepository.existsByDocumentIdIgnoreCase(request.getDocumentId())) {
-            throw TransportException.conflict("DRIVER_DUPLICATE_DOCUMENT", "Ya existe un chofer con ese documento");
+        if (driverRepository.existsByNameIgnoreCase(request.getName().trim())) {
+            throw TransportException.conflict("DRIVER_DUPLICATE_NAME", "Ya existe un chofer con ese nombre");
         }
         Driver driver = toEntity(request);
         return toResponse(driverRepository.save(driver));
@@ -53,8 +52,8 @@ public class DriverService {
     @Transactional
     public DriverResponseDto update(UUID id, DriverRequestDto request) {
         Driver driver = driverRepository.findById(id).orElseThrow(() -> TransportException.notFound("Chofer", id.toString()));
-        if (driverRepository.existsByDocumentIdIgnoreCaseAndIdNot(request.getDocumentId(), id)) {
-            throw TransportException.conflict("DRIVER_DUPLICATE_DOCUMENT", "Ya existe un chofer con ese documento");
+        if (driverRepository.existsByNameIgnoreCaseAndIdNot(request.getName().trim(), id)) {
+            throw TransportException.conflict("DRIVER_DUPLICATE_NAME", "Ya existe un chofer con ese nombre");
         }
         updateEntity(driver, request);
         return toResponse(driverRepository.save(driver));
@@ -63,13 +62,6 @@ public class DriverService {
     @Transactional
     public void delete(UUID id) {
         Driver driver = driverRepository.findById(id).orElseThrow(() -> TransportException.notFound("Chofer", id.toString()));
-        long assignmentsUsingDriver = assignmentRepository.countByDriverId(id);
-        if (assignmentsUsingDriver > 0) {
-            throw TransportException.conflict(
-                    "DRIVER_IN_USE",
-                    "No se puede eliminar el chofer porque tiene " + assignmentsUsingDriver + " asignaciones relacionadas"
-            );
-        }
         driverRepository.delete(driver);
     }
 
@@ -80,23 +72,13 @@ public class DriverService {
     }
 
     private void updateEntity(Driver entity, DriverRequestDto request) {
-        entity.setFirstName(request.getFirstName());
-        entity.setLastName(request.getLastName());
-        entity.setDocumentId(request.getDocumentId());
-        entity.setLicenseNumber(request.getLicenseNumber());
-        entity.setPhone(request.getPhone());
-        entity.setEmail(request.getEmail());
+        entity.setName(request.getName().trim());
         entity.setStatus(request.getStatus());
         entity.setRestrictions(request.getRestrictions());
-        entity.setAvailability(request.isAvailability());
-        entity.setAccumulatedHours(request.getAccumulatedHours());
-        entity.setFreeWeekendsCount(request.getFreeWeekendsCount());
-        entity.setOvertimeHours(request.getOvertimeHours());
-        entity.setSurplusHours(request.getSurplusHours());
-        entity.setJornadaHoursPerDay(request.getJornadaHoursPerDay());
+        entity.setAllowedVehicleTypes(new HashSet<>(request.getAllowedVehicleTypes()));
     }
 
     public DriverResponseDto toResponse(Driver entity) {
-        return DriverResponseDto.builder().id(entity.getId()).firstName(entity.getFirstName()).lastName(entity.getLastName()).documentId(entity.getDocumentId()).licenseNumber(entity.getLicenseNumber()).phone(entity.getPhone()).email(entity.getEmail()).status(entity.getStatus()).restrictions(entity.getRestrictions()).availability(entity.isAvailability()).accumulatedHours(entity.getAccumulatedHours()).freeWeekendsCount(entity.getFreeWeekendsCount()).overtimeHours(entity.getOvertimeHours()).surplusHours(entity.getSurplusHours()).jornadaHoursPerDay(entity.getJornadaHoursPerDay()).createdAt(entity.getCreatedAt()).updatedAt(entity.getUpdatedAt()).build();
+        return DriverResponseDto.builder().id(entity.getId()).name(entity.getName()).status(entity.getStatus()).restrictions(entity.getRestrictions()).allowedVehicleTypes(entity.getAllowedVehicleTypes().stream().sorted().toList()).createdAt(entity.getCreatedAt()).updatedAt(entity.getUpdatedAt()).build();
     }
 }

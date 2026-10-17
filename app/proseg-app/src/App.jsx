@@ -29,11 +29,7 @@ import TicketsDashboard from './features/maintenance/pages/TicketsDashboard.jsx'
 import TransportPage from './features/transport/pages/TransportPage.jsx';
 import DriversPage from './features/transport/pages/drivers/DriversPage.jsx';
 import VehiclesPage from './features/transport/pages/vehicles/VehiclesPage.jsx';
-import VehicleMaintenancePage from './features/transport/pages/maintenance/VehicleMaintenancePage.jsx';
-import ToursPage from './features/transport/pages/tours/ToursPage.jsx';
-import AssignmentPage from './features/transport/pages/assignment/AssignmentPage.jsx';
 import CleaningPage from './features/transport/pages/cleaning/CleaningPage.jsx';
-import CleaningImportPage from './features/transport/pages/cleaning/CleaningImportPage.jsx';
 import CleaningDraftPage from './features/transport/pages/cleaning/CleaningDraftPage.jsx';
 
 function App() {
@@ -174,23 +170,11 @@ function App() {
                                     }
                                 />
                                 <Route
-                                    path="/transporte/depuracion/nueva"
-                                    element={
-                                        <ProtectedRoute
-                                            element={
-                                                <DashboardLayout title="Nueva Depuración" pageTitle="Depuración">
-                                                    <CleaningImportPage />
-                                                </DashboardLayout>
-                                            }
-                                        />
-                                    }
-                                />
-                                <Route
                                     path="/transporte/depuracion/borradores/:draftId"
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Borrador de Depuración" pageTitle="Depuración">
+                                                <DashboardLayout title="Borrador de Depuración de giras" pageTitle="Depuración">
                                                     <CleaningDraftPage />
                                                 </DashboardLayout>
                                             }
@@ -216,42 +200,6 @@ function App() {
                                             element={
                                                 <DashboardLayout title="Gestión de Vehículos" pageTitle="Vehículos">
                                                     <VehiclesPage />
-                                                </DashboardLayout>
-                                            }
-                                        />
-                                    }
-                                />
-                                <Route
-                                    path="/transporte/mantenimiento"
-                                    element={
-                                        <ProtectedRoute
-                                            element={
-                                                <DashboardLayout title="Mantenimiento de Vehículos" pageTitle="Mantenimiento">
-                                                    <VehicleMaintenancePage />
-                                                </DashboardLayout>
-                                            }
-                                        />
-                                    }
-                                />
-                                <Route
-                                    path="/transporte/giras"
-                                    element={
-                                        <ProtectedRoute
-                                            element={
-                                                <DashboardLayout title="Gestión de Giras" pageTitle="Giras">
-                                                    <ToursPage />
-                                                </DashboardLayout>
-                                            }
-                                        />
-                                    }
-                                />
-                                <Route
-                                    path="/transporte/asignaciones"
-                                    element={
-                                        <ProtectedRoute
-                                            element={
-                                                <DashboardLayout title="Gestión de Asignaciones" pageTitle="Asignaciones">
-                                                    <AssignmentPage />
                                                 </DashboardLayout>
                                             }
                                         />

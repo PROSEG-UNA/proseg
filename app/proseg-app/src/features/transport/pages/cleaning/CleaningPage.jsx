@@ -12,16 +12,13 @@ export default function CleaningPage() {
     const { hasAnyPermission } = usePermissions();
 
     const canExecuteCleaning = hasAnyPermission([
-        PERMISSIONS.TRANSPORT.ASSIGNMENT.GENERATE,
-        PERMISSIONS.TRANSPORT.ASSIGNMENT.UPDATE,
+        PERMISSIONS.TRANSPORT.TOURS.MANAGE,
     ]);
 
     const canReadHistory = hasAnyPermission([
         PERMISSIONS.TRANSPORT.TOURS.READ,
         PERMISSIONS.TRANSPORT.TOURS.MANAGE,
         PERMISSIONS.TRANSPORT.TOURS.DELETE,
-        PERMISSIONS.TRANSPORT.ASSIGNMENT.GENERATE,
-        PERMISSIONS.TRANSPORT.ASSIGNMENT.UPDATE,
     ]);
 
     const tabs = useMemo(() => [

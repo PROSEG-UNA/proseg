@@ -1,25 +1,23 @@
 import { useEffect, useState } from 'react';
-import { Box, MenuItem, TextField } from '@mui/material';
+import { Box, Checkbox, ListItemText, MenuItem, TextField } from '@mui/material';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
 import { createDriver, fetchDriverById, updateDriver } from '../../services/drivers/driversService';
-import { DRIVER_STATUS_OPTIONS } from '../../transportUtils';
+import { DRIVER_STATUS_OPTIONS, VEHICLE_TYPE_OPTIONS, vehicleTypeLabel } from '../../transportUtils';
+
+const ALL_VEHICLE_TYPES = VEHICLE_TYPE_OPTIONS.map((option) => option.value);
 
 const INITIAL_VALUES = {
-    firstName: '',
-    lastName: '',
-    documentId: '',
-    licenseNumber: '',
-    phone: '',
-    email: '',
+    name: '',
     status: 'ACTIVE',
+    allowedVehicleTypes: ALL_VEHICLE_TYPES,
 };
 
-export default function DriverFormModal({ open, onClose, onSaved, driverId = null }) {
+export default function DriverFormModal({ open, onClose, onSaved, driverId = null, initialValues = null }) {
     const isEdit = !!driverId;
-    const [formValues, setFormValues] = useState(INITIAL_VALUES);
+    const [formValues, setFormValues] = useState(() => ({ ...INITIAL_VALUES, ...initialValues }));
     const [errors, setErrors] = useState({});
     const [touched, setTouched] = useState({});
     const [saving, setSaving] = useState(false);
@@ -36,13 +34,9 @@ export default function DriverFormModal({ open, onClose, onSaved, driverId = nul
                 const driver = await fetchDriverById(driverId);
                 if (cancelled || !driver) return;
                 setFormValues({
-                    firstName: driver.firstName ?? '',
-                    lastName: driver.lastName ?? '',
-                    documentId: driver.documentId ?? '',
-                    licenseNumber: driver.licenseNumber ?? '',
-                    phone: driver.phone ?? '',
-                    email: driver.email ?? '',
+                    name: driver.name ?? '',
                     status: driver.status ?? 'ACTIVE',
+                    allowedVehicleTypes: driver.allowedVehicleTypes ?? ALL_VEHICLE_TYPES,
                 });
             } catch (error) {
                 if (!cancelled) {
@@ -64,14 +58,8 @@ export default function DriverFormModal({ open, onClose, onSaved, driverId = nul
         const trimmedValue = typeof value === 'string' ? value.trim() : value;
         let error = '';
 
-        if ((key === 'firstName' || key === 'lastName' || key === 'licenseNumber') && !trimmedValue) {
+        if (key === 'name' && !trimmedValue) {
             error = 'Este campo es requerido';
-        }
-
-        if (!error && key === 'email' && trimmedValue) {
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedValue)) {
-                error = 'El correo electrónico no es válido';
-            }
         }
 
         setErrors((previousValue) => ({ ...previousValue, [key]: error }));
@@ -89,7 +77,7 @@ export default function DriverFormModal({ open, onClose, onSaved, driverId = nul
     };
 
     const handleSave = async () => {
-        const keysToValidate = ['firstName', 'lastName', 'licenseNumber', 'email'];
+        const keysToValidate = ['name'];
         const nextTouched = {};
         let hasError = false;
 
@@ -110,22 +98,16 @@ export default function DriverFormModal({ open, onClose, onSaved, driverId = nul
         setSaving(true);
         try {
             const payload = {
-                firstName: formValues.firstName.trim(),
-                lastName: formValues.lastName.trim(),
-                documentId: formValues.documentId.trim() || null,
-                licenseNumber: formValues.licenseNumber.trim(),
-                phone: formValues.phone.trim() || null,
-                email: formValues.email.trim() || null,
+                name: formValues.name.trim(),
                 status: formValues.status,
+                allowedVehicleTypes: formValues.allowedVehicleTypes,
             };
 
-            if (isEdit) {
-                await updateDriver(driverId, payload);
-            } else {
-                await createDriver(payload);
-            }
+            const saved = isEdit
+                ? await updateDriver(driverId, payload)
+                : await createDriver(payload);
 
-            onSaved?.();
+            onSaved?.(saved);
             onClose?.();
         } catch (error) {
             setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo guardar el chofer') });
@@ -158,53 +140,12 @@ export default function DriverFormModal({ open, onClose, onSaved, driverId = nul
                 <Box sx={{ p: 3, display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' } }}>
                     <TextField
                         label="Nombre"
-                        value={formValues.firstName}
-                        onChange={(event) => handleChange('firstName', event.target.value)}
-                        onBlur={() => handleBlur('firstName')}
-                        error={!!errors.firstName}
-                        helperText={errors.firstName}
+                        value={formValues.name}
+                        onChange={(event) => handleChange('name', event.target.value)}
+                        onBlur={() => handleBlur('name')}
+                        error={!!errors.name}
+                        helperText={errors.name}
                         required
-                        fullWidth
-                    />
-                    <TextField
-                        label="Apellido"
-                        value={formValues.lastName}
-                        onChange={(event) => handleChange('lastName', event.target.value)}
-                        onBlur={() => handleBlur('lastName')}
-                        error={!!errors.lastName}
-                        helperText={errors.lastName}
-                        required
-                        fullWidth
-                    />
-                    <TextField
-                        label="Identificación"
-                        value={formValues.documentId}
-                        onChange={(event) => handleChange('documentId', event.target.value)}
-                        fullWidth
-                    />
-                    <TextField
-                        label="Licencia"
-                        value={formValues.licenseNumber}
-                        onChange={(event) => handleChange('licenseNumber', event.target.value)}
-                        onBlur={() => handleBlur('licenseNumber')}
-                        error={!!errors.licenseNumber}
-                        helperText={errors.licenseNumber}
-                        required
-                        fullWidth
-                    />
-                    <TextField
-                        label="Teléfono"
-                        value={formValues.phone}
-                        onChange={(event) => handleChange('phone', event.target.value)}
-                        fullWidth
-                    />
-                    <TextField
-                        label="Correo"
-                        value={formValues.email}
-                        onChange={(event) => handleChange('email', event.target.value)}
-                        onBlur={() => handleBlur('email')}
-                        error={!!errors.email}
-                        helperText={errors.email}
                         fullWidth
                     />
                     <TextField
@@ -217,6 +158,31 @@ export default function DriverFormModal({ open, onClose, onSaved, driverId = nul
                         {DRIVER_STATUS_OPTIONS.map((option) => (
                             <MenuItem key={option.value} value={option.value}>
                                 {option.label}
+                            </MenuItem>
+                        ))}
+                    </TextField>
+                    <TextField
+                        select
+                        label="Tipos de vehículo que puede manejar"
+                        value={formValues.allowedVehicleTypes}
+                        onChange={(event) => handleChange('allowedVehicleTypes', event.target.value)}
+                        slotProps={{
+                            select: {
+                                multiple: true,
+                                renderValue: (selected) => selected.map(vehicleTypeLabel).join(', '),
+                            },
+                        }}
+                        sx={{ gridColumn: { md: '1 / -1' } }}
+                        fullWidth
+                    >
+                        {VEHICLE_TYPE_OPTIONS.map((option) => (
+                            <MenuItem key={option.value} value={option.value}>
+                                <Checkbox
+                                    checked={formValues.allowedVehicleTypes.includes(option.value)}
+                                    tabIndex={-1}
+                                    sx={{ m: 0, mr: 1.5, p: 0 }}
+                                />
+                                <ListItemText primary={option.label} />
                             </MenuItem>
                         ))}
                     </TextField>

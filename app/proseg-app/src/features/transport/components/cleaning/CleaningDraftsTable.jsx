@@ -9,14 +9,14 @@ import RowActionsMenu from '../../../../common/components/RowActionsMenu.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { queryKeys } from '../../../../common/query';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils';
-import { formatDateTime } from '../../transportUtils.js';
 import { deleteCleaningDraft } from '../../services/cleaning/cleaningService.js';
 import { useCleaningDraftsData } from '../../hooks/useCleaningDraftsData.js';
 import { useServerTableState } from '../../hooks/useServerTableState.js';
-import { draftStatusColor, draftStatusLabel } from './cleaningDraftLabels.js';
+import { draftPeriodLabel, draftStatusColor, draftStatusLabel } from './cleaningDraftLabels.js';
 
-const INITIAL_SORTING = [{ id: 'importedAt', desc: true }];
-const FILTERABLE_COLUMNS = new Set(['fileName', 'fileType', 'status', 'importedBy']);
+const TABLE_STORAGE_KEY = 'cleaning-drafts-table-state';
+const INITIAL_SORTING = [];
+const FILTERABLE_COLUMNS = new Set(['fileName', 'status']);
 const STATUS_FILTER_OPTIONS = [
     { label: 'Borrador', value: 'DRAFT' },
     { label: 'Registrado', value: 'REGISTERED' },
@@ -31,6 +31,7 @@ export default function CleaningDraftsTable() {
     const { requestParams, tableOptions } = useServerTableState({
         initialSorting: INITIAL_SORTING,
         filterableColumns: FILTERABLE_COLUMNS,
+        storageKey: TABLE_STORAGE_KEY,
     });
     const { rows, loading, fetching, error, totalElements } = useCleaningDraftsData(requestParams);
 
@@ -47,17 +48,19 @@ export default function CleaningDraftsTable() {
         },
     });
 
+    const openDraft = (draftId) => navigate(`/transporte/depuracion/borradores/${draftId}`);
+
     const columns = useMemo(() => [
         {
-            accessorKey: 'importedAt',
-            header: 'Importado',
+            id: 'period',
+            header: 'Mes',
             size: 160,
             grow: false,
+            accessorFn: draftPeriodLabel,
             enableColumnFilter: false,
-            Cell: ({ cell }) => formatDateTime(cell.getValue()),
+            enableSorting: false,
         },
         { accessorKey: 'fileName', header: 'Archivo', size: 240, grow: true },
-        { accessorKey: 'fileType', header: 'Formato', size: 110, grow: false },
         { accessorKey: 'totalRows', header: 'Filas', size: 90, grow: false, enableColumnFilter: false },
         { accessorKey: 'duplicateRows', header: 'Repetidas', size: 110, grow: false, enableColumnFilter: false },
         {
@@ -76,7 +79,6 @@ export default function CleaningDraftsTable() {
                 />
             ),
         },
-        { accessorKey: 'importedBy', header: 'Importado por', size: 170, grow: true },
     ], []);
 
     return (
@@ -88,6 +90,7 @@ export default function CleaningDraftsTable() {
                 fetching={fetching}
                 error={error}
                 enableRowActions
+                onRowClick={(row) => openDraft(row.original.id)}
                 renderRowActions={({ row }) => (
                     <RowActionsMenu
                         tooltip="Acciones"
@@ -96,7 +99,7 @@ export default function CleaningDraftsTable() {
                                 key: 'open',
                                 label: 'Abrir borrador',
                                 icon: <OpenInNewOutlinedIcon fontSize="small" />,
-                                onClick: () => navigate(`/transporte/depuracion/borradores/${row.original.id}`),
+                                onClick: () => openDraft(row.original.id),
                             },
                             {
                                 key: 'delete',

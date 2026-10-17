@@ -3,20 +3,28 @@ package com.proseg.msvc_transport.entity;
 import com.proseg.common.entity.BaseEntity;
 import com.proseg.common.specification.FilterType;
 import com.proseg.common.specification.Filterable;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.UuidGenerator;
 import org.hibernate.annotations.Where;
 
+import java.util.EnumSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -38,25 +46,7 @@ public class Driver extends BaseEntity {
 
     @Filterable(type = FilterType.TEXT)
     @Column(nullable = false)
-    private String firstName;
-
-    @Filterable(type = FilterType.TEXT)
-    @Column(nullable = false)
-    private String lastName;
-
-    @Filterable(type = FilterType.TEXT)
-    @Column(nullable = false, unique = true)
-    private String documentId;
-
-    @Filterable(type = FilterType.TEXT)
-    @Column(nullable = false)
-    private String licenseNumber;
-
-    @Filterable(type = FilterType.TEXT)
-    private String phone;
-
-    @Filterable(type = FilterType.TEXT)
-    private String email;
+    private String name;
 
     @Filterable(type = FilterType.TEXT)
     @Builder.Default
@@ -66,21 +56,11 @@ public class Driver extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String restrictions;
 
+    @ElementCollection
+    @CollectionTable(name = "driver_vehicle_type", joinColumns = @JoinColumn(name = "driver_id"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "vehicle_type", nullable = false)
+    @BatchSize(size = 50)
     @Builder.Default
-    private boolean availability = true;
-
-    @Builder.Default
-    private double accumulatedHours = 0D;
-
-    @Builder.Default
-    private double freeWeekendsCount = 1D;
-
-    @Builder.Default
-    private double overtimeHours = 0D;
-
-    @Builder.Default
-    private double surplusHours = 0D;
-
-    @Builder.Default
-    private double jornadaHoursPerDay = 8D;
+    private Set<VehicleType> allowedVehicleTypes = EnumSet.allOf(VehicleType.class);
 }

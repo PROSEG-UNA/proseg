@@ -19,3 +19,4 @@ export { default as CancelWithReasonModal } from './CancelWithReasonModal.jsx';
 export { default as AccessDeniedState } from './AccessDeniedState.jsx';
 export { FeatureCard } from './FeatureCard.jsx';
 export { default as TableHorizontalScrollbar } from './TableHorizontalScrollbar.jsx';
+export { default as MonthPicker } from './MonthPicker.jsx';

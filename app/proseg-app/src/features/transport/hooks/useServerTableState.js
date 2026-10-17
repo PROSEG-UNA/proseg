@@ -27,7 +27,13 @@ function readStoredState(storageKey) {
     }
 }
 
-export function useServerTableState({ initialSorting, filterableColumns, initialPageSize = 10, storageKey }) {
+export function useServerTableState({
+    initialSorting,
+    filterableColumns,
+    initialPageSize = 10,
+    initialColumnVisibility = {},
+    storageKey,
+}) {
     const [stored] = useState(() => readStoredState(storageKey));
 
     const [pagination, setPagination] = useState({
@@ -37,7 +43,11 @@ export function useServerTableState({ initialSorting, filterableColumns, initial
     const [globalFilter, setGlobalFilter] = useState(typeof stored.globalFilter === 'string' ? stored.globalFilter : '');
     const [columnFilters, setColumnFilters] = useState(Array.isArray(stored.columnFilters) ? stored.columnFilters : []);
     const [sorting, setSorting] = useState(Array.isArray(stored.sorting) ? stored.sorting : initialSorting);
-    const [columnVisibility, setColumnVisibility] = useState(isPlainObject(stored.columnVisibility) ? stored.columnVisibility : {});
+    const [columnVisibility, setColumnVisibility] = useState(
+        isPlainObject(stored.columnVisibility)
+            ? { ...initialColumnVisibility, ...stored.columnVisibility }
+            : initialColumnVisibility,
+    );
     const [density, setDensity] = useState(DENSITIES.includes(stored.density) ? stored.density : DEFAULT_DENSITY);
     const [showColumnFilters, setShowColumnFilters] = useState(stored.showColumnFilters === true);
 

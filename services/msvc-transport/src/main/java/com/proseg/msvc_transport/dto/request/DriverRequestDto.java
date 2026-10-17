@@ -1,14 +1,17 @@
 package com.proseg.msvc_transport.dto.request;
 
-import jakarta.validation.constraints.Email;
+import com.proseg.msvc_transport.entity.VehicleType;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.EnumSet;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -18,53 +21,15 @@ import lombok.Setter;
 public class DriverRequestDto {
 
     @NotBlank
-    @Size(max = 100)
-    private String firstName;
-
-    @NotBlank
-    @Size(max = 100)
-    private String lastName;
-
-    @NotBlank
-    @Size(max = 50)
-    private String documentId;
-
-    @NotBlank
-    @Size(max = 50)
-    private String licenseNumber;
-
-    @Size(max = 50)
-    private String phone;
-
-    @Email
-    @Size(max = 150)
-    private String email;
+    @Size(max = 200)
+    private String name;
 
     @Builder.Default
     private String status = "ACTIVE";
 
     private String restrictions;
 
+    @NotNull
     @Builder.Default
-    private boolean availability = true;
-
-    @PositiveOrZero
-    @Builder.Default
-    private double accumulatedHours = 0D;
-
-    @PositiveOrZero
-    @Builder.Default
-    private double freeWeekendsCount = 1D;
-
-    @PositiveOrZero
-    @Builder.Default
-    private double overtimeHours = 0D;
-
-    @PositiveOrZero
-    @Builder.Default
-    private double surplusHours = 0D;
-
-    @PositiveOrZero
-    @Builder.Default
-    private double jornadaHoursPerDay = 8D;
+    private Set<VehicleType> allowedVehicleTypes = EnumSet.allOf(VehicleType.class);
 }

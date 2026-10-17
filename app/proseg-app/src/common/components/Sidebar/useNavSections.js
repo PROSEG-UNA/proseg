@@ -17,9 +17,6 @@ import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import DirectionsCarFilledOutlinedIcon from '@mui/icons-material/DirectionsCarFilledOutlined';
-import BuildCircleOutlinedIcon from '@mui/icons-material/BuildCircleOutlined';
-import AltRouteOutlinedIcon from '@mui/icons-material/AltRouteOutlined';
-import AssignmentTurnedInOutlinedIcon from '@mui/icons-material/AssignmentTurnedInOutlined';
 import CleaningServicesOutlinedIcon from '@mui/icons-material/CleaningServicesOutlined';
 import { PERMISSIONS } from '../../constants/permissions';
 import { usePermissions } from '../../hooks';
@@ -111,21 +108,10 @@ const transportVehiclePermissions = [
     PERMISSIONS.TRANSPORT.VEHICLES.DELETE,
 ];
 
-const transportMaintenancePermissions = [
-    PERMISSIONS.TRANSPORT.MAINTENANCE.READ,
-    PERMISSIONS.TRANSPORT.MAINTENANCE.MANAGE,
-    PERMISSIONS.TRANSPORT.MAINTENANCE.DELETE,
-];
-
-const transportTourPermissions = [
+const transportCleaningPermissions = [
     PERMISSIONS.TRANSPORT.TOURS.READ,
     PERMISSIONS.TRANSPORT.TOURS.MANAGE,
     PERMISSIONS.TRANSPORT.TOURS.DELETE,
-];
-
-const transportAssignmentPermissions = [
-    PERMISSIONS.TRANSPORT.ASSIGNMENT.GENERATE,
-    PERMISSIONS.TRANSPORT.ASSIGNMENT.UPDATE,
 ];
 
 export function useNavSections() {
@@ -141,11 +127,8 @@ export function useNavSections() {
     const canViewTicketsSubmodule = hasAnyPermission(ticketPermissions);
     const canViewDriversSubmodule = hasAnyPermission(transportDriverPermissions);
     const canViewVehiclesSubmodule = hasAnyPermission(transportVehiclePermissions);
-    const canViewTransportMaintenanceSubmodule = hasAnyPermission(transportMaintenancePermissions);
-    const canViewToursSubmodule = hasAnyPermission(transportTourPermissions);
-    const canViewAssignmentSubmodule = hasAnyPermission(transportAssignmentPermissions);
-    const canViewCleaningSubmodule = canViewToursSubmodule || canViewAssignmentSubmodule;
-    const canViewTransportSection = canViewCleaningSubmodule || canViewDriversSubmodule || canViewVehiclesSubmodule || canViewTransportMaintenanceSubmodule || canViewToursSubmodule || canViewAssignmentSubmodule;
+    const canViewCleaningSubmodule = hasAnyPermission(transportCleaningPermissions);
+    const canViewTransportSection = canViewCleaningSubmodule || canViewDriversSubmodule || canViewVehiclesSubmodule;
 
     const sections = useMemo(() => {
         const result = [];
@@ -209,9 +192,6 @@ export function useNavSections() {
                     canViewCleaningSubmodule ? { key: 'cleaning', icon: CleaningServicesOutlinedIcon, label: 'Depuración', path: '/transporte/depuracion' } : null,
                     canViewDriversSubmodule ? { key: 'drivers', icon: BadgeOutlinedIcon, label: 'Choferes', path: '/transporte/choferes' } : null,
                     canViewVehiclesSubmodule ? { key: 'vehicles', icon: DirectionsCarFilledOutlinedIcon, label: 'Vehículos', path: '/transporte/vehiculos' } : null,
-                    canViewTransportMaintenanceSubmodule ? { key: 'transport-maintenance', icon: BuildCircleOutlinedIcon, label: 'Mantenimiento', path: '/transporte/mantenimiento' } : null,
-                    canViewToursSubmodule ? { key: 'tours', icon: AltRouteOutlinedIcon, label: 'Giras', path: '/transporte/giras' } : null,
-                    canViewAssignmentSubmodule ? { key: 'assignment', icon: AssignmentTurnedInOutlinedIcon, label: 'Asignaciones', path: '/transporte/asignaciones' } : null,
                 ].filter(Boolean),
             });
         }
@@ -229,7 +209,7 @@ export function useNavSections() {
         }
 
         return result;
-    }, [canViewInventorySection, canViewLocationsSection, canViewSecuritySection, canViewUsersSubmodule, canViewRolesSubmodule, canViewMaintenanceSection, canViewRegistersSubmodule, canViewTicketsSubmodule, canViewCleaningSubmodule, canViewDriversSubmodule, canViewVehiclesSubmodule, canViewTransportMaintenanceSubmodule, canViewToursSubmodule, canViewAssignmentSubmodule, canViewTransportSection]);
+    }, [canViewInventorySection, canViewLocationsSection, canViewSecuritySection, canViewUsersSubmodule, canViewRolesSubmodule, canViewMaintenanceSection, canViewRegistersSubmodule, canViewTicketsSubmodule, canViewCleaningSubmodule, canViewDriversSubmodule, canViewVehiclesSubmodule, canViewTransportSection]);
 
     return { sections };
 }

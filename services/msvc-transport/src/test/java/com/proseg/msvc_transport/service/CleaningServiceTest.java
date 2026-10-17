@@ -42,6 +42,7 @@ class CleaningServiceTest {
     private static final UUID EXECUTION_ID = UUID.randomUUID();
 
     private TourRepository tourRepository;
+    private DriverRepository driverRepository;
     private VehicleRepository vehicleRepository;
     private CleaningDraftRepository draftRepository;
     private CleaningDraftRowRepository rowRepository;
@@ -52,7 +53,7 @@ class CleaningServiceTest {
     @BeforeEach
     void setUp() {
         tourRepository = mock(TourRepository.class);
-        DriverRepository driverRepository = mock(DriverRepository.class);
+        driverRepository = mock(DriverRepository.class);
         vehicleRepository = mock(VehicleRepository.class);
         draftRepository = mock(CleaningDraftRepository.class);
         rowRepository = mock(CleaningDraftRowRepository.class);
@@ -60,8 +61,7 @@ class CleaningServiceTest {
         CurrentUserResolver currentUserResolver = mock(CurrentUserResolver.class);
 
         when(currentUserResolver.resolve()).thenReturn("aleja");
-        when(driverRepository.findFirstByFirstNameIgnoreCaseAndLastNameIgnoreCase(anyString(), anyString())).thenReturn(Optional.empty());
-        when(driverRepository.findByDocumentIdIgnoreCase(anyString())).thenReturn(Optional.empty());
+        when(driverRepository.findFirstByNameIgnoreCase(anyString())).thenReturn(Optional.empty());
         when(driverRepository.save(any(Driver.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(vehicleRepository.findByPlateIgnoreCase(anyString())).thenReturn(Optional.empty());
         when(vehicleRepository.save(any(Vehicle.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -85,6 +85,7 @@ class CleaningServiceTest {
                 draftRepository,
                 rowRepository,
                 historyService,
+                mock(DriverMonthService.class),
                 currentUserResolver
         );
     }
@@ -119,6 +120,13 @@ class CleaningServiceTest {
         ArgumentCaptor<Vehicle> vehicleCaptor = ArgumentCaptor.forClass(Vehicle.class);
         verify(vehicleRepository).save(vehicleCaptor.capture());
         assertThat(vehicleCaptor.getValue().getPlate()).isEqualTo("301-295");
+        assertThat(vehicleCaptor.getValue().getType()).isNull();
+
+        ArgumentCaptor<Driver> driverCaptor = ArgumentCaptor.forClass(Driver.class);
+        verify(driverRepository).save(driverCaptor.capture());
+        assertThat(driverCaptor.getValue().getName()).isEqualTo("Daniel Zuniga");
+        assertThat(response.getCreatedDrivers()).isEqualTo(1);
+        assertThat(response.getUpdatedDrivers()).isZero();
     }
 
     @Test

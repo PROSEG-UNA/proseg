@@ -27,6 +27,9 @@ public class CleaningDraftResponseDto {
     private int duplicateRows;
     private int conflictingRows;
     private int blocksDetected;
+    private Integer year;
+    private Integer month;
+    private Integer businessDays;
     private LocalDate minDepartureDate;
     private LocalDate maxReturnDate;
     private LocalDateTime registeredAt;

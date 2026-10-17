@@ -2,20 +2,17 @@ import Chip from '@mui/material/Chip';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RowActionsMenu from '../../../../common/components/RowActionsMenu.jsx';
-import { formatDateTime, getStatusChipColor } from '../../transportUtils';
+import { formatHours, formatPercent, getStatusChipColor } from '../../transportUtils';
 
-export function getDriverColumns() {
-    return [
-        { accessorKey: 'fullName', header: 'Nombre', size: 220, grow: true },
-        { accessorKey: 'documentId', header: 'Identificación', size: 180, grow: false },
-        { accessorKey: 'licenseNumber', header: 'Licencia', size: 180, grow: false },
-        { accessorKey: 'phone', header: 'Teléfono', size: 160, grow: false },
-        { accessorKey: 'email', header: 'Correo', size: 220, grow: true },
+export function getDriverColumns({ showMonthColumns = false } = {}) {
+    const baseColumns = [
+        { accessorKey: 'name', header: 'Nombre', size: 280, grow: true },
         {
             accessorKey: 'status',
             header: 'Estado',
             size: 130,
             grow: false,
+            enableColumnFilter: false,
             Cell: ({ row, cell }) => (
                 <Chip
                     label={cell.getValue() ?? '—'}
@@ -25,21 +22,50 @@ export function getDriverColumns() {
                 />
             ),
         },
+    ];
+
+    if (!showMonthColumns) return baseColumns;
+
+    return [
+        ...baseColumns,
         {
-            accessorKey: 'createdAt',
-            header: 'Creado',
-            size: 170,
+            accessorKey: 'ordinaryHoursAccrued',
+            header: 'Horas Ordinarias acumulado',
+            size: 190,
             grow: false,
             enableColumnFilter: false,
-            Cell: ({ cell }) => formatDateTime(cell.getValue()),
+            Cell: ({ cell }) => formatHours(cell.getValue()),
         },
         {
-            accessorKey: 'updatedAt',
-            header: 'Actualizado',
-            size: 170,
+            accessorKey: 'surplusExecutionRatio',
+            header: 'Porcentaje de ejecución sobresueldo',
+            size: 220,
             grow: false,
             enableColumnFilter: false,
-            Cell: ({ cell }) => formatDateTime(cell.getValue()),
+            Cell: ({ cell }) => formatPercent(cell.getValue()),
+        },
+        {
+            accessorKey: 'surplusHoursAccrued',
+            header: 'Horas Sobresueldo acumulado',
+            size: 190,
+            grow: false,
+            enableColumnFilter: false,
+            Cell: ({ cell }) => formatHours(cell.getValue()),
+        },
+        {
+            accessorKey: 'overtimeHoursAccrued',
+            header: 'Horas Extra acumulado',
+            size: 190,
+            grow: false,
+            enableColumnFilter: false,
+            Cell: ({ cell }) => formatHours(cell.getValue()),
+        },
+        {
+            accessorKey: 'weekendsWorked',
+            header: 'Fines de Semana laburados',
+            size: 190,
+            grow: false,
+            enableColumnFilter: false,
         },
     ];
 }

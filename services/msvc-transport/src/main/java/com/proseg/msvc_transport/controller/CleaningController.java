@@ -8,12 +8,17 @@ import com.proseg.common.specification.FilterConstants;
 import com.proseg.msvc_transport.dto.cleaning.CleaningDraftCreateRequestDto;
 import com.proseg.msvc_transport.dto.cleaning.CleaningDraftImportResponseDto;
 import com.proseg.msvc_transport.dto.cleaning.CleaningDraftResponseDto;
+import com.proseg.msvc_transport.dto.cleaning.CleaningDraftRowDayRequestDto;
+import com.proseg.msvc_transport.dto.cleaning.CleaningDraftRowDayResponseDto;
 import com.proseg.msvc_transport.dto.cleaning.CleaningDraftRowRequestDto;
 import com.proseg.msvc_transport.dto.cleaning.CleaningDraftRowResponseDto;
+import com.proseg.msvc_transport.dto.cleaning.CleaningDriverAutoAssignResponseDto;
 import com.proseg.msvc_transport.dto.cleaning.CleaningExecutionDetailViewResponseDto;
 import com.proseg.msvc_transport.dto.cleaning.CleaningExecutionSummaryResponseDto;
 import com.proseg.msvc_transport.dto.cleaning.CleaningImportSchemaDto;
 import com.proseg.msvc_transport.dto.cleaning.CleaningRegisterResponseDto;
+import com.proseg.msvc_transport.dto.cleaning.CleaningVehicleAutoAssignResponseDto;
+import com.proseg.msvc_transport.dto.response.OvertimeRequestReportDto;
 import com.proseg.msvc_transport.service.CleaningDraftService;
 import com.proseg.msvc_transport.service.CleaningHistoryService;
 import com.proseg.msvc_transport.service.CleaningService;
@@ -100,6 +105,19 @@ public class CleaningController {
         );
     }
 
+    @PutMapping("/drafts/{id}/rows/{rowId}/days/{dayId}")
+    public ResponseEntity<ApiResponse<CleaningDraftRowDayResponseDto>> updateDraftRowDay(
+            @PathVariable UUID id,
+            @PathVariable UUID rowId,
+            @PathVariable UUID dayId,
+            @Valid @RequestBody CleaningDraftRowDayRequestDto request
+    ) {
+        return ApiResponseBuilder.ok(
+                cleaningDraftService.updateRowDay(id, rowId, dayId, request),
+                "Día de la gira actualizado"
+        );
+    }
+
     @DeleteMapping("/drafts/{id}/rows/{rowId}")
     public ResponseEntity<ApiResponse<Void>> deleteDraftRow(@PathVariable UUID id, @PathVariable UUID rowId) {
         cleaningDraftService.deleteRow(id, rowId);
@@ -118,6 +136,27 @@ public class CleaningController {
     public ResponseEntity<ApiResponse<Void>> deleteDraft(@PathVariable UUID id) {
         cleaningDraftService.delete(id);
         return ApiResponseBuilder.ok(null, "Borrador de depuración eliminado");
+    }
+
+    @GetMapping("/drafts/{id}/drivers/schedule")
+    public ResponseEntity<ApiResponse<OvertimeRequestReportDto>> findDraftDriverSchedule(@PathVariable UUID id) {
+        return ApiResponseBuilder.ok(cleaningDraftService.getSchedule(id), "Horario de choferes del borrador");
+    }
+
+    @PostMapping("/drafts/{id}/drivers/auto-assign")
+    public ResponseEntity<ApiResponse<CleaningDriverAutoAssignResponseDto>> autoAssignDraftDrivers(@PathVariable UUID id) {
+        return ApiResponseBuilder.ok(
+                cleaningDraftService.autoAssignDrivers(id),
+                "Choferes autoasignados"
+        );
+    }
+
+    @PostMapping("/drafts/{id}/vehicles/auto-assign")
+    public ResponseEntity<ApiResponse<CleaningVehicleAutoAssignResponseDto>> autoAssignDraftVehicles(@PathVariable UUID id) {
+        return ApiResponseBuilder.ok(
+                cleaningDraftService.autoAssignVehicles(id),
+                "Vehículos autoasignados"
+        );
     }
 
     @PostMapping("/drafts/{id}/register")

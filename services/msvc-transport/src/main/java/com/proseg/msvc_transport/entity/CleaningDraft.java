@@ -75,6 +75,15 @@ public class CleaningDraft extends BaseEntity {
     @Column(nullable = false)
     private Integer blocksDetected;
 
+    @Column(name = "year")
+    private Integer year;
+
+    @Column(name = "month")
+    private Integer month;
+
+    @Column(name = "business_days")
+    private Integer businessDays;
+
     private LocalDate minDepartureDate;
 
     private LocalDate maxReturnDate;

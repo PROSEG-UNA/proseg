@@ -5,6 +5,8 @@ import com.proseg.common.specification.FilterType;
 import com.proseg.common.specification.Filterable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -17,7 +19,6 @@ import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.UuidGenerator;
 import org.hibernate.annotations.Where;
 
-import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
@@ -42,34 +43,12 @@ public class Vehicle extends BaseEntity {
     private String plate;
 
     @Filterable(type = FilterType.TEXT)
-    @Column(nullable = false)
-    private String brand;
-
-    @Filterable(type = FilterType.TEXT)
-    @Column(nullable = false)
-    private String model;
-
-    @Filterable(type = FilterType.TEXT)
-    @Column(name = "vehicle_year")
-    private Integer year;
-
-    @Filterable(type = FilterType.TEXT)
-    @Column(nullable = false)
     private Integer capacity;
 
-    @Filterable(type = FilterType.TEXT)
-    @Builder.Default
-    private String status = "ACTIVE";
-
-    @Filterable(type = FilterType.TEXT)
-    private String type;
+    @Filterable(type = FilterType.ENUM)
+    @Enumerated(EnumType.STRING)
+    private VehicleType type;
 
     @Builder.Default
     private boolean available = true;
-
-    @Builder.Default
-    private boolean underMaintenance = false;
-
-    @Filterable(type = FilterType.DATE)
-    private LocalDate lastMaintenanceDate;
 }

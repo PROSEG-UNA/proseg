@@ -6,17 +6,18 @@ import { useDebounce } from '../../../../common/hooks/useDebounce.js';
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { deleteVehicle } from '../../services/vehicles/vehiclesService';
+import { usePersistedColumnVisibility } from '../../hooks/usePersistedColumnVisibility';
 import { useTransportVehiclesData } from '../../hooks/useTransportVehiclesData';
 import { getVehicleColumns, renderVehicleActions } from './vehicleColumns.jsx';
 import { queryKeys } from '../../../../common/query';
 
+const COLUMN_VISIBILITY_STORAGE_KEY = 'vehicles-table-column-visibility';
+
 const COLUMN_TO_BACKEND_KEY = {
     plate: 'plate',
-    brand: 'brand',
-    model: 'model',
-    year: 'year',
+    type: 'type',
     capacity: 'capacity',
-    statusRaw: 'status',
+    available: 'available',
 };
 
 export default function VehiclesTable({ onEditVehicle }) {
@@ -24,6 +25,7 @@ export default function VehiclesTable({ onEditVehicle }) {
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
     const [sorting, setSorting] = useState([]);
+    const [columnVisibility, setColumnVisibility] = usePersistedColumnVisibility(COLUMN_VISIBILITY_STORAGE_KEY);
     const [alert, setAlert] = useState(null);
     const [vehicleToDelete, setVehicleToDelete] = useState(null);
     const queryClient = useQueryClient();
@@ -116,6 +118,7 @@ export default function VehiclesTable({ onEditVehicle }) {
                 fetching={fetching}
                 error={error}
                 enableRowActions={canEdit || canDelete}
+                onRowClick={canEdit ? (row) => onEditVehicle(row.original) : undefined}
                 renderRowActions={renderVehicleActions({
                     onEdit: onEditVehicle,
                     onDelete: handleDelete,
@@ -132,13 +135,8 @@ export default function VehiclesTable({ onEditVehicle }) {
                     onGlobalFilterChange: handleGlobalFilterChange,
                     onColumnFiltersChange: handleColumnFiltersChange,
                     onSortingChange: handleSortingChange,
-                    state: { pagination, globalFilter, columnFilters, sorting },
-                    initialState: {
-                        columnVisibility: {
-                            updatedAt: false,
-                            createdAt: false,
-                        },
-                    },
+                    onColumnVisibilityChange: setColumnVisibility,
+                    state: { pagination, globalFilter, columnFilters, sorting, columnVisibility },
                 }}
                 enableGlobalFilter
             />

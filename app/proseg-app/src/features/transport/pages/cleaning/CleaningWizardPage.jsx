@@ -137,8 +137,7 @@ export default function CleaningWizardPage() {
     const accentColor = theme.vars.palette.tones.rose.fg;
 
     const canExecuteCleaning = hasAnyPermission([
-        PERMISSIONS.TRANSPORT.ASSIGNMENT.GENERATE,
-        PERMISSIONS.TRANSPORT.ASSIGNMENT.UPDATE,
+        PERMISSIONS.TRANSPORT.TOURS.MANAGE,
     ]);
 
     const [activeStep, setActiveStep] = useState(0);
@@ -368,8 +367,6 @@ export default function CleaningWizardPage() {
                 },
             });
             setRegisterSummary(registered);
-            queryClient.invalidateQueries({ queryKey: queryKeys.transport.tours() });
-            queryClient.invalidateQueries({ queryKey: queryKeys.transport.assignment() });
             queryClient.invalidateQueries({ queryKey: queryKeys.transport.cleaning() });
             setResultState({
                 status: 'success',

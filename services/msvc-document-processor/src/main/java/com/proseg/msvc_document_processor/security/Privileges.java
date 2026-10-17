@@ -9,9 +9,14 @@ public final class Privileges {
         public static final String EXPORTAR = "EXPORTAR_ACTIVOS";
     }
 
-    public static final class Asignaciones {
-        public static final String GENERAR = "GENERAR_ASIGNACIONES";
-        public static final String ACTUALIZAR = "ACTUALIZAR_ASIGNACIONES";
+    public static final class Giras {
+        public static final String LEER = "LEER_GIRAS";
+        public static final String GESTIONAR = "GESTIONAR_GIRAS";
+        public static final String ELIMINAR = "ELIMINAR_GIRAS";
+    }
+
+    public static final class Choferes {
+        public static final String LEER = "LEER_CHOFERES";
     }
 
     public static final class SolicitudesMantenimiento {

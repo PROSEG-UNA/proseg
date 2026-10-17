@@ -2,19 +2,21 @@ import { useQuery } from '@tanstack/react-query';
 import {
     fetchCleaningDraft,
     fetchCleaningDraftRows,
+    fetchCleaningDraftSchedule,
     fetchCleaningDrafts,
 } from '../services/cleaning/cleaningService';
 import { getFriendlyApiErrorMessage } from '../../../common/utils';
 import { keepPreviousPage, queryKeys } from '../../../common/query';
 
+const ALL_ROWS_PAGE_SIZE = 5000;
+
 function mapDraftToRow(draft) {
     return {
         id: draft.id,
         fileName: draft.fileName ?? '—',
-        fileType: draft.fileType ?? '—',
+        year: draft.year ?? null,
+        month: draft.month ?? null,
         status: draft.status ?? '',
-        importedBy: draft.importedBy ?? '—',
-        importedAt: draft.importedAt ?? null,
         totalRows: draft.totalRows ?? 0,
         duplicateRows: draft.duplicateRows ?? 0,
         conflictingRows: draft.conflictingRows ?? 0,
@@ -92,5 +94,38 @@ export function useCleaningDraftRows(draftId, { pageIndex = 0, pageSize = 10, se
         fetching: isFetching,
         error: error ? getFriendlyApiErrorMessage(error, 'No se pudieron cargar las filas del borrador') : null,
         totalElements: data?.totalElements ?? 0,
+    };
+}
+
+export function useCleaningDraftAllRows(draftId) {
+    const requestParams = { page: 0, size: ALL_ROWS_PAGE_SIZE };
+    const { data, isLoading, error } = useQuery({
+        queryKey: queryKeys.transport.cleaningDraftRows(draftId, requestParams),
+        enabled: Boolean(draftId),
+        queryFn: async () => {
+            const response = await fetchCleaningDraftRows(draftId, requestParams);
+            return (response.content ?? []).map(mapDraftRowToRow);
+        },
+    });
+
+    return {
+        rows: data ?? [],
+        loading: isLoading,
+        error: error ? getFriendlyApiErrorMessage(error, 'No se pudieron cargar las filas del borrador') : null,
+    };
+}
+
+export function useCleaningDraftSchedule(draftId) {
+    const { data, isLoading, isFetching, error } = useQuery({
+        queryKey: queryKeys.transport.cleaningDraftSchedule(draftId),
+        queryFn: () => fetchCleaningDraftSchedule(draftId),
+        enabled: Boolean(draftId),
+    });
+
+    return {
+        schedule: data ?? null,
+        loading: isLoading,
+        fetching: isFetching,
+        error: error ? getFriendlyApiErrorMessage(error, 'No se pudo cargar la solicitud de horas extra') : null,
     };
 }

@@ -3,19 +3,33 @@ package com.proseg.msvc_transport.service;
 import com.proseg.msvc_transport.dto.cleaning.CleaningDraftCreateRequestDto;
 import com.proseg.msvc_transport.dto.cleaning.CleaningDraftImportResponseDto;
 import com.proseg.msvc_transport.dto.cleaning.CleaningDraftResponseDto;
+import com.proseg.msvc_transport.dto.cleaning.CleaningDraftRowDayRequestDto;
+import com.proseg.msvc_transport.dto.cleaning.CleaningDraftRowDayResponseDto;
 import com.proseg.msvc_transport.dto.cleaning.CleaningDraftRowIssueDto;
 import com.proseg.msvc_transport.dto.cleaning.CleaningDraftRowRequestDto;
 import com.proseg.msvc_transport.dto.cleaning.CleaningDraftRowResponseDto;
+import com.proseg.msvc_transport.dto.cleaning.CleaningDriverAutoAssignResponseDto;
 import com.proseg.msvc_transport.dto.cleaning.CleaningImportColumnDto;
 import com.proseg.msvc_transport.dto.cleaning.CleaningImportSchemaDto;
+import com.proseg.msvc_transport.dto.cleaning.CleaningVehicleAutoAssignResponseDto;
+import com.proseg.msvc_transport.dto.response.OvertimeRequestReportDto;
 import com.proseg.msvc_transport.entity.CleaningDraft;
 import com.proseg.msvc_transport.entity.CleaningDraftRow;
+import com.proseg.msvc_transport.entity.CleaningDraftRowDay;
 import com.proseg.msvc_transport.entity.CleaningDraftStatus;
+import com.proseg.msvc_transport.entity.Driver;
+import com.proseg.msvc_transport.entity.Vehicle;
 import com.proseg.msvc_transport.exception.TransportException;
 import com.proseg.msvc_transport.importer.TransportImportField;
 import com.proseg.msvc_transport.repository.CleaningDraftRepository;
+import com.proseg.msvc_transport.repository.CleaningDraftRowDayRepository;
 import com.proseg.msvc_transport.repository.CleaningDraftRowRepository;
+import com.proseg.msvc_transport.repository.DriverRepository;
+import com.proseg.msvc_transport.repository.VehicleRepository;
 import com.proseg.msvc_transport.security.CurrentUserResolver;
+import com.proseg.msvc_transport.service.driverhours.DriverAutoAssigner;
+import com.proseg.msvc_transport.service.driverhours.DriverHoursRules;
+import com.proseg.msvc_transport.service.driverhours.VehicleAutoAssigner;
 import com.proseg.msvc_transport.specification.GenericSpecifications;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -28,11 +42,15 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Month;
+import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -46,12 +64,19 @@ public class CleaningDraftService {
     private static final int MAX_ROWS = 5000;
     private static final String DRAFT_RESOURCE = "Borrador de depuración";
     private static final String ROW_RESOURCE = "Fila del borrador";
+    private static final String DAY_RESOURCE = "Día de la gira";
+    private static final Locale SPANISH = Locale.forLanguageTag("es");
     private static final List<String> FIELD_ORDER = Arrays.stream(TransportImportField.values())
             .map(TransportImportField::getAttribute)
             .toList();
 
     private final CleaningDraftRepository draftRepository;
     private final CleaningDraftRowRepository rowRepository;
+    private final CleaningDraftRowDayRepository dayRepository;
+    private final DriverRepository driverRepository;
+    private final VehicleRepository vehicleRepository;
+    private final DriverMonthService driverMonthService;
+    private final OvertimeRequestReportService overtimeRequestReportService;
     private final CurrentUserResolver currentUserResolver;
     private final Validator validator;
 
@@ -69,6 +94,7 @@ public class CleaningDraftService {
 
     @Transactional
     public CleaningDraftImportResponseDto create(CleaningDraftCreateRequestDto request) {
+        ensureMonthIsAvailable(request.getYear(), request.getMonth());
         List<CleaningDraftRowRequestDto> rows = request.getRows() == null ? List.of() : request.getRows();
         if (rows.isEmpty()) {
             throw TransportException.badRequest("CLEANING_DRAFT_EMPTY", "No hay filas para importar");
@@ -96,6 +122,9 @@ public class CleaningDraftService {
                 .importedAt(LocalDateTime.now())
                 .totalRows(rows.size())
                 .blocksDetected(request.getBlocksDetected() == null ? 0 : request.getBlocksDetected())
+                .year(request.getYear())
+                .month(request.getMonth())
+                .businessDays(request.getBusinessDays())
                 .build();
 
         List<CleaningDraftRow> entities = rows.stream()
@@ -106,6 +135,7 @@ public class CleaningDraftService {
 
         CleaningDraft saved = draftRepository.save(draft);
         rowRepository.saveAll(entities);
+        driverMonthService.syncWithDraft(saved, entities);
 
         return CleaningDraftImportResponseDto.builder()
                 .draftId(saved.getId())
@@ -146,6 +176,11 @@ public class CleaningDraftService {
                 .map(this::toRowResponse);
     }
 
+    @Transactional(readOnly = true)
+    public OvertimeRequestReportDto getSchedule(UUID draftId) {
+        return overtimeRequestReportService.buildSchedule(getDraft(draftId));
+    }
+
     @Transactional
     public CleaningDraftRowResponseDto createRow(UUID draftId, CleaningDraftRowRequestDto request) {
         CleaningDraft draft = getEditableDraft(draftId);
@@ -169,6 +204,7 @@ public class CleaningDraftService {
         summarize(draft, rows);
         draft.setTotalRows(rows.size());
         rowRepository.save(row);
+        driverMonthService.syncWithDraft(draft, rows);
         return toRowResponse(row);
     }
 
@@ -183,11 +219,132 @@ public class CleaningDraftService {
             throw TransportException.unprocessable("CLEANING_DRAFT_ROW_INVALID", String.join(". ", reasons));
         }
 
-        applyValues(row, request);
         List<CleaningDraftRow> rows = rowRepository.findAllByDraftIdOrderByRowNumberAsc(draftId);
+        validateAssignedDriverCanAttend(draft, row, request, rows);
+
+        applyValues(row, request);
         markDuplicates(rows);
         summarize(draft, rows);
+        driverMonthService.syncWithDraft(draft, rows);
         return toRowResponse(row);
+    }
+
+    private void validateAssignedDriverCanAttend(
+            CleaningDraft draft,
+            CleaningDraftRow row,
+            CleaningDraftRowRequestDto request,
+            List<CleaningDraftRow> rows
+    ) {
+        boolean durationIncreased = request.getDurationDays() > row.getDurationDays();
+        boolean periodDefined = draft.getYear() != null && draft.getMonth() != null && draft.getBusinessDays() != null;
+        boolean sameDriver = DriverHoursRules.driverKey(request.getDriver()).equals(DriverHoursRules.driverKey(row.getDriver()));
+        if (!durationIncreased || !periodDefined || !sameDriver || !DriverHoursRules.isPrimary(row)) {
+            return;
+        }
+
+        List<Driver> catalog = driverRepository.findAll();
+        Driver driver = DriverHoursRules.catalogByKey(catalog).get(DriverHoursRules.driverKey(row.getDriver()));
+        if (driver == null) {
+            return;
+        }
+
+        List<CleaningDraftRow> otherRows = rows.stream()
+                .filter(other -> !other.getId().equals(row.getId()))
+                .toList();
+        new DriverAutoAssigner(draft.getYear(), draft.getMonth(), draft.getBusinessDays(), catalog, otherRows)
+                .rejectionFor(driver, toEntity(request, draft))
+                .ifPresent(rejection -> {
+                    throw TransportException.unprocessable(
+                            "CLEANING_DRAFT_ROW_DRIVER_UNAVAILABLE",
+                            "No se puede aumentar la duración de la gira porque el chofer asignado no puede atenderla.\n\n"
+                                    + rejection.message()
+                    );
+                });
+    }
+
+    @Transactional
+    public CleaningDraftRowDayResponseDto updateRowDay(UUID draftId, UUID rowId, UUID dayId, CleaningDraftRowDayRequestDto request) {
+        CleaningDraft draft = getEditableDraft(draftId);
+        CleaningDraftRow row = rowRepository.findByIdAndDraftId(rowId, draftId)
+                .orElseThrow(() -> TransportException.notFound(ROW_RESOURCE, rowId.toString()));
+        CleaningDraftRowDay day = dayRepository.findByIdAndRowId(dayId, rowId)
+                .orElseThrow(() -> TransportException.notFound(DAY_RESOURCE, dayId.toString()));
+
+        if (!request.getEndTime().isAfter(request.getStartTime())) {
+            throw TransportException.unprocessable(
+                    "CLEANING_DRAFT_ROW_DAY_INVALID",
+                    "La hora de fin debe ser posterior a la hora de inicio"
+            );
+        }
+        if (request.getOrdinaryHours() > DriverHoursRules.MAX_ORDINARY_HOURS_PER_DAY + DriverHoursRules.HOURS_TOLERANCE) {
+            throw TransportException.unprocessable(
+                    "CLEANING_DRAFT_ROW_DAY_ORDINARY_LIMIT",
+                    "Las horas ordinarias no pueden superar las " + (int) DriverHoursRules.MAX_ORDINARY_HOURS_PER_DAY + " horas por día"
+            );
+        }
+
+        List<CleaningDraftRow> rows = rowRepository.findAllByDraftIdOrderByRowNumberAsc(draftId);
+        validateDriverMonthlyCaps(draft, rows, row.getDriver(), dayId, request);
+
+        day.setStartTime(request.getStartTime());
+        day.setEndTime(request.getEndTime());
+        day.setOrdinaryHours(request.getOrdinaryHours());
+        day.setSurplusHours(request.getSurplusHours());
+        day.setOvertimeHours(request.getOvertimeHours());
+        day.setManuallyEdited(true);
+        CleaningDraftRowDay saved = dayRepository.save(day);
+
+        driverMonthService.recomputeDriverMonth(draft, rows, row.getDriver());
+
+        return toDayResponse(saved);
+    }
+
+    private void validateDriverMonthlyCaps(
+            CleaningDraft draft,
+            List<CleaningDraftRow> rows,
+            String driverName,
+            UUID dayId,
+            CleaningDraftRowDayRequestDto request
+    ) {
+        String key = DriverHoursRules.driverKey(driverName);
+        List<UUID> driverRowIds = rows.stream()
+                .filter(DriverHoursRules::isPrimary)
+                .filter(candidate -> DriverHoursRules.driverKey(candidate.getDriver()).equals(key))
+                .map(CleaningDraftRow::getId)
+                .toList();
+        double otherSurplus = 0;
+        double otherOvertime = 0;
+        for (CleaningDraftRowDay other : dayRepository.findByRowIdIn(driverRowIds)) {
+            if (other.getId().equals(dayId)) continue;
+            otherSurplus += other.getSurplusHours();
+            otherOvertime += other.getOvertimeHours();
+        }
+
+        double surplusCap = DriverHoursRules.surplusCap(draft.getBusinessDays());
+        double newSurplusTotal = otherSurplus + request.getSurplusHours();
+        double newOvertimeTotal = otherOvertime + request.getOvertimeHours();
+
+        if (newSurplusTotal > surplusCap + DriverHoursRules.HOURS_TOLERANCE) {
+            throw TransportException.unprocessable(
+                    "CLEANING_DRAFT_ROW_DAY_SURPLUS_CAP_EXCEEDED",
+                    "Las horas sobresueldo acumuladas del chofer en el mes superarían el tope de " + surplusCap + " horas"
+            );
+        }
+        if (newOvertimeTotal > DriverHoursRules.MONTHLY_OVERTIME_CAP + DriverHoursRules.HOURS_TOLERANCE) {
+            throw TransportException.unprocessable(
+                    "CLEANING_DRAFT_ROW_DAY_OVERTIME_CAP_EXCEEDED",
+                    "Las horas extra acumuladas del chofer en el mes superarían el tope de " + (int) DriverHoursRules.MONTHLY_OVERTIME_CAP + " horas"
+            );
+        }
+
+        boolean overtimeBelowSurplusThreshold = request.getOvertimeHours() > DriverHoursRules.HOURS_TOLERANCE
+                && newSurplusTotal < surplusCap * DriverHoursRules.SURPLUS_CUTOFF_RATIO - DriverHoursRules.HOURS_TOLERANCE;
+        if (overtimeBelowSurplusThreshold && !request.isConfirmOvertimeBelowSurplusThreshold()) {
+            throw TransportException.conflict(
+                    "CLEANING_DRAFT_ROW_DAY_OVERTIME_NEEDS_CONFIRMATION",
+                    "El chofer todavía no alcanza el 95% de su tope de sobresueldo del mes"
+            );
+        }
     }
 
     @Transactional
@@ -202,6 +359,7 @@ public class CleaningDraftService {
         markDuplicates(rows);
         summarize(draft, rows);
         draft.setTotalRows(rows.size());
+        driverMonthService.syncWithDraft(draft, rows);
     }
 
     @Transactional
@@ -226,7 +384,102 @@ public class CleaningDraftService {
         markDuplicates(remaining);
         summarize(draft, remaining);
         draft.setTotalRows(remaining.size());
+        driverMonthService.syncWithDraft(draft, remaining);
         return duplicates.size();
+    }
+
+    @Transactional
+    public CleaningDriverAutoAssignResponseDto autoAssignDrivers(UUID draftId) {
+        CleaningDraft draft = getEditableDraft(draftId);
+        if (draft.getYear() == null || draft.getMonth() == null || draft.getBusinessDays() == null) {
+            throw TransportException.unprocessable(
+                    "CLEANING_DRAFT_WITHOUT_PERIOD",
+                    "El borrador no tiene mes ni días hábiles definidos, no se pueden autoasignar choferes"
+            );
+        }
+
+        List<CleaningDraftRow> rows = rowRepository.findAllByDraftIdOrderByRowNumberAsc(draftId);
+        List<Driver> catalog = driverRepository.findAll();
+        Map<String, Driver> catalogByKey = DriverHoursRules.catalogByKey(catalog);
+
+        int clearedTours = 0;
+        for (CleaningDraftRow row : rows) {
+            String driverKey = DriverHoursRules.driverKey(row.getDriver());
+            if (!driverKey.isEmpty() && !catalogByKey.containsKey(driverKey)) {
+                row.setDriver(null);
+                clearedTours += DriverHoursRules.isPrimary(row) ? 1 : 0;
+            }
+        }
+
+        List<CleaningDraftRow> pendingTours = rows.stream()
+                .filter(DriverHoursRules::isPrimary)
+                .filter(row -> row.getDriver() == null)
+                .toList();
+        Map<CleaningDraftRow, Driver> assignments = new DriverAutoAssigner(
+                draft.getYear(),
+                draft.getMonth(),
+                draft.getBusinessDays(),
+                catalog,
+                vehicleRepository.findAll(),
+                rows
+        ).assign(pendingTours);
+
+        Map<String, String> driverNameByNumber = new HashMap<>();
+        assignments.forEach((tour, driver) -> driverNameByNumber.put(numberKey(tour), driver.getName()));
+        rows.stream()
+                .filter(row -> driverNameByNumber.containsKey(numberKey(row)))
+                .forEach(row -> row.setDriver(driverNameByNumber.get(numberKey(row))));
+
+        markDuplicates(rows);
+        summarize(draft, rows);
+        driverMonthService.syncWithDraft(draft, rows);
+
+        return CleaningDriverAutoAssignResponseDto.builder()
+                .clearedTours(clearedTours)
+                .assignedTours(assignments.size())
+                .unassignedTours(pendingTours.size() - assignments.size())
+                .build();
+    }
+
+    @Transactional
+    public CleaningVehicleAutoAssignResponseDto autoAssignVehicles(UUID draftId) {
+        CleaningDraft draft = getEditableDraft(draftId);
+        List<CleaningDraftRow> rows = rowRepository.findAllByDraftIdOrderByRowNumberAsc(draftId);
+        List<Vehicle> vehicles = vehicleRepository.findAll();
+        Map<String, Vehicle> vehicleCatalogByPlate = DriverHoursRules.vehicleCatalogByPlate(vehicles);
+
+        int clearedTours = 0;
+        for (CleaningDraftRow row : rows) {
+            if (row.getVehicle() != null && DriverHoursRules.catalogVehicle(row.getVehicle(), vehicleCatalogByPlate) == null) {
+                row.setVehicle(null);
+                clearedTours += DriverHoursRules.isPrimary(row) ? 1 : 0;
+            }
+        }
+
+        List<CleaningDraftRow> pendingTours = rows.stream()
+                .filter(DriverHoursRules::isPrimary)
+                .filter(row -> row.getVehicle() == null)
+                .toList();
+        Map<CleaningDraftRow, Vehicle> assignments = new VehicleAutoAssigner(
+                vehicles,
+                driverRepository.findAll(),
+                rows
+        ).assign(pendingTours);
+
+        Map<String, String> plateByNumber = new HashMap<>();
+        assignments.forEach((tour, vehicle) -> plateByNumber.put(numberKey(tour), vehicle.getPlate()));
+        rows.stream()
+                .filter(row -> row.getVehicle() == null)
+                .forEach(row -> row.setVehicle(plateByNumber.get(numberKey(row))));
+
+        markDuplicates(rows);
+        summarize(draft, rows);
+
+        return CleaningVehicleAutoAssignResponseDto.builder()
+                .clearedTours(clearedTours)
+                .assignedTours(assignments.size())
+                .unassignedTours(pendingTours.size() - assignments.size())
+                .build();
     }
 
     @Transactional
@@ -239,6 +492,7 @@ public class CleaningDraftService {
             );
         }
         draftRepository.delete(draft);
+        driverMonthService.syncWithDraft(draft, List.of());
     }
 
     private CleaningDraft getDraft(UUID id) {
@@ -256,6 +510,26 @@ public class CleaningDraftService {
             );
         }
         return draft;
+    }
+
+    private void ensureMonthIsAvailable(Integer year, Integer month) {
+        if (draftRepository.existsByYearAndMonthAndStatus(year, month, CleaningDraftStatus.REGISTERED)) {
+            throw TransportException.conflict(
+                    "CLEANING_MONTH_ALREADY_REGISTERED",
+                    "La depuración de " + monthLabel(year, month) + " ya fue registrada. No se puede importar otra del mismo mes"
+            );
+        }
+        if (draftRepository.existsByYearAndMonthAndStatus(year, month, CleaningDraftStatus.DRAFT)) {
+            throw TransportException.conflict(
+                    "CLEANING_DRAFT_MONTH_EXISTS",
+                    "Ya existe un borrador de depuración de " + monthLabel(year, month)
+                            + " pendiente de registrar. Regístralo o elimínalo antes de importar otro del mismo mes"
+            );
+        }
+    }
+
+    private String monthLabel(Integer year, Integer month) {
+        return Month.of(month).getDisplayName(TextStyle.FULL, SPANISH) + " de " + year;
     }
 
     private List<CleaningDraftRowIssueDto> validateRows(List<CleaningDraftRowRequestDto> rows) {
@@ -292,10 +566,14 @@ public class CleaningDraftService {
         return index < 0 ? -1 : index;
     }
 
+    private String numberKey(CleaningDraftRow row) {
+        return row.getNumber().toLowerCase(Locale.ROOT);
+    }
+
     private void markDuplicates(List<CleaningDraftRow> rows) {
         Map<String, List<CleaningDraftRow>> groups = new LinkedHashMap<>();
         for (CleaningDraftRow row : rows) {
-            groups.computeIfAbsent(row.getNumber().toLowerCase(Locale.ROOT), key -> new ArrayList<>()).add(row);
+            groups.computeIfAbsent(numberKey(row), key -> new ArrayList<>()).add(row);
         }
         for (List<CleaningDraftRow> group : groups.values()) {
             CleaningDraftRow first = group.get(0);
@@ -380,6 +658,9 @@ public class CleaningDraftService {
                 .duplicateRows(draft.getDuplicateRows())
                 .conflictingRows(draft.getConflictingRows())
                 .blocksDetected(draft.getBlocksDetected())
+                .year(draft.getYear())
+                .month(draft.getMonth())
+                .businessDays(draft.getBusinessDays())
                 .minDepartureDate(draft.getMinDepartureDate())
                 .maxReturnDate(draft.getMaxReturnDate())
                 .registeredAt(draft.getRegisteredAt())
@@ -409,6 +690,21 @@ public class CleaningDraftService {
                 .duplicateGroupSize(row.getDuplicateGroupSize())
                 .duplicateRank(row.getDuplicateRank())
                 .conflicting(row.isConflicting())
+                .days(dayRepository.findByRowIdOrderByDateAsc(row.getId()).stream().map(this::toDayResponse).toList())
+                .build();
+    }
+
+    private CleaningDraftRowDayResponseDto toDayResponse(CleaningDraftRowDay day) {
+        return CleaningDraftRowDayResponseDto.builder()
+                .id(day.getId())
+                .date(day.getDate())
+                .dayOfWeek(day.getDate().getDayOfWeek().getDisplayName(TextStyle.FULL, SPANISH))
+                .startTime(day.getStartTime())
+                .endTime(day.getEndTime())
+                .ordinaryHours(day.getOrdinaryHours())
+                .surplusHours(day.getSurplusHours())
+                .overtimeHours(day.getOvertimeHours())
+                .manuallyEdited(day.isManuallyEdited())
                 .build();
     }
 

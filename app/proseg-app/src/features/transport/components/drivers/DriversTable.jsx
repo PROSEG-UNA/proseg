@@ -6,24 +6,24 @@ import { useDebounce } from '../../../../common/hooks/useDebounce.js';
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { deleteDriver } from '../../services/drivers/driversService';
+import { usePersistedColumnVisibility } from '../../hooks/usePersistedColumnVisibility';
 import { useTransportDriversData } from '../../hooks/useTransportDriversData';
 import { getDriverColumns, renderDriverActions } from './driverColumns.jsx';
 import { queryKeys } from '../../../../common/query';
 
+const COLUMN_VISIBILITY_STORAGE_KEY = 'drivers-table-column-visibility';
+
 const COLUMN_TO_BACKEND_KEY = {
-    fullName: 'name',
-    documentId: 'documentId',
-    licenseNumber: 'licenseNumber',
-    phone: 'phone',
-    email: 'email',
-    statusRaw: 'status',
+    name: 'name',
+    status: 'status',
 };
 
-export default function DriversTable({ onEditDriver }) {
+export default function DriversTable({ onEditDriver, monthData, surplusHoursPerDriver }) {
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
     const [sorting, setSorting] = useState([]);
+    const [columnVisibility, setColumnVisibility] = usePersistedColumnVisibility(COLUMN_VISIBILITY_STORAGE_KEY);
     const [alert, setAlert] = useState(null);
     const [driverToDelete, setDriverToDelete] = useState(null);
     const queryClient = useQueryClient();
@@ -80,7 +80,25 @@ export default function DriversTable({ onEditDriver }) {
         sort: backendSort,
     });
 
-    const columns = useMemo(() => getDriverColumns(), []);
+    const showMonthColumns = Boolean(monthData?.enabled);
+
+    const rowsWithMonth = useMemo(() => {
+        if (!showMonthColumns) return rows;
+        return rows.map((row) => {
+            const driverMonth = monthData.byDriverId.get(row.id);
+            const surplusHoursAccrued = driverMonth?.surplusHoursAccrued ?? 0;
+            return {
+                ...row,
+                ordinaryHoursAccrued: driverMonth?.ordinaryHoursAccrued ?? 0,
+                surplusExecutionRatio: surplusHoursPerDriver > 0 ? surplusHoursAccrued / surplusHoursPerDriver : null,
+                surplusHoursAccrued,
+                overtimeHoursAccrued: driverMonth?.overtimeHoursAccrued ?? 0,
+                weekendsWorked: driverMonth?.weekendsWorked ?? 0,
+            };
+        });
+    }, [rows, showMonthColumns, monthData, surplusHoursPerDriver]);
+
+    const columns = useMemo(() => getDriverColumns({ showMonthColumns }), [showMonthColumns]);
 
     const deleteDriverMutation = useMutation({
         mutationFn: (driverId) => deleteDriver(driverId),
@@ -111,11 +129,12 @@ export default function DriversTable({ onEditDriver }) {
         <>
             <TableBase
                 columns={columns}
-                data={rows}
+                data={rowsWithMonth}
                 loading={loading}
-                fetching={fetching}
-                error={error}
+                fetching={fetching || Boolean(monthData?.loading)}
+                error={error ?? monthData?.error}
                 enableRowActions={canEdit || canDelete}
+                onRowClick={canEdit ? (row) => onEditDriver(row.original) : undefined}
                 renderRowActions={renderDriverActions({
                     onEdit: onEditDriver,
                     onDelete: handleDelete,
@@ -132,13 +151,8 @@ export default function DriversTable({ onEditDriver }) {
                     onGlobalFilterChange: handleGlobalFilterChange,
                     onColumnFiltersChange: handleColumnFiltersChange,
                     onSortingChange: handleSortingChange,
-                    state: { pagination, globalFilter, columnFilters, sorting },
-                    initialState: {
-                        columnVisibility: {
-                            updatedAt: false,
-                            phone: false,
-                        },
-                    },
+                    onColumnVisibilityChange: setColumnVisibility,
+                    state: { pagination, globalFilter, columnFilters, sorting, columnVisibility },
                 }}
                 enableGlobalFilter
             />
@@ -147,7 +161,7 @@ export default function DriversTable({ onEditDriver }) {
                 type="delete"
                 open={!!driverToDelete}
                 title="Eliminar chofer"
-                message={`¿Seguro que deseas eliminar al chofer "${driverToDelete?.fullName}"?\nEsta acción no se puede deshacer.`}
+                message={`¿Seguro que deseas eliminar al chofer "${driverToDelete?.name}"?\nEsta acción no se puede deshacer.`}
                 onClose={handleDeleteCancel}
                 onConfirm={handleDeleteConfirm}
                 confirmLabel="Eliminar"

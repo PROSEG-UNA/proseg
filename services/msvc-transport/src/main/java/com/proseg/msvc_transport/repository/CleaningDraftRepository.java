@@ -1,6 +1,7 @@
 package com.proseg.msvc_transport.repository;
 
 import com.proseg.msvc_transport.entity.CleaningDraft;
+import com.proseg.msvc_transport.entity.CleaningDraftStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -18,4 +19,8 @@ public interface CleaningDraftRepository extends JpaRepository<CleaningDraft, UU
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select d from CleaningDraft d where d.id = :id")
     Optional<CleaningDraft> findByIdForUpdate(@Param("id") UUID id);
+
+    boolean existsByYearAndMonthAndStatus(Integer year, Integer month, CleaningDraftStatus status);
+
+    Optional<CleaningDraft> findFirstByYearAndMonthOrderByImportedAtDesc(Integer year, Integer month);
 }

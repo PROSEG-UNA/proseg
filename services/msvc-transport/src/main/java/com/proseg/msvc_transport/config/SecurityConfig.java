@@ -35,6 +35,8 @@ public class SecurityConfig {
                         .hasAuthority(Privileges.Drivers.GESTIONAR)
                         .requestMatchers(HttpMethod.DELETE, transportRoute + "/drivers/**")
                         .hasAuthority(Privileges.Drivers.ELIMINAR)
+                        .requestMatchers(HttpMethod.PATCH, transportRoute + "/drivers/**")
+                        .hasAuthority(Privileges.Drivers.GESTIONAR)
 
                         .requestMatchers(HttpMethod.GET, transportRoute + "/vehicles", transportRoute + "/vehicles/**")
                         .hasAuthority(Privileges.Vehicles.LEER)
@@ -45,58 +47,21 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, transportRoute + "/vehicles/**")
                         .hasAuthority(Privileges.Vehicles.ELIMINAR)
 
-                        .requestMatchers(HttpMethod.GET, transportRoute + "/maintenance", transportRoute + "/maintenance/**")
-                        .hasAuthority(Privileges.VehicleMaintenance.LEER)
-                        .requestMatchers(HttpMethod.POST, transportRoute + "/maintenance")
-                        .hasAuthority(Privileges.VehicleMaintenance.GESTIONAR)
-                        .requestMatchers(HttpMethod.PUT, transportRoute + "/maintenance/**")
-                        .hasAuthority(Privileges.VehicleMaintenance.GESTIONAR)
-                        .requestMatchers(HttpMethod.DELETE, transportRoute + "/maintenance/**")
-                        .hasAuthority(Privileges.VehicleMaintenance.ELIMINAR)
-
-                        .requestMatchers(HttpMethod.GET, transportRoute + "/tours", transportRoute + "/tours/**")
-                        .hasAuthority(Privileges.Tours.LEER)
-                        .requestMatchers(HttpMethod.POST, transportRoute + "/tours")
-                        .hasAuthority(Privileges.Tours.GESTIONAR)
-                        .requestMatchers(HttpMethod.PUT, transportRoute + "/tours/**")
-                        .hasAuthority(Privileges.Tours.GESTIONAR)
-                        .requestMatchers(HttpMethod.DELETE, transportRoute + "/tours/**")
-                        .hasAuthority(Privileges.Tours.ELIMINAR)
-
-                        .requestMatchers(HttpMethod.POST, transportRoute + "/assignments/generate")
-                        .hasAuthority(Privileges.Assignments.GENERAR)
-                        .requestMatchers(HttpMethod.GET, transportRoute + "/assignments", transportRoute + "/assignments/**")
-                        .hasAnyAuthority(Privileges.Assignments.ACTUALIZAR, Privileges.Assignments.GENERAR)
-                        .requestMatchers(HttpMethod.POST, transportRoute + "/assignments")
-                        .hasAuthority(Privileges.Assignments.ACTUALIZAR)
-                        .requestMatchers(HttpMethod.PUT, transportRoute + "/assignments/**")
-                        .hasAuthority(Privileges.Assignments.ACTUALIZAR)
-                        .requestMatchers(HttpMethod.DELETE, transportRoute + "/assignments/**")
-                        .hasAuthority(Privileges.Assignments.ACTUALIZAR)
-
-                        .requestMatchers(HttpMethod.GET, transportRoute + "/reports/**")
-                        .hasAnyAuthority(Privileges.Assignments.ACTUALIZAR, Privileges.Assignments.GENERAR)
-                        .requestMatchers(HttpMethod.GET, transportRoute + "/cleaning/history", transportRoute + "/cleaning/history/**")
-                        .hasAnyAuthority(
-                                Privileges.Tours.LEER,
-                                Privileges.Tours.GESTIONAR,
-                                Privileges.Tours.ELIMINAR,
-                                Privileges.Assignments.ACTUALIZAR,
-                                Privileges.Assignments.GENERAR
-                        )
                         .requestMatchers(
                                 HttpMethod.GET,
+                                transportRoute + "/cleaning/history",
+                                transportRoute + "/cleaning/history/**",
                                 transportRoute + "/cleaning/imports/schema",
                                 transportRoute + "/cleaning/drafts",
                                 transportRoute + "/cleaning/drafts/**"
                         )
-                        .hasAnyAuthority(Privileges.Assignments.ACTUALIZAR, Privileges.Assignments.GENERAR)
+                        .hasAnyAuthority(Privileges.Tours.LEER, Privileges.Tours.GESTIONAR, Privileges.Tours.ELIMINAR)
                         .requestMatchers(HttpMethod.POST, transportRoute + "/cleaning/**")
-                        .hasAnyAuthority(Privileges.Assignments.ACTUALIZAR, Privileges.Assignments.GENERAR)
+                        .hasAuthority(Privileges.Tours.GESTIONAR)
                         .requestMatchers(HttpMethod.PUT, transportRoute + "/cleaning/drafts/**")
-                        .hasAnyAuthority(Privileges.Assignments.ACTUALIZAR, Privileges.Assignments.GENERAR)
+                        .hasAuthority(Privileges.Tours.GESTIONAR)
                         .requestMatchers(HttpMethod.DELETE, transportRoute + "/cleaning/drafts/**")
-                        .hasAnyAuthority(Privileges.Assignments.ACTUALIZAR, Privileges.Assignments.GENERAR)
+                        .hasAuthority(Privileges.Tours.GESTIONAR)
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex

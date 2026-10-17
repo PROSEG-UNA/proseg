@@ -7,17 +7,9 @@ import { keepPreviousPage, queryKeys } from '../../../common/query';
 function mapDriverToRow(driver) {
     return {
         id: driver.id,
-        firstName: driver.firstName ?? '',
-        lastName: driver.lastName ?? '',
-        fullName: [driver.firstName, driver.lastName].filter(Boolean).join(' ').trim() || driver.name || '—',
-        documentId: driver.documentId ?? '—',
-        licenseNumber: driver.licenseNumber ?? '—',
-        phone: driver.phone ?? '—',
-        email: driver.email ?? '—',
+        name: driver.name ?? '—',
         status: driverStatusLabel(driver.status),
         statusRaw: driver.status ?? '',
-        createdAt: driver.createdAt ?? null,
-        updatedAt: driver.updatedAt ?? null,
     };
 }
 

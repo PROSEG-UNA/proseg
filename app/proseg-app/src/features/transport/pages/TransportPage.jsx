@@ -10,9 +10,6 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import DirectionsCarFilledOutlinedIcon from '@mui/icons-material/DirectionsCarFilledOutlined';
-import BuildCircleOutlinedIcon from '@mui/icons-material/BuildCircleOutlined';
-import AltRouteOutlinedIcon from '@mui/icons-material/AltRouteOutlined';
-import AssignmentTurnedInOutlinedIcon from '@mui/icons-material/AssignmentTurnedInOutlined';
 import CleaningServicesOutlinedIcon from '@mui/icons-material/CleaningServicesOutlined';
 import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx';
 import { PrimaryButton } from '../../../common/components/PrimaryButton.jsx';
@@ -22,11 +19,6 @@ import DriversTable from '../components/drivers/DriversTable.jsx';
 import DriverFormModal from '../components/drivers/DriverFormModal.jsx';
 import VehiclesTable from '../components/vehicles/VehiclesTable.jsx';
 import VehicleFormModal from '../components/vehicles/VehicleFormModal.jsx';
-import TransportMaintenanceTable from '../components/maintenance/TransportMaintenanceTable.jsx';
-import VehicleMaintenanceFormModal from '../components/maintenance/VehicleMaintenanceFormModal.jsx';
-import ToursTable from '../components/tours/ToursTable.jsx';
-import TourFormModal from '../components/tours/TourFormModal.jsx';
-import AssignmentPanel from '../components/assignment/AssignmentPanel.jsx';
 import CleaningPanel from '../components/cleaning/CleaningPanel.jsx';
 import { queryKeys } from '../../../common/query';
 
@@ -36,10 +28,6 @@ export default function TransportPage() {
     const [driverFormId, setDriverFormId] = useState(null);
     const [vehicleFormOpen, setVehicleFormOpen] = useState(false);
     const [vehicleFormId, setVehicleFormId] = useState(null);
-    const [maintenanceFormOpen, setMaintenanceFormOpen] = useState(false);
-    const [maintenanceFormId, setMaintenanceFormId] = useState(null);
-    const [tourFormOpen, setTourFormOpen] = useState(false);
-    const [tourFormId, setTourFormId] = useState(null);
 
     const queryClient = useQueryClient();
     const { hasPermission, hasAnyPermission } = usePermissions();
@@ -56,33 +44,17 @@ export default function TransportPage() {
         PERMISSIONS.TRANSPORT.VEHICLES.DELETE,
     ]);
 
-    const canViewMaintenance = hasAnyPermission([
-        PERMISSIONS.TRANSPORT.MAINTENANCE.READ,
-        PERMISSIONS.TRANSPORT.MAINTENANCE.MANAGE,
-        PERMISSIONS.TRANSPORT.MAINTENANCE.DELETE,
-    ]);
-
-    const canViewTours = hasAnyPermission([
+    const canViewCleaning = hasAnyPermission([
         PERMISSIONS.TRANSPORT.TOURS.READ,
         PERMISSIONS.TRANSPORT.TOURS.MANAGE,
         PERMISSIONS.TRANSPORT.TOURS.DELETE,
     ]);
 
-    const canViewAssignment = hasAnyPermission([
-        PERMISSIONS.TRANSPORT.ASSIGNMENT.GENERATE,
-        PERMISSIONS.TRANSPORT.ASSIGNMENT.UPDATE,
-    ]);
-
-    const canViewCleaning = canViewTours || canViewAssignment;
-
     const tabs = useMemo(() => [
         canViewCleaning ? { key: 'cleaning', label: 'Depuracion', icon: CleaningServicesOutlinedIcon } : null,
         canViewDrivers ? { key: 'drivers', label: 'Choferes', icon: BadgeOutlinedIcon } : null,
         canViewVehicles ? { key: 'vehicles', label: 'Vehículos', icon: DirectionsCarFilledOutlinedIcon } : null,
-        canViewMaintenance ? { key: 'maintenance', label: 'Mantenimiento', icon: BuildCircleOutlinedIcon } : null,
-        canViewTours ? { key: 'tours', label: 'Giras', icon: AltRouteOutlinedIcon } : null,
-        canViewAssignment ? { key: 'assignment', label: 'Asignaciones', icon: AssignmentTurnedInOutlinedIcon } : null,
-    ].filter(Boolean), [canViewCleaning, canViewDrivers, canViewVehicles, canViewMaintenance, canViewTours, canViewAssignment]);
+    ].filter(Boolean), [canViewCleaning, canViewDrivers, canViewVehicles]);
 
     const safeTabIndex = tabIndex < tabs.length ? tabIndex : 0;
     const currentTab = tabs[safeTabIndex] ?? tabs[0] ?? null;
@@ -109,36 +81,14 @@ export default function TransportPage() {
         setVehicleFormOpen(true);
     };
 
-    const openCreateMaintenance = () => {
-        setMaintenanceFormId(null);
-        setMaintenanceFormOpen(true);
-    };
-
-    const openEditMaintenance = (record) => {
-        setMaintenanceFormId(record.id);
-        setMaintenanceFormOpen(true);
-    };
-
-    const openCreateTour = () => {
-        setTourFormId(null);
-        setTourFormOpen(true);
-    };
-
-    const openEditTour = (tour) => {
-        setTourFormId(tour.id);
-        setTourFormOpen(true);
-    };
-
     const invalidateTransport = (queryKey) => {
         void queryClient.invalidateQueries({ queryKey });
     };
 
     const refreshDrivers = () => invalidateTransport(queryKeys.transport.drivers());
     const refreshVehicles = () => invalidateTransport(queryKeys.transport.vehicles());
-    const refreshMaintenance = () => invalidateTransport(queryKeys.transport.maintenance());
-    const refreshTours = () => invalidateTransport(queryKeys.transport.tours());
 
-    if (!canViewCleaning && !canViewDrivers && !canViewVehicles && !canViewMaintenance && !canViewTours && !canViewAssignment) {
+    if (!canViewCleaning && !canViewDrivers && !canViewVehicles) {
         return <AccessDeniedState />;
     }
 
@@ -151,7 +101,7 @@ export default function TransportPage() {
                             Transporte
                         </Typography>
                         <Typography sx={{ color: 'text.secondary', fontSize: 14 }}>
-                            Gestión de choferes, vehículos, mantenimiento, giras y asignaciones desde un solo módulo.
+                            Gestión de depuración de giras, choferes y vehículos desde un solo módulo.
                         </Typography>
                     </Box>
                     {currentTab?.key === 'drivers' && hasPermission(PERMISSIONS.TRANSPORT.DRIVERS.MANAGE) ? (
@@ -160,14 +110,6 @@ export default function TransportPage() {
                         </PrimaryButton>
                     ) : currentTab?.key === 'vehicles' && hasPermission(PERMISSIONS.TRANSPORT.VEHICLES.MANAGE) ? (
                         <PrimaryButton startIcon={<AddIcon />} onClick={openCreateVehicle} sx={{ px: '28px' }}>
-                            Crear
-                        </PrimaryButton>
-                    ) : currentTab?.key === 'maintenance' && hasPermission(PERMISSIONS.TRANSPORT.MAINTENANCE.MANAGE) ? (
-                        <PrimaryButton startIcon={<AddIcon />} onClick={openCreateMaintenance} sx={{ px: '28px' }}>
-                            Crear
-                        </PrimaryButton>
-                    ) : currentTab?.key === 'tours' && hasPermission(PERMISSIONS.TRANSPORT.TOURS.MANAGE) ? (
-                        <PrimaryButton startIcon={<AddIcon />} onClick={openCreateTour} sx={{ px: '28px' }}>
                             Crear
                         </PrimaryButton>
                     ) : null}
@@ -212,28 +154,6 @@ export default function TransportPage() {
                             <VehiclesTable onEditVehicle={openEditVehicle} />
                         </Box>
                     )}
-
-                    {currentTab?.key === 'maintenance' && (
-                        <Box>
-                            <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.icon', mb: 2 }}>
-                                Lista de mantenimientos
-                            </Typography>
-                            <TransportMaintenanceTable onEditMaintenance={openEditMaintenance} />
-                        </Box>
-                    )}
-
-                    {currentTab?.key === 'tours' && (
-                        <Box>
-                            <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.icon', mb: 2 }}>
-                                Lista de giras
-                            </Typography>
-                            <ToursTable onEditTour={openEditTour} />
-                        </Box>
-                    )}
-
-                    {currentTab?.key === 'assignment' && (
-                        <AssignmentPanel />
-                    )}
                 </Box>
             </Container>
 
@@ -252,24 +172,6 @@ export default function TransportPage() {
                     vehicleId={vehicleFormId}
                     onClose={() => setVehicleFormOpen(false)}
                     onSaved={refreshVehicles}
-                />
-            ) : null}
-
-            {maintenanceFormOpen ? (
-                <VehicleMaintenanceFormModal
-                    open={maintenanceFormOpen}
-                    maintenanceId={maintenanceFormId}
-                    onClose={() => setMaintenanceFormOpen(false)}
-                    onSaved={refreshMaintenance}
-                />
-            ) : null}
-
-            {tourFormOpen ? (
-                <TourFormModal
-                    open={tourFormOpen}
-                    tourId={tourFormId}
-                    onClose={() => setTourFormOpen(false)}
-                    onSaved={refreshTours}
                 />
             ) : null}
         </Box>
