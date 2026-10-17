@@ -12,8 +12,9 @@ public final class Privileges {
     }
 
     public static final class Ubicaciones {
-        public static final String LEER     = "LEER_UBICACIONES";
-        public static final String GESTIONAR = "GESTIONAR_UBICACIONES";
-        public static final String ELIMINAR  = "ELIMINAR_UBICACIONES";
+        public static final String LEER   = "LEER_UBICACIONES";
+        public static final String CREAR  = "CREAR_UBICACIONES";
+        public static final String EDITAR = "EDITAR_UBICACIONES";
+        public static final String ELIMINAR = "ELIMINAR_UBICACIONES";
     }
 }
