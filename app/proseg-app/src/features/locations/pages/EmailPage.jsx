@@ -8,7 +8,8 @@ import BuildingEmailManager from '../components/email/BuildingEmailManager.jsx';
 export function EmailPage() {
     const { hasPermission } = usePermissions();
     const canView = hasPermission(PERMISSIONS.INVENTORY.LOCATIONS.READ)
-        || hasPermission(PERMISSIONS.INVENTORY.LOCATIONS.MANAGE)
+        || hasPermission(PERMISSIONS.INVENTORY.LOCATIONS.CREATE)
+        || hasPermission(PERMISSIONS.INVENTORY.LOCATIONS.UPDATE)
         || hasPermission(PERMISSIONS.INVENTORY.LOCATIONS.DELETE);
 
     return (

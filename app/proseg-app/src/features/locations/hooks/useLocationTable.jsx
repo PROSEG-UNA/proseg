@@ -42,12 +42,15 @@ export function useLocationTable(config, { enabled = true } = {}) {
     const locationPermissions = useMemo(() => getLocationPermissionGroup(baseUrl), [baseUrl]);
     const canView = hasPermission(locationPermissions.READ)
         || hasPermission(locationPermissions.MANAGE)
+        || hasPermission(locationPermissions.CREATE)
+        || hasPermission(locationPermissions.UPDATE)
         || hasPermission(locationPermissions.DELETE);
-    const canManage = hasPermission(locationPermissions.MANAGE);
     const canDelete = hasPermission(locationPermissions.DELETE);
 
     const canReadEmails = hasPermission(PERMISSIONS.INVENTORY.LOCATIONS?.READ)
         || hasPermission(PERMISSIONS.INVENTORY.LOCATIONS?.MANAGE)
+        || hasPermission(PERMISSIONS.INVENTORY.LOCATIONS?.CREATE)
+        || hasPermission(PERMISSIONS.INVENTORY.LOCATIONS?.UPDATE)
         || hasPermission(PERMISSIONS.INVENTORY.LOCATIONS?.DELETE);
 
     const hasAction = useCallback((action) => {
@@ -55,8 +58,10 @@ export function useLocationTable(config, { enabled = true } = {}) {
         return config.actions.includes(action);
     }, [config]);
 
-    const canCreate = canManage && hasAction('create');
-    const canEdit   = canManage && hasAction('edit');
+    const canCreate = (hasPermission(locationPermissions.CREATE) || hasPermission(locationPermissions.MANAGE))
+        && hasAction('create');
+    const canEdit = (hasPermission(locationPermissions.UPDATE) || hasPermission(locationPermissions.MANAGE))
+        && hasAction('edit');
     const canRemove = canDelete && hasAction('delete');
 
     const columnToBackendKey = config?.columnToBackendKey ?? {};
