@@ -5,7 +5,6 @@ const BASE_URL = '/api/v1/archive/files';
 export async function uploadArchiveFile({
   file,
   folder,
-  objectName,
   onProgress,
   chunkSize = 5 * 1024 * 1024,
   retries = 3,
@@ -17,7 +16,6 @@ export async function uploadArchiveFile({
     contentType: file.type || 'application/octet-stream',
   };
   if (folder) initParams.folder = folder;
-  if (objectName) initParams.objectName = objectName;
 
   const initResponse = await axios.post(`${BASE_URL}/initiate`, null, {
     params: initParams,

@@ -130,6 +130,8 @@ public class TicketServiceImpl implements TicketService {
     @Transactional
     public TicketResponseDto create(TicketCreateRequestDto request, List<MultipartFile> photos,
                                     Authentication authentication) {
+        requireAttachPhotosPermission(authentication, photos);
+
         InventoryCampusResponseDto site = null;
         if (request.getSiteId() != null) {
             site = requireCampus(request.getSiteId());
@@ -258,6 +260,8 @@ public class TicketServiceImpl implements TicketService {
             && !Objects.equals(ticket.getCreatedBy(), extractUserId(authentication))) {
             throw TicketException.accessDenied();
         }
+
+        requireAttachPhotosPermission(authentication, photos);
 
         String actorId = extractUserId(authentication);
         String oldTitle = ticket.getTitle();
@@ -1153,7 +1157,7 @@ public class TicketServiceImpl implements TicketService {
         }
 
         for (MultipartFile file : photos) {
-            String objectName = uploadFileToArchive(file, authentication);
+            String objectName = uploadFileToArchive(file, ticket.getId(), authentication);
 
             TicketPhoto photo = TicketPhoto.builder()
                     .ticket(ticket)
@@ -1857,6 +1861,26 @@ public class TicketServiceImpl implements TicketService {
                 });
     }
 
+    private void requireAttachPhotosPermission(Authentication authentication, List<MultipartFile> photos) {
+        if (photos == null || photos.isEmpty()) {
+            return;
+        }
+
+        if (!hasAttachPhotosPermission(authentication)) {
+            throw TicketException.attachPhotosForbidden();
+        }
+    }
+
+    private boolean hasAttachPhotosPermission(Authentication authentication) {
+        if (authentication == null) {
+            return false;
+        }
+
+        return authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority()
+                        .equalsIgnoreCase(Privileges.Tickets.ADJUNTAR_IMAGENES));
+    }
+
     private String extractUserId(Authentication authentication) {
         if (authentication instanceof JwtAuthenticationToken jwt) {
             return jwt.getToken().getSubject();
@@ -1878,11 +1902,12 @@ public class TicketServiceImpl implements TicketService {
     }
 
     @SneakyThrows
-    private String uploadFileToArchive(MultipartFile file, Authentication authentication) {
+    private String uploadFileToArchive(MultipartFile file, UUID ticketId, Authentication authentication) {
         String initiateUrl = UriComponentsBuilder.fromHttpUrl(archiveBaseUrl)
                 .path("/api/v1/archive/files/initiate")
                 .queryParam("filename", file.getOriginalFilename())
                 .queryParam("contentType", file.getContentType())
+                .queryParam("folder", "tickets/" + ticketId)
                 .queryParam("totalSize", file.getSize())
                 .toUriString();
 

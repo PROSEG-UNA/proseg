@@ -43,8 +43,11 @@ public class SecurityConfig {
                         ).hasAuthority(Privileges.Activos.LEER)
 
                         .requestMatchers(HttpMethod.POST,
+                                "/api/v1/inventory/asset-archives"
+                        ).hasAuthority(Privileges.Activos.SUBIR_IMAGENES)
+
+                        .requestMatchers(HttpMethod.POST,
                                 "/api/v1/inventory/assets",
-                                "/api/v1/inventory/asset-archives",
                                 "/api/v1/inventory/network-interfaces",
                                 "/api/v1/inventory/assets/alarm-sensors"
                         ).hasAuthority(Privileges.Activos.GESTIONAR)

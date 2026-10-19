@@ -6,10 +6,12 @@ import com.proseg.common.api.response.ArchiveUploadPartResponseDto;
 import com.proseg.common.api.response.ArchiveUploadResponseDto;
 import com.proseg.common.api.response.PresignedUrlResponseDto;
 import com.proseg.common.api.util.ApiResponseBuilder;
+import com.proseg.msvc_archive.security.FolderAccessPolicy;
 import com.proseg.msvc_archive.service.ArchiveDownload;
 import com.proseg.msvc_archive.service.ArchiveService;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -32,6 +34,7 @@ import java.nio.file.Paths;
 public class ArchiveController {
 
     private final ArchiveService archiveService;
+    private final FolderAccessPolicy folderAccessPolicy;
 
     @Value("${archive.max-file-size-mb:25}")
     private long maxFileSizeMb;
@@ -39,8 +42,9 @@ public class ArchiveController {
     @Value("${archive.max-chunk-size-mb:5}")
     private long maxChunkSizeMb;
 
-    public ArchiveController(ArchiveService archiveService) {
+    public ArchiveController(ArchiveService archiveService, FolderAccessPolicy folderAccessPolicy) {
         this.archiveService = archiveService;
+        this.folderAccessPolicy = folderAccessPolicy;
     }
 
     private long getMaxFileSizeBytes() {
@@ -53,10 +57,10 @@ public class ArchiveController {
 
     @PostMapping("/initiate")
     public ResponseEntity<ApiResponse<ArchiveUploadInitResponseDto>> initiateMultipartUpload(
+            Authentication authentication,
             @RequestParam(value = "filename", required = false) String filename,
             @RequestParam(value = "contentType", required = false) String contentType,
-            @RequestParam(value = "objectName", required = false) String objectName,
-            @RequestParam(value = "folder", required = false) String folder,
+            @RequestParam("folder") String folder,
             @RequestParam(value = "totalSize", required = false) Long totalSize) {
 
         if (totalSize != null && totalSize > getMaxFileSizeBytes()) {
@@ -64,9 +68,10 @@ public class ArchiveController {
                     "El archivo supera el tamaño máximo permitido de " + maxFileSizeMb + " MB.");
         }
 
+        folderAccessPolicy.checkUpload(folder, authentication);
+
         ArchiveUploadInitResponseDto response = archiveService.initiateMultipartUpload(
                 filename,
-                objectName,
                 folder,
                 contentType);
 
@@ -75,6 +80,7 @@ public class ArchiveController {
 
     @PostMapping(value = "/part", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ArchiveUploadPartResponseDto>> uploadPart(
+            Authentication authentication,
             @RequestParam("uploadId") String uploadId,
             @RequestParam("objectName") String objectName,
             @RequestParam("partNumber") int chunkNumber,
@@ -83,6 +89,8 @@ public class ArchiveController {
             throw new IllegalArgumentException(
                     "La parte supera el tamaño máximo permitido de " + maxChunkSizeMb + " MB.");
         }
+
+        folderAccessPolicy.checkUpload(objectName, authentication);
 
         ArchiveUploadPartResponseDto response = archiveService.uploadPart(
                 uploadId,
@@ -95,6 +103,7 @@ public class ArchiveController {
 
     @PostMapping("/complete")
     public ResponseEntity<ApiResponse<ArchiveUploadResponseDto>> completeMultipartUpload(
+            Authentication authentication,
             @RequestParam("uploadId") String uploadId,
             @RequestParam("objectName") String objectName,
             @RequestParam("totalSize") long totalSize) {
@@ -102,6 +111,8 @@ public class ArchiveController {
             throw new IllegalArgumentException(
                     "El archivo supera el tamaño máximo permitido de " + maxFileSizeMb + " MB.");
         }
+
+        folderAccessPolicy.checkUpload(objectName, authentication);
 
         ArchiveUploadResponseDto response = archiveService.completeMultipartUpload(
                 uploadId,
@@ -113,7 +124,10 @@ public class ArchiveController {
 
     @GetMapping("/presigned")
     public ResponseEntity<ApiResponse<PresignedUrlResponseDto>> getPresignedUrl(
+            Authentication authentication,
             @RequestParam("objectName") String objectName) {
+        folderAccessPolicy.checkRead(objectName, authentication);
+
         PresignedUrlResponseDto response = new PresignedUrlResponseDto();
         response.setUrl(archiveService.getPresignedGetUrl(objectName));
         return ApiResponseBuilder.ok(response, "URL firmada generada");
@@ -121,10 +135,13 @@ public class ArchiveController {
 
     @GetMapping("/**")
     public ResponseEntity<InputStreamResource> download(
+            Authentication authentication,
             HttpServletRequest request) {
         String path = (String) request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE);
         String bestMatch = (String) request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
         String objectName = new AntPathMatcher().extractPathWithinPattern(bestMatch, path);
+
+        folderAccessPolicy.checkRead(objectName, authentication);
 
         ArchiveDownload download = archiveService.download(objectName);
         String filename = Paths.get(download.objectName()).getFileName().toString();

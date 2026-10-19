@@ -49,6 +49,14 @@ public class ArchiveException extends BaseException {
         );
     }
 
+    public static ArchiveException forbidden() {
+        return new ArchiveException(
+                HttpStatus.FORBIDDEN,
+                "ARCHIVE_FORBIDDEN",
+                "No tiene permiso para acceder a este archivo"
+        );
+    }
+
     public static ArchiveException notFound(String objectName) {
         return new ArchiveException(
                 HttpStatus.NOT_FOUND,

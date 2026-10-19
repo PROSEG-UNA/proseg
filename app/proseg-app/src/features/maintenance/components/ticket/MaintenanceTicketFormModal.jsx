@@ -165,6 +165,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
     const { user } = useContext(AuthContext);
     const canSetPriority = hasPermission(PERMISSIONS.MAINTENANCE.TICKETS.SET_PRIORITY);
     const canAssignTicket = hasPermission(PERMISSIONS.MAINTENANCE.TICKETS.ASSIGN_TICKET);
+    const canAttachImages = hasPermission(PERMISSIONS.MAINTENANCE.TICKETS.ATTACH_IMAGES);
     const isEditing = !!ticket?.id;
     const isReadOnly = !!readOnly;
 
@@ -1096,9 +1097,10 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                 ...(isEditing && !isRestrictedEditor && removedPhotoIds.length > 0 ? { removedPhotoIds } : {}),
             };
 
+            const photosToSend = canAttachImages ? photos : [];
             const savedTicket = isEditing
-                ? await updateMaintenanceTicket(ticket.id, payload, photos)
-                : await createMaintenanceTicket(payload, photos);
+                ? await updateMaintenanceTicket(ticket.id, payload, photosToSend)
+                : await createMaintenanceTicket(payload, photosToSend);
 
             if (isEditing && formValues.status && formValues.status !== ticket?.status) {
                 await updateMaintenanceTicketStatus(ticket.id, formValues.status);
@@ -1697,7 +1699,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
 
                     {activeTab === 'attachments' ? (
                         <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 3 }}>
-                            {!isReadOnly ? (
+                            {!isReadOnly && canAttachImages ? (
                                 <>
                                     <Typography sx={sectionTitleSx}>Agregar fotos</Typography>
 
@@ -1914,7 +1916,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                 </Typography>
                             ) : null}
 
-                            {!isReadOnly && photos.length > 0 ? (
+                            {!isReadOnly && canAttachImages && photos.length > 0 ? (
                                 <Typography sx={{ mt: 2, color: 'text.secondary', fontSize: 13.5 }}>
                                     {photos.length} archivo(s) listo(s) para adjuntar al guardar.
                                 </Typography>

@@ -132,6 +132,7 @@ Set-RoleDomain "LEER_ACTIVOS"      "Inventario"
 Set-RoleDomain "GESTIONAR_ACTIVOS" "Inventario"
 Set-RoleDomain "ELIMINAR_ACTIVOS"  "Inventario"
 Set-RoleDomain "IMPORTAR_ACTIVOS"  "Inventario"
+Set-RoleDomain "SUBIR_IMAGENES_ACTIVOS" "Inventario"
 
 Write-Host ""
 Write-Host "--- Ubicaciones ---"
@@ -169,6 +170,7 @@ Set-RoleDomain "ELIMINAR_TECNICOS_MANTENIMIENTO"        "Registro de mantenimien
 
 Write-Host ""
 Write-Host "--- Tickets ---"
+Set-RoleDomain "ADJUNTAR_IMAGENES_TICKETS_MANTENIMIENTO" "Tickets"
 Set-RoleDomain "LEER_TICKET_MANTENIMIENTO"               "Tickets"
 Set-RoleDomain "LEER_TODOS_TICKETS_MANTENIMIENTO"        "Tickets"
 Set-RoleDomain "CREAR_TICKETS_MANTENIMIENTO"             "Tickets"
