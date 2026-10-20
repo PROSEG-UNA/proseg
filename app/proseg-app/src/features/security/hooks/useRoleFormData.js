@@ -7,6 +7,15 @@ const NEW_ROLE_KEY = '__new_role__';
 
 const EMPTY_OVERRIDES = { roleName: null, description: null, selectedIds: null };
 
+function uniqueIds(ids = []) {
+    return [...new Set((ids ?? []).filter(Boolean))];
+}
+
+function normalizeSelectedIds(ids = [], allPrivileges = []) {
+    const validIds = new Set((allPrivileges ?? []).map((privilege) => privilege.id).filter(Boolean));
+    return uniqueIds(ids).filter((id) => validIds.has(id));
+}
+
 function mapPrivilege(privilege) {
     return {
         id: privilege.id,
@@ -31,7 +40,10 @@ export function useRoleFormData(role) {
 
                 return {
                     allPrivileges: privileges.map(mapPrivilege),
-                    assignedIds: assigned.map((privilege) => privilege.id),
+                    assignedIds: normalizeSelectedIds(
+                        assigned.map((privilege) => privilege.id),
+                        privileges
+                    ),
                     roleName: role.name,
                     description: role.description || '',
                 };
@@ -73,7 +85,11 @@ export function useRoleFormData(role) {
             const base = current.roleKey === roleKey ? current : { roleKey, ...EMPTY_OVERRIDES };
             const currentSelection = base.selectedIds ?? data?.assignedIds ?? [];
             const nextSelection = typeof value === 'function' ? value(currentSelection) : value;
-            return { ...base, roleKey, selectedIds: nextSelection };
+            return {
+                ...base,
+                roleKey,
+                selectedIds: normalizeSelectedIds(nextSelection, data?.allPrivileges ?? []),
+            };
         });
     }, [roleKey, data]);
 

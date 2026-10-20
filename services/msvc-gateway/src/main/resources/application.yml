@@ -84,6 +84,13 @@ spring:
           filters:
             - StripPrefix=0
 
+        - id: msvc-forms
+          uri: ${FORMS_SERVICE_URL:http://localhost:8092}
+          predicates:
+            - Path=/api/v1/forms/**
+          filters:
+            - StripPrefix=0
+
 cors:
   allowed-origins: http://localhost:5173,http://localhost:5174
 

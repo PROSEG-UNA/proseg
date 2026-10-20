@@ -59,6 +59,7 @@ public class SecurityConfig {
                                 "/api/v1/archive/**",
                                 "/api/v1/transport/**",
                                 "/api/v1/maintenance/**",
+                                "/api/v1/forms/**",
                                 "/api/v1/document-processor/**"
                         ).permitAll()
                 )
