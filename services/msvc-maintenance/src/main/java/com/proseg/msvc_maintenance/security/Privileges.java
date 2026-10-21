@@ -42,6 +42,7 @@ public final class Privileges {
         public static final String CREAR      = "CREAR_TICKETS_MANTENIMIENTO";
         public static final String EDITAR     = "EDITAR_TICKETS_MANTENIMIENTO";
         public static final String COMENTAR   = "COMENTAR_TICKETS_MANTENIMIENTO";
+        public static final String ADJUNTAR_IMAGENES = "ADJUNTAR_IMAGENES_TICKETS_MANTENIMIENTO";
         public static final String LEER_TODOS = "LEER_TODOS_TICKETS_MANTENIMIENTO";
         public static final String ASIGNAR_PRIORIDAD = "ASIGNAR_PRIORIDAD_TICKETS_MANTENIMIENTO";
         public static final String ASIGNAR_TICKET = "ASIGNAR_TICKETS_MANTENIMIENTO";

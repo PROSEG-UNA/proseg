@@ -43,8 +43,11 @@ public class SecurityConfig {
                         ).hasAuthority(Privileges.Activos.LEER)
 
                         .requestMatchers(HttpMethod.POST,
+                                "/api/v1/inventory/asset-archives"
+                        ).hasAuthority(Privileges.Activos.SUBIR_IMAGENES)
+
+                        .requestMatchers(HttpMethod.POST,
                                 "/api/v1/inventory/assets",
-                                "/api/v1/inventory/asset-archives",
                                 "/api/v1/inventory/network-interfaces",
                                 "/api/v1/inventory/assets/alarm-sensors"
                         ).hasAuthority(Privileges.Activos.GESTIONAR)
@@ -76,13 +79,13 @@ public class SecurityConfig {
                                 "/api/v1/inventory/campuses",
                                 "/api/v1/inventory/buildings",
                                 "/api/v1/inventory/locations"
-                        ).hasAuthority(Privileges.Ubicaciones.GESTIONAR)
+                        ).hasAuthority(Privileges.Ubicaciones.CREAR)
 
                         .requestMatchers(HttpMethod.PUT,
                                 "/api/v1/inventory/campuses/**",
                                 "/api/v1/inventory/buildings/**",
                                 "/api/v1/inventory/locations/**"
-                        ).hasAuthority(Privileges.Ubicaciones.GESTIONAR)
+                        ).hasAuthority(Privileges.Ubicaciones.EDITAR)
 
                         .requestMatchers(HttpMethod.DELETE,
                                 "/api/v1/inventory/campuses/**",
@@ -97,7 +100,7 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/inventory/buildings/*/emails"
-                        ).hasAuthority(Privileges.Ubicaciones.GESTIONAR)
+                        ).hasAuthority(Privileges.Ubicaciones.CREAR)
 
                         .requestMatchers(HttpMethod.DELETE,
                                 "/api/v1/inventory/emails/**"
