@@ -228,8 +228,8 @@ export default function AssetDashboard() {
     const kpiCards = [
         {
             key: 'total',
-            title: 'Total de activos',
-            value: summary?.activeAssets ?? 0,
+            title: 'Activos aprobados',
+            value: summary?.activeAssets ?? '—',
             chip: summary?.decommissionedAssets != null
                 ? `${summary.decommissionedAssets} de baja`
                 : null,
@@ -238,28 +238,28 @@ export default function AssetDashboard() {
         {
             key: CATEGORIES.WARRANTY_EXPIRED,
             title: 'Garantía vencida',
-            value: summary?.warranty?.expired ?? 0,
+            value: summary?.warranty?.expired ?? '—',
             color: 'error.main',
             selectable: true,
         },
         {
             key: CATEGORIES.WARRANTY_EXPIRING,
             title: 'Garantía por vencer',
-            value: summary?.warranty?.expiringSoon ?? 0,
+            value: summary?.warranty?.expiringSoon ?? '—',
             color: 'warning.main',
             selectable: true,
         },
         {
             key: CATEGORIES.FIRMWARE_EXPIRED,
             title: 'Soporte vencido',
-            value: summary?.firmware?.expired ?? 0,
+            value: summary?.firmware?.expired ?? '—',
             color: 'error.main',
             selectable: true,
         },
         {
             key: CATEGORIES.FIRMWARE_EXPIRING,
             title: 'Soporte por vencer',
-            value: summary?.firmware?.expiringSoon ?? 0,
+            value: summary?.firmware?.expiringSoon ?? '—',
             color: 'warning.main',
             selectable: true,
         },
