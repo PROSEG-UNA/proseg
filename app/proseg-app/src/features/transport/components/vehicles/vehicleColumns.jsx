@@ -19,7 +19,7 @@ export function getVehicleColumns() {
         { accessorKey: 'capacity', header: 'Capacidad', size: 120, grow: false },
         {
             accessorKey: 'available',
-            header: 'Disponible',
+            header: 'Estado',
             size: 150,
             grow: false,
             enableColumnFilter: false,

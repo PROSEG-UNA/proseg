@@ -1,6 +1,18 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Box, Button, Chip, Divider, IconButton, TextField, Typography, useTheme } from '@mui/material';
+import {
+    Autocomplete,
+    Box,
+    Button,
+    Chip,
+    Divider,
+    IconButton,
+    TextField,
+    ToggleButton,
+    ToggleButtonGroup,
+    Typography,
+    useTheme,
+} from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import dayjs from 'dayjs';
@@ -14,6 +26,7 @@ import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { queryKeys } from '../../../../common/query';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils';
 import { formatDate, formatHours } from '../../transportUtils.js';
+import { useBorrowedVehicleOptions } from '../../hooks/useTransportOptions.js';
 import {
     createCleaningDraftRow,
     deleteCleaningDraftRow,
@@ -23,6 +36,12 @@ import {
 import { draftRowDuplicateLabel } from './cleaningDraftLabels.js';
 import CleaningCatalogField from './CleaningCatalogField.jsx';
 import DuplicateChip from './DuplicateChip.jsx';
+
+const RESOURCE_TYPE_OPTIONS = [
+    { value: 'INTERNAL', label: 'Interno' },
+    { value: 'EXTERNAL', label: 'Contratación externa' },
+    { value: 'BORROWED_VEHICLE', label: 'Préstamo de vehículo' },
+];
 
 const FORM_ID = 'cleaning-draft-row-form';
 const EMPTY_ROW = {};
@@ -302,6 +321,8 @@ function toFormValues(row) {
         driver: row.driver ?? '',
         number: row.number ?? '',
         vehicle: row.vehicle ?? '',
+        resourceType: row.resourceType ?? 'INTERNAL',
+        borrowedVehicleId: row.borrowedVehicleId ?? '',
         passengers: String(row.passengers ?? ''),
         executingUnit: row.executingUnit ?? '',
         responsible: row.responsible ?? '',
@@ -333,6 +354,9 @@ function validate(values) {
     DATE_TIME_KEYS.forEach((key) => {
         if (!values[key]) errors[key] = REQUIRED_MESSAGE;
     });
+    if (values.resourceType === 'BORROWED_VEHICLE' && !values.borrowedVehicleId) {
+        errors.borrowedVehicleId = 'Selecciona el vehículo prestado';
+    }
 
     return { ...errors, ...validateReturnRange(values) };
 }
@@ -364,7 +388,9 @@ function toPayload(values, rowNumber) {
         rowNumber,
         driver: toNullable(values.driver),
         number: values.number.trim(),
-        vehicle: toNullable(values.vehicle),
+        vehicle: values.resourceType === 'BORROWED_VEHICLE' ? null : toNullable(values.vehicle),
+        resourceType: values.resourceType,
+        borrowedVehicleId: values.resourceType === 'BORROWED_VEHICLE' ? (values.borrowedVehicleId || null) : null,
         passengers: Number(values.passengers),
         executingUnit: values.executingUnit.trim(),
         responsible: values.responsible.trim(),
@@ -406,6 +432,21 @@ function CleaningDraftRowForm({ row, draftId, isEdit, saving, onSubmit, onInvali
     });
 
     const handleBlur = (key) => setTouched((current) => ({ ...current, [key]: true }));
+
+    const borrowedVehicles = useBorrowedVehicleOptions(isEdit && values.resourceType === 'BORROWED_VEHICLE');
+
+    const handleResourceTypeChange = (_, nextResourceType) => {
+        if (!nextResourceType) return;
+        setValues((current) => ({
+            ...current,
+            resourceType: nextResourceType,
+            vehicle: '',
+            borrowedVehicleId: '',
+        }));
+    };
+
+    const pendingContracting = values.resourceType === 'EXTERNAL'
+        && (!values.driver.trim() || !values.vehicle.trim());
 
     const handleSubmit = (event) => {
         event.preventDefault();
@@ -530,10 +571,61 @@ function CleaningDraftRowForm({ row, draftId, isEdit, saving, onSubmit, onInvali
 
             <Box>
                 {sectionLabel('Chofer y vehículo')}
-                <Box sx={gridSx('repeat(3, 1fr)')}>
-                    {renderCatalogField('driver')}
-                    {renderCatalogField('vehicle')}
-                    {renderField('passengers', 'Pasajeros', { required: true, numeric: true })}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
+                    {isEdit ? (
+                        <ToggleButtonGroup
+                            value={values.resourceType}
+                            onChange={handleResourceTypeChange}
+                            exclusive
+                            size="small"
+                            disabled={saving}
+                        >
+                            {RESOURCE_TYPE_OPTIONS.map((option) => (
+                                <ToggleButton key={option.value} value={option.value} sx={{ textTransform: 'none', fontSize: 12.5, fontWeight: 600, px: 1.5 }}>
+                                    {option.label}
+                                </ToggleButton>
+                            ))}
+                        </ToggleButtonGroup>
+                    ) : (
+                        <Chip
+                            label={RESOURCE_TYPE_OPTIONS.find((option) => option.value === values.resourceType)?.label ?? 'Interno'}
+                            size="small"
+                            variant="outlined"
+                        />
+                    )}
+                    {pendingContracting && (
+                        <Chip label="Pendiente de contratar" size="small" color="warning" variant="outlined" />
+                    )}
+                </Box>
+                <Box sx={gridSx('repeat(2, 1fr)')}>
+                    {values.resourceType === 'EXTERNAL'
+                        ? renderField('driver', 'Chofer / Empresa')
+                        : renderCatalogField('driver')}
+                    {values.resourceType === 'EXTERNAL' && renderField('vehicle', 'Placa (contratación externa)')}
+                    {values.resourceType === 'BORROWED_VEHICLE' && (isEdit ? (
+                        <Autocomplete
+                            options={borrowedVehicles.options}
+                            loading={borrowedVehicles.loading}
+                            value={borrowedVehicles.options.find((option) => option.id === values.borrowedVehicleId) ?? null}
+                            onChange={(_, next) => handleChange('borrowedVehicleId', next?.id ?? '')}
+                            getOptionLabel={(option) => option.label ?? ''}
+                            isOptionEqualToValue={(option, value) => option.id === value.id}
+                            disabled={saving}
+                            size="small"
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label="Vehículo prestado"
+                                    required
+                                    error={Boolean(visibleError('borrowedVehicleId'))}
+                                    helperText={visibleError('borrowedVehicleId') || ' '}
+                                    onBlur={() => handleBlur('borrowedVehicleId')}
+                                    sx={fieldSx}
+                                />
+                            )}
+                        />
+                    ) : renderReadOnly('Vehículo prestado', row.borrowedVehiclePlate))}
+                    {values.resourceType === 'INTERNAL' && renderCatalogField('vehicle')}
                 </Box>
             </Box>
 
@@ -547,6 +639,7 @@ function CleaningDraftRowForm({ row, draftId, isEdit, saving, onSubmit, onInvali
                     {renderField('destination', 'Destinos', { required: true })}
                     {renderField('durationDays', 'Duración (días)', { required: true, numeric: true })}
                     {renderField('priority', 'Prioridad', { required: true, numeric: true })}
+                    {renderField('passengers', 'Pasajeros', { required: true, numeric: true })}
                     {renderField('modality', 'Modalidad')}
                 </Box>
             </Box>

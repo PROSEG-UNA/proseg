@@ -14,9 +14,11 @@ import com.proseg.msvc_transport.entity.CleaningDraftRow;
 import com.proseg.msvc_transport.entity.CleaningDraftRowDay;
 import com.proseg.msvc_transport.entity.CleaningDraftStatus;
 import com.proseg.msvc_transport.entity.Driver;
+import com.proseg.msvc_transport.entity.ResourceType;
 import com.proseg.msvc_transport.entity.Vehicle;
 import com.proseg.msvc_transport.entity.VehicleType;
 import com.proseg.msvc_transport.exception.TransportException;
+import com.proseg.msvc_transport.repository.BorrowedVehicleRepository;
 import com.proseg.msvc_transport.repository.CleaningDraftRepository;
 import com.proseg.msvc_transport.repository.CleaningDraftRowDayRepository;
 import com.proseg.msvc_transport.repository.CleaningDraftRowRepository;
@@ -54,6 +56,7 @@ class CleaningDraftServiceTest {
     private CleaningDraftRowDayRepository dayRepository;
     private DriverRepository driverRepository;
     private VehicleRepository vehicleRepository;
+    private BorrowedVehicleRepository borrowedVehicleRepository;
     private DriverMonthService driverMonthService;
     private OvertimeRequestReportService overtimeRequestReportService;
     private CleaningDraftService service;
@@ -65,6 +68,7 @@ class CleaningDraftServiceTest {
         dayRepository = mock(CleaningDraftRowDayRepository.class);
         driverRepository = mock(DriverRepository.class);
         vehicleRepository = mock(VehicleRepository.class);
+        borrowedVehicleRepository = mock(BorrowedVehicleRepository.class);
         driverMonthService = mock(DriverMonthService.class);
         overtimeRequestReportService = mock(OvertimeRequestReportService.class);
         CurrentUserResolver currentUserResolver = mock(CurrentUserResolver.class);
@@ -80,6 +84,7 @@ class CleaningDraftServiceTest {
                 dayRepository,
                 driverRepository,
                 vehicleRepository,
+                borrowedVehicleRepository,
                 driverMonthService,
                 overtimeRequestReportService,
                 currentUserResolver,
@@ -512,6 +517,8 @@ class CleaningDraftServiceTest {
         draft.setBusinessDays(28);
         CleaningDraftRow kept = entity(draft, 1, "100", "Cartago");
         kept.setDriver("daniel   ZUNIGA");
+        kept.setDepartureDate(LocalDate.of(2026, 5, 6));
+        kept.setReturnDate(LocalDate.of(2026, 5, 6));
         CleaningDraftRow unknown = entity(draft, 2, "200", "Heredia");
         unknown.setDriver("Chofer Fantasma");
         unknown.setDepartureDate(LocalDate.of(2026, 5, 4));
@@ -556,8 +563,9 @@ class CleaningDraftServiceTest {
         CleaningDriverAutoAssignResponseDto result = service.autoAssignDrivers(draft.getId());
 
         assertThat(pending.getDriver()).isNull();
+        assertThat(kept.getDriver()).isNull();
         assertThat(result.getAssignedTours()).isZero();
-        assertThat(result.getUnassignedTours()).isEqualTo(1);
+        assertThat(result.getUnassignedTours()).isEqualTo(2);
     }
 
     @Test
@@ -578,10 +586,37 @@ class CleaningDraftServiceTest {
         stubDraft(draft, betoWeekday, betoWeekday2, betoWeekday3, betoWeekday4, lowPriorityWeekend);
         when(driverRepository.findAll()).thenReturn(List.of(ana, beto));
 
-        service.autoAssignDrivers(draft.getId());
+        CleaningDriverAutoAssignResponseDto result = service.autoAssignDrivers(draft.getId());
 
         assertThat(lowPriorityWeekend.getDriver()).isEqualTo("Beto");
         assertThat(betoWeekday.getDriver()).isEqualTo("Ana");
+        assertThat(result.getAssignedTours()).isEqualTo(2);
+        assertThat(result.getUnassignedTours()).isZero();
+    }
+
+    @Test
+    void autoAssignClearsReleasedToursAndTheirRepeatedRowsWithoutChangingExternalDrivers() {
+        CleaningDraft draft = draftWithBusinessDays(28);
+        draft.setYear(2026);
+        draft.setMonth(5);
+        Driver ana = Driver.builder().id(UUID.randomUUID()).name("Ana").status("ACTIVE").build();
+        CleaningDraftRow weekend = shortRow(draft, 1, "1", "2026-05-09", "08:00", "12:00", "Ana");
+        CleaningDraftRow repeated = shortRow(draft, 2, "1", "2026-05-09", "08:00", "12:00", "Ana");
+        repeated.setDuplicateRank(2);
+        CleaningDraftRow external = shortRow(draft, 3, "2", "2026-05-09", "08:00", "12:00", "Empresa externa");
+        external.setResourceType(ResourceType.EXTERNAL);
+        stubDraft(draft, weekend, repeated, external);
+        when(driverRepository.findAll()).thenReturn(List.of(ana));
+
+        CleaningDriverAutoAssignResponseDto result = service.autoAssignDrivers(draft.getId());
+
+        assertThat(weekend.getDriver()).isNull();
+        assertThat(repeated.getDriver()).isNull();
+        assertThat(external.getDriver()).isEqualTo("Empresa externa");
+        assertThat(result.getAssignedTours()).isZero();
+        assertThat(result.getUnassignedTours()).isEqualTo(1);
+        assertThat(result.getClearedTours()).isZero();
+        verify(driverMonthService).syncWithDraft(draft, List.of(weekend, repeated, external));
     }
 
     @Test

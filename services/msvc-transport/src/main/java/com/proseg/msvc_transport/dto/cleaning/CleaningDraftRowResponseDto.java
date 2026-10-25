@@ -1,5 +1,6 @@
 package com.proseg.msvc_transport.dto.cleaning;
 
+import com.proseg.msvc_transport.entity.ResourceType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,6 +23,10 @@ public class CleaningDraftRowResponseDto {
     private String driver;
     private String number;
     private String vehicle;
+    private ResourceType resourceType;
+    private UUID borrowedVehicleId;
+    private String borrowedVehiclePlate;
+    private boolean pendingContracting;
     private Integer passengers;
     private String executingUnit;
     private String responsible;

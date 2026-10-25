@@ -12,6 +12,8 @@ import com.proseg.msvc_transport.repository.CleaningDraftRowRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -144,6 +146,61 @@ class OvertimeRequestReportServiceTest {
         assertThatThrownBy(() -> service.buildSchedule(draft))
                 .isInstanceOf(TransportException.class)
                 .hasMessage("El borrador no tiene días hábiles definidos");
+    }
+
+    @Test
+    void listDriverSummariesKeepsTotalsButDropsTours() {
+        CleaningDraft draft = CleaningDraft.builder().id(DRAFT_ID).year(2026).month(5).businessDays(28).build();
+        Driver alvaro = driver("Álvaro Parada", "ACTIVE");
+        when(driverRepository.findAll()).thenReturn(List.of(alvaro));
+        CleaningDraftRow tour = row("3622", "Álvaro Parada", "2026-05-08");
+        when(rowRepository.findAllByDraftIdOrderByRowNumberAsc(DRAFT_ID)).thenReturn(List.of(tour));
+        when(dayRepository.findByRowIdIn(anyCollection())).thenReturn(List.of(
+                day(tour, "2026-05-08", "11:00", "20:30", 5.5, 4.0, 0.0)
+        ));
+
+        OvertimeRequestReportDto summaries = service.listDriverSummaries(draft);
+
+        assertThat(summaries.getDrivers()).hasSize(1);
+        OvertimeRequestReportDto.DriverBlock summary = summaries.getDrivers().get(0);
+        assertThat(summary.getId()).isEqualTo(alvaro.getId());
+        assertThat(summary.getSurplusHours()).isEqualTo(4.0);
+        assertThat(summary.getTours()).isEmpty();
+    }
+
+    @Test
+    void buildDriverPagePaginatesThatDriversToursAndTotalsCoverAllOfThem() {
+        CleaningDraft draft = CleaningDraft.builder().id(DRAFT_ID).year(2026).month(5).businessDays(28).build();
+        Driver alvaro = driver("Álvaro Parada", "ACTIVE");
+        when(driverRepository.findAll()).thenReturn(List.of(alvaro));
+        CleaningDraftRow firstTour = row("3622", "Álvaro Parada", "2026-05-08");
+        CleaningDraftRow secondTour = row("3700", "Álvaro Parada", "2026-05-12");
+        when(rowRepository.findAllByDraftIdOrderByRowNumberAsc(DRAFT_ID)).thenReturn(List.of(firstTour, secondTour));
+        when(dayRepository.findByRowIdIn(anyCollection())).thenReturn(List.of(
+                day(firstTour, "2026-05-08", "11:00", "20:30", 5.5, 4.0, 0.0),
+                day(secondTour, "2026-05-12", "08:00", "15:00", 7.0, 0.0, 2.5)
+        ));
+
+        Page<OvertimeRequestReportDto.TourBlock> firstPage = service.buildDriverPage(draft, alvaro.getId(), PageRequest.of(0, 1));
+
+        assertThat(firstPage.getTotalElements()).isEqualTo(2);
+        assertThat(firstPage.getContent()).extracting(OvertimeRequestReportDto.TourBlock::getNumber).containsExactly("3622");
+
+        Page<OvertimeRequestReportDto.TourBlock> secondPage = service.buildDriverPage(draft, alvaro.getId(), PageRequest.of(1, 1));
+        assertThat(secondPage.getContent()).extracting(OvertimeRequestReportDto.TourBlock::getNumber).containsExactly("3700");
+    }
+
+    @Test
+    void buildDriverPageFailsWhenTheDriverHasNoToursInTheDraft() {
+        CleaningDraft draft = CleaningDraft.builder().id(DRAFT_ID).year(2026).month(5).businessDays(28).build();
+        Driver alvaro = driver("Álvaro Parada", "ACTIVE");
+        when(driverRepository.findAll()).thenReturn(List.of(alvaro));
+        when(rowRepository.findAllByDraftIdOrderByRowNumberAsc(DRAFT_ID)).thenReturn(List.of());
+        when(dayRepository.findByRowIdIn(anyCollection())).thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.buildDriverPage(draft, UUID.randomUUID(), PageRequest.of(0, 10)))
+                .isInstanceOf(TransportException.class)
+                .hasMessage("El chofer no tiene giras en este borrador");
     }
 
     private void stubDraft(Integer businessDays) {

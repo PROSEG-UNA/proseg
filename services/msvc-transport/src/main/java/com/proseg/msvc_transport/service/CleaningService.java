@@ -5,6 +5,7 @@ import com.proseg.msvc_transport.entity.CleaningDraft;
 import com.proseg.msvc_transport.entity.CleaningDraftRow;
 import com.proseg.msvc_transport.entity.CleaningDraftStatus;
 import com.proseg.msvc_transport.entity.Driver;
+import com.proseg.msvc_transport.entity.ResourceType;
 import com.proseg.msvc_transport.entity.Tour;
 import com.proseg.msvc_transport.entity.Vehicle;
 import com.proseg.msvc_transport.exception.TransportException;
@@ -62,6 +63,7 @@ public class CleaningService {
 
         List<CleaningDraftRow> rows = draftRowRepository.findAllByDraftIdOrderByRowNumberAsc(draftId);
         ensureNoConflicts(rows);
+        ensureNoPendingContracting(rows);
 
         List<CleaningDraftRow> primaryRows = rows.stream()
                 .filter(row -> row.getDuplicateRank() == 1)
@@ -148,6 +150,30 @@ public class CleaningService {
         );
     }
 
+    private void ensureNoPendingContracting(List<CleaningDraftRow> rows) {
+        List<Integer> pendingRowNumbers = rows.stream()
+                .filter(row -> row.getDuplicateRank() == 1)
+                .filter(row -> row.getResourceType() == ResourceType.EXTERNAL)
+                .filter(row -> isBlank(row.getDriver()) || isBlank(row.getVehicle()))
+                .map(CleaningDraftRow::getRowNumber)
+                .toList();
+        if (pendingRowNumbers.isEmpty()) {
+            return;
+        }
+        String detail = pendingRowNumbers.stream().limit(MAX_CONFLICTS_IN_MESSAGE).map(String::valueOf).collect(Collectors.joining(", "));
+        String remaining = pendingRowNumbers.size() > MAX_CONFLICTS_IN_MESSAGE
+                ? " y " + (pendingRowNumbers.size() - MAX_CONFLICTS_IN_MESSAGE) + " más"
+                : "";
+        throw TransportException.unprocessable(
+                "CLEANING_DRAFT_PENDING_CONTRACTING",
+                "Hay giras de contratación externa pendientes de contratar (falta el chofer/empresa o la placa) en las filas: " + detail + remaining
+        );
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
     private void appendSkippedDuplicates(
             List<CleaningDraftRow> rows,
             List<CleaningHistoryService.CleaningDetailDraft> detailDrafts
@@ -191,8 +217,12 @@ public class CleaningService {
         List<Tour> tours = new ArrayList<>();
         for (CleaningDraftRow row : rows) {
             Map<String, String> values = toDetailValues(row);
+            boolean external = row.getResourceType() == ResourceType.EXTERNAL;
+            boolean borrowedVehicle = row.getResourceType() == ResourceType.BORROWED_VEHICLE;
 
-            UpsertResult<Driver> driverResult = resolveOrCreateDriver(row.getDriver(), driverCache, createdDrivers);
+            UpsertResult<Driver> driverResult = external
+                    ? new UpsertResult<>(null, UpsertAction.SKIPPED)
+                    : resolveOrCreateDriver(row.getDriver(), driverCache, createdDrivers);
             if (driverResult.action() != UpsertAction.SKIPPED) {
                 detailDrafts.add(buildDetail(
                         row.getRowNumber(),
@@ -207,7 +237,7 @@ public class CleaningService {
                 ));
             }
 
-            UpsertResult<Vehicle> vehicleResult = DriverHoursRules.looksLikePlate(row.getVehicle())
+            UpsertResult<Vehicle> vehicleResult = (!external && !borrowedVehicle && DriverHoursRules.looksLikePlate(row.getVehicle()))
                     ? resolveOrCreateVehicle(row.getVehicle(), row.getPassengers(), vehicleCache, createdVehicles, updatedVehicles)
                     : new UpsertResult<>(null, UpsertAction.SKIPPED);
             if (vehicleResult.action() != UpsertAction.SKIPPED) {
@@ -277,9 +307,14 @@ public class CleaningService {
         tour.setStatus("PLANNED");
         tour.setPriority(row.getPriority());
         tour.setPassengers(row.getPassengers());
-        tour.setRequestedVehicle(importedVehicle != null ? importedVehicle.getPlate() : null);
-        tour.setRequestedVehicleType(importedVehicle != null ? vehicleTypeName(importedVehicle) : row.getVehicle());
-        tour.setRequestedDriver(importedDriver != null ? importedDriver.getName() : null);
+        if (row.getResourceType() == ResourceType.BORROWED_VEHICLE && row.getBorrowedVehicle() != null) {
+            tour.setRequestedVehicle(row.getBorrowedVehicle().getPlate());
+            tour.setRequestedVehicleType(row.getBorrowedVehicle().getType() != null ? row.getBorrowedVehicle().getType().name() : null);
+        } else {
+            tour.setRequestedVehicle(importedVehicle != null ? importedVehicle.getPlate() : null);
+            tour.setRequestedVehicleType(importedVehicle != null ? vehicleTypeName(importedVehicle) : row.getVehicle());
+        }
+        tour.setRequestedDriver(importedDriver != null ? importedDriver.getName() : row.getDriver());
         tour.setResponsible(row.getResponsible());
         tour.setExecutingUnit(row.getExecutingUnit());
         tour.setModality(row.getModality());

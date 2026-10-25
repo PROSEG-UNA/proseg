@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import {
     fetchCleaningDraft,
+    fetchCleaningDraftDriverSchedule,
+    fetchCleaningDraftDriverSummaries,
     fetchCleaningDraftRows,
-    fetchCleaningDraftSchedule,
     fetchCleaningDrafts,
 } from '../services/cleaning/cleaningService';
 import { getFriendlyApiErrorMessage } from '../../../common/utils';
@@ -115,17 +116,44 @@ export function useCleaningDraftAllRows(draftId) {
     };
 }
 
-export function useCleaningDraftSchedule(draftId) {
+export function useCleaningDraftDriverSummaries(draftId) {
     const { data, isLoading, isFetching, error } = useQuery({
-        queryKey: queryKeys.transport.cleaningDraftSchedule(draftId),
-        queryFn: () => fetchCleaningDraftSchedule(draftId),
+        queryKey: queryKeys.transport.cleaningDraftDriverSummaries(draftId),
+        queryFn: () => fetchCleaningDraftDriverSummaries(draftId),
         enabled: Boolean(draftId),
     });
 
     return {
-        schedule: data ?? null,
+        surplusCapPerDriver: data?.surplusCapPerDriver ?? 0,
+        drivers: data?.drivers ?? [],
         loading: isLoading,
         fetching: isFetching,
-        error: error ? getFriendlyApiErrorMessage(error, 'No se pudo cargar la solicitud de horas extra') : null,
+        error: error ? getFriendlyApiErrorMessage(error, 'No se pudo cargar el resumen de choferes') : null,
+    };
+}
+
+export function useCleaningDraftDriverSchedule(draftId, driverId, { pageIndex = 0, pageSize = 10 } = {}) {
+    const requestParams = { page: pageIndex, size: pageSize };
+    const listQueryKey = queryKeys.transport.cleaningDraftDriverSchedule(draftId, driverId, requestParams);
+
+    const { data, isLoading, isFetching, error } = useQuery({
+        queryKey: listQueryKey,
+        placeholderData: keepPreviousPage(listQueryKey),
+        enabled: Boolean(draftId) && Boolean(driverId),
+        queryFn: async () => {
+            const response = await fetchCleaningDraftDriverSchedule(draftId, driverId, requestParams);
+            return {
+                tours: response.content ?? [],
+                totalElements: response.totalElements ?? 0,
+            };
+        },
+    });
+
+    return {
+        tours: data?.tours ?? [],
+        loading: isLoading,
+        fetching: isFetching,
+        error: error ? getFriendlyApiErrorMessage(error, 'No se pudieron cargar las giras del chofer') : null,
+        totalElements: data?.totalElements ?? 0,
     };
 }

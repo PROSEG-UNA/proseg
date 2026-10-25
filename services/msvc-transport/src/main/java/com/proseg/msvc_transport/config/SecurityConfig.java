@@ -47,6 +47,15 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, transportRoute + "/vehicles/**")
                         .hasAuthority(Privileges.Vehicles.ELIMINAR)
 
+                        .requestMatchers(HttpMethod.GET, transportRoute + "/borrowed-vehicles", transportRoute + "/borrowed-vehicles/**")
+                        .hasAuthority(Privileges.Vehicles.LEER)
+                        .requestMatchers(HttpMethod.POST, transportRoute + "/borrowed-vehicles")
+                        .hasAuthority(Privileges.Vehicles.GESTIONAR)
+                        .requestMatchers(HttpMethod.PUT, transportRoute + "/borrowed-vehicles/**")
+                        .hasAuthority(Privileges.Vehicles.GESTIONAR)
+                        .requestMatchers(HttpMethod.DELETE, transportRoute + "/borrowed-vehicles/**")
+                        .hasAuthority(Privileges.Vehicles.ELIMINAR)
+
                         .requestMatchers(
                                 HttpMethod.GET,
                                 transportRoute + "/cleaning/history",

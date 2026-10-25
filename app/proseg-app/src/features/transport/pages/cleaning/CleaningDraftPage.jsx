@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     Alert,
@@ -55,21 +55,20 @@ import { exportDriverOvertimeRequest } from '../../services/drivers/driversServi
 import { useCleaningCatalogMatch } from '../../hooks/useCleaningCatalogMatch.js';
 import {
     useCleaningDraft,
-    useCleaningDraftAllRows,
     useCleaningDraftRows,
-    useCleaningDraftSchedule,
 } from '../../hooks/useCleaningDraftsData.js';
 import { useServerTableState } from '../../hooks/useServerTableState.js';
 import CatalogValueCell from '../../components/cleaning/CatalogValueCell.jsx';
 import CleaningDraftRowModal from '../../components/cleaning/CleaningDraftRowModal.jsx';
-import CleaningDraftScheduleTable from '../../components/cleaning/CleaningDraftScheduleTable.jsx';
+import CleaningDraftDaysDetailPanel from '../../components/cleaning/CleaningDraftDaysDetailPanel.jsx';
+import CleaningDraftDriverScheduleView from '../../components/cleaning/CleaningDraftDriverScheduleView.jsx';
 import { draftPeriodLabel, shortPeriodLabel } from '../../components/cleaning/cleaningDraftLabels.js';
 import DuplicateChip from '../../components/cleaning/DuplicateChip.jsx';
 
 const HUB_PATH = '/transporte/depuracion';
 const INITIAL_SORTING = [{ id: 'rowNumber', desc: false }];
-const INITIAL_PAGE_SIZE = 100;
-const TABLE_STORAGE_KEY = 'cleaning-draft-rows-table-state';
+const INITIAL_PAGE_SIZE = 50;
+const TABLE_STORAGE_KEY = 'cleaning-draft-rows-table-state-v3';
 const INITIAL_COLUMN_VISIBILITY = { rowNumber: false };
 const FILTERABLE_COLUMNS = new Set([
     'rowNumber', 'number', 'driver', 'vehicle', 'passengers', 'executingUnit', 'responsible',
@@ -177,27 +176,10 @@ const DraftRowsTable = memo(function DraftRowsTable({
             enableRowActions
             onRowClick={handleRowClick}
             renderRowActions={renderRowActions}
+            renderDetailPanel={({ row }) => row.original.days?.length
+                ? <CleaningDraftDaysDetailPanel days={row.original.days} />
+                : null}
             tableOptions={mergedTableOptions}
-        />
-    );
-});
-
-const DraftScheduleView = memo(function DraftScheduleView({ draftId, isDraft, onOpenRow }) {
-    const { schedule, loading, error } = useCleaningDraftSchedule(draftId);
-    const { rows } = useCleaningDraftAllRows(draftId);
-    const rowsById = useMemo(() => new Map(rows.map((row) => [row.id, row])), [rows]);
-
-    const handleOpenTour = useCallback((tourId) => {
-        const row = rowsById.get(tourId);
-        if (row) onOpenRow(isDraft ? 'edit' : 'view', row);
-    }, [rowsById, isDraft, onOpenRow]);
-
-    return (
-        <CleaningDraftScheduleTable
-            schedule={schedule}
-            loading={loading}
-            error={error}
-            onOpenTour={handleOpenTour}
         />
     );
 });
@@ -229,6 +211,7 @@ export default function CleaningDraftPage() {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const { draftId } = useParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { hasAnyPermission } = usePermissions();
     const accentColor = theme.vars.palette.tones.rose.fg;
 
@@ -241,7 +224,16 @@ export default function CleaningDraftPage() {
     const [rowToDelete, setRowToDelete] = useState(null);
     const [rowModal, setRowModal] = useState({ open: false, mode: 'view', row: null });
     const [alert, setAlert] = useState(null);
-    const [viewTab, setViewTab] = useState('rows');
+    const viewTab = searchParams.get('tab') === 'schedule' ? 'schedule' : 'rows';
+
+    const handleViewTabChange = (_, value) => {
+        setSearchParams((current) => {
+            const next = new URLSearchParams(current);
+            if (value === 'rows') next.delete('tab');
+            else next.set('tab', value);
+            return next;
+        }, { replace: true });
+    };
 
     const canExecuteCleaning = hasAnyPermission([
         PERMISSIONS.TRANSPORT.TOURS.MANAGE,
@@ -372,8 +364,12 @@ export default function CleaningDraftPage() {
             header: 'Chofer',
             size: 210,
             grow: false,
-            Cell: ({ cell }) => (
-                <CatalogValueCell kind="driver" value={cell.getValue()} missing={isDriverMissing(cell.getValue())} />
+            Cell: ({ cell, row }) => (
+                <CatalogValueCell
+                    kind="driver"
+                    value={cell.getValue()}
+                    missing={row.original.resourceType !== 'EXTERNAL' && isDriverMissing(cell.getValue())}
+                />
             ),
         },
         {
@@ -381,9 +377,18 @@ export default function CleaningDraftPage() {
             header: 'Vehículo',
             size: 160,
             grow: false,
-            Cell: ({ cell }) => (
-                <CatalogValueCell kind="vehicle" value={cell.getValue()} missing={isVehicleMissing(cell.getValue())} />
-            ),
+            Cell: ({ cell, row }) => {
+                if (row.original.resourceType === 'BORROWED_VEHICLE') {
+                    return <CatalogValueCell kind="vehicle" value={row.original.borrowedVehiclePlate} missing={false} />;
+                }
+                return (
+                    <CatalogValueCell
+                        kind="vehicle"
+                        value={cell.getValue()}
+                        missing={row.original.resourceType !== 'EXTERNAL' && isVehicleMissing(cell.getValue())}
+                    />
+                );
+            },
         },
         { accessorKey: 'passengers', header: 'Pasajeros', size: 120, grow: false },
         { accessorKey: 'executingUnit', header: 'Unidad ejecutora', size: 240, grow: false },
@@ -625,7 +630,7 @@ export default function CleaningDraftPage() {
                 )}
 
                 <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-                    <Tabs value={viewTab} onChange={(_, value) => setViewTab(value)}>
+                    <Tabs value={viewTab} onChange={handleViewTabChange}>
                         <Tab value="rows" label="Filas" sx={{ textTransform: 'none', fontWeight: 700 }} />
                         <Tab value="schedule" label="Solicitud de horas extra" sx={{ textTransform: 'none', fontWeight: 700 }} />
                     </Tabs>
@@ -648,7 +653,7 @@ export default function CleaningDraftPage() {
                 )}
 
                 {viewTab === 'schedule' && (
-                    <DraftScheduleView draftId={draftId} isDraft={isDraft} onOpenRow={openRowModal} />
+                    <CleaningDraftDriverScheduleView draftId={draftId} isDraft={isDraft} onOpenRow={openRowModal} />
                 )}
             </Container>
 

@@ -57,6 +57,9 @@ export const queryKeys = {
         vehicles: () => [...queryKeys.transport.root, 'vehicles'],
         vehicleList: (params) => [...queryKeys.transport.vehicles(), 'list', params],
         vehicleOptions: () => [...queryKeys.transport.vehicles(), 'options'],
+        borrowedVehicles: () => [...queryKeys.transport.root, 'borrowed-vehicles'],
+        borrowedVehicleList: (params) => [...queryKeys.transport.borrowedVehicles(), 'list', params],
+        borrowedVehicleOptions: () => [...queryKeys.transport.borrowedVehicles(), 'options'],
         drivers: () => [...queryKeys.transport.root, 'drivers'],
         driverList: (params) => [...queryKeys.transport.drivers(), 'list', params],
         driverOptions: () => [...queryKeys.transport.drivers(), 'options'],
@@ -69,6 +72,7 @@ export const queryKeys = {
         cleaningDraftList: (params) => [...queryKeys.transport.cleaningDrafts(), 'list', params],
         cleaningDraftDetail: (draftId) => [...queryKeys.transport.cleaningDrafts(), 'detail', draftId],
         cleaningDraftRows: (draftId, params) => [...queryKeys.transport.cleaningDrafts(), 'rows', draftId, params],
-        cleaningDraftSchedule: (draftId) => [...queryKeys.transport.cleaningDrafts(), 'schedule', draftId],
+        cleaningDraftDriverSummaries: (draftId) => [...queryKeys.transport.cleaningDrafts(), 'schedule-summary', draftId],
+        cleaningDraftDriverSchedule: (draftId, driverId, params) => [...queryKeys.transport.cleaningDrafts(), 'schedule', draftId, driverId, params],
     },
 };

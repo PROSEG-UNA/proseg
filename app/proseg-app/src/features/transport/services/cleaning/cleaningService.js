@@ -44,9 +44,13 @@ export async function fetchCleaningDraftRows(draftId, options = {}) {
     return fetchPage(`${TRANSPORT_ENDPOINTS.cleaningDrafts}/${draftId}/rows`, options);
 }
 
-export async function fetchCleaningDraftSchedule(draftId) {
-    const { data } = await axios.get(`${TRANSPORT_ENDPOINTS.cleaningDrafts}/${draftId}/drivers/schedule`, transportConfig);
+export async function fetchCleaningDraftDriverSummaries(draftId) {
+    const { data } = await axios.get(`${TRANSPORT_ENDPOINTS.cleaningDrafts}/${draftId}/drivers/schedule-summary`, transportConfig);
     return data?.data ?? null;
+}
+
+export async function fetchCleaningDraftDriverSchedule(draftId, driverId, options = {}) {
+    return fetchPage(`${TRANSPORT_ENDPOINTS.cleaningDrafts}/${draftId}/drivers/${driverId}/schedule`, options);
 }
 
 export async function createCleaningDraftRow(draftId, payload) {

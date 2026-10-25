@@ -12,6 +12,10 @@ import { formatDateTime } from '../../transportUtils.js';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
 import { fetchCleaningHistory, fetchCleaningHistoryById } from '../../services/cleaning/cleaningService.js';
 import { keepPreviousPage, queryKeys } from '../../../../common/query';
+import { usePersistedColumnVisibility } from '../../hooks/usePersistedColumnVisibility.js';
+
+const HISTORY_COLUMN_VISIBILITY_STORAGE_KEY = 'cleaning-history-column-visibility';
+const HISTORY_DETAIL_COLUMN_VISIBILITY_STORAGE_KEY = 'cleaning-history-detail-column-visibility';
 
 const COLUMN_TO_BACKEND_KEY = {
     executedAt: 'executionDate',
@@ -102,6 +106,8 @@ function mapCleaningRecordToRow(record) {
 
 export default function CleaningHistoryPanel() {
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
+    const [columnVisibility, setColumnVisibility] = usePersistedColumnVisibility(HISTORY_COLUMN_VISIBILITY_STORAGE_KEY);
+    const [detailColumnVisibility, setDetailColumnVisibility] = usePersistedColumnVisibility(HISTORY_DETAIL_COLUMN_VISIBILITY_STORAGE_KEY);
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
     const [sorting, setSorting] = useState([{ id: 'executedAt', desc: true }]);
@@ -281,7 +287,8 @@ export default function CleaningHistoryPanel() {
                     onGlobalFilterChange: handleGlobalFilterChange,
                     onColumnFiltersChange: handleColumnFiltersChange,
                     onSortingChange: handleSortingChange,
-                    state: { pagination, globalFilter, columnFilters, sorting },
+                    onColumnVisibilityChange: setColumnVisibility,
+                    state: { pagination, globalFilter, columnFilters, sorting, columnVisibility },
                 }}
                 enableGlobalFilter
             />
@@ -340,6 +347,8 @@ export default function CleaningHistoryPanel() {
                                 enableGlobalFilter
                                 tableOptions={{
                                     initialState: { pagination: { pageIndex: 0, pageSize: 10 } },
+                                    onColumnVisibilityChange: setDetailColumnVisibility,
+                                    state: { columnVisibility: detailColumnVisibility },
                                 }}
                                 maxHeight="45vh"
                             />

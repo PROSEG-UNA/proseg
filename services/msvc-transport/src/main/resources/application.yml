@@ -19,4 +19,5 @@ routes:
   transport: ${api.prefix}
   drivers: ${api.prefix}/drivers
   vehicles: ${api.prefix}/vehicles
+  borrowed-vehicles: ${api.prefix}/borrowed-vehicles
   cleaning: ${api.prefix}/cleaning

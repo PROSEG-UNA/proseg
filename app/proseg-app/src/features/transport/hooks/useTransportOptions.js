@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchDrivers } from '../services/drivers/driversService';
 import { fetchVehicles } from '../services/vehicles/vehiclesService';
+import { fetchBorrowedVehicles } from '../services/borrowedVehicles/borrowedVehiclesService';
 import { queryKeys } from '../../../common/query';
 
 const OPTIONS_PAGE = { page: 0, size: 300 };
@@ -35,6 +36,24 @@ export function useVehicleOptions(enabled = true) {
         queryFn: async () => {
             const response = await fetchVehicles(OPTIONS_PAGE);
             return (response?.content ?? []).map((vehicle) => ({ id: vehicle.id, label: vehicleLabel(vehicle) }));
+        },
+        enabled: Boolean(enabled),
+        staleTime: OPTIONS_STALE_TIME,
+    });
+
+    return { options: data ?? EMPTY_OPTIONS, loading: isLoading, error };
+}
+
+export function useBorrowedVehicleOptions(enabled = true) {
+    const { data, isLoading, error } = useQuery({
+        queryKey: queryKeys.transport.borrowedVehicleOptions(),
+        queryFn: async () => {
+            const response = await fetchBorrowedVehicles(OPTIONS_PAGE);
+            return (response?.content ?? []).map((vehicle) => ({
+                id: vehicle.id,
+                label: vehicleLabel(vehicle),
+                capacity: vehicle.capacity ?? null,
+            }));
         },
         enabled: Boolean(enabled),
         staleTime: OPTIONS_STALE_TIME,

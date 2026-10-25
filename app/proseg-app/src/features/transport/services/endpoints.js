@@ -1,6 +1,7 @@
 export const TRANSPORT_ENDPOINTS = {
     drivers: '/api/v1/transport/drivers',
     vehicles: '/api/v1/transport/vehicles',
+    borrowedVehicles: '/api/v1/transport/borrowed-vehicles',
     cleaning: '/api/v1/transport/cleaning',
     cleaningHistory: '/api/v1/transport/cleaning/history',
     cleaningDrafts: '/api/v1/transport/cleaning/drafts',

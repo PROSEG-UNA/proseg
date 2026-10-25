@@ -143,6 +143,23 @@ public class CleaningController {
         return ApiResponseBuilder.ok(cleaningDraftService.getSchedule(id), "Horario de choferes del borrador");
     }
 
+    @GetMapping("/drafts/{id}/drivers/schedule-summary")
+    public ResponseEntity<ApiResponse<OvertimeRequestReportDto>> findDraftDriverScheduleSummary(@PathVariable UUID id) {
+        return ApiResponseBuilder.ok(cleaningDraftService.getDriverScheduleSummaries(id), "Resumen de sobresueldo por chofer del borrador");
+    }
+
+    @GetMapping("/drafts/{id}/drivers/{driverId}/schedule")
+    public ResponseEntity<ApiResponse<PageResponse<OvertimeRequestReportDto.TourBlock>>> findDraftDriverTours(
+            @PathVariable UUID id,
+            @PathVariable UUID driverId,
+            @PageableDefault(size = 10, page = 0) Pageable pageable
+    ) {
+        return ApiResponseBuilder.ok(
+                PageMapper.from(cleaningDraftService.getDriverSchedule(id, driverId, pageable)),
+                "Giras del chofer en el borrador"
+        );
+    }
+
     @PostMapping("/drafts/{id}/drivers/auto-assign")
     public ResponseEntity<ApiResponse<CleaningDriverAutoAssignResponseDto>> autoAssignDraftDrivers(@PathVariable UUID id) {
         return ApiResponseBuilder.ok(

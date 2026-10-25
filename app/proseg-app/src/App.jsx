@@ -26,7 +26,6 @@ import LocationPage from './features/locations/pages/LocationPage';
 import EmailPage from './features/locations/pages/EmailPage';
 import TicketsPage from './features/maintenance/pages/TicketsPage.jsx';
 import TicketsDashboard from './features/maintenance/pages/TicketsDashboard.jsx';
-import TransportPage from './features/transport/pages/TransportPage.jsx';
 import DriversPage from './features/transport/pages/drivers/DriversPage.jsx';
 import VehiclesPage from './features/transport/pages/vehicles/VehiclesPage.jsx';
 import CleaningPage from './features/transport/pages/cleaning/CleaningPage.jsx';
@@ -140,18 +139,6 @@ function App() {
                                             element={
                                                 <DashboardLayout title="Gestión de Técnicos" pageTitle="Técnicos">
                                                     <MaintenancePage />
-                                                </DashboardLayout>
-                                            }
-                                        />
-                                    }
-                                />
-                                <Route
-                                    path="/transporte"
-                                    element={
-                                        <ProtectedRoute
-                                            element={
-                                                <DashboardLayout title="Gestión de Transporte" pageTitle="Transporte">
-                                                    <TransportPage />
                                                 </DashboardLayout>
                                             }
                                         />

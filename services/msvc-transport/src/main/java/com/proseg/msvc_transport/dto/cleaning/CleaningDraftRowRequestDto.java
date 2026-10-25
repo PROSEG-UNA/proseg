@@ -1,5 +1,6 @@
 package com.proseg.msvc_transport.dto.cleaning;
 
+import com.proseg.msvc_transport.entity.ResourceType;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -12,6 +13,7 @@ import lombok.Setter;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -32,6 +34,10 @@ public class CleaningDraftRowRequestDto {
 
     @Size(max = 100, message = "El vehículo no puede superar los 100 caracteres")
     private String vehicle;
+
+    private ResourceType resourceType;
+
+    private UUID borrowedVehicleId;
 
     @NotNull(message = "El campo obligatorio 'Pasajeros' está vacío")
     @Min(value = 1, message = "Pasajeros debe ser mayor o igual a 1")

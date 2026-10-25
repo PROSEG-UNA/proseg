@@ -28,6 +28,7 @@ public class OvertimeRequestReportDto {
     @AllArgsConstructor
     @Builder
     public static class DriverBlock {
+        private UUID id;
         private String name;
         private double surplusHours;
         private double overtimeHours;

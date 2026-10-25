@@ -13,14 +13,17 @@ import com.proseg.msvc_transport.dto.cleaning.CleaningImportColumnDto;
 import com.proseg.msvc_transport.dto.cleaning.CleaningImportSchemaDto;
 import com.proseg.msvc_transport.dto.cleaning.CleaningVehicleAutoAssignResponseDto;
 import com.proseg.msvc_transport.dto.response.OvertimeRequestReportDto;
+import com.proseg.msvc_transport.entity.BorrowedVehicle;
 import com.proseg.msvc_transport.entity.CleaningDraft;
 import com.proseg.msvc_transport.entity.CleaningDraftRow;
 import com.proseg.msvc_transport.entity.CleaningDraftRowDay;
 import com.proseg.msvc_transport.entity.CleaningDraftStatus;
 import com.proseg.msvc_transport.entity.Driver;
+import com.proseg.msvc_transport.entity.ResourceType;
 import com.proseg.msvc_transport.entity.Vehicle;
 import com.proseg.msvc_transport.exception.TransportException;
 import com.proseg.msvc_transport.importer.TransportImportField;
+import com.proseg.msvc_transport.repository.BorrowedVehicleRepository;
 import com.proseg.msvc_transport.repository.CleaningDraftRepository;
 import com.proseg.msvc_transport.repository.CleaningDraftRowDayRepository;
 import com.proseg.msvc_transport.repository.CleaningDraftRowRepository;
@@ -75,6 +78,7 @@ public class CleaningDraftService {
     private final CleaningDraftRowDayRepository dayRepository;
     private final DriverRepository driverRepository;
     private final VehicleRepository vehicleRepository;
+    private final BorrowedVehicleRepository borrowedVehicleRepository;
     private final DriverMonthService driverMonthService;
     private final OvertimeRequestReportService overtimeRequestReportService;
     private final CurrentUserResolver currentUserResolver;
@@ -181,6 +185,16 @@ public class CleaningDraftService {
         return overtimeRequestReportService.buildSchedule(getDraft(draftId));
     }
 
+    @Transactional(readOnly = true)
+    public OvertimeRequestReportDto getDriverScheduleSummaries(UUID draftId) {
+        return overtimeRequestReportService.listDriverSummaries(getDraft(draftId));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<OvertimeRequestReportDto.TourBlock> getDriverSchedule(UUID draftId, UUID driverId, Pageable pageable) {
+        return overtimeRequestReportService.buildDriverPage(getDraft(draftId), driverId, pageable);
+    }
+
     @Transactional
     public CleaningDraftRowResponseDto createRow(UUID draftId, CleaningDraftRowRequestDto request) {
         CleaningDraft draft = getEditableDraft(draftId);
@@ -200,6 +214,7 @@ public class CleaningDraftService {
 
         CleaningDraftRow row = toEntity(request, draft);
         rows.add(row);
+        validateBorrowedVehicleAvailability(row, rows);
         markDuplicates(rows);
         summarize(draft, rows);
         draft.setTotalRows(rows.size());
@@ -223,6 +238,7 @@ public class CleaningDraftService {
         validateAssignedDriverCanAttend(draft, row, request, rows);
 
         applyValues(row, request);
+        validateBorrowedVehicleAvailability(row, rows);
         markDuplicates(rows);
         summarize(draft, rows);
         driverMonthService.syncWithDraft(draft, rows);
@@ -404,6 +420,9 @@ public class CleaningDraftService {
 
         int clearedTours = 0;
         for (CleaningDraftRow row : rows) {
+            if (row.getResourceType() == ResourceType.EXTERNAL) {
+                continue;
+            }
             String driverKey = DriverHoursRules.driverKey(row.getDriver());
             if (!driverKey.isEmpty() && !catalogByKey.containsKey(driverKey)) {
                 row.setDriver(null);
@@ -413,6 +432,7 @@ public class CleaningDraftService {
 
         List<CleaningDraftRow> pendingTours = rows.stream()
                 .filter(DriverHoursRules::isPrimary)
+                .filter(row -> row.getResourceType() != ResourceType.EXTERNAL)
                 .filter(row -> row.getDriver() == null)
                 .toList();
         Map<CleaningDraftRow, Driver> assignments = new DriverAutoAssigner(
@@ -425,8 +445,9 @@ public class CleaningDraftService {
         ).assign(pendingTours);
 
         Map<String, String> driverNameByNumber = new HashMap<>();
-        assignments.forEach((tour, driver) -> driverNameByNumber.put(numberKey(tour), driver.getName()));
+        assignments.forEach((tour, driver) -> driverNameByNumber.put(numberKey(tour), driver == null ? null : driver.getName()));
         rows.stream()
+                .filter(row -> row.getResourceType() != ResourceType.EXTERNAL)
                 .filter(row -> driverNameByNumber.containsKey(numberKey(row)))
                 .forEach(row -> row.setDriver(driverNameByNumber.get(numberKey(row))));
 
@@ -436,8 +457,12 @@ public class CleaningDraftService {
 
         return CleaningDriverAutoAssignResponseDto.builder()
                 .clearedTours(clearedTours)
-                .assignedTours(assignments.size())
-                .unassignedTours(pendingTours.size() - assignments.size())
+                .assignedTours((int) assignments.values().stream().filter(java.util.Objects::nonNull).count())
+                .unassignedTours((int) rows.stream()
+                        .filter(DriverHoursRules::isPrimary)
+                        .filter(row -> row.getResourceType() != ResourceType.EXTERNAL)
+                        .filter(row -> row.getDriver() == null)
+                        .count())
                 .build();
     }
 
@@ -450,6 +475,9 @@ public class CleaningDraftService {
 
         int clearedTours = 0;
         for (CleaningDraftRow row : rows) {
+            if (row.getResourceType() != ResourceType.INTERNAL) {
+                continue;
+            }
             if (row.getVehicle() != null && DriverHoursRules.catalogVehicle(row.getVehicle(), vehicleCatalogByPlate) == null) {
                 row.setVehicle(null);
                 clearedTours += DriverHoursRules.isPrimary(row) ? 1 : 0;
@@ -458,6 +486,7 @@ public class CleaningDraftService {
 
         List<CleaningDraftRow> pendingTours = rows.stream()
                 .filter(DriverHoursRules::isPrimary)
+                .filter(row -> row.getResourceType() == ResourceType.INTERNAL)
                 .filter(row -> row.getVehicle() == null)
                 .toList();
         Map<CleaningDraftRow, Vehicle> assignments = new VehicleAutoAssigner(
@@ -558,7 +587,45 @@ public class CleaningDraftService {
         if (row.getReturnDate().isEqual(row.getDepartureDate()) && row.getReturnTime().isBefore(row.getDepartureTime())) {
             return List.of("La hora de regreso es anterior a la hora de salida en una gira de un solo día");
         }
+        if (row.getResourceType() == ResourceType.BORROWED_VEHICLE) {
+            if (row.getBorrowedVehicleId() == null) {
+                return List.of("Selecciona el vehículo prestado para esta gira");
+            }
+            BorrowedVehicle borrowedVehicle = borrowedVehicleRepository.findById(row.getBorrowedVehicleId()).orElse(null);
+            if (borrowedVehicle == null) {
+                return List.of("El vehículo prestado seleccionado no existe");
+            }
+            if (borrowedVehicle.getCapacity() != null && borrowedVehicle.getCapacity() < row.getPassengers()) {
+                return List.of("El vehículo prestado no tiene capacidad para " + row.getPassengers() + " pasajeros");
+            }
+        }
         return List.of();
+    }
+
+    private BorrowedVehicle resolveBorrowedVehicle(UUID borrowedVehicleId) {
+        if (borrowedVehicleId == null) {
+            return null;
+        }
+        return borrowedVehicleRepository.findById(borrowedVehicleId)
+                .orElseThrow(() -> TransportException.notFound("Vehículo prestado", borrowedVehicleId.toString()));
+    }
+
+    private void validateBorrowedVehicleAvailability(CleaningDraftRow row, List<CleaningDraftRow> rows) {
+        if (row.getResourceType() != ResourceType.BORROWED_VEHICLE || row.getBorrowedVehicle() == null) {
+            return;
+        }
+        boolean overlaps = rows.stream()
+                .filter(other -> other != row)
+                .filter(DriverHoursRules::isPrimary)
+                .filter(other -> other.getResourceType() == ResourceType.BORROWED_VEHICLE)
+                .filter(other -> other.getBorrowedVehicle() != null && other.getBorrowedVehicle().getId().equals(row.getBorrowedVehicle().getId()))
+                .anyMatch(other -> DriverHoursRules.toursOverlap(other, row));
+        if (overlaps) {
+            throw TransportException.unprocessable(
+                    "CLEANING_DRAFT_ROW_BORROWED_VEHICLE_OVERLAP",
+                    "El vehículo prestado \"" + row.getBorrowedVehicle().getPlate() + "\" ya está asignado a otra gira en ese rango de fechas"
+            );
+        }
     }
 
     private int violationOrder(ConstraintViolation<CleaningDraftRowRequestDto> violation) {
@@ -591,6 +658,8 @@ public class CleaningDraftService {
                 row.getDriver(),
                 row.getNumber(),
                 row.getVehicle(),
+                row.getResourceType(),
+                row.getBorrowedVehicle() == null ? null : row.getBorrowedVehicle().getId(),
                 row.getPassengers(),
                 row.getExecutingUnit(),
                 row.getResponsible(),
@@ -629,9 +698,17 @@ public class CleaningDraftService {
     }
 
     private void applyValues(CleaningDraftRow row, CleaningDraftRowRequestDto request) {
+        ResourceType resourceType = request.getResourceType() == null ? ResourceType.INTERNAL : request.getResourceType();
+        row.setResourceType(resourceType);
         row.setDriver(trimToNull(request.getDriver()));
         row.setNumber(request.getNumber().trim());
-        row.setVehicle(trimToNull(request.getVehicle()));
+        if (resourceType == ResourceType.BORROWED_VEHICLE) {
+            row.setVehicle(null);
+            row.setBorrowedVehicle(resolveBorrowedVehicle(request.getBorrowedVehicleId()));
+        } else {
+            row.setVehicle(trimToNull(request.getVehicle()));
+            row.setBorrowedVehicle(null);
+        }
         row.setPassengers(request.getPassengers());
         row.setExecutingUnit(request.getExecutingUnit().trim());
         row.setResponsible(request.getResponsible().trim());
@@ -669,12 +746,18 @@ public class CleaningDraftService {
     }
 
     private CleaningDraftRowResponseDto toRowResponse(CleaningDraftRow row) {
+        boolean pendingContracting = row.getResourceType() == ResourceType.EXTERNAL
+                && (trimToNull(row.getDriver()) == null || trimToNull(row.getVehicle()) == null);
         return CleaningDraftRowResponseDto.builder()
                 .id(row.getId())
                 .rowNumber(row.getRowNumber())
                 .driver(row.getDriver())
                 .number(row.getNumber())
                 .vehicle(row.getVehicle())
+                .resourceType(row.getResourceType())
+                .borrowedVehicleId(row.getBorrowedVehicle() == null ? null : row.getBorrowedVehicle().getId())
+                .borrowedVehiclePlate(row.getBorrowedVehicle() == null ? null : row.getBorrowedVehicle().getPlate())
+                .pendingContracting(pendingContracting)
                 .passengers(row.getPassengers())
                 .executingUnit(row.getExecutingUnit())
                 .responsible(row.getResponsible())

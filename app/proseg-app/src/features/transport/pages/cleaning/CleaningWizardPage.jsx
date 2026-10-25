@@ -40,6 +40,7 @@ import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { usePermissions } from '../../../../common/hooks/index.js';
 import { queryKeys } from '../../../../common/query';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
+import { usePersistedColumnVisibility } from '../../hooks/usePersistedColumnVisibility.js';
 import {
     finalizeCleaning,
     previewCleaning,
@@ -83,6 +84,8 @@ const TEMPLATE_HEADERS = [
     'Fecha de regreso',
     'Observaciones',
 ];
+
+const PREVIEW_COLUMN_VISIBILITY_STORAGE_KEY = 'cleaning-wizard-preview-column-visibility';
 
 const WIZARD_STEPS = [
     { label: 'Archivo y parámetros', icon: CloudUploadOutlinedIcon },
@@ -151,6 +154,7 @@ export default function CleaningWizardPage() {
     const [suggestedRemovals, setSuggestedRemovals] = useState([]);
     const [duplicateGroups, setDuplicateGroups] = useState([]);
     const [rowSelection, setRowSelection] = useState({});
+    const [previewColumnVisibility, setPreviewColumnVisibility] = usePersistedColumnVisibility(PREVIEW_COLUMN_VISIBILITY_STORAGE_KEY);
     const [keepDuplicates, setKeepDuplicates] = useState(false);
     const [replaceExisting, setReplaceExisting] = useState(false);
     const [editingRow, setEditingRow] = useState(null);
@@ -926,6 +930,8 @@ export default function CleaningWizardPage() {
                             tableOptions={{
                                 initialState: { pagination: { pageIndex: 0, pageSize: 100 } },
                                 muiPaginationProps: { rowsPerPageOptions: [10, 20, 50, 100] },
+                                onColumnVisibilityChange: setPreviewColumnVisibility,
+                                state: { columnVisibility: previewColumnVisibility },
                             }}
                         />
                     </Box>

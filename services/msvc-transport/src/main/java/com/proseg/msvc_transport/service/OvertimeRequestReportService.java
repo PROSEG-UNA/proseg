@@ -12,6 +12,9 @@ import com.proseg.msvc_transport.repository.CleaningDraftRowRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
 import com.proseg.msvc_transport.service.driverhours.DriverHoursRules;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -70,6 +73,33 @@ public class OvertimeRequestReportService {
         return buildReport(draft, false);
     }
 
+    @Transactional(readOnly = true)
+    public OvertimeRequestReportDto listDriverSummaries(CleaningDraft draft) {
+        OvertimeRequestReportDto report = buildSchedule(draft);
+        report.getDrivers().forEach(driver -> driver.setTours(List.of()));
+        return report;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<OvertimeRequestReportDto.TourBlock> buildDriverPage(CleaningDraft draft, UUID driverId, Pageable pageable) {
+        OvertimeRequestReportDto report = buildSchedule(draft);
+        List<OvertimeRequestReportDto.TourBlock> tours = report.getDrivers().stream()
+                .filter(driver -> driverId.equals(driver.getId()))
+                .findFirst()
+                .map(OvertimeRequestReportDto.DriverBlock::getTours)
+                .orElseThrow(() -> new TransportException(
+                        HttpStatus.NOT_FOUND,
+                        "DRIVER_NOT_IN_DRAFT",
+                        "El chofer no tiene giras en este borrador"
+                ));
+        int start = (int) pageable.getOffset();
+        if (start >= tours.size()) {
+            return new PageImpl<>(List.of(), pageable, tours.size());
+        }
+        int end = Math.min(start + pageable.getPageSize(), tours.size());
+        return new PageImpl<>(tours.subList(start, end), pageable, tours.size());
+    }
+
     private OvertimeRequestReportDto buildReport(CleaningDraft draft, boolean onlyExtraHours) {
         double surplusCap = DriverHoursRules.surplusCap(draft.getBusinessDays());
         List<CleaningDraftRow> rows = rowRepository.findAllByDraftIdOrderByRowNumberAsc(draft.getId()).stream()
@@ -111,6 +141,7 @@ public class OvertimeRequestReportService {
                 .filter(tour -> !tour.getDays().isEmpty())
                 .toList();
         return OvertimeRequestReportDto.DriverBlock.builder()
+                .id(driver.getId())
                 .name(driver.getName())
                 .surplusHours(round(tours.stream().flatMap(tour -> tour.getDays().stream()).mapToDouble(OvertimeRequestReportDto.TourDay::getSurplusHours).sum()))
                 .overtimeHours(round(tours.stream().flatMap(tour -> tour.getDays().stream()).mapToDouble(OvertimeRequestReportDto.TourDay::getOvertimeHours).sum()))

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Container, LinearProgress, ListItemIcon, ListItemText, Menu, MenuItem, Stack, Typography } from '@mui/material';
+import { Alert, Box, Container, LinearProgress, ListItemIcon, ListItemText, Menu, MenuItem, Stack } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
@@ -15,12 +15,13 @@ import { usePermissions } from '../../../../common/hooks/index.js';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
 import DriversTable from '../../components/drivers/DriversTable.jsx';
 import DriverFormModal from '../../components/drivers/DriverFormModal.jsx';
+import DriverSurplusSummary from '../../components/drivers/DriverSurplusSummary.jsx';
 import { shortPeriodLabel } from '../../components/cleaning/cleaningDraftLabels.js';
 import { usePersistedMonth } from '../../hooks/usePersistedMonth.js';
 import { useTransportDriverMonthsData } from '../../hooks/useTransportDriverMonthsData.js';
 import { useTransportDriverMonthSurplusCap } from '../../hooks/useTransportDriverMonthSurplusCap.js';
 import { exportDriverOvertimeRequest } from '../../services/drivers/driversService';
-import { downloadBlob, formatHours } from '../../transportUtils.js';
+import { downloadBlob } from '../../transportUtils.js';
 import { queryKeys } from '../../../../common/query';
 
 const SELECTED_MONTH_STORAGE_KEY = 'transport-drivers-selected-month';
@@ -131,8 +132,15 @@ export default function DriversPage() {
 
                 {exportingOvertimeRequest && <LinearProgress sx={{ mt: 2 }} />}
 
-                <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap sx={{ pt: 3 }}>
-                    <Box sx={{ width: 220 }}>
+                <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={3}
+                    alignItems={{ xs: 'stretch', sm: 'center' }}
+                    flexWrap="wrap"
+                    useFlexGap
+                    sx={{ pt: 3 }}
+                >
+                    <Box sx={{ width: { xs: '100%', sm: 220 }, flexShrink: 0 }}>
                         <MonthPicker
                             label="Mes"
                             ariaLabel="Ver datos de un mes especifico"
@@ -142,9 +150,7 @@ export default function DriversPage() {
                         />
                     </Box>
                     {monthData.enabled && surplusHoursPerDriver !== null && (
-                        <Typography variant="body1" sx={{ alignSelf: 'center', color: 'text.primary' }}>
-                            {`Horas sobresueldo del mes: ${formatHours(surplusHoursPerDriver)} h por chofer`}
-                        </Typography>
+                        <DriverSurplusSummary surplusCapPerDriver={surplusHoursPerDriver} />
                     )}
                     {showEmptyMonthNotice && (
                         <Alert severity="info" variant="outlined" icon={<InfoOutlinedIcon fontSize="small" />} sx={{ py: 0 }}>

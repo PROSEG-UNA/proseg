@@ -5,6 +5,8 @@ import com.proseg.common.specification.FilterType;
 import com.proseg.common.specification.Filterable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
@@ -17,6 +19,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.UuidGenerator;
 import org.hibernate.annotations.Where;
@@ -64,6 +67,17 @@ public class CleaningDraftRow extends BaseEntity {
     @Filterable(type = FilterType.TEXT)
     @Column(length = 100)
     private String vehicle;
+
+    @Filterable(type = FilterType.ENUM)
+    @Enumerated(EnumType.STRING)
+    @ColumnDefault("'INTERNAL'")
+    @Column(nullable = false)
+    @Builder.Default
+    private ResourceType resourceType = ResourceType.INTERNAL;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "borrowed_vehicle_id")
+    private BorrowedVehicle borrowedVehicle;
 
     @Filterable(type = FilterType.TEXT)
     @Column(nullable = false)
