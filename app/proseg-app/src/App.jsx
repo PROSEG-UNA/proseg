@@ -12,6 +12,7 @@ import ResetPasswordPage from './features/auth/pages/ResetPasswordPage';
 import SetPasswordPage from './features/security/pages/SetPasswordPage';
 import HomePage from './features/home/pages/HomePage.jsx';
 import AssetPage from './features/inventory/pages/AssetPage';
+import AssetExpirationPage from './features/inventory/pages/AssetExpirationPage';
 import SecurityPage from './features/security/pages/SecurityPage';
 import UserPage from './features/security/pages/UserPage';
 import RolePage from './features/security/pages/RolePage';
@@ -69,6 +70,18 @@ function App() {
                                             element={
                                                 <DashboardLayout title="Gestión de Activos" pageTitle="Activos">
                                                     <AssetPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/inventario/vencimientos"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Panel de Vencimientos" pageTitle="Panel de vencimientos">
+                                                    <AssetExpirationPage />
                                                 </DashboardLayout>
                                             }
                                         />
