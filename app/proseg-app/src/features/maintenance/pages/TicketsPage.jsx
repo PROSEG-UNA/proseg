@@ -126,7 +126,7 @@ export default function TicketsPage() {
             <Container maxWidth="xl" sx={{ pb: 3, pt: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
                     <Box>
-                        <Typography variant="h4" sx={{ fontWeight: 800, color: 'primary.icon', fontSize: { xs: '1.55rem', sm: '1.9rem' } }}>
+                        <Typography variant="h4" component="h1" sx={{ fontWeight: 800, color: 'primary.icon', fontSize: { xs: '1.55rem', sm: '1.9rem' } }}>
                             Tickets
                         </Typography>
                         <Typography sx={{ color: 'text.secondary', fontSize: 14 }}>

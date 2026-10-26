@@ -268,7 +268,7 @@ export default function AssetDashboard() {
     const renderChartPanel = (title, hasData, content) => (
         <Card sx={cardSx}>
             <CardContent sx={{ p: 2, height: 300, display: 'flex', flexDirection: 'column' }}>
-                <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: 'text.primary', mb: 1 }}>
+                <Typography component="h2" sx={{ fontWeight: 700, fontSize: '0.95rem', color: 'text.primary', mb: 1 }}>
                     {title}
                 </Typography>
                 <Box sx={{ flex: 1, minHeight: 0, position: 'relative' }}>
@@ -296,7 +296,7 @@ export default function AssetDashboard() {
                 sx={{ mb: 3 }}
             >
                 <Box>
-                    <Typography sx={{ color: 'primary.main', fontWeight: 800, fontSize: '1.25rem' }}>
+                    <Typography component="h1" sx={{ color: 'primary.main', fontWeight: 800, fontSize: '1.25rem' }}>
                         Panel de vencimientos
                     </Typography>
                     <Typography sx={{ mt: 0.5, color: 'text.secondary', fontSize: '0.95rem' }}>

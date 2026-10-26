@@ -66,6 +66,7 @@ export default function AccessDeniedState({
 
         <Typography
           variant="h5"
+          component="h1"
           sx={{
             fontWeight: 800,
             color: 'text.primary',

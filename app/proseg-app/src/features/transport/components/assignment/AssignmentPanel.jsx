@@ -267,7 +267,7 @@ export default function AssignmentPanel() {
         <>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, alignItems: { xs: 'flex-start', md: 'center' }, flexDirection: { xs: 'column', md: 'row' }, mb: 2 }}>
                 <Box>
-                    <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.icon' }}>
+                    <Typography variant="h6" component="h2" sx={{ fontWeight: 700, color: 'primary.icon' }}>
                         Panel de asignaciones
                     </Typography>
                     <Typography sx={{ color: 'text.secondary', fontSize: 14 }}>

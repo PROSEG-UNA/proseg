@@ -148,7 +148,7 @@ export default function TransportPage() {
             <Container maxWidth="xl" sx={{ pt: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', md: 'center' }, justifyContent: 'space-between', gap: 2, mb: 2, flexDirection: { xs: 'column', md: 'row' } }}>
                     <Box sx={{ flex: 1 }}>
-                        <Typography variant="h4" sx={{ fontWeight: 800, color: 'primary.icon', fontSize: { xs: '1.55rem', sm: '1.9rem' } }}>
+                        <Typography variant="h4" component="h1" sx={{ fontWeight: 800, color: 'primary.icon', fontSize: { xs: '1.55rem', sm: '1.9rem' } }}>
                             Transporte
                         </Typography>
                         <Typography sx={{ color: 'text.secondary', fontSize: 14 }}>
@@ -198,7 +198,7 @@ export default function TransportPage() {
 
                     {currentTab?.key === 'drivers' && (
                         <Box>
-                            <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.icon', mb: 2 }}>
+                            <Typography variant="h5" component="h2" sx={{ fontWeight: 700, color: 'primary.icon', mb: 2 }}>
                                 Lista de choferes
                             </Typography>
                             <DriversTable onEditDriver={openEditDriver} />
@@ -207,7 +207,7 @@ export default function TransportPage() {
 
                     {currentTab?.key === 'vehicles' && (
                         <Box>
-                            <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.icon', mb: 2 }}>
+                            <Typography variant="h5" component="h2" sx={{ fontWeight: 700, color: 'primary.icon', mb: 2 }}>
                                 Lista de vehículos
                             </Typography>
                             <VehiclesTable onEditVehicle={openEditVehicle} />
@@ -216,7 +216,7 @@ export default function TransportPage() {
 
                     {currentTab?.key === 'maintenance' && (
                         <Box>
-                            <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.icon', mb: 2 }}>
+                            <Typography variant="h5" component="h2" sx={{ fontWeight: 700, color: 'primary.icon', mb: 2 }}>
                                 Lista de mantenimientos
                             </Typography>
                             <TransportMaintenanceTable onEditMaintenance={openEditMaintenance} />
@@ -225,7 +225,7 @@ export default function TransportPage() {
 
                     {currentTab?.key === 'tours' && (
                         <Box>
-                            <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.icon', mb: 2 }}>
+                            <Typography variant="h5" component="h2" sx={{ fontWeight: 700, color: 'primary.icon', mb: 2 }}>
                                 Lista de giras
                             </Typography>
                             <ToursTable onEditTour={openEditTour} />
