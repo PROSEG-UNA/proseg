@@ -159,6 +159,7 @@ export function useNavSections() {
                 label: 'Inventario',
                 items: [
                     { key: 'assets', icon: AppsIcon, label: 'Activos', path: '/inventario/activos' },
+                    { key: 'expirations', icon: AnalyticsIcon, label: 'Panel de vencimientos', path: '/inventario/vencimientos' },
                 ],
             });
         }

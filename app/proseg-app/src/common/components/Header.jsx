@@ -6,6 +6,7 @@ import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import { useAuth } from '../../features/auth/hooks/useAuth';
 import { headerSurfaceSx as surfaceSx } from '../theme/sxStyles';
+import ExpirationAlerts from './ExpirationAlerts.jsx';
 
 const iconButtonSx = (t) => ({
   color: 'text.secondary',
@@ -108,6 +109,7 @@ export function Header({ title, onMenuClick, navButtons = [] }) {
           </Button>
         ))}
 
+        <ExpirationAlerts sx={iconButtonSx} />
         <ColorModeToggle />
 
         <IconButton

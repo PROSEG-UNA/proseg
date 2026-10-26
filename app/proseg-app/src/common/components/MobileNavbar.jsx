@@ -90,7 +90,10 @@ export function MobileNavbar() {
   ]);
 
   const inventoryItems = canViewInventorySection
-    ? [{ key: 'assets', label: 'Activos', path: '/inventario/activos' }]
+    ? [
+        { key: 'assets', label: 'Activos', path: '/inventario/activos' },
+        { key: 'expirations', label: 'Panel de vencimientos', path: '/inventario/vencimientos' },
+      ]
     : [];
 
   const securityItems = canViewSecuritySection

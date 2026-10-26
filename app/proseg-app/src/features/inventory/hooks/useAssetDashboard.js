@@ -4,12 +4,13 @@ import { getFriendlyApiErrorMessage } from '../../../common/utils';
 import { keepPreviousPage, queryKeys } from '../../../common/query';
 import { mapAssetToRow } from './useAssetsData';
 
-export function useAssetDashboard(days) {
+export function useAssetDashboard(days, options = {}) {
     const dashboardQueryKey = queryKeys.inventory.assetDashboard(days);
 
     const { data, isLoading, isFetching, error } = useQuery({
         queryKey: dashboardQueryKey,
         queryFn: () => fetchAssetDashboard(days),
+        ...options,
     });
 
     return {

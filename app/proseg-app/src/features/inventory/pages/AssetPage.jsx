@@ -16,7 +16,6 @@ import AccessDeniedState from '../../../common/components/AccessDeniedState.jsx'
 import DialogModal from '../../../common/components/DialogModal.jsx';
 import Catalog from '../components/catalog/Catalog';
 import AssetTable from '../components/asset/AssetTable.jsx';
-import AssetDashboard from '../components/dashboard/AssetDashboard.jsx';
 import AssetFormModal from '../components/asset/AssetFormModal.jsx';
 import ImportAssetsModal from '../components/asset/ImportAssetsModal.jsx';
 import { exportAssets } from '../services/assetExportService.js';
@@ -155,7 +154,6 @@ export function AssetPage() {
               />
 
               <AssetTable />
-              <AssetDashboard />
               <AssetFormModal open={createOpen} onClose={() => setCreateOpen(false)} onSaved={handleRefresh} />
               <ImportAssetsModal open={importOpen} onClose={() => setImportOpen(false)} onImported={handleRefresh} />
             </>
