@@ -28,7 +28,11 @@ function ColorModeToggle() {
   const { mode, systemMode, setMode } = useColorScheme();
   const resolved = mode === 'system' ? systemMode : mode;
   return (
-    <IconButton onClick={() => setMode(resolved === 'dark' ? 'light' : 'dark')} sx={iconButtonSx}>
+    <IconButton
+      onClick={() => setMode(resolved === 'dark' ? 'light' : 'dark')}
+      aria-label={resolved === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+      sx={iconButtonSx}
+    >
       {resolved === 'dark' ? <LightModeIcon sx={{ fontSize: 20 }} /> : <DarkModeIcon sx={{ fontSize: 20 }} />}
     </IconButton>
   );
@@ -53,7 +57,7 @@ export function Header({ title, onMenuClick, navButtons = [] }) {
     >
       <Toolbar sx={{ position: 'relative', zIndex: 1, gap: 0.5, minHeight: { xs: 60, sm: 64 } }}>
         {onMenuClick && (
-          <IconButton edge="start" onClick={onMenuClick} sx={(t) => ({ ...iconButtonSx(t), mr: 1 })}>
+          <IconButton edge="start" onClick={onMenuClick} aria-label="Abrir menú" sx={(t) => ({ ...iconButtonSx(t), mr: 1 })}>
             <MenuIcon />
           </IconButton>
         )}
@@ -114,6 +118,7 @@ export function Header({ title, onMenuClick, navButtons = [] }) {
 
         <IconButton
           onClick={handleLogout}
+          aria-label="Cerrar sesión"
           sx={(t) => ({
             color: 'text.secondary',
             borderRadius: '10px',

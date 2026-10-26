@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Dialog, Box, Button, Typography } from '@mui/material';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import ErrorOutlinedIcon from '@mui/icons-material/ErrorOutlined';
@@ -91,6 +91,7 @@ export default function DialogModal({
     confirmLabel = 'Sí, continuar',
     cancelLabel,
 }) {
+    const titleId = useId();
     const [shown, setShown] = useState({ type, title, message });
     if (open && (shown.type !== type || shown.title !== title || shown.message !== message)) {
         setShown({ type, title, message });
@@ -105,6 +106,7 @@ export default function DialogModal({
         <Dialog
             open={open}
             onClose={onClose}
+            aria-labelledby={titleId}
             maxWidth="xs"
             fullWidth
             slotProps={{
@@ -127,7 +129,7 @@ export default function DialogModal({
                     >
                         <DeleteForeverOutlinedIcon sx={(t) => ({ fontSize: 26, color: t.vars.palette[colorKey].main, ...t.applyStyles('dark', { color: t.vars.palette[colorKey].light }) })} />
                     </Box>
-                    <Typography sx={{ fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.01em', color: 'text.primary', lineHeight: 1.3, textAlign: 'center' }}>
+                    <Typography id={titleId} component="h2" sx={{ fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.01em', color: 'text.primary', lineHeight: 1.3, textAlign: 'center' }}>
                         {frozenTitle ?? defaultTitle}
                     </Typography>
                 </Box>
@@ -146,7 +148,7 @@ export default function DialogModal({
                     >
                         <Icon sx={(t) => ({ fontSize: 22, color: t.vars.palette[colorKey].main, ...t.applyStyles('dark', { color: t.vars.palette[colorKey].light }) })} />
                     </Box>
-                    <Typography sx={{ fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.01em', color: 'text.primary', lineHeight: 1.3 }}>
+                    <Typography id={titleId} component="h2" sx={{ fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.01em', color: 'text.primary', lineHeight: 1.3 }}>
                         {frozenTitle ?? defaultTitle}
                     </Typography>
                 </Box>

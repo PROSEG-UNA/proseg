@@ -174,6 +174,7 @@ export function RegisterPage() {
         <>
             <Helmet>
                 <title>{`Registro - ${APP_CONFIG.name}`}</title>
+                <meta name="description" content="Creá tu cuenta para acceder a la gestión de servicios institucionales." />
             </Helmet>
             <PageShell />
             <GeneralModal
@@ -184,6 +185,7 @@ export function RegisterPage() {
                 fullScreenAt="xs"
                 icon={PersonAddIcon}
                 title={APP_CONFIG.fullName}
+                titleComponent="h1"
                 subtitle="Gestión de Servicios Institucionales"
                 loading={loading}
                 footerLeft={
