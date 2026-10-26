@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useState } from 'react';
 import { Dialog, Box, Button, Typography } from '@mui/material';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import ErrorOutlinedIcon from '@mui/icons-material/ErrorOutlined';
@@ -91,9 +91,11 @@ export default function DialogModal({
     confirmLabel = 'Sí, continuar',
     cancelLabel,
 }) {
-    const frozen = useRef({ type, title, message });
-    if (open) frozen.current = { type, title, message };
-    const { type: frozenType, title: frozenTitle, message: frozenMessage } = frozen.current;
+    const [shown, setShown] = useState({ type, title, message });
+    if (open && (shown.type !== type || shown.title !== title || shown.message !== message)) {
+        setShown({ type, title, message });
+    }
+    const { type: frozenType, title: frozenTitle, message: frozenMessage } = open ? { type, title, message } : shown;
 
     const { Icon, colorKey, defaultTitle } = TYPES[frozenType] ?? TYPES.warning;
     const isDelete = DELETE_TYPES.has(frozenType);
