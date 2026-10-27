@@ -31,3 +31,5 @@ services/msvc-common/target/msvc-common-1.0-SNAPSHOT.jar
 
 # Salidas de compilacion
 **/target/
+
+rd-*.txt

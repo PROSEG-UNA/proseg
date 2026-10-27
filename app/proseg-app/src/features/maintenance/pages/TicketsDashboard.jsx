@@ -28,10 +28,10 @@ const dashboardCardSx = {
     boxShadow: '0px 1px 3px rgba(15, 23, 42, 0.08)',
 };
 
-function SectionHeading({ title, subtitle }) {
+function SectionHeading({ title, subtitle, component = 'h2' }) {
     return (
         <Box sx={{ mb: 2 }}>
-            <Typography sx={{ fontSize: { xs: 18, md: 22 }, fontWeight: 800, color: 'primary.icon' }}>
+            <Typography component={component} sx={{ fontSize: { xs: 18, md: 22 }, fontWeight: 800, color: 'primary.icon' }}>
                 {title}
             </Typography>
             {subtitle ? (
@@ -106,7 +106,7 @@ function MetricList({ title, items = [], color = 'primary.main' }) {
     return (
         <Card variant="outlined" sx={dashboardCardSx}>
             <CardContent>
-                <Typography sx={{ fontWeight: 800, fontSize: 15, mb: 1.5 }}>{title}</Typography>
+                <Typography component="h2" sx={{ fontWeight: 800, fontSize: 15, mb: 1.5 }}>{title}</Typography>
 
                 {items.length === 0 ? (
                     <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>Sin datos</Typography>
@@ -209,7 +209,7 @@ export default function TicketsDashboard() {
     return (
         <Box>
             <Container maxWidth="xl" sx={{ pt: 3, pb: 3 }}>
-                <SectionHeading title="Dashboard de Tickets" subtitle="Vista ejecutiva de carga operativa y distribucion de tickets." />
+                <SectionHeading component="h1" title="Dashboard de Tickets" subtitle="Vista ejecutiva de carga operativa y distribucion de tickets." />
 
                 {loading ? (
                     <Box sx={{ py: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -234,7 +234,7 @@ export default function TicketsDashboard() {
                             <Grid item xs={12} md={8}>
                                 <Card variant="outlined" sx={dashboardCardSx}>
                                     <CardContent>
-                                        <Typography sx={{ fontWeight: 800, fontSize: 15, mb: 1.5 }}>Area estadistica</Typography>
+                                        <Typography component="h2" sx={{ fontWeight: 800, fontSize: 15, mb: 1.5 }}>Area estadistica</Typography>
 
                                         <Grid container spacing={2}>
                                             <Grid item xs={12} sm={6}>
@@ -270,7 +270,7 @@ export default function TicketsDashboard() {
                             <Grid item xs={12} md={4}>
                                 <Card variant="outlined" sx={dashboardCardSx}>
                                     <CardContent>
-                                        <Typography sx={{ fontWeight: 800, fontSize: 15, mb: 1.5 }}>Top de atencion</Typography>
+                                        <Typography component="h2" sx={{ fontWeight: 800, fontSize: 15, mb: 1.5 }}>Top de atencion</Typography>
                                         <Stack spacing={1.1}>
                                             <Typography sx={{ fontSize: 12, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Tecnicos</Typography>
                                             {topTechnicians.length === 0 ? (

@@ -96,7 +96,7 @@ export default function MaintenancePage() {
             <Container maxWidth="xl" sx={{ pt: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', md: 'center' }, justifyContent: 'space-between', gap: 2, mb: 2, flexDirection: { xs: 'column', md: 'row' } }}>
                     <Box sx={{ flex: 1 }}>
-                        <Typography variant="h4" sx={{ fontWeight: 800, color: 'primary.icon', fontSize: { xs: '1.55rem', sm: '1.9rem' } }}>
+                        <Typography variant="h4" component="h1" sx={{ fontWeight: 800, color: 'primary.icon', fontSize: { xs: '1.55rem', sm: '1.9rem' } }}>
                             Mantenimiento
                         </Typography>
                         <Typography sx={{ color: 'text.secondary', fontSize: 14 }}>
@@ -134,7 +134,7 @@ export default function MaintenancePage() {
                 <Box sx={{ pt: 3 }}>
                     {currentTab?.key === 'companies' && (
                         <Box>
-                            <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.icon', mb: 2 }}>
+                            <Typography variant="h5" component="h2" sx={{ fontWeight: 700, color: 'primary.icon', mb: 2 }}>
                                 Lista de empresas
                             </Typography>
                             <CompanyTable
@@ -146,7 +146,7 @@ export default function MaintenancePage() {
 
                     {currentTab?.key === 'requests' && (
                         <Box>
-                            <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.icon', mb: 2 }}>
+                            <Typography variant="h5" component="h2" sx={{ fontWeight: 700, color: 'primary.icon', mb: 2 }}>
                                 Lista de solicitudes
                             </Typography>
                             <MaintenanceRequestTable

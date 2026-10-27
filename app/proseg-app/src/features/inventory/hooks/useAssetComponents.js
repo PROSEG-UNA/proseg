@@ -52,13 +52,9 @@ export function useAssetComponents(open) {
     };
 
     const removeComponent = (localId) => {
-        setComponents(prev => {
-            const component = prev.find(item => item.localId === localId);
-            if (component?.id) {
-                setComponentsToDelete(current => [...current, component.id]);
-            }
-            return prev.filter(item => item.localId !== localId);
-        });
+        const component = components.find(item => item.localId === localId);
+        if (component?.id) setComponentsToDelete(current => [...current, component.id]);
+        setComponents(prev => prev.filter(item => item.localId !== localId));
 
         setComponentErrors(prev => {
             if (!prev[localId]) return prev;

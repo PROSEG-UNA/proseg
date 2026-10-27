@@ -167,7 +167,16 @@ export function NavDrawer({ open, onClose }) {
           <img
             src={resolvedMode === 'dark' ? '/logo_una_blanco.png' : '/logo_una.png'}
             alt="Logo UNA"
+            role="link"
+            tabIndex={0}
+            aria-label="Ir al inicio"
             onClick={() => handleNavigation('/home')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleNavigation('/home');
+              }
+            }}
             style={{ maxWidth: '50%', height: 'auto', maxHeight: '50px', cursor: 'pointer' }}
           />
           <IconButton
