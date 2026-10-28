@@ -6,7 +6,7 @@ import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import CheckCircleOutlinedIcon from "@mui/icons-material/CheckCircleOutlined";
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
-import { Box, Chip, Tab, Tabs } from '@mui/material';
+import { Box, Chip, Tab, Tabs, useMediaQuery, useTheme } from '@mui/material';
 import RowActionsMenu from '../../../../common/components/RowActionsMenu.jsx';
 import TableBase from '../../../../common/components/TablaBase.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
@@ -64,6 +64,8 @@ const STATUS_LABELS = Object.fromEntries(
 );
 
 export default function MaintenanceTicketTable({ onEdit, onView }) {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'), { noSsr: true });
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
@@ -123,6 +125,7 @@ export default function MaintenanceTicketTable({ onEdit, onView }) {
             accessorKey: 'title',
             header: 'Titulo',
             enableColumnFilter: true,
+            muiTableBodyCellProps: { sx: { maxWidth: { xs: 160, sm: 'none' }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
         },
         {
             accessorKey: 'description',
@@ -240,6 +243,8 @@ export default function MaintenanceTicketTable({ onEdit, onView }) {
                             assignedRole: true,
                             assetsCount: false,
                             photosCount: false,
+                            description: !isMobile,
+                            createdByName: !isMobile,
                         },
                     },
                 }}
