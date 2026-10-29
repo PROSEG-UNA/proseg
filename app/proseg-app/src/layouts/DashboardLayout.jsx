@@ -6,7 +6,7 @@ import { Box, useMediaQuery, useTheme } from '@mui/material';
 import { Helmet } from 'react-helmet-async';
 import { APP_CONFIG } from '../config/appConfig.js';
 
-export function DashboardLayout({ children, title, pageTitle }) {
+export function DashboardLayout({ children, title, pageTitle, description }) {
   const { isMinimized } = useContext(SidebarContext);
   const theme = useTheme();
   const isMediumOrDown = useMediaQuery(theme.breakpoints.down('md'));
@@ -19,6 +19,7 @@ export function DashboardLayout({ children, title, pageTitle }) {
     <Box sx={{ display: 'flex', minHeight: '100dvh' }}>
       <Helmet>
         <title>{`${resolvedPageTitle} - ${APP_CONFIG.name}`}</title>
+        <meta name="description" content={description || 'Sistema de gestión de servicios institucionales de la UNA.'} />
       </Helmet>
       {!isMediumOrDown && <Sidebar />}
       <NavDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />

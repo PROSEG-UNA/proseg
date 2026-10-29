@@ -28,10 +28,10 @@ const dashboardCardSx = {
     boxShadow: '0px 1px 3px rgba(15, 23, 42, 0.08)',
 };
 
-function SectionHeading({ title, subtitle }) {
+function SectionHeading({ title, subtitle, component = 'h2' }) {
     return (
         <Box sx={{ mb: 2 }}>
-            <Typography sx={{ fontSize: { xs: 18, md: 22 }, fontWeight: 800, color: 'primary.icon' }}>
+            <Typography component={component} sx={{ fontSize: { xs: 18, md: 22 }, fontWeight: 800, color: 'primary.icon' }}>
                 {title}
             </Typography>
             {subtitle ? (
@@ -106,7 +106,7 @@ function MetricList({ title, items = [], color = 'primary.main' }) {
     return (
         <Card variant="outlined" sx={dashboardCardSx}>
             <CardContent>
-                <Typography sx={{ fontWeight: 800, fontSize: 15, mb: 1.5 }}>{title}</Typography>
+                <Typography component="h2" sx={{ fontWeight: 800, fontSize: 15, mb: 1.5 }}>{title}</Typography>
 
                 {items.length === 0 ? (
                     <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>Sin datos</Typography>
@@ -209,7 +209,7 @@ export default function TicketsDashboard() {
     return (
         <Box>
             <Container maxWidth="xl" sx={{ pt: 3, pb: 3 }}>
-                <SectionHeading title="Dashboard de Tickets" subtitle="Vista ejecutiva de carga operativa y distribucion de tickets." />
+                <SectionHeading component="h1" title="Dashboard de Tickets" subtitle="Vista ejecutiva de carga operativa y distribucion de tickets." />
 
                 {loading ? (
                     <Box sx={{ py: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -224,29 +224,29 @@ export default function TicketsDashboard() {
                     <Stack spacing={2.5}>
                         <Grid container spacing={3}>
                             {kpiCards.map((card) => (
-                                <Grid item xs={12} sm={6} md={4} lg={3} key={card.key}>
+                                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={card.key}>
                                     <KpiCard title={card.title} value={card.value} caption={card.caption} icon={card.icon} accent={card.accent} />
                                 </Grid>
                             ))}
                         </Grid>
 
                         <Grid container spacing={3}>
-                            <Grid item xs={12} md={8}>
+                            <Grid size={{ xs: 12, md: 8 }}>
                                 <Card variant="outlined" sx={dashboardCardSx}>
                                     <CardContent>
-                                        <Typography sx={{ fontWeight: 800, fontSize: 15, mb: 1.5 }}>Area estadistica</Typography>
+                                        <Typography component="h2" sx={{ fontWeight: 800, fontSize: 15, mb: 1.5 }}>Area estadistica</Typography>
 
                                         <Grid container spacing={2}>
-                                            <Grid item xs={12} sm={6}>
+                                            <Grid size={{ xs: 12, sm: 6 }}>
                                                 <InsightProgress label="Carga en backlog" value={statisticalRatios.backlogRate} helper="Porcentaje del total que sigue pendiente." color="warning" />
                                             </Grid>
-                                            <Grid item xs={12} sm={6}>
+                                            <Grid size={{ xs: 12, sm: 6 }}>
                                                 <InsightProgress label="Riesgo de vencimiento" value={statisticalRatios.overdueRate} helper="Tickets que ya superaron el umbral interno." color="error" />
                                             </Grid>
-                                            <Grid item xs={12} sm={6}>
+                                            <Grid size={{ xs: 12, sm: 6 }}>
                                                 <InsightProgress label="Cobertura de asignacion" value={statisticalRatios.assignmentRate} helper="Tickets actualmente asignados a tecnico." color="success" />
                                             </Grid>
-                                            <Grid item xs={12} sm={6}>
+                                            <Grid size={{ xs: 12, sm: 6 }}>
                                                 <InsightProgress label="Tasa de cancelacion" value={statisticalRatios.cancellationRate} helper="Participacion de tickets cancelados." color="info" />
                                             </Grid>
                                         </Grid>
@@ -254,11 +254,11 @@ export default function TicketsDashboard() {
                                         <Divider sx={{ my: 2 }} />
 
                                         <Grid container spacing={2}>
-                                            <Grid item xs={12} sm={6}>
+                                            <Grid size={{ xs: 12, sm: 6 }}>
                                                 <Typography sx={{ fontSize: 13, color: 'text.secondary', mb: 0.4 }}>Tickets totales</Typography>
                                                 <Typography sx={{ fontSize: 28, fontWeight: 900, lineHeight: 1.1 }}>{summary.totalTickets ?? 0}</Typography>
                                             </Grid>
-                                            <Grid item xs={12} sm={6}>
+                                            <Grid size={{ xs: 12, sm: 6 }}>
                                                 <Typography sx={{ fontSize: 13, color: 'text.secondary', mb: 0.4 }}>Promedio de resolucion</Typography>
                                                 <Typography sx={{ fontSize: 28, fontWeight: 900, lineHeight: 1.1 }}>{summary.averageResolutionHours ?? 0}h</Typography>
                                             </Grid>
@@ -267,10 +267,10 @@ export default function TicketsDashboard() {
                                 </Card>
                             </Grid>
 
-                            <Grid item xs={12} md={4}>
+                            <Grid size={{ xs: 12, md: 4 }}>
                                 <Card variant="outlined" sx={dashboardCardSx}>
                                     <CardContent>
-                                        <Typography sx={{ fontWeight: 800, fontSize: 15, mb: 1.5 }}>Top de atencion</Typography>
+                                        <Typography component="h2" sx={{ fontWeight: 800, fontSize: 15, mb: 1.5 }}>Top de atencion</Typography>
                                         <Stack spacing={1.1}>
                                             <Typography sx={{ fontSize: 12, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Tecnicos</Typography>
                                             {topTechnicians.length === 0 ? (
@@ -298,16 +298,16 @@ export default function TicketsDashboard() {
                                 </Card>
                             </Grid>
 
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <MetricList title="Distribucion por prioridad" items={summary.byPriority ?? []} color="warning.main" />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <MetricList title="Distribucion por estado" items={summary.byStatus ?? []} color="info.main" />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <MetricList title="Tickets por tecnico" items={summary.byTechnician ?? []} color="primary.main" />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <MetricList title="Tickets por empresa" items={summary.byCompany ?? []} color="success.main" />
                             </Grid>
                         </Grid>

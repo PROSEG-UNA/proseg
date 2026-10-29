@@ -133,7 +133,7 @@ export default function CompaniesPage() {
                     {tabIndex === 1 && (
                         <Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                                <Typography variant="h6" sx={{ fontWeight: 700 }}>Ver usuarios vinculados</Typography>
+                                <Typography variant="h6" component="h2" sx={{ fontWeight: 700 }}>Ver usuarios vinculados</Typography>
                                 <Box sx={{ flex: 1 }} />
                             </Box>
 
@@ -214,15 +214,15 @@ export default function CompaniesPage() {
                                                 <Typography sx={{ color: 'text.secondary' }}>No hay usuarios vinculados a la empresa seleccionada.</Typography>
                                             ) : (
                                                 inspectUsers.map((u) => (
-                                                    <Box key={u.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                                                    <Box key={u.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                                                         <Box sx={{ minWidth: 0 }}>
                                                             <Typography sx={{ fontWeight: 800 }}>{getUserDisplayName(u)}</Typography>
-                                                            <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>{u.email || '—'}</Typography>
+                                                            <Typography sx={{ fontSize: 13, color: 'text.secondary', wordBreak: 'break-all' }}>{u.email || '—'}</Typography>
                                                             {u.username && (
-                                                                <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{u.username}</Typography>
+                                                                <Typography sx={{ fontSize: 12, color: 'text.secondary', wordBreak: 'break-all' }}>{u.username}</Typography>
                                                             )}
                                                         </Box>
-                                                        <Box sx={{ display: 'flex', gap: 1 }}>
+                                                        <Box sx={{ display: 'flex', gap: 1, flexShrink: 0 }}>
                                                             <Button size="small" color="error" variant="outlined" disabled={processingAction} onClick={() => setConfirmUnassignUser(u)}>
                                                                 Desasignar
                                                             </Button>

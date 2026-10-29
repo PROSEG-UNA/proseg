@@ -232,7 +232,7 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
                             }}
                         >
                             <Grid container spacing={2} alignItems="stretch">
-                                <Grid item xs={12} lg={7}>
+                                <Grid size={{ xs: 12, lg: 7 }}>
                                     <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start', height: '100%' }}>
 
 
@@ -253,12 +253,12 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
                                     </Box>
                                 </Grid>
 
-                                <Grid item xs={12} lg={5}>
+                                <Grid size={{ xs: 12, lg: 5 }}>
                                     <Grid container spacing={1.25}>
-                                        <Grid item xs={12} sm={4}>
+                                        <Grid size={{ xs: 12, sm: 4 }}>
                                             <HeroMetricCard label="Componentes" value={String(components.length)} color="primary.main" />
                                         </Grid>
-                                        <Grid item xs={12} sm={4}>
+                                        <Grid size={{ xs: 12, sm: 4 }}>
                                             <HeroMetricCard label="Imágenes" value={String(imageArchives.length)} color="primary.main" />
                                         </Grid>
                                     </Grid>
@@ -283,21 +283,21 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
                         <>
                             <SectionBlock icon={InfoOutlinedIcon} title="Información General">
                                 <Grid container spacing={1.5}>
-                                    <Grid item xs={12} sm={6} xl={4}><DetailCard label="Número de activo" value={asset.assetNumber} icon={Inventory2OutlinedIcon} /></Grid>
-                                    <Grid item xs={12} sm={6} xl={4}><DetailCard label="Número de serie" value={asset.serialNumber} icon={TagOutlinedIcon} /></Grid>
-                                    <Grid item xs={12} sm={6} xl={4}><DetailCard label="Tipo" value={asset.model?.type?.name} icon={InfoOutlinedIcon} /></Grid>
-                                    <Grid item xs={12} sm={6} xl={4}><DetailCard label="Marca" value={asset.model?.brand?.name} icon={InfoOutlinedIcon} /></Grid>
-                                    <Grid item xs={12} sm={6} xl={4}><DetailCard label="Modelo" value={asset.model?.name} icon={InfoOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6, xl: 4 }}><DetailCard label="Número de activo" value={asset.assetNumber} icon={Inventory2OutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6, xl: 4 }}><DetailCard label="Número de serie" value={asset.serialNumber} icon={TagOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6, xl: 4 }}><DetailCard label="Tipo" value={asset.model?.type?.name} icon={InfoOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6, xl: 4 }}><DetailCard label="Marca" value={asset.model?.brand?.name} icon={InfoOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6, xl: 4 }}><DetailCard label="Modelo" value={asset.model?.name} icon={InfoOutlinedIcon} /></Grid>
                                 </Grid>
                             </SectionBlock>
 
                             <SectionBlock icon={Inventory2OutlinedIcon} title="Información del Activo">
                                 <Grid container spacing={1.5}>
-                                    <Grid item xs={12} sm={6} lg={4}><DetailCard label="Fecha de adquisición" value={formatDate(asset.acquisitionDate)} icon={EventOutlinedIcon} /></Grid>
-                                    <Grid item xs={12} sm={6} lg={4}><DetailCard label="Fin de garantía" value={formatDate(asset.warrantyEndDate)} icon={EventOutlinedIcon} /></Grid>
-                                    <Grid item xs={12} sm={6} lg={4}><DetailCard label="Fin de soporte firmware" value={formatDate(asset.firmwareSupportEndDate)} icon={EventOutlinedIcon} /></Grid>
-                                    <Grid item xs={12} sm={6} lg={4}><DetailCard label="Fecha de baja" value={formatDate(asset.decommissionDate)} icon={EventOutlinedIcon} /></Grid>
-                                    <Grid item xs={12} sm={6} lg={4}><DetailCard label="Actualizado" value={formatDateTime(asset.updatedAt)} icon={EventOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6, lg: 4 }}><DetailCard label="Fecha de adquisición" value={formatDate(asset.acquisitionDate)} icon={EventOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6, lg: 4 }}><DetailCard label="Fin de garantía" value={formatDate(asset.warrantyEndDate)} icon={EventOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6, lg: 4 }}><DetailCard label="Fin de soporte firmware" value={formatDate(asset.firmwareSupportEndDate)} icon={EventOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6, lg: 4 }}><DetailCard label="Fecha de baja" value={formatDate(asset.decommissionDate)} icon={EventOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6, lg: 4 }}><DetailCard label="Actualizado" value={formatDateTime(asset.updatedAt)} icon={EventOutlinedIcon} /></Grid>
                                 </Grid>
                             </SectionBlock>
 
@@ -327,18 +327,18 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
 
                             <SectionBlock icon={PersonOutlineOutlinedIcon} title="Responsable">
                                 <Grid container spacing={1.5}>
-                                    <Grid item xs={12} md={4}><DetailCard label="Unidad ejecutora" value={asset.executingUnit?.name} icon={PersonOutlineOutlinedIcon} /></Grid>
-                                    <Grid item xs={12} md={4}><DetailCard label="Funcionario responsable" value={asset.employee?.name} icon={PersonOutlineOutlinedIcon} /></Grid>
-                                    <Grid item xs={12} md={4}><DetailCard label="ID del funcionario" value={asset.employee?.identification} icon={PersonOutlineOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, md: 4 }}><DetailCard label="Unidad ejecutora" value={asset.executingUnit?.name} icon={PersonOutlineOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, md: 4 }}><DetailCard label="Funcionario responsable" value={asset.employee?.name} icon={PersonOutlineOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, md: 4 }}><DetailCard label="ID del funcionario" value={asset.employee?.identification} icon={PersonOutlineOutlinedIcon} /></Grid>
                                 </Grid>
                             </SectionBlock>
 
                             <SectionBlock icon={EngineeringOutlinedIcon} title="Información Técnica">
                                 <Grid container spacing={1.5}>
-                                    <Grid item xs={12} sm={6} lg={3}><DetailCard label="IP" value={networkInterface?.ipAddress} icon={RouterOutlinedIcon} /></Grid>
-                                    <Grid item xs={12} sm={6} lg={3}><DetailCard label="MAC" value={networkInterface?.macAddress} icon={RouterOutlinedIcon} /></Grid>
-                                    <Grid item xs={12} sm={6} lg={3}><DetailCard label="Archivos asociados" value={String(archives.length)} icon={PhotoLibraryOutlinedIcon} /></Grid>
-                                    <Grid item xs={12} sm={6} lg={3}><DetailCard label="Creado" value={formatDateTime(asset.createdAt)} icon={EventOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6, lg: 3 }}><DetailCard label="IP" value={networkInterface?.ipAddress} icon={RouterOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6, lg: 3 }}><DetailCard label="MAC" value={networkInterface?.macAddress} icon={RouterOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6, lg: 3 }}><DetailCard label="Archivos asociados" value={String(archives.length)} icon={PhotoLibraryOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6, lg: 3 }}><DetailCard label="Creado" value={formatDateTime(asset.createdAt)} icon={EventOutlinedIcon} /></Grid>
                                 </Grid>
                             </SectionBlock>
 
@@ -361,7 +361,7 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
                                 ) : (
                                     <Grid container spacing={1.25}>
                                         {imageArchives.map((image) => (
-                                            <Grid item xs={12} sm={6} md={4} lg={3} key={image.id}>
+                                            <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={image.id}>
                                                 <Card
                                                     variant="outlined"
                                                     sx={{
@@ -411,7 +411,7 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
                                 ) : (
                                     <Grid container spacing={1.5}>
                                         {components.map((component) => (
-                                            <Grid item xs={12} sm={6} lg={4} key={component.id}>
+                                            <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={component.id}>
                                                 <Card
                                                     variant="outlined"
                                                     sx={{
@@ -436,8 +436,8 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
                                                     </Box>
                                                     <Divider />
                                                     <Grid container spacing={1.25}>
-                                                        <Grid item xs={12}><DetailCard label="Ubicación" value={component.location || '—'} icon={PlaceOutlinedIcon} /></Grid>
-                                                        <Grid item xs={12}><DetailCard label="Observaciones" value={component.observations || '—'} icon={NotesOutlinedIcon} /></Grid>
+                                                        <Grid size={{ xs: 12 }}><DetailCard label="Ubicación" value={component.location || '—'} icon={PlaceOutlinedIcon} /></Grid>
+                                                        <Grid size={{ xs: 12 }}><DetailCard label="Observaciones" value={component.observations || '—'} icon={NotesOutlinedIcon} /></Grid>
                                                     </Grid>
                                                 </Card>
                                             </Grid>
@@ -448,8 +448,8 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
 
                             <SectionBlock icon={NotesOutlinedIcon} title="Observaciones">
                                 <Grid container spacing={1.5}>
-                                    <Grid item xs={12} md={6}><DetailCard label="Resumen de ubicación" value={assetLocationSummary || 'Sin ubicación resumida'} icon={NotesOutlinedIcon} /></Grid>
-                                    <Grid item xs={12} md={6}><DetailCard label="Observaciones registradas" value="No hay observaciones adicionales disponibles para este activo." icon={NotesOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, md: 6 }}><DetailCard label="Resumen de ubicación" value={assetLocationSummary || 'Sin ubicación resumida'} icon={NotesOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, md: 6 }}><DetailCard label="Observaciones registradas" value="No hay observaciones adicionales disponibles para este activo." icon={NotesOutlinedIcon} /></Grid>
                                 </Grid>
                             </SectionBlock>
                         </>
