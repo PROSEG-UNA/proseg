@@ -6,6 +6,9 @@ import com.proseg.msvc_forms.dto.request.OvertimeReportData;
 import com.proseg.msvc_forms.dto.request.OvertimeReportDetailRow;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -68,39 +71,47 @@ public class OvertimeReportValidator implements FormValidator {
                 throw new FormValidationException("Fila " + (i + 1) + ": La hora de salida es obligatoria");
             }
             
-            validateTimeRange(row, i);
-            validateCalculatedHours(row, i);
+            Duration duration = validateTimeRange(row, i);
+            validateCalculatedHours(row, i, duration);
         }
     }
 
-    private void validateTimeRange(OvertimeReportDetailRow row, int rowIndex) {
+    private Duration validateTimeRange(OvertimeReportDetailRow row, int rowIndex) {
         LocalTime entryTime = row.getEntryTime();
         LocalTime exitTime = row.getExitTime();
 
-        if (exitTime.isBefore(entryTime) || exitTime.equals(entryTime)) {
+        if (exitTime.equals(entryTime)) {
             throw new FormValidationException("Fila " + (rowIndex + 1) + 
-                ": La hora de salida debe ser posterior a la hora de entrada");
+                ": La hora de salida debe ser distinta de la hora de entrada");
         }
+
+        LocalDate exitDate = exitTime.isBefore(entryTime)
+                ? row.getDate().plusDays(1)
+                : row.getDate();
+        LocalDateTime entryDateTime = LocalDateTime.of(row.getDate(), entryTime);
+        LocalDateTime exitDateTime = LocalDateTime.of(exitDate, exitTime);
+        Duration duration = Duration.between(entryDateTime, exitDateTime);
+
+        if (duration.isNegative() || duration.isZero() || duration.compareTo(Duration.ofHours(24)) > 0) {
+            throw new FormValidationException("Fila " + (rowIndex + 1) +
+                ": La duración del turno debe ser mayor a 0 y no exceder 24 horas");
+        }
+
+        return duration;
     }
 
-    private void validateCalculatedHours(OvertimeReportDetailRow row, int rowIndex) {
+    private void validateCalculatedHours(OvertimeReportDetailRow row, int rowIndex, Duration duration) {
         if (row.getTotalHours() != null && row.getTotalHours() < 0) {
             throw new FormValidationException("Fila " + (rowIndex + 1) + 
                 ": El total de horas no puede ser negativo");
         }
         
-        double calculatedHours = calculateHours(row.getEntryTime(), row.getExitTime());
+        double calculatedHours = duration.toMinutes() / 60.0;
         
         if (row.getTotalHours() != null && Math.abs(row.getTotalHours() - calculatedHours) > 0.01) {
             throw new FormValidationException("Fila " + (rowIndex + 1) + 
                 ": El total de horas no coincide con la diferencia entre entrada y salida");
         }
-    }
-
-    private double calculateHours(LocalTime entryTime, LocalTime exitTime) {
-        int entryMinutes = entryTime.getHour() * 60 + entryTime.getMinute();
-        int exitMinutes = exitTime.getHour() * 60 + exitTime.getMinute();
-        return (exitMinutes - entryMinutes) / 60.0;
     }
 
     @Override

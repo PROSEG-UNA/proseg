@@ -206,6 +206,46 @@ describe('forms module', () => {
         expect(await screen.findByDisplayValue('2.50')).toBeInTheDocument();
     });
 
+    it('calcula horas extra cuando el turno cruza medianoche', async () => {
+        const user = userEvent.setup();
+        renderWithProviders(
+            <FormRecordCreateModal
+                open
+                formType={{ id: '1', code: 'OVERTIME_REPORT', name: 'Reporte de Horas Extras' }}
+                onClose={vi.fn()}
+                onSaved={vi.fn()}
+            />
+        );
+
+        const firstDataRow = screen.getAllByRole('row')[1];
+        const inputs = firstDataRow.querySelectorAll('input');
+        await user.type(inputs[3], '22:00');
+        await user.type(inputs[4], '06:00');
+
+        expect(await within(firstDataRow).findByDisplayValue('8.00')).toBeInTheDocument();
+    });
+
+    it('rechaza una hora de entrada y salida idénticas', async () => {
+        const user = userEvent.setup();
+        renderWithProviders(
+            <FormRecordCreateModal
+                open
+                formType={{ id: '1', code: 'OVERTIME_REPORT', name: 'Reporte de Horas Extras' }}
+                onClose={vi.fn()}
+                onSaved={vi.fn()}
+            />
+        );
+
+        const firstDataRow = screen.getAllByRole('row')[1];
+        const inputs = firstDataRow.querySelectorAll('input');
+        await user.type(inputs[3], '08:00');
+        await user.type(inputs[4], '08:00');
+        await user.click(screen.getByRole('button', { name: 'Guardar' }));
+
+        expect(await screen.findByText('La hora de salida debe ser distinta de la hora de entrada')).toBeInTheDocument();
+        expect(formsService.createFormRecord).not.toHaveBeenCalled();
+    });
+
     it('formulario Ausencia renderiza campos requeridos y payload exacto', () => {
         renderWithProviders(
             <FormRecordCreateModal

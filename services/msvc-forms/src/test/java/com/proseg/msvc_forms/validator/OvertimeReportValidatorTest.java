@@ -42,6 +42,24 @@ class OvertimeReportValidatorTest {
     }
 
     @Test
+    void validate_should_accept_daytime_shift() {
+        assertThatCode(() -> validator.validate(payload(List.of(validRow(1, "08:00", "17:00", 9.0)))))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void validate_should_accept_overnight_shift_and_calculate_hours() {
+        assertThatCode(() -> validator.validate(payload(List.of(validRow(1, "22:00", "06:00", 8.0)))))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void validate_should_accept_overnight_shift_with_minutes() {
+        assertThatCode(() -> validator.validate(payload(List.of(validRow(1, "23:30", "02:30", 3.0)))))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
     void validate_should_reject_missing_required_fields() {
         JsonNode payload = objectMapper.valueToTree(Map.of(
                 "fecha", "2026-09-13",
@@ -69,10 +87,23 @@ class OvertimeReportValidatorTest {
     }
 
     @Test
-    void validate_should_reject_invalid_schedule() {
-        assertThatThrownBy(() -> validator.validate(payload(List.of(validRow(1, "19:00", "17:00", 2.0)))))
+    void validate_should_accept_earlier_exit_as_next_day() {
+        assertThatCode(() -> validator.validate(payload(List.of(validRow(1, "19:00", "17:00", 22.0)))))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void validate_should_reject_equal_entry_and_exit_times() {
+        assertThatThrownBy(() -> validator.validate(payload(List.of(validRow(1, "08:00", "08:00", 0.0)))))
                 .isInstanceOf(FormValidationException.class)
-                .hasMessageContaining("hora de salida");
+                .hasMessageContaining("distinta");
+    }
+
+    @Test
+    void validate_should_reject_total_hours_exceeding_the_validated_duration() {
+        assertThatThrownBy(() -> validator.validate(payload(List.of(validRow(1, "22:00", "06:00", 25.0)))))
+                .isInstanceOf(FormValidationException.class)
+                .hasMessageContaining("no coincide");
     }
 
     private JsonNode payload(List<Map<String, Object>> details) {

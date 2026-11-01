@@ -60,8 +60,9 @@ function calculateTotalHours(entryTime, exitTime) {
     if ([entryHour, entryMinute, exitHour, exitMinute].some(Number.isNaN)) return '';
 
     const entryMinutes = entryHour * 60 + entryMinute;
-    const exitMinutes = exitHour * 60 + exitMinute;
-    if (exitMinutes <= entryMinutes) return '';
+    let exitMinutes = exitHour * 60 + exitMinute;
+    if (exitMinutes === entryMinutes) return '';
+    if (exitMinutes < entryMinutes) exitMinutes += 24 * 60;
 
     return ((exitMinutes - entryMinutes) / 60).toFixed(2);
 }
@@ -148,7 +149,7 @@ function validate(formType, values, overtimeRows) {
             if (!row.entryTime) current.entryTime = 'Requerido';
             if (!row.exitTime) current.exitTime = 'Requerido';
             if (row.entryTime && row.exitTime && !row.totalHours) {
-                current.exitTime = 'La hora de salida debe ser posterior a la hora de entrada';
+                current.exitTime = 'La hora de salida debe ser distinta de la hora de entrada';
             }
             if (Object.keys(current).length > 0) {
                 rowErrors[row.id] = current;

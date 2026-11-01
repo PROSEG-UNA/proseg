@@ -9,6 +9,5 @@ public final class Privileges {
         public static final String CREAR = "CREAR_FORMULARIOS";
         public static final String EDITAR = "EDITAR_FORMULARIOS";
         public static final String ELIMINAR = "ELIMINAR_FORMULARIOS";
-        public static final String GESTIONAR_TIPOS = "GESTIONAR_TIPOS_FORMULARIOS";
     }
 }

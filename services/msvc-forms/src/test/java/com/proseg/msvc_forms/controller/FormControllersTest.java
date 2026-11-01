@@ -60,6 +60,22 @@ class FormControllersTest {
     }
 
     @Test
+    void formTypes_should_not_expose_admin_operations() throws Exception {
+        mockMvc.perform(post("/api/v1/forms/types")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isMethodNotAllowed());
+
+        mockMvc.perform(put("/api/v1/forms/types/{id}", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isMethodNotAllowed());
+
+        mockMvc.perform(delete("/api/v1/forms/types/{id}", UUID.randomUUID()))
+                .andExpect(status().isMethodNotAllowed());
+    }
+
+    @Test
     void getForms_should_return_ok() throws Exception {
         when(formRecordService.findAll(isNull(), isNull(), any(), any())).thenReturn(new PageImpl<>(List.of(FormRecordResponseDto.builder().id(UUID.randomUUID()).build()), PageRequest.of(0, 10), 1));
 

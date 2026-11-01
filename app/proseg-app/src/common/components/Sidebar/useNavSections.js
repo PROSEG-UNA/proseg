@@ -104,7 +104,6 @@ const formsPermissions = [
     PERMISSIONS.FORMS.READ,
     PERMISSIONS.FORMS.CREATE,
     PERMISSIONS.FORMS.DELETE,
-    PERMISSIONS.FORMS.MANAGE_TYPES,
 ];
 
 const transportDriverPermissions = [
