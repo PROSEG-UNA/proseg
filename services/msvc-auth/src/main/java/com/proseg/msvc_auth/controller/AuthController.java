@@ -50,27 +50,16 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-        public ResponseEntity<ApiResponse<KeycloakUserResponseDto>> getCurrentUser(
-            HttpServletRequest request,
+    public ResponseEntity<ApiResponse<KeycloakUserResponseDto>> getCurrentUser(
             Authentication authentication
-        ) {
-        String authToken = null;
-        if (request.getCookies() != null) {
-            for (Cookie cookie : request.getCookies()) {
-                if ("auth_token".equals(cookie.getName())) {
-                    authToken = cookie.getValue();
-                    break;
-                }
-            }
-        }
-        if (authToken == null || authToken.isBlank()) {
+    ) {
+        if (authentication == null || !authentication.isAuthenticated()
+                || authentication.getName() == null || authentication.getName().isBlank()) {
             throw com.proseg.msvc_auth.exception.TokenException.notFound();
         }
-        String userId = keycloakAuthService.extractUserIdFromToken(authToken);
+        String userId = authentication.getName();
         KeycloakUserResponseDto user = userService.getKeycloakUserById(userId);
-        List<String> permissions = authentication == null
-            ? List.of()
-            : authentication.getAuthorities().stream()
+        List<String> permissions = authentication.getAuthorities().stream()
             .map(authority -> authority.getAuthority())
             .distinct()
             .sorted()

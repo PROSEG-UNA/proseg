@@ -1,0 +1,10 @@
+contract:
+  multi-base: base-value
+  multi-profile: default-value
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+contract:
+  multi-profile: prod-value
