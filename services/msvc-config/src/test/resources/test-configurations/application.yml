@@ -1,0 +1,3 @@
+contract:
+  shared: shared-value
+  precedence: shared
