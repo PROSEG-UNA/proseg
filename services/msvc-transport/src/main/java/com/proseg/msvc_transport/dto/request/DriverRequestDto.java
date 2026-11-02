@@ -1,5 +1,7 @@
 package com.proseg.msvc_transport.dto.request;
 
+import com.proseg.msvc_transport.entity.UlloaShift;
+import com.proseg.msvc_transport.entity.DriverUnit;
 import com.proseg.msvc_transport.entity.VehicleType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -10,6 +12,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalTime;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -27,9 +30,19 @@ public class DriverRequestDto {
     @Builder.Default
     private String status = "ACTIVE";
 
+    private DriverUnit organizationalUnit;
+
     private String restrictions;
 
     @NotNull
     @Builder.Default
     private Set<VehicleType> allowedVehicleTypes = EnumSet.allOf(VehicleType.class);
+
+    private LocalTime ordinaryStart;
+
+    private LocalTime ordinaryEnd;
+
+    @NotNull
+    @Builder.Default
+    private Set<UlloaShift> ulloaShifts = EnumSet.noneOf(UlloaShift.class);
 }

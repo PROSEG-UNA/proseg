@@ -19,10 +19,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.BatchSize;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.UuidGenerator;
 import org.hibernate.annotations.Where;
 
+import java.time.LocalTime;
 import java.util.EnumSet;
 import java.util.Set;
 import java.util.UUID;
@@ -52,6 +54,13 @@ public class Driver extends BaseEntity {
     @Builder.Default
     private String status = "ACTIVE";
 
+    @Filterable(type = FilterType.ENUM)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "organizational_unit", nullable = false, length = 32)
+    @ColumnDefault("'GENERAL_SERVICES'")
+    @Builder.Default
+    private DriverUnit organizationalUnit = DriverUnit.GENERAL_SERVICES;
+
     @Filterable(type = FilterType.TEXT)
     @Column(columnDefinition = "TEXT")
     private String restrictions;
@@ -63,4 +72,18 @@ public class Driver extends BaseEntity {
     @BatchSize(size = 50)
     @Builder.Default
     private Set<VehicleType> allowedVehicleTypes = EnumSet.allOf(VehicleType.class);
+
+    @Column(name = "ordinary_start")
+    private LocalTime ordinaryStart;
+
+    @Column(name = "ordinary_end")
+    private LocalTime ordinaryEnd;
+
+    @ElementCollection
+    @CollectionTable(name = "driver_ulloa_shift", joinColumns = @JoinColumn(name = "driver_id"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ulloa_shift", nullable = false)
+    @BatchSize(size = 50)
+    @Builder.Default
+    private Set<UlloaShift> ulloaShifts = EnumSet.noneOf(UlloaShift.class);
 }
