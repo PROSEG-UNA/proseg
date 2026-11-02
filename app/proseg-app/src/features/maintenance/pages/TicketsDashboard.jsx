@@ -224,29 +224,29 @@ export default function TicketsDashboard() {
                     <Stack spacing={2.5}>
                         <Grid container spacing={3}>
                             {kpiCards.map((card) => (
-                                <Grid item xs={12} sm={6} md={4} lg={3} key={card.key}>
+                                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={card.key}>
                                     <KpiCard title={card.title} value={card.value} caption={card.caption} icon={card.icon} accent={card.accent} />
                                 </Grid>
                             ))}
                         </Grid>
 
                         <Grid container spacing={3}>
-                            <Grid item xs={12} md={8}>
+                            <Grid size={{ xs: 12, md: 8 }}>
                                 <Card variant="outlined" sx={dashboardCardSx}>
                                     <CardContent>
                                         <Typography component="h2" sx={{ fontWeight: 800, fontSize: 15, mb: 1.5 }}>Area estadistica</Typography>
 
                                         <Grid container spacing={2}>
-                                            <Grid item xs={12} sm={6}>
+                                            <Grid size={{ xs: 12, sm: 6 }}>
                                                 <InsightProgress label="Carga en backlog" value={statisticalRatios.backlogRate} helper="Porcentaje del total que sigue pendiente." color="warning" />
                                             </Grid>
-                                            <Grid item xs={12} sm={6}>
+                                            <Grid size={{ xs: 12, sm: 6 }}>
                                                 <InsightProgress label="Riesgo de vencimiento" value={statisticalRatios.overdueRate} helper="Tickets que ya superaron el umbral interno." color="error" />
                                             </Grid>
-                                            <Grid item xs={12} sm={6}>
+                                            <Grid size={{ xs: 12, sm: 6 }}>
                                                 <InsightProgress label="Cobertura de asignacion" value={statisticalRatios.assignmentRate} helper="Tickets actualmente asignados a tecnico." color="success" />
                                             </Grid>
-                                            <Grid item xs={12} sm={6}>
+                                            <Grid size={{ xs: 12, sm: 6 }}>
                                                 <InsightProgress label="Tasa de cancelacion" value={statisticalRatios.cancellationRate} helper="Participacion de tickets cancelados." color="info" />
                                             </Grid>
                                         </Grid>
@@ -254,11 +254,11 @@ export default function TicketsDashboard() {
                                         <Divider sx={{ my: 2 }} />
 
                                         <Grid container spacing={2}>
-                                            <Grid item xs={12} sm={6}>
+                                            <Grid size={{ xs: 12, sm: 6 }}>
                                                 <Typography sx={{ fontSize: 13, color: 'text.secondary', mb: 0.4 }}>Tickets totales</Typography>
                                                 <Typography sx={{ fontSize: 28, fontWeight: 900, lineHeight: 1.1 }}>{summary.totalTickets ?? 0}</Typography>
                                             </Grid>
-                                            <Grid item xs={12} sm={6}>
+                                            <Grid size={{ xs: 12, sm: 6 }}>
                                                 <Typography sx={{ fontSize: 13, color: 'text.secondary', mb: 0.4 }}>Promedio de resolucion</Typography>
                                                 <Typography sx={{ fontSize: 28, fontWeight: 900, lineHeight: 1.1 }}>{summary.averageResolutionHours ?? 0}h</Typography>
                                             </Grid>
@@ -267,7 +267,7 @@ export default function TicketsDashboard() {
                                 </Card>
                             </Grid>
 
-                            <Grid item xs={12} md={4}>
+                            <Grid size={{ xs: 12, md: 4 }}>
                                 <Card variant="outlined" sx={dashboardCardSx}>
                                     <CardContent>
                                         <Typography component="h2" sx={{ fontWeight: 800, fontSize: 15, mb: 1.5 }}>Top de atencion</Typography>
@@ -298,16 +298,16 @@ export default function TicketsDashboard() {
                                 </Card>
                             </Grid>
 
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <MetricList title="Distribucion por prioridad" items={summary.byPriority ?? []} color="warning.main" />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <MetricList title="Distribucion por estado" items={summary.byStatus ?? []} color="info.main" />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <MetricList title="Tickets por tecnico" items={summary.byTechnician ?? []} color="primary.main" />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <MetricList title="Tickets por empresa" items={summary.byCompany ?? []} color="success.main" />
                             </Grid>
                         </Grid>

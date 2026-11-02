@@ -381,6 +381,7 @@ export default function TableBase({
             shape: 'rounded',
             variant: 'outlined',
             size: 'small',
+            siblingCount: isMobile ? 0 : 1,
         },
 
         muiToolbarAlertBannerProps: error

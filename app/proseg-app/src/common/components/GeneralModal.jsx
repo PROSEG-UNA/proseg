@@ -74,7 +74,7 @@ export default function GeneralModal({
                     justifyContent: 'space-between',
                 }}
             >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
                     <Box
                         sx={{
                             width: 38, height: 38, borderRadius: '10px',
@@ -104,6 +104,7 @@ export default function GeneralModal({
                             color: theme.vars.palette.tones.rose.headerTextSubtle,
                             border: `1px solid ${theme.vars.palette.tones.rose.headerTextBorder}`,
                             p: 0.625,
+                            flexShrink: 0,
                             '&:hover': { bgcolor: theme.vars.palette.tones.rose.headerOverlayHover, color: '#fff' },
                         }}
                     >
@@ -132,12 +133,14 @@ export default function GeneralModal({
                     px: { xs: 2.5, sm: 3 }, py: 1.75,
                     borderTop: '1px solid', borderColor: 'divider',
                     display: 'flex', alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: 1,
                     justifyContent: footerLeft ? 'space-between' : 'flex-end',
                     bgcolor: theme.vars.palette.tones.rose.footerBg,
                 }}
             >
                 {footerLeft}
-                <Box sx={{ display: 'flex', gap: 1 }}>
+                <Box sx={{ display: 'flex', gap: 1, marginLeft: 'auto' }}>
                     {secondaryButton && (
                         <Button
                             onClick={secondaryButton.onClick}
