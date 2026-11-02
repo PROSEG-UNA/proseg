@@ -23,8 +23,18 @@ public class TourImportController {
     private final TourImportService tourImportService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<TourImportSummaryDto>> importTours(@RequestParam("file") MultipartFile file) {
-        return ApiResponseBuilder.ok(tourImportService.importFile(file), "Importación de giras procesada");
+    public ResponseEntity<ApiResponse<TourImportSummaryDto>> importTours(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("year") int year,
+            @RequestParam("month") int month,
+            @RequestParam("businessDays") int businessDays,
+            @RequestParam(value = "keepDrivers", defaultValue = "true") boolean keepDrivers,
+            @RequestParam(value = "keepVehicles", defaultValue = "true") boolean keepVehicles
+    ) {
+        return ApiResponseBuilder.ok(
+                tourImportService.importFile(file, year, month, businessDays, keepDrivers, keepVehicles),
+                "Importación de giras procesada"
+        );
     }
 
     @GetMapping("/template")

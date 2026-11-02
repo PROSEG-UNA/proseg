@@ -19,5 +19,11 @@ public class TourDraftRequestDto {
 
     private int blocksDetected;
 
+    private int year;
+
+    private int month;
+
+    private int businessDays;
+
     private List<Map<String, Object>> rows;
 }

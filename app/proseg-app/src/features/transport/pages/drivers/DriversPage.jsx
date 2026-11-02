@@ -1,19 +1,37 @@
 import { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { Box, Container } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import { PageHeader } from '../../../../common/components/index.js';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Alert, Box, Container, LinearProgress, ListItemIcon, ListItemText, Menu, MenuItem, Stack } from '@mui/material';
+import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
+import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined';
+import { MonthPicker, PageHeader } from '../../../../common/components/index.js';
 import AccessDeniedState from '../../../../common/components/AccessDeniedState.jsx';
+import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { PrimaryButton } from '../../../../common/components/PrimaryButton.jsx';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { usePermissions } from '../../../../common/hooks/index.js';
+import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
 import DriversTable from '../../components/drivers/DriversTable.jsx';
 import DriverFormModal from '../../components/drivers/DriverFormModal.jsx';
+import DriverSurplusSummary from '../../components/drivers/DriverSurplusSummary.jsx';
+import { shortPeriodLabel } from '../../components/tourProcessing/tourProcessingDraftLabels.js';
+import { usePersistedMonth } from '../../hooks/usePersistedMonth.js';
+import { useTransportDriverMonthsData } from '../../hooks/useTransportDriverMonthsData.js';
+import { useTransportDriverMonthSurplusCap } from '../../hooks/useTransportDriverMonthSurplusCap.js';
+import { exportDriverOvertimeRequest } from '../../services/drivers/driversService';
+import { downloadBlob } from '../../transportUtils.js';
 import { queryKeys } from '../../../../common/query';
+
+const SELECTED_MONTH_STORAGE_KEY = 'transport-drivers-selected-month';
 
 export default function DriversPage() {
     const [driverFormOpen, setDriverFormOpen] = useState(false);
     const [driverFormId, setDriverFormId] = useState(null);
+    const [selectedMonth, setSelectedMonth] = usePersistedMonth(SELECTED_MONTH_STORAGE_KEY);
+    const [optionsAnchor, setOptionsAnchor] = useState(null);
+    const [alert, setAlert] = useState(null);
     const queryClient = useQueryClient();
     const { hasPermission, hasAnyPermission } = usePermissions();
 
@@ -23,7 +41,33 @@ export default function DriversPage() {
         PERMISSIONS.TRANSPORT.DRIVERS.DELETE,
     ]);
 
+    const year = selectedMonth?.year();
+    const month = selectedMonth ? selectedMonth.month() + 1 : undefined;
+    const monthData = useTransportDriverMonthsData(year, month);
+    const { surplusHoursPerDriver } = useTransportDriverMonthSurplusCap(year, month);
+    const showEmptyMonthNotice = monthData.enabled && !monthData.loading && !monthData.hasAnyRecord;
+    const canManageDrivers = hasPermission(PERMISSIONS.TRANSPORT.DRIVERS.MANAGE);
+    const canDeleteDrivers = hasPermission(PERMISSIONS.TRANSPORT.DRIVERS.DELETE);
+    const periodLabel = monthData.enabled ? shortPeriodLabel(year, month) : null;
+
+    const overtimeRequestMutation = useMutation({
+        mutationFn: () => exportDriverOvertimeRequest(year, month),
+        onSuccess: ({ blob, fileName }) => downloadBlob(blob, fileName),
+        onError: (error) => {
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo generar la solicitud de horas extra') });
+        },
+    });
+    const exportingOvertimeRequest = overtimeRequestMutation.isPending;
+
+    const closeOptions = () => setOptionsAnchor(null);
+
+    const handleExportOvertimeRequest = () => {
+        closeOptions();
+        if (!overtimeRequestMutation.isPending) overtimeRequestMutation.mutate();
+    };
+
     const openCreateDriver = () => {
+        closeOptions();
         setDriverFormId(null);
         setDriverFormOpen(true);
     };
@@ -35,6 +79,7 @@ export default function DriversPage() {
 
     const refreshDrivers = () => {
         void queryClient.invalidateQueries({ queryKey: queryKeys.transport.drivers() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.transport.tourProcessingDrafts() });
     };
 
     if (!canViewDrivers) return <AccessDeniedState />;
@@ -45,15 +90,79 @@ export default function DriversPage() {
                 <PageHeader
                     title="Choferes"
                     description="Gestión de choferes."
-                    action={hasPermission(PERMISSIONS.TRANSPORT.DRIVERS.MANAGE) ? (
-                        <PrimaryButton startIcon={<AddIcon />} onClick={openCreateDriver} sx={{ px: '28px' }}>
-                            Crear
-                        </PrimaryButton>
+                    action={canManageDrivers || periodLabel ? (
+                        <>
+                            <PrimaryButton
+                                onClick={(event) => setOptionsAnchor(event.currentTarget)}
+                                startIcon={<TuneOutlinedIcon />}
+                                endIcon={<KeyboardArrowDownIcon />}
+                                aria-haspopup="menu"
+                                aria-expanded={Boolean(optionsAnchor)}
+                                sx={{ px: '28px' }}
+                            >
+                                Opciones
+                            </PrimaryButton>
+                            <Menu
+                                anchorEl={optionsAnchor}
+                                open={Boolean(optionsAnchor)}
+                                onClose={closeOptions}
+                                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                            >
+                                {canManageDrivers && (
+                                    <MenuItem onClick={openCreateDriver}>
+                                        <ListItemIcon><AddOutlinedIcon fontSize="small" /></ListItemIcon>
+                                        <ListItemText>Crear chofer</ListItemText>
+                                    </MenuItem>
+                                )}
+                                {periodLabel && (
+                                    <MenuItem onClick={closeOptions}>
+                                        <ListItemIcon><DownloadOutlinedIcon fontSize="small" /></ListItemIcon>
+                                        <ListItemText>{`Descargar 'Control de Giras ${periodLabel}'`}</ListItemText>
+                                    </MenuItem>
+                                )}
+                                {periodLabel && (
+                                    <MenuItem onClick={handleExportOvertimeRequest} disabled={exportingOvertimeRequest}>
+                                        <ListItemIcon><DownloadOutlinedIcon fontSize="small" /></ListItemIcon>
+                                        <ListItemText>{`Descargar 'Solicitud de Horas Extra ${periodLabel}'`}</ListItemText>
+                                    </MenuItem>
+                                )}
+                            </Menu>
+                        </>
                     ) : null}
                 />
 
+                {exportingOvertimeRequest && <LinearProgress sx={{ mt: 2 }} />}
+
+                <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={3}
+                    alignItems={{ xs: 'stretch', sm: 'center' }}
+                    flexWrap="wrap"
+                    useFlexGap
+                    sx={{ pt: 3 }}
+                >
+                    <Box sx={{ width: { xs: '100%', sm: 220 }, flexShrink: 0 }}>
+                        <MonthPicker
+                            label="Mes"
+                            ariaLabel="Ver datos de un mes especifico"
+                            value={selectedMonth}
+                            onChange={setSelectedMonth}
+                            clearable
+                        />
+                    </Box>
+                    {monthData.enabled && surplusHoursPerDriver !== null && (
+                        <DriverSurplusSummary surplusCapPerDriver={surplusHoursPerDriver} />
+                    )}
+                    {showEmptyMonthNotice && (
+                        <Alert severity="info" variant="outlined" icon={<InfoOutlinedIcon fontSize="small" />} sx={{ py: 0 }}>
+                            No hay ningún registro para este mes todavía.
+                        </Alert>
+                    )}
+                </Stack>
+
                 <Box sx={{ pt: 3 }}>
-                    <DriversTable onEditDriver={openEditDriver} />
+                    <DriversTable onEditDriver={openEditDriver} monthData={monthData} surplusHoursPerDriver={surplusHoursPerDriver} />
                 </Box>
             </Container>
 
@@ -61,10 +170,23 @@ export default function DriversPage() {
                 <DriverFormModal
                     open={driverFormOpen}
                     driverId={driverFormId}
+                    canEdit={canManageDrivers}
+                    canDelete={canDeleteDrivers}
                     onClose={() => setDriverFormOpen(false)}
                     onSaved={refreshDrivers}
+                    onDeleted={() => {
+                        refreshDrivers();
+                        setAlert({ type: 'success', message: 'Chofer eliminado correctamente' });
+                    }}
                 />
             ) : null}
+
+            <DialogModal
+                open={Boolean(alert)}
+                type={alert?.type}
+                message={alert?.message}
+                onClose={() => setAlert(null)}
+            />
         </Box>
     );
 }

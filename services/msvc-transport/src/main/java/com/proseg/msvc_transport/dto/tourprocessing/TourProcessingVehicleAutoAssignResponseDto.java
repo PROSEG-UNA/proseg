@@ -1,0 +1,18 @@
+package com.proseg.msvc_transport.dto.tourprocessing;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class TourProcessingVehicleAutoAssignResponseDto {
+    private int clearedTours;
+    private int assignedTours;
+    private int unassignedTours;
+}

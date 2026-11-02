@@ -9,7 +9,7 @@ import com.proseg.msvc_document_processor.dto.response.SchemaDto;
 import com.proseg.msvc_document_processor.dto.response.TourDraftResultDto;
 import com.proseg.msvc_document_processor.dto.response.TourImportSummaryDto;
 import com.proseg.msvc_document_processor.excel.ParseResult;
-import com.proseg.msvc_document_processor.excel.TourTemplateGenerator;
+import com.proseg.msvc_document_processor.excel.TourWorkbookGenerator;
 import com.proseg.msvc_document_processor.excel.block.DailyBlockSheetParser;
 import com.proseg.msvc_document_processor.excel.reader.TabularFile;
 import com.proseg.msvc_document_processor.excel.reader.TabularFileReader;
@@ -30,13 +30,15 @@ import java.util.UUID;
 public class TourImportService {
 
     private static final String TRANSPORT_ERROR_CODE = "TRANSPORT_ERROR";
+    private static final String DRIVER_ATTRIBUTE = "driver";
+    private static final String VEHICLE_ATTRIBUTE = "vehicle";
 
     private final TabularFileReader tabularFileReader;
     private final DailyBlockSheetParser dailyBlockSheetParser;
-    private final TourTemplateGenerator tourTemplateGenerator;
+    private final TourWorkbookGenerator tourWorkbookGenerator;
     private final TransportClient transportClient;
 
-    public TourImportSummaryDto importFile(MultipartFile file) {
+    public TourImportSummaryDto importFile(MultipartFile file, int year, int month, int businessDays, boolean keepDrivers, boolean keepVehicles) {
         if (file == null || file.isEmpty()) {
             throw DocumentProcessorException.emptyFile();
         }
@@ -54,12 +56,21 @@ public class TourImportService {
                     .build());
             return summary(parsed, sourceFormat, null, 0, noRows);
         }
+        if (!keepDrivers) {
+            parsed.getRows().forEach(row -> row.remove(DRIVER_ATTRIBUTE));
+        }
+        if (!keepVehicles) {
+            parsed.getRows().forEach(row -> row.remove(VEHICLE_ATTRIBUTE));
+        }
 
         TourDraftResultDto draft = createDraft(TourDraftRequestDto.builder()
                 .fileName(fileName)
                 .fileType(sourceFormat)
                 .totalRowsRead(parsed.getTotalRows())
                 .blocksDetected(parsed.getBlocksDetected())
+                .year(year)
+                .month(month)
+                .businessDays(businessDays)
                 .rows(parsed.getRows())
                 .build());
         List<RowIssueDto> errors = new ArrayList<>(draft.getErrors() == null ? List.of() : draft.getErrors());
@@ -68,7 +79,7 @@ public class TourImportService {
     }
 
     public byte[] generateTemplate() {
-        return tourTemplateGenerator.generate(fetchSchema());
+        return tourWorkbookGenerator.generateTemplate(fetchSchema());
     }
 
     private byte[] readBytes(MultipartFile file) {
@@ -81,7 +92,7 @@ public class TourImportService {
 
     private SchemaDto fetchSchema() {
         try {
-            ApiResponse<SchemaDto> response = transportClient.getCleaningImportSchema();
+            ApiResponse<SchemaDto> response = transportClient.getTourProcessingImportSchema();
             if (response == null || response.getData() == null) {
                 throw DocumentProcessorException.transportUnavailable();
             }
@@ -93,7 +104,7 @@ public class TourImportService {
 
     private TourDraftResultDto createDraft(TourDraftRequestDto request) {
         try {
-            ApiResponse<TourDraftResultDto> response = transportClient.createCleaningDraft(request);
+            ApiResponse<TourDraftResultDto> response = transportClient.createTourProcessingDraft(request);
             if (response == null || response.getData() == null) {
                 throw DocumentProcessorException.transportUnavailable();
             }

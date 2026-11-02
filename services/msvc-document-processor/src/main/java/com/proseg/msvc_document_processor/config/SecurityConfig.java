@@ -34,11 +34,19 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/document-processor/imports/tours"
-                        ).hasAnyAuthority(Privileges.Asignaciones.GENERAR, Privileges.Asignaciones.ACTUALIZAR)
+                        ).hasAuthority(Privileges.Giras.GESTIONAR)
 
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/document-processor/imports/tours/**"
-                        ).hasAnyAuthority(Privileges.Asignaciones.GENERAR, Privileges.Asignaciones.ACTUALIZAR)
+                        ).hasAuthority(Privileges.Giras.GESTIONAR)
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/document-processor/exports/tours/**"
+                        ).hasAnyAuthority(Privileges.Giras.LEER, Privileges.Giras.GESTIONAR, Privileges.Giras.ELIMINAR)
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/document-processor/exports/drivers/**"
+                        ).hasAuthority(Privileges.Choferes.LEER)
 
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/document-processor/exports/assets/**"

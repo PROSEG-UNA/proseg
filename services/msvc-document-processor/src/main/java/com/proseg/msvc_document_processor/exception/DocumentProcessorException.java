@@ -57,6 +57,14 @@ public class DocumentProcessorException extends BaseException {
         );
     }
 
+    public static DocumentProcessorException transportReadFailed() {
+        return new DocumentProcessorException(
+                HttpStatus.BAD_GATEWAY,
+                "TRANSPORT_UNAVAILABLE",
+                "No fue posible consultar el borrador en transporte"
+        );
+    }
+
     public static DocumentProcessorException unreadableWorkbook() {
         return new DocumentProcessorException(
                 HttpStatus.BAD_REQUEST,

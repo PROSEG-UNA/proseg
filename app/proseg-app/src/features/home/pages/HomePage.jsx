@@ -24,7 +24,7 @@ import AssignmentIndOutlinedIcon from '@mui/icons-material/AssignmentIndOutlined
 
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
-import CleaningServicesOutlinedIcon from '@mui/icons-material/CleaningServicesOutlined';
+import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import EmailIcon from '@mui/icons-material/Email';
 import { FeatureCard } from '../../../common/components/FeatureCard.jsx';
@@ -404,7 +404,7 @@ export function HomePage() {
                             pushCard('depuracion', (
                                 <FeatureCard
                                     fullHeight
-                                    icon={<CleaningServicesOutlinedIcon fontSize="inherit" />}
+                                    icon={<FactCheckOutlinedIcon fontSize="inherit" />}
                                     title="Transporte"
                                     description="Depuración de giras"
                                     buttonLabel="Ir a Depuración"

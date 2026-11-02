@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchDrivers } from '../services/drivers/driversService';
 import { fetchVehicles } from '../services/vehicles/vehiclesService';
-import { fetchTours } from '../services/tours/toursService';
+import { fetchBorrowedVehicles } from '../services/borrowedVehicles/borrowedVehiclesService';
 import { queryKeys } from '../../../common/query';
 
 const OPTIONS_PAGE = { page: 0, size: 300 };
@@ -9,11 +9,34 @@ const OPTIONS_STALE_TIME = 5 * 60_000;
 const EMPTY_OPTIONS = [];
 
 function driverLabel(driver) {
-    return [driver.firstName, driver.lastName].filter(Boolean).join(' ').trim() || 'Chofer';
+    return driver.name || 'Chofer';
 }
 
 function vehicleLabel(vehicle) {
-    return vehicle.plate ? `${vehicle.plate}${vehicle.model ? ` - ${vehicle.model}` : ''}` : 'Vehículo';
+    return vehicle.plate || 'Vehículo';
+}
+
+export function toDriverOption(driver) {
+    return {
+        id: driver.id,
+        label: driverLabel(driver),
+        status: driver.status ?? null,
+        unit: driver.organizationalUnit ?? 'GENERAL_SERVICES',
+        restrictions: driver.restrictions ?? '',
+        allowedVehicleTypes: driver.allowedVehicleTypes ?? [],
+        ordinaryStart: driver.ordinaryStart ?? null,
+        ordinaryEnd: driver.ordinaryEnd ?? null,
+    };
+}
+
+export function toVehicleOption(vehicle) {
+    return {
+        id: vehicle.id,
+        label: vehicleLabel(vehicle),
+        type: vehicle.type ?? null,
+        capacity: vehicle.capacity ?? null,
+        available: vehicle.available,
+    };
 }
 
 export function useDriverOptions(enabled = true) {
@@ -21,7 +44,7 @@ export function useDriverOptions(enabled = true) {
         queryKey: queryKeys.transport.driverOptions(),
         queryFn: async () => {
             const response = await fetchDrivers(OPTIONS_PAGE);
-            return (response?.content ?? []).map((driver) => ({ id: driver.id, label: driverLabel(driver) }));
+            return (response?.content ?? []).map(toDriverOption);
         },
         enabled: Boolean(enabled),
         staleTime: OPTIONS_STALE_TIME,
@@ -35,7 +58,7 @@ export function useVehicleOptions(enabled = true) {
         queryKey: queryKeys.transport.vehicleOptions(),
         queryFn: async () => {
             const response = await fetchVehicles(OPTIONS_PAGE);
-            return (response?.content ?? []).map((vehicle) => ({ id: vehicle.id, label: vehicleLabel(vehicle) }));
+            return (response?.content ?? []).map(toVehicleOption);
         },
         enabled: Boolean(enabled),
         staleTime: OPTIONS_STALE_TIME,
@@ -44,12 +67,16 @@ export function useVehicleOptions(enabled = true) {
     return { options: data ?? EMPTY_OPTIONS, loading: isLoading, error };
 }
 
-export function useTourOptions(enabled = true) {
+export function useBorrowedVehicleOptions(enabled = true) {
     const { data, isLoading, error } = useQuery({
-        queryKey: queryKeys.transport.tourOptions(),
+        queryKey: queryKeys.transport.borrowedVehicleOptions(),
         queryFn: async () => {
-            const response = await fetchTours(OPTIONS_PAGE);
-            return (response?.content ?? []).map((tour) => ({ id: tour.id, label: tour.name || 'Gira' }));
+            const response = await fetchBorrowedVehicles(OPTIONS_PAGE);
+            return (response?.content ?? []).map((vehicle) => ({
+                id: vehicle.id,
+                label: vehicleLabel(vehicle),
+                capacity: vehicle.capacity ?? null,
+            }));
         },
         enabled: Boolean(enabled),
         staleTime: OPTIONS_STALE_TIME,

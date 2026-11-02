@@ -26,15 +26,27 @@ import LocationPage from './features/locations/pages/LocationPage';
 import EmailPage from './features/locations/pages/EmailPage';
 import TicketsPage from './features/maintenance/pages/TicketsPage.jsx';
 import TicketsDashboard from './features/maintenance/pages/TicketsDashboard.jsx';
-import TransportPage from './features/transport/pages/TransportPage.jsx';
 import DriversPage from './features/transport/pages/drivers/DriversPage.jsx';
 import VehiclesPage from './features/transport/pages/vehicles/VehiclesPage.jsx';
-import VehicleMaintenancePage from './features/transport/pages/maintenance/VehicleMaintenancePage.jsx';
-import ToursPage from './features/transport/pages/tours/ToursPage.jsx';
-import AssignmentPage from './features/transport/pages/assignment/AssignmentPage.jsx';
-import CleaningPage from './features/transport/pages/cleaning/CleaningPage.jsx';
-import CleaningImportPage from './features/transport/pages/cleaning/CleaningImportPage.jsx';
-import CleaningDraftPage from './features/transport/pages/cleaning/CleaningDraftPage.jsx';
+import TourProcessingPage from './features/transport/pages/tourProcessing/TourProcessingPage.jsx';
+import TourProcessingDraftPage from './features/transport/pages/tourProcessing/TourProcessingDraftPage.jsx';
+
+function migrateTourProcessingStorage() {
+    try {
+        for (const key of Object.keys(localStorage)) {
+            if (!key.startsWith('cleaning-')) continue;
+            const nextKey = key.replace(/^cleaning-/, 'tour-processing-');
+            if (localStorage.getItem(nextKey) === null) {
+                localStorage.setItem(nextKey, localStorage.getItem(key));
+            }
+            localStorage.removeItem(key);
+        }
+    } catch {
+        return;
+    }
+}
+
+migrateTourProcessingStorage();
 
 function App() {
     return (
@@ -150,36 +162,12 @@ function App() {
                                     }
                                 />
                                 <Route
-                                    path="/transporte"
-                                    element={
-                                        <ProtectedRoute
-                                            element={
-                                                <DashboardLayout title="Gestión de Transporte" pageTitle="Transporte">
-                                                    <TransportPage />
-                                                </DashboardLayout>
-                                            }
-                                        />
-                                    }
-                                />
-                                <Route
                                     path="/transporte/depuracion"
                                     element={
                                         <ProtectedRoute
                                             element={
                                                 <DashboardLayout title="Depuración de Giras" pageTitle="Depuración">
-                                                    <CleaningPage />
-                                                </DashboardLayout>
-                                            }
-                                        />
-                                    }
-                                />
-                                <Route
-                                    path="/transporte/depuracion/nueva"
-                                    element={
-                                        <ProtectedRoute
-                                            element={
-                                                <DashboardLayout title="Nueva Depuración" pageTitle="Depuración">
-                                                    <CleaningImportPage />
+                                                    <TourProcessingPage />
                                                 </DashboardLayout>
                                             }
                                         />
@@ -190,8 +178,8 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Borrador de Depuración" pageTitle="Depuración">
-                                                    <CleaningDraftPage />
+                                                <DashboardLayout title="Borrador de Depuración de giras" pageTitle="Depuración">
+                                                    <TourProcessingDraftPage />
                                                 </DashboardLayout>
                                             }
                                         />
@@ -216,42 +204,6 @@ function App() {
                                             element={
                                                 <DashboardLayout title="Gestión de Vehículos" pageTitle="Vehículos">
                                                     <VehiclesPage />
-                                                </DashboardLayout>
-                                            }
-                                        />
-                                    }
-                                />
-                                <Route
-                                    path="/transporte/mantenimiento"
-                                    element={
-                                        <ProtectedRoute
-                                            element={
-                                                <DashboardLayout title="Mantenimiento de Vehículos" pageTitle="Mantenimiento">
-                                                    <VehicleMaintenancePage />
-                                                </DashboardLayout>
-                                            }
-                                        />
-                                    }
-                                />
-                                <Route
-                                    path="/transporte/giras"
-                                    element={
-                                        <ProtectedRoute
-                                            element={
-                                                <DashboardLayout title="Gestión de Giras" pageTitle="Giras">
-                                                    <ToursPage />
-                                                </DashboardLayout>
-                                            }
-                                        />
-                                    }
-                                />
-                                <Route
-                                    path="/transporte/asignaciones"
-                                    element={
-                                        <ProtectedRoute
-                                            element={
-                                                <DashboardLayout title="Gestión de Asignaciones" pageTitle="Asignaciones">
-                                                    <AssignmentPage />
                                                 </DashboardLayout>
                                             }
                                         />

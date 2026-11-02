@@ -1,24 +1,22 @@
 import { useEffect, useState } from 'react';
-import { Box, MenuItem, TextField } from '@mui/material';
+import { Box, FormControlLabel, MenuItem, Switch, TextField } from '@mui/material';
 import DirectionsCarFilledOutlinedIcon from '@mui/icons-material/DirectionsCarFilledOutlined';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
 import { createVehicle, fetchVehicleById, updateVehicle } from '../../services/vehicles/vehiclesService';
-import { VEHICLE_STATUS_OPTIONS } from '../../transportUtils';
+import { VEHICLE_TYPE_OPTIONS } from '../../transportUtils';
 
 const INITIAL_VALUES = {
     plate: '',
-    brand: '',
-    model: '',
-    year: '',
+    type: '',
     capacity: '',
-    status: 'AVAILABLE',
+    available: true,
 };
 
-export default function VehicleFormModal({ open, onClose, onSaved, vehicleId = null }) {
+export default function VehicleFormModal({ open, onClose, onSaved, vehicleId = null, initialValues = null }) {
     const isEdit = !!vehicleId;
-    const [formValues, setFormValues] = useState(INITIAL_VALUES);
+    const [formValues, setFormValues] = useState(() => ({ ...INITIAL_VALUES, ...initialValues }));
     const [errors, setErrors] = useState({});
     const [touched, setTouched] = useState({});
     const [saving, setSaving] = useState(false);
@@ -36,11 +34,9 @@ export default function VehicleFormModal({ open, onClose, onSaved, vehicleId = n
                 if (cancelled || !vehicle) return;
                 setFormValues({
                     plate: vehicle.plate ?? '',
-                    brand: vehicle.brand ?? '',
-                    model: vehicle.model ?? '',
-                    year: vehicle.year ?? '',
+                    type: vehicle.type ?? '',
                     capacity: vehicle.capacity ?? '',
-                    status: vehicle.status ?? 'AVAILABLE',
+                    available: vehicle.available ?? true,
                 });
             } catch (error) {
                 if (!cancelled) {
@@ -62,19 +58,13 @@ export default function VehicleFormModal({ open, onClose, onSaved, vehicleId = n
         const trimmedValue = typeof value === 'string' ? value.trim() : value;
         let error = '';
 
-        if ((key === 'plate' || key === 'brand' || key === 'model') && !trimmedValue) {
+        if (key === 'plate' && !trimmedValue) {
             error = 'Este campo es requerido';
         }
 
-        if (!error && key === 'year' && trimmedValue) {
-            if (!/^\d{4}$/.test(String(trimmedValue))) {
-                error = 'Ingresa un año válido';
-            }
-        }
-
         if (!error && key === 'capacity' && trimmedValue) {
-            if (Number.isNaN(Number(trimmedValue))) {
-                error = 'Ingresa un valor numérico';
+            if (!/^\d+$/.test(String(trimmedValue)) || Number(trimmedValue) < 1) {
+                error = 'Ingresa un número entero mayor a 0';
             }
         }
 
@@ -93,7 +83,7 @@ export default function VehicleFormModal({ open, onClose, onSaved, vehicleId = n
     };
 
     const handleSave = async () => {
-        const keysToValidate = ['plate', 'brand', 'model', 'year', 'capacity'];
+        const keysToValidate = ['plate', 'capacity'];
         const nextTouched = {};
         let hasError = false;
 
@@ -115,20 +105,16 @@ export default function VehicleFormModal({ open, onClose, onSaved, vehicleId = n
         try {
             const payload = {
                 plate: formValues.plate.trim(),
-                brand: formValues.brand.trim(),
-                model: formValues.model.trim(),
-                year: formValues.year ? Number(formValues.year) : null,
+                type: formValues.type || null,
                 capacity: formValues.capacity ? Number(formValues.capacity) : null,
-                status: formValues.status,
+                available: formValues.available,
             };
 
-            if (isEdit) {
-                await updateVehicle(vehicleId, payload);
-            } else {
-                await createVehicle(payload);
-            }
+            const saved = isEdit
+                ? await updateVehicle(vehicleId, payload)
+                : await createVehicle(payload);
 
-            onSaved?.();
+            onSaved?.(saved);
             onClose?.();
         } catch (error) {
             setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo guardar el vehículo') });
@@ -170,34 +156,20 @@ export default function VehicleFormModal({ open, onClose, onSaved, vehicleId = n
                         fullWidth
                     />
                     <TextField
-                        label="Marca"
-                        value={formValues.brand}
-                        onChange={(event) => handleChange('brand', event.target.value)}
-                        onBlur={() => handleBlur('brand')}
-                        error={!!errors.brand}
-                        helperText={errors.brand}
-                        required
+                        select
+                        label="Tipo"
+                        value={formValues.type}
+                        onChange={(event) => handleChange('type', event.target.value)}
+                        slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
                         fullWidth
-                    />
-                    <TextField
-                        label="Modelo"
-                        value={formValues.model}
-                        onChange={(event) => handleChange('model', event.target.value)}
-                        onBlur={() => handleBlur('model')}
-                        error={!!errors.model}
-                        helperText={errors.model}
-                        required
-                        fullWidth
-                    />
-                    <TextField
-                        label="Año"
-                        value={formValues.year}
-                        onChange={(event) => handleChange('year', event.target.value)}
-                        onBlur={() => handleBlur('year')}
-                        error={!!errors.year}
-                        helperText={errors.year}
-                        fullWidth
-                    />
+                    >
+                        <MenuItem value="">Sin especificar</MenuItem>
+                        {VEHICLE_TYPE_OPTIONS.map((option) => (
+                            <MenuItem key={option.value} value={option.value}>
+                                {option.label}
+                            </MenuItem>
+                        ))}
+                    </TextField>
                     <TextField
                         label="Capacidad"
                         value={formValues.capacity}
@@ -207,19 +179,15 @@ export default function VehicleFormModal({ open, onClose, onSaved, vehicleId = n
                         helperText={errors.capacity}
                         fullWidth
                     />
-                    <TextField
-                        select
-                        label="Estado"
-                        value={formValues.status}
-                        onChange={(event) => handleChange('status', event.target.value)}
-                        fullWidth
-                    >
-                        {VEHICLE_STATUS_OPTIONS.map((option) => (
-                            <MenuItem key={option.value} value={option.value}>
-                                {option.label}
-                            </MenuItem>
-                        ))}
-                    </TextField>
+                    <FormControlLabel
+                        control={(
+                            <Switch
+                                checked={formValues.available}
+                                onChange={(event) => handleChange('available', event.target.checked)}
+                            />
+                        )}
+                        label="Disponible"
+                    />
                 </Box>
             </GeneralModal>
 

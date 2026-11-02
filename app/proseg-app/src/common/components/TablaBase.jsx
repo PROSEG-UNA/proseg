@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { startTransition, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
     MaterialReactTable,
     useMaterialReactTable,
@@ -512,6 +512,13 @@ export default function TableBase({
         },
 
     });
+
+    const pageIndex = table.getState().pagination.pageIndex;
+
+    useLayoutEffect(() => {
+        const container = table.refs.tableContainerRef.current;
+        container?.scrollTo({ top: 0, behavior: 'instant' });
+    }, [pageIndex, table]);
 
     const isFullScreen = table.getState().isFullScreen;
     const { slotRef, paneRef } = useFillToBottom(fillsToBottom && !isFullScreen);

@@ -237,15 +237,6 @@
         "attributes": {}
       },
       {
-        "id": "5492b49e-5aeb-41e5-91d9-ed96821c2a9a",
-        "name": "ACTUALIZAR_ASIGNACIONES",
-        "description": "",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {}
-      },
-      {
         "id": "c6f8b87f-b898-40c1-acc3-aaef39a4c500",
         "name": "LEER_USUARIOS_EMPRESAS",
         "description": "Consulta de asignaciones entre usuarios y empresas.",
@@ -257,15 +248,6 @@
             "Empresas"
           ]
         }
-      },
-      {
-        "id": "a7605541-9843-43f5-aa16-830dcf1ee28d",
-        "name": "LEER_MANTENIMIENTO_VEHICULOS",
-        "description": "",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {}
       },
       {
         "id": "02fe82d0-9252-401b-b1ce-dc1b36c70717",
@@ -664,15 +646,6 @@
         }
       },
       {
-        "id": "fcf840ed-3f28-4407-a488-8899888c8f9c",
-        "name": "GESTIONAR_MANTENIMIENTO_VEHICULOS",
-        "description": "",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {}
-      },
-      {
         "id": "e8b459a5-fe30-4b0d-b328-1c7e1433b294",
         "name": "EDITAR_ROL",
         "description": "Modificar la configuración o permisos de un rol existente.",
@@ -687,15 +660,6 @@
             "Roles"
           ]
         }
-      },
-      {
-        "id": "6d6a3493-c352-40b3-90ef-2d6d8a8b9529",
-        "name": "GENERAR_ASIGNACIONES",
-        "description": "",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {}
       },
       {
         "id": "edb14f08-0eaf-4493-9826-44e14af874d3",
@@ -802,15 +766,6 @@
         "attributes": {}
       },
       {
-        "id": "13aff295-e8b5-4bc1-8d43-efccea07bdc0",
-        "name": "ELIMINAR_MANTENIMIENTO_VEHICULOS",
-        "description": "",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {}
-      },
-      {
         "id": "64d7e8df-5006-4b17-a7d3-31dc1e77117f",
         "name": "LEER_USUARIO",
         "description": "Consultar la información de un usuario específico.",
@@ -895,8 +850,6 @@
             "LEER_VEHICULOS",
             "GESTIONAR_REGISTROS_MANTENIMIENTO",
             "ELIMINAR_EMPRESAS",
-            "GENERAR_ASIGNACIONES",
-            "GESTIONAR_MANTENIMIENTO_VEHICULOS",
             "ELIMINAR_UBICACIONES",
             "LEER_GIRAS",
             "ELIMINAR_SOLICITUDES_MANTENIMIENTO",
@@ -925,7 +878,6 @@
             "ELIMINAR_USUARIOS_EMPRESAS",
             "LEER_ROLES_USUARIO",
             "EDITAR_TICKETS_MANTENIMIENTO",
-            "ACTUALIZAR_ASIGNACIONES",
             "LEER_ARCHIVOS",
             "LEER_TICKETS_MANTENIMIENTO",
             "APROBAR_USUARIO",
@@ -934,7 +886,6 @@
             "CREAR_TICKETS_MANTENIMIENTO",
             "ELIMINAR_ROL_USUARIO",
             "LEER_ACTIVOS",
-            "LEER_MANTENIMIENTO_VEHICULOS",
             "LEER_TODOS_TICKETS_MANTENIMIENTO",
             "CANCELAR_SOLICITUDES_MANTENIMIENTO",
             "GESTIONAR_ACTIVOS",
@@ -950,7 +901,6 @@
             "LEER_USUARIOS_EMPRESAS",
             "LEER_UBICACIONES",
             "LEER_COMPOSITES_ROL",
-            "ELIMINAR_MANTENIMIENTO_VEHICULOS",
             "EDITAR_ROL"
           ]
         },

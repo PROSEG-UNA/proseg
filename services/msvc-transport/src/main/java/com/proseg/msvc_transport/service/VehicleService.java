@@ -4,8 +4,6 @@ import com.proseg.msvc_transport.dto.request.VehicleRequestDto;
 import com.proseg.msvc_transport.dto.response.VehicleResponseDto;
 import com.proseg.msvc_transport.entity.Vehicle;
 import com.proseg.msvc_transport.exception.TransportException;
-import com.proseg.msvc_transport.repository.AssignmentRepository;
-import com.proseg.msvc_transport.repository.VehicleMaintenanceRepository;
 import com.proseg.msvc_transport.repository.VehicleRepository;
 import com.proseg.msvc_transport.specification.GenericSpecifications;
 import lombok.RequiredArgsConstructor;
@@ -24,16 +22,17 @@ import java.util.UUID;
 public class VehicleService {
 
     private final VehicleRepository vehicleRepository;
-    private final AssignmentRepository assignmentRepository;
-    private final VehicleMaintenanceRepository vehicleMaintenanceRepository;
+    private final DraftCatalogService draftCatalogService;
 
     @Transactional
     public VehicleResponseDto create(VehicleRequestDto request) {
-        if (vehicleRepository.existsByPlateIgnoreCase(request.getPlate())) {
+        if (vehicleRepository.existsByPlateIgnoreCase(request.getPlate().trim())) {
             throw TransportException.conflict("VEHICLE_DUPLICATE_PLATE", "Ya existe un vehículo con esa placa");
         }
         Vehicle entity = toEntity(request);
-        return toResponse(vehicleRepository.save(entity));
+        Vehicle saved = vehicleRepository.save(entity);
+        draftCatalogService.syncVehicle(saved);
+        return toResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -51,30 +50,19 @@ public class VehicleService {
     @Transactional
     public VehicleResponseDto update(UUID id, VehicleRequestDto request) {
         Vehicle entity = vehicleRepository.findById(id).orElseThrow(() -> TransportException.notFound("Vehículo", id.toString()));
-        if (vehicleRepository.existsByPlateIgnoreCaseAndIdNot(request.getPlate(), id)) {
+        if (vehicleRepository.existsByPlateIgnoreCaseAndIdNot(request.getPlate().trim(), id)) {
             throw TransportException.conflict("VEHICLE_DUPLICATE_PLATE", "Ya existe un vehículo con esa placa");
         }
         updateEntity(entity, request);
-        return toResponse(vehicleRepository.save(entity));
+        Vehicle saved = vehicleRepository.save(entity);
+        draftCatalogService.syncVehicle(saved);
+        return toResponse(saved);
     }
 
     @Transactional
     public void delete(UUID id) {
         Vehicle entity = vehicleRepository.findById(id).orElseThrow(() -> TransportException.notFound("Vehículo", id.toString()));
-        long assignmentsUsingVehicle = assignmentRepository.countByVehicleId(id);
-        if (assignmentsUsingVehicle > 0) {
-            throw TransportException.conflict(
-                    "VEHICLE_IN_USE_ASSIGNMENTS",
-                    "No se puede eliminar el vehículo porque tiene " + assignmentsUsingVehicle + " asignaciones relacionadas"
-            );
-        }
-        long maintenanceRecords = vehicleMaintenanceRepository.countByVehicleId(id);
-        if (maintenanceRecords > 0) {
-            throw TransportException.conflict(
-                    "VEHICLE_IN_USE_MAINTENANCE",
-                    "No se puede eliminar el vehículo porque tiene " + maintenanceRecords + " mantenimientos relacionados"
-            );
-        }
+        draftCatalogService.removeVehicle(id);
         vehicleRepository.delete(entity);
     }
 
@@ -85,19 +73,13 @@ public class VehicleService {
     }
 
     private void updateEntity(Vehicle entity, VehicleRequestDto request) {
-        entity.setPlate(request.getPlate());
-        entity.setBrand(request.getBrand());
-        entity.setModel(request.getModel());
-        entity.setYear(request.getYear());
+        entity.setPlate(request.getPlate().trim());
         entity.setCapacity(request.getCapacity());
-        entity.setStatus(request.getStatus());
         entity.setType(request.getType());
         entity.setAvailable(request.isAvailable());
-        entity.setUnderMaintenance(request.isUnderMaintenance());
-        entity.setLastMaintenanceDate(request.getLastMaintenanceDate());
     }
 
     public VehicleResponseDto toResponse(Vehicle entity) {
-        return VehicleResponseDto.builder().id(entity.getId()).plate(entity.getPlate()).brand(entity.getBrand()).model(entity.getModel()).year(entity.getYear()).capacity(entity.getCapacity()).status(entity.getStatus()).type(entity.getType()).available(entity.isAvailable()).underMaintenance(entity.isUnderMaintenance()).lastMaintenanceDate(entity.getLastMaintenanceDate()).createdAt(entity.getCreatedAt()).updatedAt(entity.getUpdatedAt()).build();
+        return VehicleResponseDto.builder().id(entity.getId()).plate(entity.getPlate()).capacity(entity.getCapacity()).type(entity.getType()).available(entity.isAvailable()).createdAt(entity.getCreatedAt()).updatedAt(entity.getUpdatedAt()).build();
     }
 }

@@ -1,14 +1,20 @@
 package com.proseg.msvc_transport.dto.request;
 
-import jakarta.validation.constraints.Email;
+import com.proseg.msvc_transport.entity.UlloaShift;
+import com.proseg.msvc_transport.entity.DriverUnit;
+import com.proseg.msvc_transport.entity.VehicleType;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.time.LocalTime;
+import java.util.EnumSet;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -18,53 +24,25 @@ import lombok.Setter;
 public class DriverRequestDto {
 
     @NotBlank
-    @Size(max = 100)
-    private String firstName;
-
-    @NotBlank
-    @Size(max = 100)
-    private String lastName;
-
-    @NotBlank
-    @Size(max = 50)
-    private String documentId;
-
-    @NotBlank
-    @Size(max = 50)
-    private String licenseNumber;
-
-    @Size(max = 50)
-    private String phone;
-
-    @Email
-    @Size(max = 150)
-    private String email;
+    @Size(max = 200)
+    private String name;
 
     @Builder.Default
     private String status = "ACTIVE";
 
+    private DriverUnit organizationalUnit;
+
     private String restrictions;
 
+    @NotNull
     @Builder.Default
-    private boolean availability = true;
+    private Set<VehicleType> allowedVehicleTypes = EnumSet.allOf(VehicleType.class);
 
-    @PositiveOrZero
-    @Builder.Default
-    private double accumulatedHours = 0D;
+    private LocalTime ordinaryStart;
 
-    @PositiveOrZero
-    @Builder.Default
-    private double freeWeekendsCount = 1D;
+    private LocalTime ordinaryEnd;
 
-    @PositiveOrZero
+    @NotNull
     @Builder.Default
-    private double overtimeHours = 0D;
-
-    @PositiveOrZero
-    @Builder.Default
-    private double surplusHours = 0D;
-
-    @PositiveOrZero
-    @Builder.Default
-    private double jornadaHoursPerDay = 8D;
+    private Set<UlloaShift> ulloaShifts = EnumSet.noneOf(UlloaShift.class);
 }
