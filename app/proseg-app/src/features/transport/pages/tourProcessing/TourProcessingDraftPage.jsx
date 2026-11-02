@@ -954,12 +954,6 @@ export default function TourProcessingDraftPage() {
                                                 <ListItemText>Limpiar Choferes y Vehiculos</ListItemText>
                                             </MenuItem>
                                         )}
-                                        {isDraft && (
-                                            <MenuItem onClick={handleFinish}>
-                                                <ListItemIcon><CheckCircleOutlineOutlinedIcon fontSize="small" /></ListItemIcon>
-                                                <ListItemText>Terminar depuración</ListItemText>
-                                            </MenuItem>
-                                        )}
                                         {draft.status === 'CLOSED' && canExecuteTourProcessing && (
                                             <MenuItem onClick={handleReopen}>
                                                 <ListItemIcon><EditOutlinedIcon fontSize="small" /></ListItemIcon>
@@ -990,6 +984,12 @@ export default function TourProcessingDraftPage() {
                                                 </MenuItem>
                                             )}
                                         </NestedMenuItem>
+                                        {isDraft && (
+                                            <MenuItem onClick={handleFinish}>
+                                                <ListItemIcon><CheckCircleOutlineOutlinedIcon fontSize="small" /></ListItemIcon>
+                                                <ListItemText>Terminar depuración</ListItemText>
+                                            </MenuItem>
+                                        )}
                                     </Menu>
                                 </>
                             )}

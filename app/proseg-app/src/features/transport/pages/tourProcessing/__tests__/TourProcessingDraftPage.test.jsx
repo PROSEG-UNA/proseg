@@ -90,6 +90,7 @@ describe('estado de depuración', () => {
 
         await screen.findByRole('button', { name: 'Opciones' });
         await userEvent.click(screen.getByRole('button', { name: 'Opciones' }));
+        expect(within(screen.getByRole('menu')).getAllByRole('menuitem').at(-1)).toHaveTextContent('Terminar depuración');
         await userEvent.click(screen.getByRole('menuitem', { name: 'Terminar depuración' }));
         await userEvent.click(screen.getByRole('button', { name: 'Terminar depuración' }));
 
