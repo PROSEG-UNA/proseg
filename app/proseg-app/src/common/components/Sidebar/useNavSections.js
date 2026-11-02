@@ -17,7 +17,7 @@ import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import DirectionsCarFilledOutlinedIcon from '@mui/icons-material/DirectionsCarFilledOutlined';
-import CleaningServicesOutlinedIcon from '@mui/icons-material/CleaningServicesOutlined';
+import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import { PERMISSIONS } from '../../constants/permissions';
 import { usePermissions } from '../../hooks';
 
@@ -108,7 +108,7 @@ const transportVehiclePermissions = [
     PERMISSIONS.TRANSPORT.VEHICLES.DELETE,
 ];
 
-const transportCleaningPermissions = [
+const transportTourProcessingPermissions = [
     PERMISSIONS.TRANSPORT.TOURS.READ,
     PERMISSIONS.TRANSPORT.TOURS.MANAGE,
     PERMISSIONS.TRANSPORT.TOURS.DELETE,
@@ -127,8 +127,8 @@ export function useNavSections() {
     const canViewTicketsSubmodule = hasAnyPermission(ticketPermissions);
     const canViewDriversSubmodule = hasAnyPermission(transportDriverPermissions);
     const canViewVehiclesSubmodule = hasAnyPermission(transportVehiclePermissions);
-    const canViewCleaningSubmodule = hasAnyPermission(transportCleaningPermissions);
-    const canViewTransportSection = canViewCleaningSubmodule || canViewDriversSubmodule || canViewVehiclesSubmodule;
+    const canViewTourProcessingSubmodule = hasAnyPermission(transportTourProcessingPermissions);
+    const canViewTransportSection = canViewTourProcessingSubmodule || canViewDriversSubmodule || canViewVehiclesSubmodule;
 
     const sections = useMemo(() => {
         const result = [];
@@ -189,7 +189,7 @@ export function useNavSections() {
                 icon: LocalShippingIcon,
                 label: 'Transporte',
                 items: [
-                    canViewCleaningSubmodule ? { key: 'cleaning', icon: CleaningServicesOutlinedIcon, label: 'Depuración', path: '/transporte/depuracion' } : null,
+                    canViewTourProcessingSubmodule ? { key: 'tourProcessing', icon: FactCheckOutlinedIcon, label: 'Depuración', path: '/transporte/depuracion' } : null,
                     canViewDriversSubmodule ? { key: 'drivers', icon: BadgeOutlinedIcon, label: 'Choferes', path: '/transporte/choferes' } : null,
                     canViewVehiclesSubmodule ? { key: 'vehicles', icon: DirectionsCarFilledOutlinedIcon, label: 'Vehículos', path: '/transporte/vehiculos' } : null,
                 ].filter(Boolean),
@@ -209,7 +209,7 @@ export function useNavSections() {
         }
 
         return result;
-    }, [canViewInventorySection, canViewLocationsSection, canViewSecuritySection, canViewUsersSubmodule, canViewRolesSubmodule, canViewMaintenanceSection, canViewRegistersSubmodule, canViewTicketsSubmodule, canViewCleaningSubmodule, canViewDriversSubmodule, canViewVehiclesSubmodule, canViewTransportSection]);
+    }, [canViewInventorySection, canViewLocationsSection, canViewSecuritySection, canViewUsersSubmodule, canViewRolesSubmodule, canViewMaintenanceSection, canViewRegistersSubmodule, canViewTicketsSubmodule, canViewTourProcessingSubmodule, canViewDriversSubmodule, canViewVehiclesSubmodule, canViewTransportSection]);
 
     return { sections };
 }

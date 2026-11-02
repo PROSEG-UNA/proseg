@@ -28,8 +28,25 @@ import TicketsPage from './features/maintenance/pages/TicketsPage.jsx';
 import TicketsDashboard from './features/maintenance/pages/TicketsDashboard.jsx';
 import DriversPage from './features/transport/pages/drivers/DriversPage.jsx';
 import VehiclesPage from './features/transport/pages/vehicles/VehiclesPage.jsx';
-import CleaningPage from './features/transport/pages/cleaning/CleaningPage.jsx';
-import CleaningDraftPage from './features/transport/pages/cleaning/CleaningDraftPage.jsx';
+import TourProcessingPage from './features/transport/pages/tourProcessing/TourProcessingPage.jsx';
+import TourProcessingDraftPage from './features/transport/pages/tourProcessing/TourProcessingDraftPage.jsx';
+
+function migrateTourProcessingStorage() {
+    try {
+        for (const key of Object.keys(localStorage)) {
+            if (!key.startsWith('cleaning-')) continue;
+            const nextKey = key.replace(/^cleaning-/, 'tour-processing-');
+            if (localStorage.getItem(nextKey) === null) {
+                localStorage.setItem(nextKey, localStorage.getItem(key));
+            }
+            localStorage.removeItem(key);
+        }
+    } catch {
+        return;
+    }
+}
+
+migrateTourProcessingStorage();
 
 function App() {
     return (
@@ -150,7 +167,7 @@ function App() {
                                         <ProtectedRoute
                                             element={
                                                 <DashboardLayout title="Depuración de Giras" pageTitle="Depuración">
-                                                    <CleaningPage />
+                                                    <TourProcessingPage />
                                                 </DashboardLayout>
                                             }
                                         />
@@ -162,7 +179,7 @@ function App() {
                                         <ProtectedRoute
                                             element={
                                                 <DashboardLayout title="Borrador de Depuración de giras" pageTitle="Depuración">
-                                                    <CleaningDraftPage />
+                                                    <TourProcessingDraftPage />
                                                 </DashboardLayout>
                                             }
                                         />
