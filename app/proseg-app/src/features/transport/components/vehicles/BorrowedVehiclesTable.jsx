@@ -7,6 +7,7 @@ import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { deleteBorrowedVehicle } from '../../services/borrowedVehicles/borrowedVehiclesService';
 import { usePersistedColumnVisibility } from '../../hooks/usePersistedColumnVisibility';
+import { usePersistedPagination } from '../../hooks/usePersistedPagination.js';
 import { useTransportBorrowedVehiclesData } from '../../hooks/useTransportBorrowedVehiclesData';
 import { getBorrowedVehicleColumns, renderBorrowedVehicleActions } from './borrowedVehicleColumns.jsx';
 import { queryKeys } from '../../../../common/query';
@@ -20,7 +21,7 @@ const COLUMN_TO_BACKEND_KEY = {
 };
 
 export default function BorrowedVehiclesTable({ onEditBorrowedVehicle }) {
-    const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
+    const [pagination, setPagination] = usePersistedPagination('borrowed-vehicles-table-page-size');
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
     const [sorting, setSorting] = useState([]);
@@ -61,17 +62,17 @@ export default function BorrowedVehiclesTable({ onEditBorrowedVehicle }) {
     const handleGlobalFilterChange = useCallback((updater) => {
         setGlobalFilter((currentValue) => (typeof updater === 'function' ? updater(currentValue) : updater));
         setPagination((previousValue) => (previousValue.pageIndex === 0 ? previousValue : { ...previousValue, pageIndex: 0 }));
-    }, []);
+    }, [setPagination]);
 
     const handleColumnFiltersChange = useCallback((updater) => {
         setColumnFilters((currentValue) => (typeof updater === 'function' ? updater(currentValue) : updater));
         setPagination((previousValue) => (previousValue.pageIndex === 0 ? previousValue : { ...previousValue, pageIndex: 0 }));
-    }, []);
+    }, [setPagination]);
 
     const handleSortingChange = useCallback((updater) => {
         setSorting((currentValue) => (typeof updater === 'function' ? updater(currentValue) : updater));
         setPagination((previousValue) => (previousValue.pageIndex === 0 ? previousValue : { ...previousValue, pageIndex: 0 }));
-    }, []);
+    }, [setPagination]);
 
     const { rows, loading, fetching, error, totalElements } = useTransportBorrowedVehiclesData({
         pageIndex: pagination.pageIndex,
@@ -85,10 +86,11 @@ export default function BorrowedVehiclesTable({ onEditBorrowedVehicle }) {
 
     const deleteVehicleMutation = useMutation({
         mutationFn: (vehicleId) => deleteBorrowedVehicle(vehicleId),
-        onSuccess: async () => {
+        onSuccess: () => {
             setVehicleToDelete(null);
             setAlert({ type: 'success', message: 'Vehículo prestado eliminado correctamente' });
-            await queryClient.invalidateQueries({ queryKey: queryKeys.transport.borrowedVehicles() });
+            void queryClient.invalidateQueries({ queryKey: queryKeys.transport.borrowedVehicles() });
+            void queryClient.invalidateQueries({ queryKey: queryKeys.transport.tourProcessingDrafts() });
         },
         onError: (deleteError) => {
             setAlert({ type: 'error', message: deleteError?.response?.data?.message ?? deleteError?.message ?? 'No se pudo eliminar el vehículo prestado' });

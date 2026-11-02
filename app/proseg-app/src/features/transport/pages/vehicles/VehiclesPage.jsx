@@ -57,10 +57,12 @@ export default function VehiclesPage() {
 
     const refreshVehicles = () => {
         void queryClient.invalidateQueries({ queryKey: queryKeys.transport.vehicles() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.transport.tourProcessingDrafts() });
     };
 
     const refreshBorrowedVehicles = () => {
         void queryClient.invalidateQueries({ queryKey: queryKeys.transport.borrowedVehicles() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.transport.tourProcessingDrafts() });
     };
 
     if (!canViewVehicles) return <AccessDeniedState />;
