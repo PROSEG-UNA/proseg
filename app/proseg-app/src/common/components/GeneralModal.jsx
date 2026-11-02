@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import {
     Dialog, DialogContent,
     Box, Typography, Button, IconButton, LinearProgress,
@@ -13,6 +14,7 @@ export default function GeneralModal({
     fillHeight = false,
     icon: Icon,
     title,
+    titleComponent = 'h2',
     subtitle,
     loading = false,
     showCloseButton = true,
@@ -24,6 +26,7 @@ export default function GeneralModal({
     transitionProps,
     children,
 }) {
+    const titleId = useId();
     const theme = useTheme();
     const isSmall = useMediaQuery(theme.breakpoints.down(fullScreenAt));
     const accentColor = theme.vars.palette.tones.rose.fg;
@@ -38,6 +41,7 @@ export default function GeneralModal({
         <Dialog
             open={open}
             onClose={onClose}
+            aria-labelledby={titleId}
             fullScreen={isSmall}
             maxWidth={maxWidth}
             fullWidth
@@ -82,7 +86,7 @@ export default function GeneralModal({
                         {Icon && <Icon sx={{ color: '#fff', fontSize: 20 }} />}
                     </Box>
                     <Box>
-                        <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: { xs: 15, sm: 15.5 }, lineHeight: 1.2, letterSpacing: '-0.01em' }}>
+                        <Typography id={titleId} component={titleComponent} sx={{ color: '#fff', fontWeight: 800, fontSize: { xs: 15, sm: 15.5 }, lineHeight: 1.2, letterSpacing: '-0.01em' }}>
                             {title}
                         </Typography>
                         {subtitle && (

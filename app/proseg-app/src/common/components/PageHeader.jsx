@@ -23,6 +23,7 @@ export function PageHeader({
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography
           variant="h4"
+          component="h1"
           sx={{
             fontWeight: 800,
             color: 'primary.icon',

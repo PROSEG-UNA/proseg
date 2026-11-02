@@ -133,7 +133,7 @@ export default function CompaniesPage() {
                     {tabIndex === 1 && (
                         <Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                                <Typography variant="h6" sx={{ fontWeight: 700 }}>Ver usuarios vinculados</Typography>
+                                <Typography variant="h6" component="h2" sx={{ fontWeight: 700 }}>Ver usuarios vinculados</Typography>
                                 <Box sx={{ flex: 1 }} />
                             </Box>
 

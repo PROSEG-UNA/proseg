@@ -110,7 +110,7 @@ function PageShell({children}) {
     );
 }
 
-function ModalHeader({title, subtitle}) {
+function ModalHeader({title, subtitle, titleComponent}) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const gradient = isDark
@@ -128,6 +128,7 @@ function ModalHeader({title, subtitle}) {
             </Box>
             <Box>
                 <Typography
+                    component={titleComponent}
                     sx={{color: '#fff', fontWeight: 800, fontSize: 16, lineHeight: 1.2, letterSpacing: '-0.01em'}}>
                     {title}
                 </Typography>
@@ -160,6 +161,11 @@ function Req({label, met}) {
 function InvalidTokenView() {
     const navigate = useNavigate();
     return (
+        <>
+        <Helmet>
+            <title>{`Enlace de activación inválido - ${APP_CONFIG.name}`}</title>
+            <meta name="description" content="Este enlace de activación ya no es válido." />
+        </Helmet>
         <PageShell>
             <ModalHeader title="Enlace inválido" subtitle="Este link ya no está disponible"/>
             <Box sx={{p: 3.5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2}}>
@@ -170,7 +176,7 @@ function InvalidTokenView() {
                 }}>
                     <ErrorIcon sx={{fontSize: 32, color: RED[600]}}/>
                 </Box>
-                <Typography variant="h6" sx={{fontWeight: 700, color: 'text.primary', textAlign: 'center'}}>
+                <Typography variant="h6" component="h1" sx={{fontWeight: 700, color: 'text.primary', textAlign: 'center'}}>
                     Link expirado o utilizado
                 </Typography>
                 <Typography variant="body2" sx={{color: 'text.secondary', textAlign: 'center', lineHeight: 1.6}}>
@@ -186,6 +192,7 @@ function InvalidTokenView() {
                 </Button>
             </Box>
         </PageShell>
+        </>
     );
 }
 
@@ -197,6 +204,11 @@ function SuccessView({info}) {
         ? `linear-gradient(135deg, ${RED[900]} 0%, ${RED[800]} 100%)`
         : `linear-gradient(135deg, ${RED[600]} 0%, ${RED[800]} 100%)`;
     return (
+        <>
+        <Helmet>
+            <title>{`Cuenta activada - ${APP_CONFIG.name}`}</title>
+            <meta name="description" content="Tu cuenta fue activada. Ya podés iniciar sesión." />
+        </Helmet>
         <PageShell>
             <ModalHeader title="¡Cuenta activada!" subtitle={`Ya podés iniciar sesión en ${APP_CONFIG.name}`}/>
             <Box sx={{p: 3.5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2}}>
@@ -207,7 +219,7 @@ function SuccessView({info}) {
                 }}>
                     <CheckCircleIcon sx={{fontSize: 32, color: '#059669'}}/>
                 </Box>
-                <Typography variant="h6" sx={{fontWeight: 700, color: 'text.primary', textAlign: 'center'}}>
+                <Typography variant="h6" component="h1" sx={{fontWeight: 700, color: 'text.primary', textAlign: 'center'}}>
                     Contraseña configurada correctamente
                 </Typography>
                 {info && (
@@ -235,6 +247,7 @@ function SuccessView({info}) {
                 </Button>
             </Box>
         </PageShell>
+        </>
     );
 }
 
@@ -317,15 +330,27 @@ export function SetPasswordPage() {
 
     if (tokenValid === null) {
         return (
-            <Box sx={{
-                minHeight: '100dvh',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: 'background.default'
-            }}>
-                <CircularProgress size={32} sx={{color: RED[700]}}/>
-            </Box>
+            <>
+                <Helmet>
+                    <title>{`Verificando invitación - ${APP_CONFIG.name}`}</title>
+                    <meta name="description" content="Estamos verificando el enlace de activación de tu cuenta." />
+                </Helmet>
+                <Box sx={{
+                    minHeight: '100dvh',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: 'background.default'
+                }}>
+                    <Typography component="h1" sx={{
+                        position: 'absolute', width: '1px', height: '1px', p: 0, m: '-1px',
+                        overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0,
+                    }}>
+                        Verificando invitación
+                    </Typography>
+                    <CircularProgress size={32} sx={{color: RED[700]}}/>
+                </Box>
+            </>
         );
     }
     if (!tokenValid) return <InvalidTokenView/>;
@@ -335,8 +360,9 @@ export function SetPasswordPage() {
         <PageShell>
             <Helmet>
                 <title>{`Configurar contraseña - ${APP_CONFIG.name}`}</title>
+                <meta name="description" content="Configurá tu contraseña para activar tu cuenta." />
             </Helmet>
-            <ModalHeader title="Configurá tu contraseña" subtitle={`Activá tu cuenta en ${APP_CONFIG.name}`}/>
+            <ModalHeader title="Configurá tu contraseña" subtitle={`Activá tu cuenta en ${APP_CONFIG.name}`} titleComponent="h1"/>
 
             {loading && (
                 <LinearProgress sx={{
