@@ -41,7 +41,7 @@ export default function LocationTableModal({ open, onClose, config }) {
                 ? { label: `Crear ${title}`, onClick: handleCreate, startIcon: <AddIcon /> }
                 : null}
         >
-            <LocationTableView table={table} fillToBottom={false} fitParent />
+            <LocationTableView table={table} fillToBottom={false} fitParent accessDeniedTitleComponent="h3" />
         </GeneralModal>
     );
 }

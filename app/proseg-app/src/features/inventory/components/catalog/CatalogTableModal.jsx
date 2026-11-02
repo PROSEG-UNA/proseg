@@ -200,7 +200,7 @@ export default function CatalogTableModal({ open, onClose, config }) {
                 primaryButton={canCreateCatalog ? { label: `Crear ${title}`, onClick: handleCreate, startIcon: <AddIcon /> } : null}
             >
                 {!canViewCatalog || isAccessDeniedError ? (
-                    <AccessDeniedState />
+                    <AccessDeniedState titleComponent="h3" />
                 ) : (
                     <TableBase
                         columns={columns}

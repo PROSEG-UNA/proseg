@@ -153,7 +153,7 @@ export default function AssignUserRolesModal({ open, user, onClose, onSaved }) {
                 primaryButton={{ label: saving ? 'Guardando…' : 'Guardar cambios', onClick: handleAssign, disabled: saving, loading: saving }}
             >
                 {isAccessDeniedError ? (
-                    <AccessDeniedState />
+                    <AccessDeniedState titleComponent="h3" />
                 ) : (
                     <TableBase
                         columns={columns}
