@@ -92,7 +92,7 @@ public class TourImportService {
 
     private SchemaDto fetchSchema() {
         try {
-            ApiResponse<SchemaDto> response = transportClient.getCleaningImportSchema();
+            ApiResponse<SchemaDto> response = transportClient.getTourProcessingImportSchema();
             if (response == null || response.getData() == null) {
                 throw DocumentProcessorException.transportUnavailable();
             }
@@ -104,7 +104,7 @@ public class TourImportService {
 
     private TourDraftResultDto createDraft(TourDraftRequestDto request) {
         try {
-            ApiResponse<TourDraftResultDto> response = transportClient.createCleaningDraft(request);
+            ApiResponse<TourDraftResultDto> response = transportClient.createTourProcessingDraft(request);
             if (response == null || response.getData() == null) {
                 throw DocumentProcessorException.transportUnavailable();
             }

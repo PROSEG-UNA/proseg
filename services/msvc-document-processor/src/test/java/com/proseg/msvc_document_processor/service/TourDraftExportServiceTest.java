@@ -4,6 +4,8 @@ import com.proseg.common.api.response.ApiResponse;
 import com.proseg.common.api.response.PageResponse;
 import com.proseg.msvc_document_processor.client.TransportClient;
 import com.proseg.msvc_document_processor.dto.request.TourDraftRequestDto;
+import com.proseg.msvc_document_processor.dto.response.FinalCommissionReportDto;
+import com.proseg.msvc_document_processor.dto.response.TourControlReportDto;
 import com.proseg.msvc_document_processor.dto.response.OvertimeRequestReportDto;
 import com.proseg.msvc_document_processor.dto.response.SchemaDto;
 import com.proseg.msvc_document_processor.dto.response.TourDraftDto;
@@ -58,11 +60,44 @@ class TourDraftExportServiceTest {
     }
 
     @Test
+    void asksTransportOnlyForApprovedTours() {
+        transportClient.draft = draft(2026, 5, "1-mayo.xls");
+        transportClient.pages = List.of(
+                page(false, row(7, "B", "2026-05-02")),
+                page(true, row(3, "A", "2026-05-02"))
+        );
+
+        service.export(DRAFT_ID);
+
+        assertThat(transportClient.rowQueries)
+                .extracting(query -> query.getFirst("approvalStatus"))
+                .containsExactly("APPROVED", "APPROVED");
+    }
+
+    @Test
     void namesTheFileAfterTheDraftPeriod() {
         transportClient.draft = draft(2026, 9, "9-setiembre.xls");
         transportClient.pages = List.of(page(true, row(1, "A", "2026-09-01")));
 
         assertThat(service.export(DRAFT_ID).fileName()).isEqualTo("setiembre 2026_depurado.xlsx");
+    }
+
+    @Test
+    void exportsEachAssignedVehicleWithItsOwnPassengerCount() throws IOException {
+        transportClient.draft = draft(2026, 5, "1-mayo.xls");
+        Map<String, Object> distributed = row(8, "03170", "2026-05-02");
+        distributed.put("passengers", 70);
+        distributed.put("assignments", List.of(
+                Map.of("driver", "Daniel Zuniga", "vehicle", "301-569", "resourceType", "INTERNAL", "passengers", 40),
+                Map.of("driver", "Marvin Quesada", "vehicle", "301-590", "resourceType", "INTERNAL", "passengers", 30)
+        ));
+        transportClient.pages = List.of(page(true, distributed));
+
+        TourDraftExport export = service.export(DRAFT_ID);
+
+        assertThat(firstColumnAndNumbers(export.content())).containsExactly(
+                "Sabado 2 de Mayo de 2026", "x dia", "03170", "03170"
+        );
     }
 
     @Test
@@ -123,24 +158,34 @@ class TourDraftExportServiceTest {
         private final List<MultiValueMap<String, String>> rowQueries = new ArrayList<>();
 
         @Override
-        public ApiResponse<SchemaDto> getCleaningImportSchema() {
+        public ApiResponse<SchemaDto> getTourProcessingImportSchema() {
             return new ApiResponse<>("ok", TourSchemaFixture.schema(), 200);
         }
 
         @Override
-        public ApiResponse<TourDraftResultDto> createCleaningDraft(TourDraftRequestDto request) {
+        public ApiResponse<TourDraftResultDto> createTourProcessingDraft(TourDraftRequestDto request) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ApiResponse<TourDraftDto> getCleaningDraft(UUID id) {
+        public ApiResponse<TourDraftDto> getTourProcessingDraft(UUID id) {
             return new ApiResponse<>("ok", draft, 200);
         }
 
         @Override
-        public ApiResponse<PageResponse<Map<String, Object>>> getCleaningDraftRows(UUID id, MultiValueMap<String, String> queryParams) {
+        public ApiResponse<PageResponse<Map<String, Object>>> getTourProcessingDraftRows(UUID id, MultiValueMap<String, String> queryParams) {
             rowQueries.add(queryParams);
             return new ApiResponse<>("ok", pages.get(rowQueries.size() - 1), 200);
+        }
+
+        @Override
+        public ApiResponse<FinalCommissionReportDto> getFinalCommissionReport(UUID id) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ApiResponse<TourControlReportDto> getTourControlReport(UUID id) {
+            throw new UnsupportedOperationException();
         }
 
         @Override

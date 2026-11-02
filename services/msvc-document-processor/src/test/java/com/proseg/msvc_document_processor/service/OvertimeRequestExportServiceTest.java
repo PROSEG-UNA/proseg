@@ -4,6 +4,8 @@ import com.proseg.common.api.response.ApiResponse;
 import com.proseg.common.api.response.PageResponse;
 import com.proseg.msvc_document_processor.client.TransportClient;
 import com.proseg.msvc_document_processor.dto.request.TourDraftRequestDto;
+import com.proseg.msvc_document_processor.dto.response.FinalCommissionReportDto;
+import com.proseg.msvc_document_processor.dto.response.TourControlReportDto;
 import com.proseg.msvc_document_processor.dto.response.OvertimeRequestReportDto;
 import com.proseg.msvc_document_processor.dto.response.SchemaDto;
 import com.proseg.msvc_document_processor.dto.response.TourDraftDto;
@@ -61,22 +63,32 @@ class OvertimeRequestExportServiceTest {
         private List<Integer> requestedPeriod = List.of();
 
         @Override
-        public ApiResponse<SchemaDto> getCleaningImportSchema() {
+        public ApiResponse<SchemaDto> getTourProcessingImportSchema() {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ApiResponse<TourDraftResultDto> createCleaningDraft(TourDraftRequestDto request) {
+        public ApiResponse<TourDraftResultDto> createTourProcessingDraft(TourDraftRequestDto request) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ApiResponse<TourDraftDto> getCleaningDraft(UUID id) {
+        public ApiResponse<TourDraftDto> getTourProcessingDraft(UUID id) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ApiResponse<PageResponse<Map<String, Object>>> getCleaningDraftRows(UUID id, MultiValueMap<String, String> queryParams) {
+        public ApiResponse<PageResponse<Map<String, Object>>> getTourProcessingDraftRows(UUID id, MultiValueMap<String, String> queryParams) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ApiResponse<FinalCommissionReportDto> getFinalCommissionReport(UUID id) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ApiResponse<TourControlReportDto> getTourControlReport(UUID id) {
             throw new UnsupportedOperationException();
         }
 

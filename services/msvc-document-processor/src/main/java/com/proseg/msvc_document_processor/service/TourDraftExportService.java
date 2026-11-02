@@ -20,6 +20,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
@@ -34,6 +35,8 @@ public class TourDraftExportService {
     private static final String TRANSPORT_ERROR_CODE = "TRANSPORT_ERROR";
     private static final int PAGE_SIZE = 500;
     private static final String ROW_SORT = "rowNumber,asc";
+    private static final String APPROVAL_STATUS_ATTRIBUTE = "approvalStatus";
+    private static final String APPROVED_STATUS = "APPROVED";
     private static final String ROW_NUMBER_ATTRIBUTE = "rowNumber";
     private static final String DEPARTURE_DATE_ATTRIBUTE = "departureDate";
     private static final String FILE_SUFFIX = "_depurado.xlsx";
@@ -52,8 +55,8 @@ public class TourDraftExportService {
     private final TourWorkbookGenerator tourWorkbookGenerator;
 
     public TourDraftExport export(UUID draftId) {
-        TourDraftDto draft = read(() -> transportClient.getCleaningDraft(draftId));
-        SchemaDto schema = read(transportClient::getCleaningImportSchema);
+        TourDraftDto draft = read(() -> transportClient.getTourProcessingDraft(draftId));
+        SchemaDto schema = read(transportClient::getTourProcessingImportSchema);
         List<TourSheetBlock> blocks = dailyBlocks(fetchRows(draftId));
         return new TourDraftExport(fileName(draft), tourWorkbookGenerator.generate(schema, blocks));
     }
@@ -65,9 +68,26 @@ public class TourDraftExportService {
             queryParams.add("page", String.valueOf(page));
             queryParams.add("size", String.valueOf(PAGE_SIZE));
             queryParams.add("sort", ROW_SORT);
-            PageResponse<Map<String, Object>> response = read(() -> transportClient.getCleaningDraftRows(draftId, queryParams));
+            queryParams.add(APPROVAL_STATUS_ATTRIBUTE, APPROVED_STATUS);
+            PageResponse<Map<String, Object>> response = read(() -> transportClient.getTourProcessingDraftRows(draftId, queryParams));
             List<Map<String, Object>> content = response.getContent() == null ? List.of() : response.getContent();
-            rows.addAll(content);
+            for (Map<String, Object> row : content) {
+                Object assignmentsValue = row.get("assignments");
+                if (assignmentsValue instanceof List<?> assignments && !assignments.isEmpty()) {
+                    for (Object assignmentValue : assignments) {
+                        if (!(assignmentValue instanceof Map<?, ?> assignment)) continue;
+                        Map<String, Object> exported = new LinkedHashMap<>(row);
+                        exported.put("driver", assignment.get("driver"));
+                        Object vehicle = "BORROWED_VEHICLE".equals(assignment.get("resourceType"))
+                                ? assignment.get("borrowedVehiclePlate") : assignment.get("vehicle");
+                        exported.put("vehicle", vehicle);
+                        exported.put("passengers", assignment.get("passengers"));
+                        rows.add(exported);
+                    }
+                } else {
+                    rows.add(row);
+                }
+            }
             if (response.isLast() || content.isEmpty()) {
                 return rows;
             }
