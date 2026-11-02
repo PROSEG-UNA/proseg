@@ -1,16 +1,32 @@
 package com.proseg.msvc_transport.service.driverhours;
 
+import com.proseg.msvc_transport.entity.TourProcessingDraftAssignment;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.util.List;
 
+import static com.proseg.msvc_transport.service.driverhours.DriverHoursTestRows.notApproved;
 import static com.proseg.msvc_transport.service.driverhours.DriverHoursTestRows.sameDayTour;
 import static com.proseg.msvc_transport.service.driverhours.DriverHoursTestRows.tour;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
 class DriverHoursRulesTest {
+
+    @Test
+    void aTourCountsOnlyWhenItIsPrimaryAndApproved() {
+        TourProcessingDraftAssignment approved = sameDayTour("1", "2026-05-05", "08:00", "10:00");
+        TourProcessingDraftAssignment notApproved = notApproved(sameDayTour("2", "2026-05-05", "08:00", "10:00"));
+        TourProcessingDraftAssignment repeated = sameDayTour("3", "2026-05-05", "08:00", "10:00");
+        repeated.getTour().setDuplicateRank(2);
+
+        assertThat(DriverHoursRules.isActive(approved)).isTrue();
+        assertThat(DriverHoursRules.isActive(notApproved)).isFalse();
+        assertThat(DriverHoursRules.isActive(repeated)).isFalse();
+        assertThat(notApproved.getTour().isApproved()).isFalse();
+        assertThat(repeated.getTour().isApproved()).isTrue();
+    }
 
     @Test
     void surplusCapRoundsUpToNextHalfHour() {

@@ -13,16 +13,24 @@ public record TourDaySpan(LocalDate date, double start, double end) {
     }
 
     public double ordinaryHours() {
+        return ordinaryHours(OrdinaryWindow.STANDARD);
+    }
+
+    public double ordinaryHours(OrdinaryWindow window) {
         if (weekend()) {
             return 0;
         }
-        double overlapStart = Math.max(start, DriverHoursRules.ORDINARY_START);
-        double overlapEnd = Math.min(end, DriverHoursRules.ORDINARY_END);
+        double overlapStart = Math.max(start, window.start());
+        double overlapEnd = Math.min(end, window.end());
         return Math.max(0, overlapEnd - overlapStart);
     }
 
     public double offScheduleWeekdayHours() {
-        return weekend() ? 0 : hours() - ordinaryHours();
+        return offScheduleWeekdayHours(OrdinaryWindow.STANDARD);
+    }
+
+    public double offScheduleWeekdayHours(OrdinaryWindow window) {
+        return weekend() ? 0 : hours() - ordinaryHours(window);
     }
 
     public double weekendHours() {

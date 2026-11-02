@@ -1,6 +1,6 @@
 package com.proseg.msvc_transport.service.driverhours;
 
-import com.proseg.msvc_transport.entity.CleaningDraftRow;
+import com.proseg.msvc_transport.entity.TourProcessingDraftAssignment;
 import com.proseg.msvc_transport.entity.Driver;
 import com.proseg.msvc_transport.entity.Vehicle;
 
@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 public final class DriverHoursRules {
 
@@ -36,8 +37,14 @@ public final class DriverHoursRules {
     private static final int SURPLUS_HOURS_PER_PERIOD = 40;
     private static final int DAYS_PER_PERIOD = 30;
     private static final int PLATE_MAX_LENGTH = 20;
+    private static final String GENERAL_SERVICES_UNIT = "programa de servicios generales";
 
     private DriverHoursRules() {
+    }
+
+    public static boolean isGeneralServices(String executingUnit) {
+        return executingUnit != null
+                && executingUnit.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT).equals(GENERAL_SERVICES_UNIT);
     }
 
     public static String driverKey(String value) {
@@ -69,16 +76,36 @@ public final class DriverHoursRules {
         return looksLikePlate(rawVehicle) ? vehicleCatalogByPlate.get(plateKey(rawVehicle)) : null;
     }
 
+    public static Map<UUID, Driver> driversById(List<Driver> drivers) {
+        Map<UUID, Driver> catalog = new LinkedHashMap<>();
+        drivers.forEach(driver -> catalog.put(driver.getId(), driver));
+        return catalog;
+    }
+
+    public static Map<UUID, Vehicle> vehiclesById(List<Vehicle> vehicles) {
+        Map<UUID, Vehicle> catalog = new LinkedHashMap<>();
+        vehicles.forEach(vehicle -> catalog.put(vehicle.getId(), vehicle));
+        return catalog;
+    }
+
+    public static Driver assignedDriver(TourProcessingDraftAssignment assignment, Map<UUID, Driver> driversById) {
+        return assignment.getDriverId() == null ? null : driversById.get(assignment.getDriverId());
+    }
+
+    public static Vehicle assignedVehicle(TourProcessingDraftAssignment assignment, Map<UUID, Vehicle> vehiclesById) {
+        return assignment.getVehicleId() == null ? null : vehiclesById.get(assignment.getVehicleId());
+    }
+
     public static boolean canDrive(Driver driver, Vehicle vehicle) {
         return vehicle.getType() == null || driver.getAllowedVehicleTypes().contains(vehicle.getType());
     }
 
-    public static boolean toursOverlap(CleaningDraftRow left, CleaningDraftRow right) {
+    public static boolean toursOverlap(TourProcessingDraftAssignment left, TourProcessingDraftAssignment right) {
         return startOf(left).isBefore(endOf(right)) && startOf(right).isBefore(endOf(left));
     }
 
-    public static boolean isPrimary(CleaningDraftRow row) {
-        return row.getDuplicateRank() == null || row.getDuplicateRank() == 1;
+    public static boolean isActive(TourProcessingDraftAssignment assignment) {
+        return assignment.isActive();
     }
 
     public static double surplusCap(int businessDays) {
@@ -107,7 +134,7 @@ public final class DriverHoursRules {
         return weekends;
     }
 
-    public static List<TourDaySpan> daySpans(CleaningDraftRow tour) {
+    public static List<TourDaySpan> daySpans(TourProcessingDraftAssignment tour) {
         LocalDate departureDate = tour.getDepartureDate();
         LocalDate returnDate = tour.getReturnDate();
         double departure = hourOf(tour.getDepartureTime());
@@ -142,11 +169,11 @@ public final class DriverHoursRules {
         return LocalTime.of(wholeHour % 24, minute);
     }
 
-    private static LocalDateTime startOf(CleaningDraftRow tour) {
+    private static LocalDateTime startOf(TourProcessingDraftAssignment tour) {
         return LocalDateTime.of(tour.getDepartureDate(), tour.getDepartureTime());
     }
 
-    private static LocalDateTime endOf(CleaningDraftRow tour) {
+    private static LocalDateTime endOf(TourProcessingDraftAssignment tour) {
         return LocalDateTime.of(tour.getReturnDate(), tour.getReturnTime());
     }
 }

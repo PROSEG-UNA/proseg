@@ -1,6 +1,6 @@
 package com.proseg.msvc_transport.service.driverhours;
 
-import com.proseg.msvc_transport.entity.CleaningDraftRow;
+import com.proseg.msvc_transport.entity.TourProcessingDraftAssignment;
 import com.proseg.msvc_transport.entity.Driver;
 
 import java.math.BigDecimal;
@@ -12,6 +12,8 @@ import java.time.format.DateTimeFormatter;
 public record DriverRejection(Reason reason, String message) {
 
     public enum Reason {
+        INVALID_SCHEDULE,
+        INCOMPATIBLE_VEHICLE,
         OVERLAP,
         DAY_HOURS_EXCEEDED,
         WEEKEND_WITHOUT_SURPLUS,
@@ -21,7 +23,16 @@ public record DriverRejection(Reason reason, String message) {
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-    static DriverRejection overlap(Driver driver, CleaningDraftRow other) {
+    static DriverRejection invalidSchedule() {
+        return new DriverRejection(Reason.INVALID_SCHEDULE, "La gira tiene datos incompletos o su regreso no es posterior a la salida.");
+    }
+
+    static DriverRejection incompatibleVehicle(Driver driver) {
+        return new DriverRejection(Reason.INCOMPATIBLE_VEHICLE,
+                "El chofer " + driver.getName() + " no está habilitado para el tipo de vehículo cargado en la gira.");
+    }
+
+    static DriverRejection overlap(Driver driver, TourProcessingDraftAssignment other) {
         LocalDateTime start = LocalDateTime.of(other.getDepartureDate(), other.getDepartureTime());
         LocalDateTime end = LocalDateTime.of(other.getReturnDate(), other.getReturnTime());
         return new DriverRejection(Reason.OVERLAP, "El chofer " + driver.getName() + " ya está asignado a la gira "
@@ -37,7 +48,7 @@ public record DriverRejection(Reason reason, String message) {
     }
 
     static DriverRejection weekendWithoutSurplus(Driver driver, double surplusHours, double surplusCap) {
-        return new DriverRejection(Reason.WEEKEND_WITHOUT_SURPLUS, "Esta gira abarca fin de semana y el chofer "
+        return new DriverRejection(Reason.WEEKEND_WITHOUT_SURPLUS, "La asignación genera horas extra y el chofer "
                 + driver.getName() + " aún no alcanza el 95% de su sobresueldo del mes (lleva " + hours(surplusHours)
                 + " de " + hours(surplusCap) + " horas).");
     }

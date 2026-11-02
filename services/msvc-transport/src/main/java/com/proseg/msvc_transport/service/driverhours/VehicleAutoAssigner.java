@@ -1,6 +1,6 @@
 package com.proseg.msvc_transport.service.driverhours;
 
-import com.proseg.msvc_transport.entity.CleaningDraftRow;
+import com.proseg.msvc_transport.entity.TourProcessingDraftAssignment;
 import com.proseg.msvc_transport.entity.Driver;
 import com.proseg.msvc_transport.entity.Vehicle;
 
@@ -17,21 +17,21 @@ public class VehicleAutoAssigner {
             Comparator.comparing(vehicle -> DriverHoursRules.plateKey(vehicle.getPlate()));
 
     private final List<Vehicle> availableVehicles;
-    private final Map<String, Driver> driverCatalogByKey;
+    private final Map<UUID, Driver> driversById;
     private final Map<UUID, VehicleWorkload> workloads;
 
-    public VehicleAutoAssigner(List<Vehicle> vehicles, List<Driver> drivers, List<CleaningDraftRow> rows) {
+    public VehicleAutoAssigner(List<Vehicle> vehicles, List<Driver> drivers, List<TourProcessingDraftAssignment> rows) {
         this.availableVehicles = vehicles.stream()
                 .filter(Vehicle::isAvailable)
                 .sorted(VEHICLE_ORDER)
                 .toList();
-        this.driverCatalogByKey = DriverHoursRules.catalogByKey(drivers);
-        this.workloads = VehicleWorkload.fromDraftRows(rows, DriverHoursRules.vehicleCatalogByPlate(vehicles));
+        this.driversById = DriverHoursRules.driversById(drivers);
+        this.workloads = VehicleWorkload.fromAssignments(rows, DriverHoursRules.vehiclesById(vehicles));
     }
 
-    public Map<CleaningDraftRow, Vehicle> assign(List<CleaningDraftRow> pendingTours) {
-        Map<CleaningDraftRow, Vehicle> assignments = new LinkedHashMap<>();
-        for (CleaningDraftRow tour : pendingTours.stream().sorted(DriverAutoAssigner.ASSIGNMENT_ORDER).toList()) {
+    public Map<TourProcessingDraftAssignment, Vehicle> assign(List<TourProcessingDraftAssignment> pendingTours) {
+        Map<TourProcessingDraftAssignment, Vehicle> assignments = new LinkedHashMap<>();
+        for (TourProcessingDraftAssignment tour : pendingTours.stream().filter(part -> !part.getTour().isDistributed()).sorted(DriverAutoAssigner.ASSIGNMENT_ORDER).toList()) {
             pickVehicle(tour).ifPresent(vehicle -> {
                 workloadOf(vehicle).add(tour);
                 assignments.put(tour, vehicle);
@@ -40,8 +40,8 @@ public class VehicleAutoAssigner {
         return assignments;
     }
 
-    private Optional<Vehicle> pickVehicle(CleaningDraftRow tour) {
-        Driver loadedDriver = driverCatalogByKey.get(DriverHoursRules.driverKey(tour.getDriver()));
+    private Optional<Vehicle> pickVehicle(TourProcessingDraftAssignment tour) {
+        Driver loadedDriver = DriverHoursRules.assignedDriver(tour, driversById);
         return availableVehicles.stream()
                 .filter(vehicle -> hasRoomFor(vehicle, tour))
                 .filter(vehicle -> loadedDriver == null || DriverHoursRules.canDrive(loadedDriver, vehicle))
@@ -49,7 +49,7 @@ public class VehicleAutoAssigner {
                 .findFirst();
     }
 
-    private boolean hasRoomFor(Vehicle vehicle, CleaningDraftRow tour) {
+    private boolean hasRoomFor(Vehicle vehicle, TourProcessingDraftAssignment tour) {
         return vehicle.getCapacity() == null || vehicle.getCapacity() >= tour.getPassengers();
     }
 

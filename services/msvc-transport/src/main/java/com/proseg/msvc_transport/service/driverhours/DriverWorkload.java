@@ -1,6 +1,6 @@
 package com.proseg.msvc_transport.service.driverhours;
 
-import com.proseg.msvc_transport.entity.CleaningDraftRow;
+import com.proseg.msvc_transport.entity.TourProcessingDraftAssignment;
 import com.proseg.msvc_transport.entity.Driver;
 
 import java.time.LocalDate;
@@ -17,45 +17,76 @@ import java.util.UUID;
 
 public class DriverWorkload {
 
-    private static final Comparator<CleaningDraftRow> CHRONOLOGICAL = Comparator
-            .comparing(CleaningDraftRow::getDepartureDate)
-            .thenComparing(CleaningDraftRow::getDepartureTime)
-            .thenComparing(CleaningDraftRow::getNumber);
+    private static final Comparator<TourProcessingDraftAssignment> CHRONOLOGICAL = Comparator
+            .comparing(TourProcessingDraftAssignment::getDepartureDate)
+            .thenComparing(TourProcessingDraftAssignment::getDepartureTime)
+            .thenComparing(TourProcessingDraftAssignment::getNumber);
 
-    private final List<CleaningDraftRow> tours = new ArrayList<>();
+    private final List<TourProcessingDraftAssignment> tours = new ArrayList<>();
+    private final OrdinaryWindow window;
+    private final ManualDays manualDays;
 
-    public static Map<UUID, DriverWorkload> fromDraftRows(List<CleaningDraftRow> rows, Map<String, Driver> catalogByKey) {
+    public DriverWorkload() {
+        this(OrdinaryWindow.STANDARD, ManualDays.NONE);
+    }
+
+    public DriverWorkload(Driver driver) {
+        this(driver, ManualDays.NONE);
+    }
+
+    public DriverWorkload(Driver driver, ManualDays manualDays) {
+        this(OrdinaryWindow.of(driver), manualDays);
+    }
+
+    private DriverWorkload(OrdinaryWindow window, ManualDays manualDays) {
+        this.window = window;
+        this.manualDays = manualDays;
+    }
+
+    public static Map<UUID, DriverWorkload> fromAssignments(
+            List<TourProcessingDraftAssignment> assignments,
+            Map<UUID, Driver> driversById,
+            ManualDays manualDays
+    ) {
         Map<UUID, DriverWorkload> workloads = new LinkedHashMap<>();
-        for (CleaningDraftRow row : rows) {
-            Driver driver = catalogByKey.get(DriverHoursRules.driverKey(row.getDriver()));
-            if (driver != null && DriverHoursRules.isPrimary(row)) {
-                workloads.computeIfAbsent(driver.getId(), id -> new DriverWorkload()).add(row);
+        for (TourProcessingDraftAssignment assignment : assignments) {
+            Driver driver = DriverHoursRules.assignedDriver(assignment, driversById);
+            if (driver != null && assignment.isActive()) {
+                workloads.computeIfAbsent(driver.getId(), id -> new DriverWorkload(driver, manualDays)).add(assignment);
             }
         }
         return workloads;
     }
 
-    public void add(CleaningDraftRow tour) {
+    public void add(TourProcessingDraftAssignment tour) {
         tours.add(tour);
     }
 
-    public List<CleaningDraftRow> tours() {
+    public DriverWorkload without(TourProcessingDraftAssignment excluded) {
+        DriverWorkload copy = new DriverWorkload(window, manualDays);
+        tours.stream().filter(tour -> tour != excluded).forEach(copy::add);
+        return copy;
+    }
+
+    public List<TourProcessingDraftAssignment> tours() {
         return List.copyOf(tours);
     }
 
-    public boolean overlaps(CleaningDraftRow tour) {
+    public boolean overlaps(TourProcessingDraftAssignment tour) {
         return findOverlap(tour).isPresent();
     }
 
-    public Optional<CleaningDraftRow> findOverlap(CleaningDraftRow tour) {
+    public Optional<TourProcessingDraftAssignment> findOverlap(TourProcessingDraftAssignment tour) {
         return tours.stream().filter(existing -> DriverHoursRules.toursOverlap(existing, tour)).findFirst();
     }
 
     public Map<LocalDate, Double> hoursByDate() {
         Map<LocalDate, Double> hoursByDate = new HashMap<>();
-        for (CleaningDraftRow tour : tours) {
+        for (TourProcessingDraftAssignment tour : tours) {
+            Map<LocalDate, DayAllocation> manual = manualDays.of(tour);
             for (TourDaySpan span : DriverHoursRules.daySpans(tour)) {
-                hoursByDate.merge(span.date(), span.hours(), Double::sum);
+                DayAllocation edited = manual.get(span.date());
+                hoursByDate.merge(span.date(), edited == null ? span.hours() : edited.span().hours(), Double::sum);
             }
         }
         return hoursByDate;
@@ -65,8 +96,8 @@ public class DriverWorkload {
         return totalsOf(tours, surplusCap, monthWeekends);
     }
 
-    public DriverMonthTotals totalsWith(CleaningDraftRow tour, double surplusCap, Set<LocalDate> monthWeekends) {
-        List<CleaningDraftRow> withTour = new ArrayList<>(tours);
+    public DriverMonthTotals totalsWith(TourProcessingDraftAssignment tour, double surplusCap, Set<LocalDate> monthWeekends) {
+        List<TourProcessingDraftAssignment> withTour = new ArrayList<>(tours);
         withTour.add(tour);
         return totalsOf(withTour, surplusCap, monthWeekends);
     }
@@ -75,30 +106,50 @@ public class DriverWorkload {
         return allocationsOf(tours, surplusCap);
     }
 
-    private static List<TourAllocation> allocationsOf(List<CleaningDraftRow> tours, double surplusCap) {
+    private List<TourAllocation> allocationsOf(List<TourProcessingDraftAssignment> tours, double surplusCap) {
         List<TourAllocation> allocations = new ArrayList<>();
         double accumulatedSurplus = 0;
-        for (CleaningDraftRow tour : tours.stream().sorted(CHRONOLOGICAL).toList()) {
+        double reservedManualSurplus = tours.stream().flatMap(tour -> DriverHoursRules.daySpans(tour).stream()
+                        .map(span -> manualDays.of(tour).get(span.date())))
+                .filter(java.util.Objects::nonNull).mapToDouble(DayAllocation::surplusHours).sum();
+        for (TourProcessingDraftAssignment tour : tours.stream().sorted(CHRONOLOGICAL).toList()) {
             List<TourDaySpan> spans = DriverHoursRules.daySpans(tour);
-            double offScheduleHours = spans.stream().mapToDouble(TourDaySpan::offScheduleWeekdayHours).sum();
-            double tourSurplus = surplusFor(accumulatedSurplus, surplusCap, offScheduleHours);
-            accumulatedSurplus += tourSurplus;
+            Map<LocalDate, DayAllocation> manual = manualDays.of(tour);
+            double manualSurplus = 0;
+            double offScheduleHours = 0;
+            for (TourDaySpan span : spans) {
+                DayAllocation edited = manual.get(span.date());
+                if (edited == null) {
+                    offScheduleHours += span.offScheduleWeekdayHours(window);
+                } else {
+                    manualSurplus += edited.surplusHours();
+                }
+            }
+            reservedManualSurplus -= manualSurplus;
+            double tourSurplus = surplusFor(accumulatedSurplus + manualSurplus, surplusCap, offScheduleHours, reservedManualSurplus);
+            accumulatedSurplus += manualSurplus + tourSurplus;
 
             double surplusLeft = tourSurplus;
             List<DayAllocation> days = new ArrayList<>();
             for (TourDaySpan span : spans) {
-                double daySurplus = Math.min(span.offScheduleWeekdayHours(), surplusLeft);
+                DayAllocation edited = manual.get(span.date());
+                if (edited != null) {
+                    days.add(edited);
+                    continue;
+                }
+                double dayOffSchedule = span.offScheduleWeekdayHours(window);
+                double daySurplus = Math.min(dayOffSchedule, surplusLeft);
                 surplusLeft -= daySurplus;
-                double dayOvertime = span.offScheduleWeekdayHours() - daySurplus + span.weekendHours();
-                days.add(new DayAllocation(span, daySurplus, dayOvertime));
+                double dayOvertime = dayOffSchedule - daySurplus + span.weekendHours();
+                days.add(new DayAllocation(span, span.ordinaryHours(window), daySurplus, dayOvertime));
             }
             allocations.add(new TourAllocation(tour, days));
         }
         return allocations;
     }
 
-    private static double surplusFor(double accumulatedSurplus, double surplusCap, double offScheduleHours) {
-        double remainingSurplus = surplusCap - accumulatedSurplus;
+    private static double surplusFor(double accumulatedSurplus, double surplusCap, double offScheduleHours, double reservedManualSurplus) {
+        double remainingSurplus = surplusCap - accumulatedSurplus - reservedManualSurplus;
         boolean surplusExhausted = remainingSurplus <= DriverHoursRules.HOURS_TOLERANCE;
         boolean pastCutoffWithoutRoom = accumulatedSurplus >= surplusCap * DriverHoursRules.SURPLUS_CUTOFF_RATIO
                 && remainingSurplus < offScheduleHours;
@@ -108,7 +159,7 @@ public class DriverWorkload {
         return Math.min(offScheduleHours, remainingSurplus);
     }
 
-    private static DriverMonthTotals totalsOf(List<CleaningDraftRow> tours, double surplusCap, Set<LocalDate> monthWeekends) {
+    private DriverMonthTotals totalsOf(List<TourProcessingDraftAssignment> tours, double surplusCap, Set<LocalDate> monthWeekends) {
         double ordinary = 0;
         double surplus = 0;
         double overtime = 0;
@@ -117,7 +168,7 @@ public class DriverWorkload {
         for (TourAllocation allocation : allocationsOf(tours, surplusCap)) {
             for (DayAllocation day : allocation.days()) {
                 TourDaySpan span = day.span();
-                ordinary += span.ordinaryHours();
+                ordinary += day.ordinaryHours();
                 surplus += day.surplusHours();
                 overtime += day.overtimeHours();
                 LocalDate weekend = DriverHoursRules.weekendKey(span.date());
