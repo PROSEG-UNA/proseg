@@ -11,6 +11,7 @@ export { PrimaryButton } from './PrimaryButton';
 export { default as SearchableSelect } from './SearchableSelect';
 export { ValidatedTextField } from './ValidatedTextField';
 export { default as RowActionsMenu } from './RowActionsMenu.jsx';
+export { default as NestedMenuItem } from './NestedMenuItem.jsx';
 export { default as TablaBase } from './TablaBase.jsx';
 export { Header } from './Header.jsx';
 export { default as MobileNavbar } from './MobileNavbar.jsx';
