@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -15,7 +14,6 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class DriverMonthResponseDto {
-    private UUID id;
     private UUID driverId;
     private String driverName;
     private Integer year;
@@ -25,6 +23,4 @@ public class DriverMonthResponseDto {
     private Double overtimeHoursAccrued;
     private Integer weekendsWorked;
     private boolean hasRecord;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 }

@@ -1,14 +1,16 @@
 package com.proseg.msvc_transport.service;
 
 import com.proseg.msvc_transport.dto.response.OvertimeRequestReportDto;
-import com.proseg.msvc_transport.entity.CleaningDraft;
-import com.proseg.msvc_transport.entity.CleaningDraftRow;
-import com.proseg.msvc_transport.entity.CleaningDraftRowDay;
+import com.proseg.msvc_transport.entity.TourProcessingDraft;
+import com.proseg.msvc_transport.entity.TourProcessingDraftAssignment;
+import com.proseg.msvc_transport.entity.TourProcessingDraftDay;
+import com.proseg.msvc_transport.entity.TourProcessingDraftTour;
 import com.proseg.msvc_transport.entity.Driver;
+import com.proseg.msvc_transport.entity.ResourceType;
 import com.proseg.msvc_transport.exception.TransportException;
-import com.proseg.msvc_transport.repository.CleaningDraftRepository;
-import com.proseg.msvc_transport.repository.CleaningDraftRowDayRepository;
-import com.proseg.msvc_transport.repository.CleaningDraftRowRepository;
+import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
+import com.proseg.msvc_transport.repository.TourProcessingDraftRepository;
+import com.proseg.msvc_transport.repository.TourProcessingDraftAssignmentRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
 import com.proseg.msvc_transport.service.driverhours.DriverHoursRules;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -37,9 +40,9 @@ public class OvertimeRequestReportService {
     private static final double HOURS_TOLERANCE = DriverHoursRules.HOURS_TOLERANCE;
     private static final String ACTIVE_STATUS = "ACTIVE";
 
-    private final CleaningDraftRepository draftRepository;
-    private final CleaningDraftRowRepository rowRepository;
-    private final CleaningDraftRowDayRepository dayRepository;
+    private final TourProcessingDraftRepository draftRepository;
+    private final TourProcessingDraftAssignmentRepository assignmentRepository;
+    private final TourProcessingDraftDayRepository dayRepository;
     private final DriverRepository driverRepository;
 
     @Transactional(readOnly = true)
@@ -47,77 +50,117 @@ public class OvertimeRequestReportService {
         if (month < 1 || month > 12) {
             throw TransportException.badRequest("INVALID_MONTH", "El mes debe estar entre 1 y 12");
         }
-        CleaningDraft draft = draftRepository.findFirstByYearAndMonthOrderByImportedAtDesc(year, month)
+        TourProcessingDraft draft = draftRepository.findFirstByYearAndMonthOrderByImportedAtDesc(year, month)
                 .orElseThrow(() -> new TransportException(
                         HttpStatus.NOT_FOUND,
-                        "CLEANING_DRAFT_MONTH_NOT_FOUND",
+                        "TOUR_PROCESSING_DRAFT_MONTH_NOT_FOUND",
                         "No hay un borrador de depuración para " + monthLabel(year, month)
                 ));
         if (draft.getBusinessDays() == null) {
             throw TransportException.unprocessable(
-                    "CLEANING_DRAFT_WITHOUT_PERIOD",
+                    "TOUR_PROCESSING_DRAFT_WITHOUT_PERIOD",
                     "El borrador de " + monthLabel(year, month) + " no tiene días hábiles definidos"
             );
         }
-        return buildReport(draft, true);
+        return buildReport(draft, true, null);
     }
 
     @Transactional(readOnly = true)
-    public OvertimeRequestReportDto buildSchedule(CleaningDraft draft) {
+    public OvertimeRequestReportDto buildSchedule(TourProcessingDraft draft) {
+        requireBusinessDays(draft);
+        return buildReport(draft, false, null);
+    }
+
+    private void requireBusinessDays(TourProcessingDraft draft) {
         if (draft.getBusinessDays() == null) {
             throw TransportException.unprocessable(
-                    "CLEANING_DRAFT_WITHOUT_PERIOD",
+                    "TOUR_PROCESSING_DRAFT_WITHOUT_PERIOD",
                     "El borrador no tiene días hábiles definidos"
             );
         }
-        return buildReport(draft, false);
     }
 
     @Transactional(readOnly = true)
-    public OvertimeRequestReportDto listDriverSummaries(CleaningDraft draft) {
-        OvertimeRequestReportDto report = buildSchedule(draft);
-        report.getDrivers().forEach(driver -> driver.setTours(List.of()));
-        return report;
-    }
-
-    @Transactional(readOnly = true)
-    public Page<OvertimeRequestReportDto.TourBlock> buildDriverPage(CleaningDraft draft, UUID driverId, Pageable pageable) {
-        OvertimeRequestReportDto report = buildSchedule(draft);
-        List<OvertimeRequestReportDto.TourBlock> tours = report.getDrivers().stream()
-                .filter(driver -> driverId.equals(driver.getId()))
-                .findFirst()
-                .map(OvertimeRequestReportDto.DriverBlock::getTours)
-                .orElseThrow(() -> new TransportException(
-                        HttpStatus.NOT_FOUND,
-                        "DRIVER_NOT_IN_DRAFT",
-                        "El chofer no tiene giras en este borrador"
-                ));
-        int start = (int) pageable.getOffset();
-        if (start >= tours.size()) {
-            return new PageImpl<>(List.of(), pageable, tours.size());
-        }
-        int end = Math.min(start + pageable.getPageSize(), tours.size());
-        return new PageImpl<>(tours.subList(start, end), pageable, tours.size());
-    }
-
-    private OvertimeRequestReportDto buildReport(CleaningDraft draft, boolean onlyExtraHours) {
-        double surplusCap = DriverHoursRules.surplusCap(draft.getBusinessDays());
-        List<CleaningDraftRow> rows = rowRepository.findAllByDraftIdOrderByRowNumberAsc(draft.getId()).stream()
-                .filter(DriverHoursRules::isPrimary)
-                .filter(row -> row.getDriver() != null)
-                .toList();
-        Map<UUID, List<CleaningDraftRowDay>> daysByRowId = dayRepository.findByRowIdIn(rows.stream().map(CleaningDraftRow::getId).toList())
-                .stream()
-                .collect(Collectors.groupingBy(day -> day.getRow().getId()));
-        Map<String, List<CleaningDraftRow>> rowsByDriverKey = rows.stream()
-                .collect(Collectors.groupingBy(row -> DriverHoursRules.driverKey(row.getDriver())));
-
+    public OvertimeRequestReportDto listDriverSummaries(TourProcessingDraft draft) {
+        requireBusinessDays(draft);
+        Map<UUID, TourProcessingDraftDayRepository.DriverTotals> totals = dayRepository.summarizeByDriver(draft.getId()).stream()
+                .collect(Collectors.toMap(TourProcessingDraftDayRepository.DriverTotals::getDriverId, value -> value));
         Collator collator = Collator.getInstance(SPANISH);
         List<OvertimeRequestReportDto.DriverBlock> drivers = driverRepository.findAll().stream()
-                .filter(driver -> ACTIVE_STATUS.equalsIgnoreCase(driver.getStatus())
-                        || rowsByDriverKey.containsKey(DriverHoursRules.driverKey(driver.getName())))
                 .sorted(Comparator.comparing(Driver::getName, collator))
-                .map(driver -> toDriverBlock(driver, rowsByDriverKey.getOrDefault(DriverHoursRules.driverKey(driver.getName()), List.of()), daysByRowId, onlyExtraHours))
+                .map(driver -> {
+                    var total = totals.get(driver.getId());
+                    return OvertimeRequestReportDto.DriverBlock.builder().id(driver.getId()).name(driver.getName())
+                            .organizationalUnit(driver.getOrganizationalUnit().name())
+                            .status(ACTIVE_STATUS.equalsIgnoreCase(driver.getStatus()) ? ACTIVE_STATUS : "INACTIVE")
+                            .surplusHours(total == null ? 0 : round(total.getSurplusHours()))
+                            .overtimeHours(total == null ? 0 : round(total.getOvertimeHours())).tours(List.of()).build();
+                }).toList();
+        return OvertimeRequestReportDto.builder().year(draft.getYear()).month(draft.getMonth())
+                .businessDays(draft.getBusinessDays()).surplusCapPerDriver(DriverHoursRules.surplusCap(draft.getBusinessDays()))
+                .drivers(drivers).build();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<OvertimeRequestReportDto.TourBlock> buildDriverPage(TourProcessingDraft draft, UUID driverId, Pageable pageable) {
+        requireBusinessDays(draft);
+        Page<TourProcessingDraftAssignment> page = assignmentRepository.findDriverPage(draft.getId(), driverId, pageable);
+        if (page.getTotalElements() == 0 && !driverRepository.existsById(driverId)) {
+            throw TransportException.notFound("Chofer", driverId.toString());
+        }
+        Map<UUID, List<TourProcessingDraftDay>> days = page.isEmpty() ? Map.of()
+                : dayRepository.findByAssignmentIdIn(page.map(TourProcessingDraftAssignment::getId).getContent()).stream()
+                        .collect(Collectors.groupingBy(day -> day.getAssignment().getId()));
+        return page.map(assignment -> toTourBlock(assignment, days.getOrDefault(assignment.getId(), List.of()), false));
+    }
+
+    @Transactional(readOnly = true)
+    public OvertimeRequestReportDto buildDailySchedule(TourProcessingDraft draft, java.time.LocalDate date) {
+        requireBusinessDays(draft);
+        List<TourProcessingDraftDay> days = dayRepository.findByDraftIdAndDate(draft.getId(), date);
+        Map<UUID, List<TourProcessingDraftDay>> byAssignment = days.stream()
+                .collect(Collectors.groupingBy(day -> day.getAssignment().getId()));
+        Map<UUID, List<TourProcessingDraftAssignment>> byDriver = days.stream().map(TourProcessingDraftDay::getAssignment).distinct()
+                .collect(Collectors.groupingBy(TourProcessingDraftAssignment::getDriverId));
+        Collator collator = Collator.getInstance(SPANISH);
+        List<OvertimeRequestReportDto.DriverBlock> drivers = driverRepository.findAll().stream()
+                .filter(driver -> ACTIVE_STATUS.equalsIgnoreCase(driver.getStatus()) || byDriver.containsKey(driver.getId()))
+                .sorted(Comparator.comparing(Driver::getName, collator))
+                .map(driver -> toDriverBlock(driver, byDriver.getOrDefault(driver.getId(), List.of()), byAssignment, false)).toList();
+        Map<UUID, TourProcessingDraftDayRepository.DriverTotals> monthlyTotals = dayRepository.summarizeByDriver(draft.getId()).stream()
+                .collect(Collectors.toMap(TourProcessingDraftDayRepository.DriverTotals::getDriverId, value -> value));
+        drivers.forEach(driver -> {
+            var totals = monthlyTotals.get(driver.getId());
+            driver.setSurplusHours(totals == null ? 0 : round(totals.getSurplusHours()));
+            driver.setOvertimeHours(totals == null ? 0 : round(totals.getOvertimeHours()));
+        });
+        return OvertimeRequestReportDto.builder().year(draft.getYear()).month(draft.getMonth())
+                .businessDays(draft.getBusinessDays()).surplusCapPerDriver(DriverHoursRules.surplusCap(draft.getBusinessDays()))
+                .drivers(drivers).build();
+    }
+
+    private OvertimeRequestReportDto buildReport(TourProcessingDraft draft, boolean onlyExtraHours, UUID onlyDriverId) {
+        double surplusCap = DriverHoursRules.surplusCap(draft.getBusinessDays());
+        List<Driver> catalog = driverRepository.findAll().stream()
+                .filter(driver -> onlyDriverId == null || onlyDriverId.equals(driver.getId()))
+                .toList();
+        Set<UUID> catalogIds = catalog.stream().map(Driver::getId).collect(Collectors.toSet());
+        List<TourProcessingDraftAssignment> rows = assignmentRepository.findActiveByDraftId(draft.getId()).stream()
+                .filter(TourProcessingDraftAssignment::isActive)
+                .filter(row -> row.getDriverId() != null && catalogIds.contains(row.getDriverId()))
+                .toList();
+        Map<UUID, List<TourProcessingDraftDay>> daysByRowId = rows.isEmpty()
+                ? Map.of()
+                : dayRepository.findByAssignmentIdIn(rows.stream().map(TourProcessingDraftAssignment::getId).toList()).stream()
+                .collect(Collectors.groupingBy(day -> day.getAssignment().getId()));
+        Map<UUID, List<TourProcessingDraftAssignment>> rowsByDriverId = rows.stream()
+                .collect(Collectors.groupingBy(TourProcessingDraftAssignment::getDriverId));
+
+        Collator collator = Collator.getInstance(SPANISH);
+        List<OvertimeRequestReportDto.DriverBlock> drivers = catalog.stream()
+                .filter(driver -> ACTIVE_STATUS.equalsIgnoreCase(driver.getStatus()) || rowsByDriverId.containsKey(driver.getId()))
+                .sorted(Comparator.comparing(Driver::getName, collator))
+                .map(driver -> toDriverBlock(driver, rowsByDriverId.getOrDefault(driver.getId(), List.of()), daysByRowId, onlyExtraHours))
                 .toList();
 
         return OvertimeRequestReportDto.builder()
@@ -131,12 +174,12 @@ public class OvertimeRequestReportService {
 
     private OvertimeRequestReportDto.DriverBlock toDriverBlock(
             Driver driver,
-            List<CleaningDraftRow> driverRows,
-            Map<UUID, List<CleaningDraftRowDay>> daysByRowId,
+            List<TourProcessingDraftAssignment> driverRows,
+            Map<UUID, List<TourProcessingDraftDay>> daysByRowId,
             boolean onlyExtraHours
     ) {
         List<OvertimeRequestReportDto.TourBlock> tours = driverRows.stream()
-                .sorted(Comparator.comparing(CleaningDraftRow::getDepartureDate).thenComparing(CleaningDraftRow::getNumber))
+                .sorted(Comparator.comparing(TourProcessingDraftAssignment::getDepartureDate).thenComparing(TourProcessingDraftAssignment::getNumber))
                 .map(row -> toTourBlock(row, daysByRowId.getOrDefault(row.getId(), List.of()), onlyExtraHours))
                 .filter(tour -> !tour.getDays().isEmpty())
                 .toList();
@@ -149,23 +192,31 @@ public class OvertimeRequestReportService {
                 .build();
     }
 
-    private OvertimeRequestReportDto.TourBlock toTourBlock(CleaningDraftRow row, List<CleaningDraftRowDay> days, boolean onlyExtraHours) {
+    private OvertimeRequestReportDto.TourBlock toTourBlock(TourProcessingDraftAssignment row, List<TourProcessingDraftDay> days, boolean onlyExtraHours) {
+        TourProcessingDraftTour tour = row.getTour();
         List<OvertimeRequestReportDto.TourDay> tourDays = days.stream()
-                .sorted(Comparator.comparing(CleaningDraftRowDay::getDate))
+                .sorted(Comparator.comparing(TourProcessingDraftDay::getDate))
                 .filter(day -> !onlyExtraHours || day.getSurplusHours() + day.getOvertimeHours() > HOURS_TOLERANCE)
                 .map(this::toTourDay)
                 .toList();
         return OvertimeRequestReportDto.TourBlock.builder()
-                .id(row.getId())
-                .number(row.getNumber())
-                .priority(row.getPriority())
-                .executingUnit(row.getExecutingUnit())
-                .responsible(row.getResponsible())
+                .id(tour.getId())
+                .number(tour.getNumber())
+                .priority(tour.getPriority())
+                .executingUnit(tour.getExecutingUnit())
+                .responsible(tour.getResponsible())
+                .departureDate(tour.getDepartureDate())
+                .returnDate(tour.getReturnDate())
+                .destination(tour.getDestination())
+                .vehicle(row.getResourceType() == ResourceType.BORROWED_VEHICLE
+                        ? (row.getBorrowedVehicle() == null ? null : row.getBorrowedVehicle().getPlate())
+                        : row.getVehicle())
+                .passengers(row.getPassengers())
                 .days(tourDays)
                 .build();
     }
 
-    private OvertimeRequestReportDto.TourDay toTourDay(CleaningDraftRowDay day) {
+    private OvertimeRequestReportDto.TourDay toTourDay(TourProcessingDraftDay day) {
         return OvertimeRequestReportDto.TourDay.builder()
                 .date(day.getDate())
                 .start(DriverHoursRules.hourOf(day.getStartTime()))

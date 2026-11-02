@@ -30,6 +30,8 @@ public class OvertimeRequestReportDto {
     public static class DriverBlock {
         private UUID id;
         private String name;
+        private String organizationalUnit;
+        private String status;
         private double surplusHours;
         private double overtimeHours;
         private List<TourBlock> tours;
@@ -46,6 +48,11 @@ public class OvertimeRequestReportDto {
         private Integer priority;
         private String executingUnit;
         private String responsible;
+        private LocalDate departureDate;
+        private LocalDate returnDate;
+        private String destination;
+        private String vehicle;
+        private Integer passengers;
         private List<TourDay> days;
     }
 

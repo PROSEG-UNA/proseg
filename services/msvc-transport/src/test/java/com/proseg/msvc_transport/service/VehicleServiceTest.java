@@ -26,7 +26,7 @@ class VehicleServiceTest {
     void setUp() {
         vehicleRepository = mock(VehicleRepository.class);
         when(vehicleRepository.save(any(Vehicle.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        service = new VehicleService(vehicleRepository);
+        service = new VehicleService(vehicleRepository, mock(DraftCatalogService.class));
     }
 
     @Test

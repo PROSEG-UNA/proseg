@@ -22,6 +22,7 @@ import java.util.UUID;
 public class VehicleService {
 
     private final VehicleRepository vehicleRepository;
+    private final DraftCatalogService draftCatalogService;
 
     @Transactional
     public VehicleResponseDto create(VehicleRequestDto request) {
@@ -29,7 +30,9 @@ public class VehicleService {
             throw TransportException.conflict("VEHICLE_DUPLICATE_PLATE", "Ya existe un vehículo con esa placa");
         }
         Vehicle entity = toEntity(request);
-        return toResponse(vehicleRepository.save(entity));
+        Vehicle saved = vehicleRepository.save(entity);
+        draftCatalogService.syncVehicle(saved);
+        return toResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -51,12 +54,15 @@ public class VehicleService {
             throw TransportException.conflict("VEHICLE_DUPLICATE_PLATE", "Ya existe un vehículo con esa placa");
         }
         updateEntity(entity, request);
-        return toResponse(vehicleRepository.save(entity));
+        Vehicle saved = vehicleRepository.save(entity);
+        draftCatalogService.syncVehicle(saved);
+        return toResponse(saved);
     }
 
     @Transactional
     public void delete(UUID id) {
         Vehicle entity = vehicleRepository.findById(id).orElseThrow(() -> TransportException.notFound("Vehículo", id.toString()));
+        draftCatalogService.removeVehicle(id);
         vehicleRepository.delete(entity);
     }
 

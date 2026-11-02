@@ -58,18 +58,20 @@ public class SecurityConfig {
 
                         .requestMatchers(
                                 HttpMethod.GET,
-                                transportRoute + "/cleaning/history",
-                                transportRoute + "/cleaning/history/**",
-                                transportRoute + "/cleaning/imports/schema",
-                                transportRoute + "/cleaning/drafts",
-                                transportRoute + "/cleaning/drafts/**"
+                                transportRoute + "/tour-processing/history",
+                                transportRoute + "/tour-processing/history/**",
+                                transportRoute + "/tour-processing/imports/schema",
+                                transportRoute + "/tour-processing/drafts",
+                                transportRoute + "/tour-processing/drafts/**"
                         )
                         .hasAnyAuthority(Privileges.Tours.LEER, Privileges.Tours.GESTIONAR, Privileges.Tours.ELIMINAR)
-                        .requestMatchers(HttpMethod.POST, transportRoute + "/cleaning/**")
+                        .requestMatchers(HttpMethod.POST, transportRoute + "/tour-processing/**")
                         .hasAuthority(Privileges.Tours.GESTIONAR)
-                        .requestMatchers(HttpMethod.PUT, transportRoute + "/cleaning/drafts/**")
+                        .requestMatchers(HttpMethod.PUT, transportRoute + "/tour-processing/drafts/**")
                         .hasAuthority(Privileges.Tours.GESTIONAR)
-                        .requestMatchers(HttpMethod.DELETE, transportRoute + "/cleaning/drafts/**")
+                        .requestMatchers(HttpMethod.PATCH, transportRoute + "/tour-processing/drafts/**")
+                        .hasAuthority(Privileges.Tours.GESTIONAR)
+                        .requestMatchers(HttpMethod.DELETE, transportRoute + "/tour-processing/drafts/**")
                         .hasAuthority(Privileges.Tours.GESTIONAR)
                         .anyRequest().authenticated()
                 )
