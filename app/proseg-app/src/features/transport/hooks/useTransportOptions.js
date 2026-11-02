@@ -16,12 +16,35 @@ function vehicleLabel(vehicle) {
     return vehicle.plate || 'Vehículo';
 }
 
+export function toDriverOption(driver) {
+    return {
+        id: driver.id,
+        label: driverLabel(driver),
+        status: driver.status ?? null,
+        unit: driver.organizationalUnit ?? 'GENERAL_SERVICES',
+        restrictions: driver.restrictions ?? '',
+        allowedVehicleTypes: driver.allowedVehicleTypes ?? [],
+        ordinaryStart: driver.ordinaryStart ?? null,
+        ordinaryEnd: driver.ordinaryEnd ?? null,
+    };
+}
+
+export function toVehicleOption(vehicle) {
+    return {
+        id: vehicle.id,
+        label: vehicleLabel(vehicle),
+        type: vehicle.type ?? null,
+        capacity: vehicle.capacity ?? null,
+        available: vehicle.available,
+    };
+}
+
 export function useDriverOptions(enabled = true) {
     const { data, isLoading, error } = useQuery({
         queryKey: queryKeys.transport.driverOptions(),
         queryFn: async () => {
             const response = await fetchDrivers(OPTIONS_PAGE);
-            return (response?.content ?? []).map((driver) => ({ id: driver.id, label: driverLabel(driver) }));
+            return (response?.content ?? []).map(toDriverOption);
         },
         enabled: Boolean(enabled),
         staleTime: OPTIONS_STALE_TIME,
@@ -35,7 +58,7 @@ export function useVehicleOptions(enabled = true) {
         queryKey: queryKeys.transport.vehicleOptions(),
         queryFn: async () => {
             const response = await fetchVehicles(OPTIONS_PAGE);
-            return (response?.content ?? []).map((vehicle) => ({ id: vehicle.id, label: vehicleLabel(vehicle) }));
+            return (response?.content ?? []).map(toVehicleOption);
         },
         enabled: Boolean(enabled),
         staleTime: OPTIONS_STALE_TIME,

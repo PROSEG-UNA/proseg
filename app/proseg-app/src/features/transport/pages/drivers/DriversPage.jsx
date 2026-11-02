@@ -16,7 +16,7 @@ import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
 import DriversTable from '../../components/drivers/DriversTable.jsx';
 import DriverFormModal from '../../components/drivers/DriverFormModal.jsx';
 import DriverSurplusSummary from '../../components/drivers/DriverSurplusSummary.jsx';
-import { shortPeriodLabel } from '../../components/cleaning/cleaningDraftLabels.js';
+import { shortPeriodLabel } from '../../components/tourProcessing/tourProcessingDraftLabels.js';
 import { usePersistedMonth } from '../../hooks/usePersistedMonth.js';
 import { useTransportDriverMonthsData } from '../../hooks/useTransportDriverMonthsData.js';
 import { useTransportDriverMonthSurplusCap } from '../../hooks/useTransportDriverMonthSurplusCap.js';
@@ -47,6 +47,7 @@ export default function DriversPage() {
     const { surplusHoursPerDriver } = useTransportDriverMonthSurplusCap(year, month);
     const showEmptyMonthNotice = monthData.enabled && !monthData.loading && !monthData.hasAnyRecord;
     const canManageDrivers = hasPermission(PERMISSIONS.TRANSPORT.DRIVERS.MANAGE);
+    const canDeleteDrivers = hasPermission(PERMISSIONS.TRANSPORT.DRIVERS.DELETE);
     const periodLabel = monthData.enabled ? shortPeriodLabel(year, month) : null;
 
     const overtimeRequestMutation = useMutation({
@@ -78,6 +79,7 @@ export default function DriversPage() {
 
     const refreshDrivers = () => {
         void queryClient.invalidateQueries({ queryKey: queryKeys.transport.drivers() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.transport.tourProcessingDrafts() });
     };
 
     if (!canViewDrivers) return <AccessDeniedState />;
@@ -168,8 +170,14 @@ export default function DriversPage() {
                 <DriverFormModal
                     open={driverFormOpen}
                     driverId={driverFormId}
+                    canEdit={canManageDrivers}
+                    canDelete={canDeleteDrivers}
                     onClose={() => setDriverFormOpen(false)}
                     onSaved={refreshDrivers}
+                    onDeleted={() => {
+                        refreshDrivers();
+                        setAlert({ type: 'success', message: 'Chofer eliminado correctamente' });
+                    }}
                 />
             ) : null}
 

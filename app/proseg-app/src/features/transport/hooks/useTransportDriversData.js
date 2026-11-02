@@ -1,15 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchDrivers } from '../services/drivers/driversService';
 import { getFriendlyApiErrorMessage } from '../../../common/utils';
-import { driverStatusLabel } from '../transportUtils';
+import { DEFAULT_ORDINARY_END, DEFAULT_ORDINARY_START, driverStatusLabel, driverUnitLabel, toTimeInput } from '../transportUtils';
 import { keepPreviousPage, queryKeys } from '../../../common/query';
 
 function mapDriverToRow(driver) {
+    const ordinaryStart = toTimeInput(driver.ordinaryStart, DEFAULT_ORDINARY_START);
+    const ordinaryEnd = toTimeInput(driver.ordinaryEnd, DEFAULT_ORDINARY_END);
     return {
         id: driver.id,
         name: driver.name ?? '—',
         status: driverStatusLabel(driver.status),
         statusRaw: driver.status ?? '',
+        organizationalUnit: driverUnitLabel(driver.organizationalUnit ?? 'GENERAL_SERVICES'),
+        organizationalUnitRaw: driver.organizationalUnit ?? 'GENERAL_SERVICES',
+        ordinarySchedule: `${ordinaryStart} a ${ordinaryEnd}`,
     };
 }
 
