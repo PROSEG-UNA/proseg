@@ -26,6 +26,7 @@ public class TransportSchemaMigration implements SmartInitializingSingleton {
             apply(2, "db/transport-phase2.sql");
             apply(3, "db/transport-import-rows.sql");
             apply(5, "db/transport-closed-draft.sql");
+            apply(6, "db/transport-drop-legacy-tables.sql");
         });
     }
     private void apply(int version, String resource) {
