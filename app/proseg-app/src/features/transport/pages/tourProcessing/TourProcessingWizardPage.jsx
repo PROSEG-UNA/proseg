@@ -141,7 +141,7 @@ export default function TourProcessingWizardPage() {
     const accentColor = theme.vars.palette.tones.rose.fg;
 
     const canExecuteTourProcessing = hasAnyPermission([
-        PERMISSIONS.TRANSPORT.TOURS.MANAGE,
+        PERMISSIONS.TRANSPORT.TOURS.IMPORT,
     ]);
 
     const [activeStep, setActiveStep] = useState(0);

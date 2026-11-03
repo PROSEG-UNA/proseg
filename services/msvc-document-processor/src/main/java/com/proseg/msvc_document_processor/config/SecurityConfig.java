@@ -34,15 +34,15 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/document-processor/imports/tours"
-                        ).hasAuthority(Privileges.Giras.GESTIONAR)
+                        ).hasAuthority(Privileges.Giras.IMPORTAR)
 
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/document-processor/imports/tours/**"
-                        ).hasAuthority(Privileges.Giras.GESTIONAR)
+                        ).hasAuthority(Privileges.Giras.IMPORTAR)
 
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/document-processor/exports/tours/**"
-                        ).hasAnyAuthority(Privileges.Giras.LEER, Privileges.Giras.GESTIONAR, Privileges.Giras.ELIMINAR)
+                        ).hasAuthority(Privileges.Giras.EXPORTAR)
 
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/document-processor/exports/drivers/**"

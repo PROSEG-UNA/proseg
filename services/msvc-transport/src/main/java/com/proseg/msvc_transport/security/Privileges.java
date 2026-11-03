@@ -18,7 +18,10 @@ public final class Privileges {
 
     public static final class Tours {
         public static final String LEER = "LEER_GIRAS";
-        public static final String GESTIONAR = "GESTIONAR_GIRAS";
+        public static final String IMPORTAR = "IMPORTAR_GIRAS";
+        public static final String CREAR = "CREAR_GIRAS";
+        public static final String EDITAR = "EDITAR_GIRAS";
         public static final String ELIMINAR = "ELIMINAR_GIRAS";
+        public static final String EXPORTAR = "EXPORTAR_GIRAS";
     }
 }

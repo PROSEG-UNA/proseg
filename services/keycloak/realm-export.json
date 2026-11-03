@@ -385,15 +385,6 @@
         }
       },
       {
-        "id": "e02a53cd-2c56-4fbd-802d-128df749b896",
-        "name": "GESTIONAR_GIRAS",
-        "description": "",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {}
-      },
-      {
         "id": "9864fc6e-f869-4cbd-8e98-cab21822a71f",
         "name": "ELIMINAR_EMPRESAS",
         "description": "Eliminación de empresas registradas en el sistema.",
@@ -856,7 +847,6 @@
             "LEER_ROLES_BASE",
             "GESTIONAR_TECNICOS_MANTENIMIENTO",
             "ELIMINAR_CHOFERES",
-            "GESTIONAR_GIRAS",
             "LEER_EMPRESAS",
             "GESTIONAR_VEHICULOS",
             "GESTIONAR_CHOFERES",

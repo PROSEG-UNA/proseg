@@ -87,8 +87,11 @@ export const PERMISSIONS = {
     },
     TOURS: {
       READ: 'LEER_GIRAS',
-      MANAGE: 'GESTIONAR_GIRAS',
+      IMPORT: 'IMPORTAR_GIRAS',
+      CREATE: 'CREAR_GIRAS',
+      UPDATE: 'EDITAR_GIRAS',
       DELETE: 'ELIMINAR_GIRAS',
+      EXPORT: 'EXPORTAR_GIRAS',
     },
   },
 };

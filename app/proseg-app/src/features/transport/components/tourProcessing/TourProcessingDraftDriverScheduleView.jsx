@@ -95,7 +95,7 @@ const COLUMNS = [
     },
 ];
 
-export default function TourProcessingDraftDriverScheduleView({ draftId, isDraft, onOpenRowById }) {
+export default function TourProcessingDraftDriverScheduleView({ draftId, canEdit, onOpenRowById }) {
     const [selectedDriverId, setSelectedDriverId] = useState(null);
     const [pagination, setPagination] = usePersistedPagination('tour-processing-draft-driver-schedule-page-size');
     const { tableOptions: expansionOptions, resetExpanded } = usePersistedExpansion('tour-processing-draft-driver-schedule-expand-all');
@@ -146,7 +146,7 @@ export default function TourProcessingDraftDriverScheduleView({ draftId, isDraft
     const selectedDriverIndex = drivers.findIndex((driver) => driver.id === effectiveDriverId);
     const selectedDriver = drivers[selectedDriverIndex] ?? null;
 
-    const handleRowClick = (row) => onOpenRowById(isDraft ? 'edit' : 'view', row.original.id);
+    const handleRowClick = (row) => onOpenRowById(canEdit ? 'edit' : 'view', row.original.id);
 
     return (
         <Box>

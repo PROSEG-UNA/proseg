@@ -13,20 +13,26 @@ export default function TourProcessingPage() {
     const [tabIndex, setTabIndex] = useState(location.state?.openHistory ? 1 : 0);
     const { hasAnyPermission } = usePermissions();
 
-    const canExecuteTourProcessing = hasAnyPermission([
-        PERMISSIONS.TRANSPORT.TOURS.MANAGE,
+    const canWorkOnDrafts = hasAnyPermission([
+        PERMISSIONS.TRANSPORT.TOURS.IMPORT,
+        PERMISSIONS.TRANSPORT.TOURS.CREATE,
+        PERMISSIONS.TRANSPORT.TOURS.UPDATE,
+        PERMISSIONS.TRANSPORT.TOURS.DELETE,
     ]);
 
     const canReadHistory = hasAnyPermission([
         PERMISSIONS.TRANSPORT.TOURS.READ,
-        PERMISSIONS.TRANSPORT.TOURS.MANAGE,
+        PERMISSIONS.TRANSPORT.TOURS.IMPORT,
+        PERMISSIONS.TRANSPORT.TOURS.CREATE,
+        PERMISSIONS.TRANSPORT.TOURS.UPDATE,
         PERMISSIONS.TRANSPORT.TOURS.DELETE,
+        PERMISSIONS.TRANSPORT.TOURS.EXPORT,
     ]);
 
     const tabs = useMemo(() => [
-        canExecuteTourProcessing ? { key: 'new', label: 'Nueva depuración' } : null,
+        canWorkOnDrafts ? { key: 'new', label: 'Nueva depuración' } : null,
         canReadHistory ? { key: 'history', label: 'Historial' } : null,
-    ].filter(Boolean), [canExecuteTourProcessing, canReadHistory]);
+    ].filter(Boolean), [canWorkOnDrafts, canReadHistory]);
 
     if (!tabs.length) return <AccessDeniedState />;
 

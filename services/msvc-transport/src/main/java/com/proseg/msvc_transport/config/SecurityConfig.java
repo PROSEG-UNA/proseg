@@ -56,23 +56,35 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, transportRoute + "/borrowed-vehicles/**")
                         .hasAuthority(Privileges.Vehicles.ELIMINAR)
 
+                        .requestMatchers(HttpMethod.GET, transportRoute + "/tour-processing/imports/schema")
+                        .hasAuthority(Privileges.Tours.IMPORTAR)
                         .requestMatchers(
                                 HttpMethod.GET,
                                 transportRoute + "/tour-processing/history",
                                 transportRoute + "/tour-processing/history/**",
-                                transportRoute + "/tour-processing/imports/schema",
                                 transportRoute + "/tour-processing/drafts",
                                 transportRoute + "/tour-processing/drafts/**"
                         )
-                        .hasAnyAuthority(Privileges.Tours.LEER, Privileges.Tours.GESTIONAR, Privileges.Tours.ELIMINAR)
+                        .hasAnyAuthority(
+                                Privileges.Tours.LEER,
+                                Privileges.Tours.IMPORTAR,
+                                Privileges.Tours.CREAR,
+                                Privileges.Tours.EDITAR,
+                                Privileges.Tours.ELIMINAR,
+                                Privileges.Tours.EXPORTAR
+                        )
+                        .requestMatchers(HttpMethod.POST, transportRoute + "/tour-processing/drafts")
+                        .hasAuthority(Privileges.Tours.IMPORTAR)
+                        .requestMatchers(HttpMethod.POST, transportRoute + "/tour-processing/drafts/*/rows")
+                        .hasAuthority(Privileges.Tours.CREAR)
                         .requestMatchers(HttpMethod.POST, transportRoute + "/tour-processing/**")
-                        .hasAuthority(Privileges.Tours.GESTIONAR)
+                        .hasAuthority(Privileges.Tours.EDITAR)
                         .requestMatchers(HttpMethod.PUT, transportRoute + "/tour-processing/drafts/**")
-                        .hasAuthority(Privileges.Tours.GESTIONAR)
+                        .hasAuthority(Privileges.Tours.EDITAR)
                         .requestMatchers(HttpMethod.PATCH, transportRoute + "/tour-processing/drafts/**")
-                        .hasAuthority(Privileges.Tours.GESTIONAR)
+                        .hasAuthority(Privileges.Tours.EDITAR)
                         .requestMatchers(HttpMethod.DELETE, transportRoute + "/tour-processing/drafts/**")
-                        .hasAuthority(Privileges.Tours.GESTIONAR)
+                        .hasAuthority(Privileges.Tours.ELIMINAR)
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex

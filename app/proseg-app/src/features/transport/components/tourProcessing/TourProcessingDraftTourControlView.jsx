@@ -45,7 +45,7 @@ const COLUMNS = [
     },
 ];
 
-export default function TourProcessingDraftTourControlView({ draftId, year, month, isDraft, onOpenRowById }) {
+export default function TourProcessingDraftTourControlView({ draftId, year, month, canEdit, onOpenRowById }) {
     const firstDate = dayjs(`${year}-${String(month).padStart(2, '0')}-01`);
     const lastDate = firstDate.endOf('month');
     const [selectedDate, setSelectedDate] = useState(firstDate);
@@ -84,7 +84,7 @@ export default function TourProcessingDraftTourControlView({ draftId, year, mont
         resetExpanded();
     };
 
-    const openTour = (tour) => onOpenRowById(isDraft ? 'edit' : 'view', tour.id);
+    const openTour = (tour) => onOpenRowById(canEdit ? 'edit' : 'view', tour.id);
 
     return (
         <Box>

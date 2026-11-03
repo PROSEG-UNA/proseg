@@ -468,7 +468,7 @@ function toPayload(values, rowNumber, wasDistributed) {
     };
 }
 
-function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions, approvalStatus, onToggleApproval, onDelete, onSubmit, onInvalid }) {
+function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions, showDelete, approvalStatus, onToggleApproval, onDelete, onSubmit, onInvalid }) {
     const theme = useTheme();
     const accentColor = theme.vars.palette.tones.rose.fg;
     const [values, setValues] = useState(() => toFormValues(row));
@@ -916,18 +916,20 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
                             >
                                 {approvalToggleLabel(approvalStatus)}
                             </Button>
-                            <Button
-                                onClick={onDelete}
-                                disabled={saving}
-                                color="error"
-                                variant="outlined"
-                                size="large"
-                                fullWidth
-                                startIcon={<DeleteOutlineOutlinedIcon />}
-                                sx={OPTION_BUTTON_SX}
-                            >
-                                Eliminar
-                            </Button>
+                            {showDelete && (
+                                <Button
+                                    onClick={onDelete}
+                                    disabled={saving}
+                                    color="error"
+                                    variant="outlined"
+                                    size="large"
+                                    fullWidth
+                                    startIcon={<DeleteOutlineOutlinedIcon />}
+                                    sx={OPTION_BUTTON_SX}
+                                >
+                                    Eliminar
+                                </Button>
+                            )}
                         </Box>
                     </Box>
                 </>
@@ -936,7 +938,7 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
     );
 }
 
-export default function TourProcessingDraftRowModal({ open, mode, row, loadingRow = false, draftId, onClose, onSaved, onDeleted, onEdit }) {
+export default function TourProcessingDraftRowModal({ open, mode, row, loadingRow = false, draftId, canDelete = true, onClose, onSaved, onDeleted, onEdit }) {
     const theme = useTheme();
     const accentColor = theme.vars.palette.tones.rose.fg;
     const queryClient = useQueryClient();
@@ -944,7 +946,7 @@ export default function TourProcessingDraftRowModal({ open, mode, row, loadingRo
     const [deleteOpen, setDeleteOpen] = useState(false);
     const isCreate = mode === 'create';
     const isEdit = mode !== 'view';
-    const canDelete = mode === 'edit' && Boolean(row);
+    const canChangeExistingRow = mode === 'edit' && Boolean(row);
     const savedApprovalStatus = row?.approvalStatus ?? APPROVAL_STATUS.APPROVED;
     const approvalSourceKey = `${open}-${mode}-${row?.id}-${savedApprovalStatus}`;
     const [approvalStatus, setApprovalStatus] = useState(savedApprovalStatus);
@@ -1014,7 +1016,7 @@ export default function TourProcessingDraftRowModal({ open, mode, row, loadingRo
                 title={MODAL_TITLES[mode]}
                 subtitle={row ? `Número de gira ${row.number}` : (loadingRow ? 'Cargando gira...' : 'Nueva fila del borrador')}
                 loading={saving || loadingRow}
-                footerLeft={canDelete ? (
+                footerLeft={canChangeExistingRow ? (
                     <Button
                         onClick={toggleApproval}
                         disabled={saving}
@@ -1048,7 +1050,8 @@ export default function TourProcessingDraftRowModal({ open, mode, row, loadingRo
                         draftId={draftId}
                         isEdit={isEdit}
                         saving={saving}
-                        showOptions={canDelete}
+                        showOptions={canChangeExistingRow}
+                        showDelete={canDelete}
                         approvalStatus={approvalStatus}
                         onToggleApproval={toggleApproval}
                         onDelete={() => setDeleteOpen(true)}

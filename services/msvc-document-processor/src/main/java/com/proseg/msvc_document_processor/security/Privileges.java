@@ -10,9 +10,8 @@ public final class Privileges {
     }
 
     public static final class Giras {
-        public static final String LEER = "LEER_GIRAS";
-        public static final String GESTIONAR = "GESTIONAR_GIRAS";
-        public static final String ELIMINAR = "ELIMINAR_GIRAS";
+        public static final String IMPORTAR = "IMPORTAR_GIRAS";
+        public static final String EXPORTAR = "EXPORTAR_GIRAS";
     }
 
     public static final class Choferes {

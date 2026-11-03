@@ -7,6 +7,8 @@ import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined
 import TableBase from '../../../../common/components/TablaBase.jsx';
 import RowActionsMenu from '../../../../common/components/RowActionsMenu.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
+import { PERMISSIONS } from '../../../../common/constants/permissions';
+import { usePermissions } from '../../../../common/hooks/index.js';
 import { queryKeys } from '../../../../common/query';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils';
 import { deleteTourProcessingDraft } from '../../services/tourProcessing/tourProcessingService.js';
@@ -21,6 +23,8 @@ export default function TourProcessingDraftsTable({ status = 'DRAFT' }) {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const [draftToDelete, setDraftToDelete] = useState(null);
+    const { hasPermission } = usePermissions();
+    const canDeleteDrafts = hasPermission(PERMISSIONS.TRANSPORT.TOURS.DELETE);
     const [alert, setAlert] = useState(null);
 
     const { requestParams, tableOptions } = useServerTableState({
@@ -98,7 +102,7 @@ export default function TourProcessingDraftsTable({ status = 'DRAFT' }) {
                                 icon: <OpenInNewOutlinedIcon fontSize="small" />,
                                 onClick: () => openDraft(row.original.id),
                             },
-                            status === 'DRAFT' ? {
+                            status === 'DRAFT' && canDeleteDrafts ? {
                                 key: 'delete',
                                 label: 'Eliminar',
                                 color: 'error',

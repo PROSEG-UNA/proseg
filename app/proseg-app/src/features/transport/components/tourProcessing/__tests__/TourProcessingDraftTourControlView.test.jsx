@@ -82,9 +82,9 @@ describe('Control de giras', () => {
         expect(screen.getByText(/40.*h por chofer/)).toBeTruthy();
     });
 
-    it.each([[true, 'edit'], [false, 'view']])('abre la gira por su id en modo %s/%s al tocar el detalle', async (isDraft, mode) => {
+    it.each([[true, 'edit'], [false, 'view']])('abre la gira por su id en modo %s/%s al tocar el detalle', async (canEdit, mode) => {
         const onOpenRowById = vi.fn();
-        renderView({ isDraft, onOpenRowById });
+        renderView({ canEdit, onOpenRowById });
         await userEvent.click(screen.getByText('Ana Mora'));
         await userEvent.click(screen.getByText('3622'));
 
@@ -94,7 +94,7 @@ describe('Control de giras', () => {
 
     it('abre la gira desde el teclado', async () => {
         const onOpenRowById = vi.fn();
-        renderView({ isDraft: true, onOpenRowById });
+        renderView({ canEdit: true, onOpenRowById });
         await userEvent.click(screen.getByText('Ana Mora'));
         const detail = screen.getByRole('list', { name: 'Detalle de giras de Ana Mora' });
         within(detail).getByRole('button', { name: 'Abrir gira 3622' }).focus();

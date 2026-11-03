@@ -2,13 +2,17 @@ import { useState } from 'react';
 import { Box, Stack, Typography, useTheme } from '@mui/material';
 import AutoFixHighOutlinedIcon from '@mui/icons-material/AutoFixHighOutlined';
 import PrimaryButton from '../../../../common/components/PrimaryButton.jsx';
+import { PERMISSIONS } from '../../../../common/constants/permissions';
+import { usePermissions } from '../../../../common/hooks/index.js';
 import TourProcessingDraftsTable from './TourProcessingDraftsTable.jsx';
 import TourProcessingImportModal from './TourProcessingImportModal.jsx';
 
 export default function TourProcessingPanel() {
+    const { hasPermission } = usePermissions();
+
     return (
         <Stack spacing={3}>
-            <TourProcessingPanelHeader />
+            {hasPermission(PERMISSIONS.TRANSPORT.TOURS.IMPORT) && <TourProcessingPanelHeader />}
             <TourProcessingDraftsTable />
         </Stack>
     );

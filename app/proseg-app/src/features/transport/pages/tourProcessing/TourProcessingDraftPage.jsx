@@ -141,7 +141,8 @@ const DraftRowsTable = memo(function DraftRowsTable({
     error,
     totalElements,
     tableOptions,
-    isDraft,
+    canEdit,
+    canDelete,
     hasDuplicates,
     onOpenRow,
     onDeleteRow,
@@ -185,7 +186,7 @@ const DraftRowsTable = memo(function DraftRowsTable({
                     key: 'edit',
                     label: 'Editar',
                     icon: <EditOutlinedIcon fontSize="small" />,
-                    disabled: !isDraft,
+                    disabled: !canEdit,
                     onClick: () => onOpenRow('edit', row.original),
                 },
                 row.original.approvalStatus === APPROVAL_STATUS.NOT_APPROVED
@@ -193,14 +194,14 @@ const DraftRowsTable = memo(function DraftRowsTable({
                         key: 'approve',
                         label: 'Aprobar',
                         icon: <CheckCircleOutlineOutlinedIcon fontSize="small" />,
-                        disabled: !isDraft,
+                        disabled: !canEdit,
                         onClick: () => onToggleApproval(row.original),
                     }
                     : {
                         key: 'disapprove',
                         label: 'No aprobar',
                         icon: <BlockOutlinedIcon fontSize="small" />,
-                        disabled: !isDraft,
+                        disabled: !canEdit,
                         onClick: () => onToggleApproval(row.original),
                     },
                 {
@@ -208,16 +209,16 @@ const DraftRowsTable = memo(function DraftRowsTable({
                     label: 'Eliminar',
                     color: 'error',
                     icon: <DeleteOutlineOutlinedIcon fontSize="small" />,
-                    disabled: !isDraft,
+                    disabled: !canDelete,
                     onClick: () => onDeleteRow(row.original),
                 },
             ]}
         />
-    ), [isDraft, onOpenRow, onDeleteRow, onToggleApproval]);
+    ), [canEdit, canDelete, onOpenRow, onDeleteRow, onToggleApproval]);
 
     const handleRowClick = useCallback(
-        (row) => onOpenRow(isDraft ? 'edit' : 'view', row.original),
-        [isDraft, onOpenRow],
+        (row) => onOpenRow(canEdit ? 'edit' : 'view', row.original),
+        [canEdit, onOpenRow],
     );
 
     const mergedTableOptions = useMemo(() => ({
@@ -325,13 +326,25 @@ export default function TourProcessingDraftPage() {
         }, { replace: true });
     };
 
-    const canExecuteTourProcessing = hasAnyPermission([
-        PERMISSIONS.TRANSPORT.TOURS.MANAGE,
+    const canCreateTours = hasAnyPermission([
+        PERMISSIONS.TRANSPORT.TOURS.CREATE,
+    ]);
+    const canEditTours = hasAnyPermission([
+        PERMISSIONS.TRANSPORT.TOURS.UPDATE,
+    ]);
+    const canDeleteTours = hasAnyPermission([
+        PERMISSIONS.TRANSPORT.TOURS.DELETE,
+    ]);
+    const canExportTours = hasAnyPermission([
+        PERMISSIONS.TRANSPORT.TOURS.EXPORT,
     ]);
     const canReadTourProcessing = hasAnyPermission([
         PERMISSIONS.TRANSPORT.TOURS.READ,
-        PERMISSIONS.TRANSPORT.TOURS.MANAGE,
+        PERMISSIONS.TRANSPORT.TOURS.IMPORT,
+        PERMISSIONS.TRANSPORT.TOURS.CREATE,
+        PERMISSIONS.TRANSPORT.TOURS.UPDATE,
         PERMISSIONS.TRANSPORT.TOURS.DELETE,
+        PERMISSIONS.TRANSPORT.TOURS.EXPORT,
     ]);
     const canReadVehicles = hasAnyPermission([
         PERMISSIONS.TRANSPORT.VEHICLES.READ,
@@ -738,7 +751,12 @@ export default function TourProcessingDraftPage() {
 
     if (!canReadTourProcessing) return <AccessDeniedState />;
 
-    const isDraft = draft?.status === 'DRAFT' && canExecuteTourProcessing;
+    const isOpenDraft = draft?.status === 'DRAFT';
+    const canCreateRows = isOpenDraft && canCreateTours;
+    const canEditRows = isOpenDraft && canEditTours;
+    const canDeleteRows = isOpenDraft && canDeleteTours;
+    const canReopen = draft?.status === 'CLOSED' && canEditTours;
+    const hasOptions = canCreateRows || canEditRows || canReopen || canExportTours;
     const conflictingRows = draft?.conflictingRows ?? 0;
     const duplicateRows = draft?.duplicateRows ?? 0;
     const oversizedRows = draft?.oversizedRows ?? 0;
@@ -897,7 +915,7 @@ export default function TourProcessingDraftPage() {
                             >
                                 Volver
                             </Button>
-                            {draft && (
+                            {draft && hasOptions && (
                                 <>
                                     <PrimaryButton
                                         onClick={(event) => setOptionsAnchor(event.currentTarget)}
@@ -916,13 +934,13 @@ export default function TourProcessingDraftPage() {
                                         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                                         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
                                     >
-                                        {isDraft && (
+                                        {canCreateRows && (
                                             <MenuItem onClick={handleCreateRow}>
                                                 <ListItemIcon><AddOutlinedIcon fontSize="small" /></ListItemIcon>
                                                 <ListItemText>Crear gira</ListItemText>
                                             </MenuItem>
                                         )}
-                                        {isDraft && (
+                                        {canEditRows && (
                                             <NestedMenuItem label="Autoasignar" icon={<AutoFixHighOutlinedIcon fontSize="small" />}>
                                                 <MenuItem onClick={handleAutoAssignDrivers}>
                                                     <ListItemIcon><BadgeOutlinedIcon fontSize="small" /></ListItemIcon>
@@ -942,49 +960,51 @@ export default function TourProcessingDraftPage() {
                                                 </MenuItem>
                                             </NestedMenuItem>
                                         )}
-                                        {isDraft && hasAssignmentReport && (
+                                        {canEditRows && hasAssignmentReport && (
                                             <MenuItem onClick={handleOpenAssignmentReport}>
                                                 <ListItemIcon><FactCheckOutlinedIcon fontSize="small" /></ListItemIcon>
                                                 <ListItemText>Ver resultado de la última autoasignación</ListItemText>
                                             </MenuItem>
                                         )}
-                                        {isDraft && (
+                                        {canEditRows && (
                                             <MenuItem onClick={handleClearAssignments}>
                                                 <ListItemIcon><DeleteOutlineOutlinedIcon fontSize="small" /></ListItemIcon>
                                                 <ListItemText>Limpiar Choferes y Vehiculos</ListItemText>
                                             </MenuItem>
                                         )}
-                                        {draft.status === 'CLOSED' && canExecuteTourProcessing && (
+                                        {canReopen && (
                                             <MenuItem onClick={handleReopen}>
                                                 <ListItemIcon><EditOutlinedIcon fontSize="small" /></ListItemIcon>
                                                 <ListItemText>Devolver a borrador</ListItemText>
                                             </MenuItem>
                                         )}
-                                        <NestedMenuItem label="Descargar" icon={<DownloadOutlinedIcon fontSize="small" />}>
-                                            <MenuItem onClick={handleExport} disabled={exporting}>
-                                                <ListItemIcon><DownloadOutlinedIcon fontSize="small" /></ListItemIcon>
-                                                <ListItemText>{exportLabel}</ListItemText>
-                                            </MenuItem>
-                                            {periodLabel && (
-                                                <MenuItem onClick={handleExportTourControl} disabled={exportingTourControl}>
+                                        {canExportTours && (
+                                            <NestedMenuItem label="Descargar" icon={<DownloadOutlinedIcon fontSize="small" />}>
+                                                <MenuItem onClick={handleExport} disabled={exporting}>
                                                     <ListItemIcon><DownloadOutlinedIcon fontSize="small" /></ListItemIcon>
-                                                    <ListItemText>{`Descargar 'Control de Giras ${periodLabel}'`}</ListItemText>
+                                                    <ListItemText>{exportLabel}</ListItemText>
                                                 </MenuItem>
-                                            )}
-                                            {periodLabel && (
-                                                <MenuItem onClick={handleExportOvertimeRequest} disabled={exportingOvertimeRequest}>
-                                                    <ListItemIcon><DownloadOutlinedIcon fontSize="small" /></ListItemIcon>
-                                                    <ListItemText>{`Descargar 'Solicitud de Horas Extra ${periodLabel}'`}</ListItemText>
-                                                </MenuItem>
-                                            )}
-                                            {periodLabel && (
-                                                <MenuItem onClick={handleExportFinalCommission} disabled={exportingFinalCommission}>
-                                                    <ListItemIcon><DownloadOutlinedIcon fontSize="small" /></ListItemIcon>
-                                                    <ListItemText>{`Descargar 'Comisión Final ${periodLabel}'`}</ListItemText>
-                                                </MenuItem>
-                                            )}
-                                        </NestedMenuItem>
-                                        {isDraft && (
+                                                {periodLabel && (
+                                                    <MenuItem onClick={handleExportTourControl} disabled={exportingTourControl}>
+                                                        <ListItemIcon><DownloadOutlinedIcon fontSize="small" /></ListItemIcon>
+                                                        <ListItemText>{`Descargar 'Control de Giras ${periodLabel}'`}</ListItemText>
+                                                    </MenuItem>
+                                                )}
+                                                {periodLabel && (
+                                                    <MenuItem onClick={handleExportOvertimeRequest} disabled={exportingOvertimeRequest}>
+                                                        <ListItemIcon><DownloadOutlinedIcon fontSize="small" /></ListItemIcon>
+                                                        <ListItemText>{`Descargar 'Solicitud de Horas Extra ${periodLabel}'`}</ListItemText>
+                                                    </MenuItem>
+                                                )}
+                                                {periodLabel && (
+                                                    <MenuItem onClick={handleExportFinalCommission} disabled={exportingFinalCommission}>
+                                                        <ListItemIcon><DownloadOutlinedIcon fontSize="small" /></ListItemIcon>
+                                                        <ListItemText>{`Descargar 'Comisión Final ${periodLabel}'`}</ListItemText>
+                                                    </MenuItem>
+                                                )}
+                                            </NestedMenuItem>
+                                        )}
+                                        {canEditRows && (
                                             <MenuItem onClick={handleFinish}>
                                                 <ListItemIcon><CheckCircleOutlineOutlinedIcon fontSize="small" /></ListItemIcon>
                                                 <ListItemText>Terminar depuración</ListItemText>
@@ -1007,12 +1027,12 @@ export default function TourProcessingDraftPage() {
 
                 {draft && (
                     <Stack spacing={1.5} sx={{ mb: 2 }}>
-                        {isDraft && conflictingRows > 0 && (
+                        {canEditRows && conflictingRows > 0 && (
                             <Alert severity="error" variant="outlined">
                                 Hay {conflictingRows} filas con un Numero repetido pero con datos distintos. No se puede registrar hasta resolverlas.
                             </Alert>
                         )}
-                        {isDraft && conflictingRows === 0 && duplicateRows > 0 && (
+                        {canDeleteRows && conflictingRows === 0 && duplicateRows > 0 && (
                             <Alert
                                 severity="info"
                                 variant="outlined"
@@ -1032,7 +1052,7 @@ export default function TourProcessingDraftPage() {
                                 Hay {duplicateRows} filas repetidas
                             </Alert>
                         )}
-                        {isDraft && conflictingRows === 0 && duplicateRows === 0 && oversizedRows > 0 && dismissedOversizedRows !== oversizedRows && (
+                        {canEditRows && conflictingRows === 0 && duplicateRows === 0 && oversizedRows > 0 && dismissedOversizedRows !== oversizedRows && (
                             <Alert
                                 severity="warning"
                                 variant="outlined"
@@ -1082,7 +1102,8 @@ export default function TourProcessingDraftPage() {
                         error={rowsError}
                         totalElements={totalElements}
                         tableOptions={tableOptions}
-                        isDraft={isDraft}
+                        canEdit={canEditRows}
+                        canDelete={canDeleteRows}
                         hasDuplicates={duplicateRows > 0}
                         onOpenRow={openRowModal}
                         onDeleteRow={openDeleteRow}
@@ -1091,10 +1112,10 @@ export default function TourProcessingDraftPage() {
                 )}
 
                 {viewTab === 'horas-extra' && (
-                    <TourProcessingDraftDriverScheduleView draftId={draftId} isDraft={isDraft} onOpenRowById={openRowModalById} />
+                    <TourProcessingDraftDriverScheduleView draftId={draftId} canEdit={canEditRows} onOpenRowById={openRowModalById} />
                 )}
                 {viewTab === 'control-giras' && draft && (
-                    <TourProcessingDraftTourControlView key={`${draftId}-${draft.year}-${draft.month}`} draftId={draftId} year={draft.year} month={draft.month} isDraft={isDraft} onOpenRowById={openRowModalById} />
+                    <TourProcessingDraftTourControlView key={`${draftId}-${draft.year}-${draft.month}`} draftId={draftId} year={draft.year} month={draft.month} canEdit={canEditRows} onOpenRowById={openRowModalById} />
                 )}
             </Container>
 
@@ -1104,8 +1125,9 @@ export default function TourProcessingDraftPage() {
                 row={rowModal.row}
                 loadingRow={Boolean(pendingRowId)}
                 draftId={draftId}
+                canDelete={canDeleteRows}
                 onClose={closeRowModal}
-                onEdit={isDraft ? () => openRowModal('edit', rowModal.row) : undefined}
+                onEdit={canEditRows ? () => openRowModal('edit', rowModal.row) : undefined}
                 onDeleted={() => setAlert({ type: 'success', message: 'Gira eliminada correctamente' })}
                 onSaved={() => setAlert({
                     type: 'success',
