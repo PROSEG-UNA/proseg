@@ -14,7 +14,7 @@ const FIELDS = [
 export default function TourProcessingDraftTourControlDetail({ tours, date, driverName, onOpenTour }) {
     return (
         <Box sx={{ px: { xs: 2, sm: 3 }, py: 1.5, bgcolor: 'background.paper' }}>
-            <Typography component="h3" sx={{ mb: 1, fontSize: 13, fontWeight: 600 }}>
+            <Typography component="h2" sx={{ mb: 1, fontSize: 13, fontWeight: 600 }}>
                 Giras del {formatDate(date)}
                 <Box component="span" sx={{ ml: 1, fontSize: 12, fontWeight: 400, color: 'text.secondary' }}>
                     {`${tours.length} ${tours.length === 1 ? 'gira' : 'giras'}`}
