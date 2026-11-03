@@ -16,7 +16,7 @@ function hasDetailContent(asset) {
     return Boolean(asset.networkInterface) || asset.imagesCount > 0 || asset.componentsCount > 0;
 }
 
-function mapAssetToRow(asset) {
+export function mapAssetToRow(asset) {
     const statusRaw = asset.status || '';
     return {
         id: asset.id,

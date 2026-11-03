@@ -202,7 +202,8 @@ export default function BuildingEmailManager() {
     const accentColor = theme.vars.palette.tones.rose.fg;
 
     const { hasPermission } = usePermissions();
-    const canManage = hasPermission(PERMISSIONS.INVENTORY.LOCATIONS.MANAGE);
+    const canManage = hasPermission(PERMISSIONS.INVENTORY.LOCATIONS.CREATE)
+        || hasPermission(PERMISSIONS.INVENTORY.LOCATIONS.UPDATE);
     const canDelete = hasPermission(PERMISSIONS.INVENTORY.LOCATIONS.DELETE);
 
     const [campuses, setCampuses] = useState([]);

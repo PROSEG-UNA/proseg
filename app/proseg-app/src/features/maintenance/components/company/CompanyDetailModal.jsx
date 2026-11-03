@@ -315,34 +315,34 @@ export default function CompanyDetailModal({
                                 </Typography>
                             </Box>
                             <Grid container spacing={1.5}>
-                                <Grid item xs={12} sm={6}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
                                     <InfoCard
                                         icon={BusinessIcon}
                                         label="Nombre comercial"
                                         value={company.name}
                                     />
                                 </Grid>
-                                <Grid item xs={12} sm={6}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
                                     <InfoCard
                                         label="Cédula jurídica"
                                         value={company.legalId}
                                     />
                                 </Grid>
-                                <Grid item xs={12} sm={6}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
                                     <InfoCard
                                         icon={AlternateEmailIcon}
                                         label="Correo de contacto"
                                         value={company.contactEmail}
                                     />
                                 </Grid>
-                                <Grid item xs={12} sm={6}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
                                     <InfoCard
                                         icon={PhoneIcon}
                                         label="Teléfono"
                                         value={company.contactPhone}
                                     />
                                 </Grid>
-                                <Grid item xs={12}>
+                                <Grid size={{ xs: 12 }}>
                                     <InfoCard
                                         icon={LocationOnIcon}
                                         label="Dirección"
@@ -367,13 +367,13 @@ export default function CompanyDetailModal({
                                 </Typography>
                             </Box>
                             <Grid container spacing={1.5}>
-                                <Grid item xs={12} sm={6}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
                                     <InfoCard
                                         label="Creada el"
                                         value={formatDateTime(company.createdAt)}
                                     />
                                 </Grid>
-                                <Grid item xs={12} sm={6}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
                                     <InfoCard
                                         label="Actualizada el"
                                         value={formatDateTime(company.updatedAt)}
@@ -438,7 +438,7 @@ export default function CompanyDetailModal({
                                 </Typography>
                                 <Grid container spacing={1.5}>
                                     {users.map((user) => (
-                                        <Grid item xs={12} sm={6} key={user.id}>
+                                        <Grid size={{ xs: 12, sm: 6 }} key={user.id}>
                                             <UserCard user={user} />
                                         </Grid>
                                     ))}

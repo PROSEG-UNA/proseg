@@ -292,6 +292,7 @@ export function HomePage() {
             <Container maxWidth="lg" sx={{ pt: { xs: 6, md: 9 }, pb: { xs: 4, md: 5 } }}>
                 <Box sx={{ maxWidth: 580 }}>
                     <Typography
+                        component="h1"
                         sx={{
                             fontWeight: 800,
                             fontSize: { xs: '2rem', sm: '2.6rem', md: '3rem' },
@@ -334,6 +335,7 @@ export function HomePage() {
                         })}
                     />
                     <Typography
+                        component="h2"
                         sx={{
                             fontSize: '0.72rem',
                             fontWeight: 800,

@@ -48,13 +48,15 @@ const inventoryPermissions = [
     PERMISSIONS.INVENTORY.MANAGE,
     PERMISSIONS.INVENTORY.DELETE,
     PERMISSIONS.INVENTORY.LOCATIONS.READ,
-    PERMISSIONS.INVENTORY.LOCATIONS.MANAGE,
+    PERMISSIONS.INVENTORY.LOCATIONS.CREATE,
+    PERMISSIONS.INVENTORY.LOCATIONS.UPDATE,
     PERMISSIONS.INVENTORY.LOCATIONS.DELETE,
 ];
 
 const locationsPermissions = [
     PERMISSIONS.INVENTORY.LOCATIONS.READ,
-    PERMISSIONS.INVENTORY.LOCATIONS.MANAGE,
+    PERMISSIONS.INVENTORY.LOCATIONS.CREATE,
+    PERMISSIONS.INVENTORY.LOCATIONS.UPDATE,
     PERMISSIONS.INVENTORY.LOCATIONS.DELETE,
     PERMISSIONS.INVENTORY.CATALOG.READ,
     PERMISSIONS.INVENTORY.CATALOG.MANAGE,
@@ -140,6 +142,7 @@ export function useNavSections() {
                 label: 'Inventario',
                 items: [
                     { key: 'assets', icon: AppsIcon, label: 'Activos', path: '/inventario/activos' },
+                    { key: 'expirations', icon: AnalyticsIcon, label: 'Panel de vencimientos', path: '/inventario/vencimientos' },
                 ],
             });
         }

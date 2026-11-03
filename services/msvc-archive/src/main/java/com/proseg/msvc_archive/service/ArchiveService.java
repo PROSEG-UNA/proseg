@@ -48,12 +48,11 @@ public class ArchiveService {
 
     public ArchiveUploadInitResponseDto initiateMultipartUpload(
             String filename,
-            String objectName,
             String folder,
             String contentType
     ) {
         String uploadId = UUID.randomUUID().toString();
-        String resolvedObjectName = resolveObjectName(filename, objectName, folder);
+        String resolvedObjectName = resolveObjectName(filename, folder);
 
         ArchiveUploadInitResponseDto response = new ArchiveUploadInitResponseDto();
         response.setUploadId(uploadId);
@@ -70,7 +69,7 @@ public class ArchiveService {
             MultipartFile chunk
     ) {
         validateUploadId(uploadId);
-        validateObjectName(objectName);
+        validateUploadObjectName(objectName);
         validatePartNumber(partNumber);
 
         try {
@@ -108,7 +107,7 @@ public class ArchiveService {
             long totalSize
     ) {
         validateUploadId(uploadId);
-        validateObjectName(objectName);
+        validateUploadObjectName(objectName);
 
         try {
             String normalizedObjectName = normalizePath(objectName);
@@ -246,17 +245,35 @@ public class ArchiveService {
         }
     }
 
-    private String resolveObjectName(String filename, String objectName, String folder) {
-        validateObjectName(objectName);
-        validateFolder(folder);
-
-        if (objectName != null && !objectName.isBlank()) {
-            return normalizePath(objectName);
+    private String resolveObjectName(String filename, String folder) {
+        if (folder == null || folder.isBlank()) {
+            throw ArchiveException.invalidFolder();
         }
+        validateFolder(folder);
 
         String normalizedFolder = normalizeFolder(folder);
         String ext = extractExtension(filename);
         return normalizedFolder + UUID.randomUUID() + ext;
+    }
+
+    private void validateUploadObjectName(String objectName) {
+        validateObjectName(objectName);
+        String normalizedObjectName = normalizePath(objectName);
+        String lastSegment = normalizedObjectName.contains("/")
+                ? normalizedObjectName.substring(normalizedObjectName.lastIndexOf('/') + 1)
+                : normalizedObjectName;
+        validateUuidWithOptionalExtension(lastSegment);
+    }
+
+    private void validateUuidWithOptionalExtension(String segment) {
+        String uuidPart = segment.contains(".")
+                ? segment.substring(0, segment.lastIndexOf('.'))
+                : segment;
+        try {
+            UUID.fromString(uuidPart);
+        } catch (Exception exception) {
+            throw ArchiveException.invalidObjectName();
+        }
     }
 
     private void validateObjectName(String objectName) {
