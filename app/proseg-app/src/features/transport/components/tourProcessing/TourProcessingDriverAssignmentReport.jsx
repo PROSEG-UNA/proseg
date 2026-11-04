@@ -171,13 +171,66 @@ function ReportBody({ result }) {
     );
 }
 
-export default function TourProcessingDriverAssignmentReport({ open, result, subtitle, onClose }) {
-    if (!result) return null;
+function VehicleReportBody({ result }) {
+    const pending = result.unassignedDetails ?? [];
+    const warnings = result.preservedAssignmentWarnings ?? [];
+    const [activeKey, setActiveKey] = useState(null);
+    const sections = [
+        { key: 'pending', label: 'Giras pendientes', items: pending },
+        { key: 'warnings', label: 'Requieren revisión', items: warnings },
+    ].filter((section) => section.items.length > 0);
+    const current = sections.find((section) => section.key === activeKey) ?? sections[0];
+
+    return (
+        <Box>
+            <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap" sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 2 }}>
+                <StatTile label="Asignadas" value={result.assignedTours ?? 0} color="success.main" />
+                <StatTile label="Pendientes" value={result.unassignedTours ?? 0} />
+                <StatTile label="Requieren revisión" value={warnings.length} />
+            </Stack>
+            {!current && (
+                <Typography variant="body2" color="text.secondary" sx={{ px: { xs: 2.5, sm: 3 }, pb: 3 }}>
+                    Todas las giras se asignaron sin observaciones.
+                </Typography>
+            )}
+            {current && (
+                <>
+                    <Tabs
+                        value={current.key}
+                        onChange={(_, key) => setActiveKey(key)}
+                        variant="scrollable"
+                        scrollButtons="auto"
+                        sx={{ position: 'sticky', top: 0, zIndex: 1, px: { xs: 1.5, sm: 2 }, bgcolor: 'background.paperWarm', borderBottom: '1px solid', borderColor: 'divider' }}
+                    >
+                        {sections.map((section) => (
+                            <Tab key={section.key} value={section.key} label={`${section.label} (${section.items.length})`} sx={{ textTransform: 'none', fontWeight: 700 }} />
+                        ))}
+                    </Tabs>
+                    <Box sx={{ px: { xs: 2.5, sm: 3 }, py: 2 }}>
+                        <TourIssuesTable key={current.key} items={current.items} />
+                    </Box>
+                </>
+            )}
+        </Box>
+    );
+}
+
+export default function TourProcessingDriverAssignmentReport({ open, result, vehicleResult, subtitle, onClose }) {
+    const [selectedResource, setSelectedResource] = useState(null);
+    const activeResource = selectedResource === 'drivers' && result ? 'drivers'
+        : selectedResource === 'vehicles' && vehicleResult ? 'vehicles'
+            : result ? 'drivers' : 'vehicles';
+    const close = () => {
+        setSelectedResource(null);
+        onClose();
+    };
+
+    if (!result && !vehicleResult) return null;
 
     return (
         <GeneralModal
             open={open}
-            onClose={onClose}
+            onClose={close}
             icon={FactCheckOutlinedIcon}
             title="Resultado de la autoasignación"
             subtitle={subtitle}
@@ -187,9 +240,20 @@ export default function TourProcessingDriverAssignmentReport({ open, result, sub
                     Corresponde a la ejecución realizada; las ediciones posteriores pueden cambiarlo.
                 </Typography>
             )}
-            primaryButton={{ label: 'Cerrar', onClick: onClose }}
+            primaryButton={{ label: 'Cerrar', onClick: close }}
         >
-            <ReportBody result={result} />
+            <Tabs
+                value={activeResource}
+                onChange={(_, value) => setSelectedResource(value)}
+                variant="scrollable"
+                scrollButtons="auto"
+                sx={{ px: { xs: 1.5, sm: 2 }, bgcolor: 'background.paperWarm', borderBottom: '1px solid', borderColor: 'divider' }}
+            >
+                <Tab value="drivers" label="Choferes" disabled={!result} sx={{ textTransform: 'none', fontWeight: 700 }} />
+                <Tab value="vehicles" label="Vehículos" disabled={!vehicleResult} sx={{ textTransform: 'none', fontWeight: 700 }} />
+            </Tabs>
+            {activeResource === 'drivers' && result && <ReportBody result={result} />}
+            {activeResource === 'vehicles' && vehicleResult && <VehicleReportBody result={vehicleResult} />}
         </GeneralModal>
     );
 }

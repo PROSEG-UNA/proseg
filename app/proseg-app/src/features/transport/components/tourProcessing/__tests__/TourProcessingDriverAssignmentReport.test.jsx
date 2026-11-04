@@ -65,9 +65,37 @@ describe('TourProcessingDriverAssignmentReport', () => {
         renderReport({ result: { assignedTours: 2, unassignedTours: 0 }, onClose: close });
 
         expect(screen.getByText('Todas las giras se asignaron sin observaciones.')).toBeTruthy();
-        expect(screen.queryByRole('tab')).toBeNull();
+        expect(screen.getByRole('tab', { name: 'Choferes' })).toBeEnabled();
+        expect(screen.getByRole('tab', { name: 'Vehículos' })).toBeDisabled();
         fireEvent.click(screen.getByRole('button', { name: 'Cerrar' }));
         expect(close).toHaveBeenCalledOnce();
+    });
+
+    it('muestra los motivos de vehículos en otra pestaña del mismo resultado', () => {
+        renderReport({
+            result: fullResult,
+            vehicleResult: {
+                assignedTours: 3,
+                unassignedTours: 1,
+                unassignedDetails: [{ rowId: 'v1', number: '05100', reasons: ['No hay vehículo con capacidad suficiente.'] }],
+                preservedAssignmentWarnings: [{ rowId: 'v2', number: '05200', reasons: ['El vehículo no tiene capacidad registrada.'] }],
+            },
+        });
+
+        fireEvent.click(screen.getByRole('tab', { name: 'Vehículos' }));
+        expect(screen.getByText('No hay vehículo con capacidad suficiente.')).toBeTruthy();
+        fireEvent.click(screen.getByRole('tab', { name: 'Requieren revisión (1)' }));
+        expect(screen.getByText('El vehículo no tiene capacidad registrada.')).toBeTruthy();
+        fireEvent.click(screen.getByRole('tab', { name: 'Choferes' }));
+        expect(screen.getByText('Ana tiene un traslape con la gira 02787.')).toBeTruthy();
+    });
+
+    it('abre directamente vehículos cuando solo se autoasignaron vehículos', () => {
+        renderReport({ result: null, vehicleResult: { assignedTours: 0, unassignedTours: 0 } });
+
+        expect(screen.getByRole('tab', { name: 'Choferes' })).toBeDisabled();
+        expect(screen.getByRole('tab', { name: 'Vehículos' })).toBeEnabled();
+        expect(screen.getByText('Todas las giras se asignaron sin observaciones.')).toBeTruthy();
     });
 
     it('no renderiza nada sin resultado', () => {

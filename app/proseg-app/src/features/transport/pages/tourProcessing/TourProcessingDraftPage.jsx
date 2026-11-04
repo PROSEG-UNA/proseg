@@ -37,6 +37,7 @@ import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import AutoFixHighOutlinedIcon from '@mui/icons-material/AutoFixHighOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import RouteOutlinedIcon from '@mui/icons-material/RouteOutlined';
 import SaveAltOutlinedIcon from '@mui/icons-material/SaveAltOutlined';
 import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined';
@@ -90,6 +91,7 @@ import CatalogValueCell from '../../components/tourProcessing/CatalogValueCell.j
 import TourProcessingAssignmentsCell from '../../components/tourProcessing/TourProcessingAssignmentsCell.jsx';
 import TourProcessingDraftRowModal from '../../components/tourProcessing/TourProcessingDraftRowModal.jsx';
 import TourProcessingDriverAssignmentReport from '../../components/tourProcessing/TourProcessingDriverAssignmentReport.jsx';
+import TourProcessingAutoAssignmentInfoModal from '../../components/tourProcessing/TourProcessingAutoAssignmentInfoModal.jsx';
 import TourProcessingFinalCommissionDialog from '../../components/tourProcessing/TourProcessingFinalCommissionDialog.jsx';
 import { hasFinalCommissionFindings } from '../../components/tourProcessing/finalCommissionIssues.js';
 import TourProcessingDraftDaysDetailPanel from '../../components/tourProcessing/TourProcessingDraftDaysDetailPanel.jsx';
@@ -101,8 +103,6 @@ import {
     approvalStatusColor,
     approvalStatusLabel,
     draftPeriodLabel,
-    draftStatusColor,
-    draftStatusLabel,
     shortPeriodLabel,
     toggledApprovalStatus,
 } from '../../components/tourProcessing/tourProcessingDraftLabels.js';
@@ -122,7 +122,7 @@ const FILTERABLE_COLUMNS = new Set([
 const AUTO_ASSIGN_DRIVERS_MESSAGE = 'Las giras con varios viajes se completan en conjunto, asignando choferes y vehículos compatibles. Si no se puede completar una gira, se conservan sus asignaciones existentes y no se agregan partes sueltas.\n\nSi hay choferes asignados que no existen en el catálogo del sistema (marcados con el ícono de advertencia), esas filas quedarán sin chofer y la autoasignación intentará completarlas.\n\nLas giras que ya tienen un chofer del catálogo se respetan y no se reasignan.';
 const AUTO_ASSIGN_ULLOA_DRIVERS_MESSAGE = 'Solo se asignan las giras de Programa De Servicios Generales hacia Ulloa (Barreal) que no tienen chofer, usando los choferes con turno de Ulloa configurado.\n\nSi alguna gira de Ulloa tiene un chofer que no existe en el catálogo del sistema (marcado con el ícono de advertencia), esa fila quedará sin chofer y se intentará completar. Las demás giras no se tocan.';
 const AUTO_ASSIGN_DRIVERS_AND_VEHICLES_MESSAGE = 'Primero se autoasignan los choferes y después los vehículos.\n\nSi hay choferes o vehículos asignados que no existen en el catálogo del sistema (marcados con el ícono de advertencia), esas filas quedarán vacías y la autoasignación intentará completarlas.\n\nLas giras que ya tienen chofer o vehículo del catálogo se respetan y no se reasignan.';
-const AUTO_ASSIGN_VEHICLES_MESSAGE = 'En giras con varios viajes también se buscan los choferes faltantes para completar la gira en conjunto. Las asignaciones existentes se conservan.\n\nSi hay vehículos asignados que no existen en el catálogo del sistema o que no son una placa (marcados con el ícono de advertencia), esas filas quedarán sin vehículo y la autoasignación intentará completarlas.\n\nLas giras que ya tienen un vehículo del catálogo se respetan y no se reasignan.';
+const AUTO_ASSIGN_VEHICLES_MESSAGE = 'Las giras que ya tienen chofer del catálogo reciben prioridad para asignarles vehículo. En giras con varios viajes también se buscan los choferes faltantes para completar la gira en conjunto. Las asignaciones existentes se conservan.\n\nSi hay vehículos asignados que no existen en el catálogo del sistema o que no son una placa (marcados con el ícono de advertencia), esas filas quedarán sin vehículo y la autoasignación intentará completarlas.\n\nLas giras que ya tienen un vehículo del catálogo se respetan y no se reasignan.';
 
 const NO_DUPLICATES_HEADER = (
     <Box component="span" sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -281,7 +281,7 @@ function autoAssignDriversAndVehiclesResultMessage({ drivers, vehicles }) {
 
 function autoAssignVehiclesResultMessage(result) {
     const parts = [`Se asignó vehículo a ${result?.assignedTours ?? 0} giras.`];
-    if (result?.unassignedTours) parts.push(`${result.unassignedTours} giras quedaron sin vehículo porque ningún vehículo disponible cumple las reglas.`);
+    if (result?.unassignedTours) parts.push(`${result.unassignedTours} giras o viajes quedaron sin vehículo. Revisá los motivos en el resultado de la autoasignación.`);
     if (result?.clearedTours) parts.push(`Se vaciaron ${result.clearedTours} giras que tenían un vehículo fuera del catálogo.`);
     return parts.join('\n');
 }
@@ -307,6 +307,7 @@ export default function TourProcessingDraftPage() {
     const [autoAssignUlloaOpen, setAutoAssignUlloaOpen] = useState(false);
     const [autoAssignVehiclesOpen, setAutoAssignVehiclesOpen] = useState(false);
     const [autoAssignBothOpen, setAutoAssignBothOpen] = useState(false);
+    const [autoAssignmentInfoOpen, setAutoAssignmentInfoOpen] = useState(false);
     const [clearAssignmentsOpen, setClearAssignmentsOpen] = useState(false);
     const [rowToDelete, setRowToDelete] = useState(null);
     const [rowModal, setRowModal] = useState({ open: false, mode: 'view', row: null, rowId: null });
@@ -476,6 +477,8 @@ export default function TourProcessingDraftPage() {
         mutationFn: () => autoAssignTourProcessingDraftVehicles(draftId),
         onSuccess: (result) => {
             setAutoAssignVehiclesOpen(false);
+            setAssignmentReport({ draftId, result: null, vehicleResult: result });
+            setAssignmentReportOpen(true);
             setAlert({ type: 'success', message: autoAssignVehiclesResultMessage(result) });
             void invalidateTourProcessingDraft(queryClient, draftId);
         },
@@ -493,7 +496,7 @@ export default function TourProcessingDraftPage() {
         },
         onSuccess: (result) => {
             setAutoAssignBothOpen(false);
-            setAssignmentReport({ draftId, result: result.drivers });
+            setAssignmentReport({ draftId, result: result.drivers, vehicleResult: result.vehicles });
             setAssignmentReportOpen(true);
             setAlert({ type: 'success', message: autoAssignDriversAndVehiclesResultMessage(result) });
             void invalidateTourProcessingDraft(queryClient, draftId);
@@ -822,6 +825,11 @@ export default function TourProcessingDraftPage() {
         setAutoAssignBothOpen(true);
     };
 
+    const handleAutoAssignmentInfo = () => {
+        closeOptions();
+        setAutoAssignmentInfoOpen(true);
+    };
+
     const handleClearAssignments = () => {
         closeOptions();
         setClearAssignmentsOpen(true);
@@ -902,9 +910,6 @@ export default function TourProcessingDraftPage() {
                     title={pageTitle}
                     action={(
                         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-                            {draft && (
-                                <Chip label={draftStatusLabel(draft.status)} color={draftStatusColor(draft.status)} size="small" variant="outlined" />
-                            )}
                             <Button
                                 variant="outlined"
                                 color="inherit"
@@ -958,6 +963,10 @@ export default function TourProcessingDraftPage() {
                                                     <ListItemIcon><GroupsOutlinedIcon fontSize="small" /></ListItemIcon>
                                                     <ListItemText>Autoasignar choferes y vehículos</ListItemText>
                                                 </MenuItem>
+                                                 <MenuItem onClick={handleAutoAssignmentInfo}>
+                                                     <ListItemIcon><InfoOutlinedIcon fontSize="small" /></ListItemIcon>
+                                                     <ListItemText>Información de la autoasignación</ListItemText>
+                                                 </MenuItem>
                                             </NestedMenuItem>
                                         )}
                                         {canEditRows && hasAssignmentReport && (
@@ -1222,6 +1231,7 @@ export default function TourProcessingDraftPage() {
                 <TourProcessingDriverAssignmentReport
                     open={assignmentReportOpen}
                     result={assignmentReport.result}
+                    vehicleResult={assignmentReport.vehicleResult}
                     subtitle={draftPeriodLabel(draft)}
                     onClose={() => setAssignmentReportOpen(false)}
                 />
@@ -1246,6 +1256,11 @@ export default function TourProcessingDraftPage() {
                 confirmLabel={autoAssigningDrivers ? 'Asignando...' : 'Sí, autoasignar'}
                 onConfirm={confirmAutoAssignDrivers}
                 onClose={autoAssigningDrivers ? undefined : () => setAutoAssignDriversOpen(false)}
+            />
+
+            <TourProcessingAutoAssignmentInfoModal
+                open={autoAssignmentInfoOpen}
+                onClose={() => setAutoAssignmentInfoOpen(false)}
             />
 
             <DialogModal
