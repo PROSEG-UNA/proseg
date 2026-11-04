@@ -5,8 +5,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import Button from '@mui/material/Button';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import AppTheme from '../../theme/AppTheme';
 import NestedMenuItem from '../NestedMenuItem.jsx';
+
+vi.mock('@mui/material/useMediaQuery', () => ({ default: vi.fn(() => false) }));
 
 function Harness({ onSelect }) {
     const [anchor, setAnchor] = useState(null);
@@ -25,7 +28,10 @@ function Harness({ onSelect }) {
 }
 
 describe('NestedMenuItem', () => {
-    afterEach(cleanup);
+    afterEach(() => {
+        cleanup();
+        vi.mocked(useMediaQuery).mockReturnValue(false);
+    });
 
     it('muestra las opciones al pasar el mouse y dispara la acción elegida', async () => {
         const onSelect = vi.fn();
@@ -53,5 +59,24 @@ describe('NestedMenuItem', () => {
 
         await user.hover(screen.getByText('Crear gira'));
         await waitFor(() => expect(screen.queryByText('Autoasignar choferes')).toBeNull());
+    });
+
+    it('en móvil espera el clic antes de abrir el submenú y permite elegir la opción', async () => {
+        vi.mocked(useMediaQuery).mockReturnValue(true);
+        const onSelect = vi.fn();
+        const user = userEvent.setup();
+        render(<Harness onSelect={onSelect} />);
+
+        await user.click(screen.getByRole('button', { name: 'abrir' }));
+        const parent = screen.getByText('Autoasignar');
+        await user.hover(parent);
+        expect(screen.queryByText('Autoasignar choferes')).toBeNull();
+
+        await user.click(parent);
+        expect(await screen.findByText('Autoasignar vehículos')).toBeTruthy();
+        expect(onSelect).not.toHaveBeenCalled();
+
+        await user.click(screen.getByText('Autoasignar vehículos'));
+        expect(onSelect).toHaveBeenCalledExactlyOnceWith('vehiculos');
     });
 });
