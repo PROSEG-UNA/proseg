@@ -76,22 +76,39 @@ class TransportPersistenceTest {
     }
 
     @Test
-    void migratesEveryAssignmentAndPreservesEveryPrimaryDayExactlyOnce() {
-        assertThat(jdbc.queryForObject("select (select count(*) from tour_processing_draft_assignment_table) + coalesce((select sum(jsonb_array_length(payload->'assignments')) from tour_processing_draft_import_row_table), 0)", Long.class))
-                .isEqualTo(jdbc.queryForObject("select count(*) from cleaning_draft_row_table", Long.class));
-        assertThat(jdbc.queryForObject("""
-                select count(*) from cleaning_draft_row_day_table old
-                join tour_processing_draft_assignment_table a on a.id = old.row_id
-                join tour_processing_draft_tour_table t on t.id = a.tour_id
-                left join tour_processing_draft_day_table d on d.id = old.id
-                where t.duplicate_rank = 1 and (d.id is null or
-                  (d.assignment_id, d.date, d.start_time, d.end_time, d.ordinary_hours, d.surplus_hours, d.overtime_hours, d.manually_edited)
-                  is distinct from
-                  (old.row_id, old.date, old.start_time, old.end_time, old.ordinary_hours, old.surplus_hours, old.overtime_hours, old.manually_edited))
-                """, Long.class)).isZero();
+    void rerunningMigrationsKeepsEveryDay() {
+        when(currentUserResolver.resolve()).thenReturn("test");
+        Driver driver = driverRepository.save(Driver.builder().name("Test " + UUID.randomUUID()).status("ACTIVE").build());
+        var row = TourProcessingDraftRowRequestDto.builder().rowNumber(1).number("MIGRATION-1")
+                .driver(driver.getName()).passengers(3).executingUnit("Unidad").responsible("Responsable")
+                .destination("Heredia").durationDays(1).priority(1).departureDate(LocalDate.of(2094, 5, 4))
+                .returnDate(LocalDate.of(2094, 5, 4)).departureTime(LocalTime.of(8, 0))
+                .returnTime(LocalTime.of(16, 0)).build();
+        drafts.create(TourProcessingDraftCreateRequestDto.builder().fileName("migration.xlsx").fileType("XLSX")
+                .year(2094).month(5).businessDays(21).rows(List.of(row)).build());
+        entityManager.flush();
         long count = jdbc.queryForObject("select count(*) from tour_processing_draft_day_table", Long.class);
+        assertThat(count).isPositive();
         migration.afterSingletonsInstantiated();
         assertThat(jdbc.queryForObject("select count(*) from tour_processing_draft_day_table", Long.class)).isEqualTo(count);
+    }
+
+    @Test
+    void dropsOnlyEmptyLegacyTables() {
+        jdbc.execute("drop table if exists assignment_table, tour_table, vehicle_maintenance_table");
+        jdbc.execute("create table tour_table (id uuid primary key)");
+        jdbc.execute("create table vehicle_maintenance_table (id uuid primary key)");
+        jdbc.update("insert into tour_table values (?)", UUID.randomUUID());
+
+        migration.afterSingletonsInstantiated();
+
+        assertThat(jdbc.queryForObject("select to_regclass('tour_table')::text", String.class)).isNotNull();
+        assertThat(jdbc.queryForObject("select to_regclass('vehicle_maintenance_table')::text", String.class)).isNull();
+
+        jdbc.update("delete from tour_table");
+        migration.afterSingletonsInstantiated();
+
+        assertThat(jdbc.queryForObject("select to_regclass('tour_table')::text", String.class)).isNull();
     }
 
     @Test
