@@ -5,15 +5,27 @@ const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
 const EDGE_SIZE = 48;
 const MAX_SPEED = 24;
+const CLAMP_TOLERANCE = 96;
+const WHEEL_LINE_HEIGHT = 16;
 
-export default function TableHorizontalScrollbar({ containerRef }) {
+export default function TableHorizontalScrollbar({ containerRef, tableElRef }) {
     const trackRef = useRef(null);
     const dragRef = useRef(null);
     const autoScrollRef = useRef({ selecting: false, pointerX: 0, rafId: 0, active: false });
+    const scrollXRef = useRef(0);
+    const [scrollX, setScrollX] = useState(0);
     const [scrollWidth, setScrollWidth] = useState(0);
     const [clientWidth, setClientWidth] = useState(0);
-    const [scrollLeft, setScrollLeft] = useState(0);
     const [trackWidth, setTrackWidth] = useState(0);
+
+    const applyScrollX = useCallback((next) => {
+        scrollXRef.current = next;
+        setScrollX(next);
+        const tableEl = tableElRef?.current;
+        if (tableEl) tableEl.style.transform = next ? `translateX(${-next}px)` : '';
+    }, [tableElRef]);
+
+    const measureRafIdRef = useRef(0);
 
     const measure = useCallback(() => {
         const container = containerRef?.current;
@@ -21,32 +33,47 @@ export default function TableHorizontalScrollbar({ containerRef }) {
         if (!container) return;
         setScrollWidth(container.scrollWidth);
         setClientWidth(container.clientWidth);
-        setScrollLeft(container.scrollLeft);
         if (track) setTrackWidth(track.clientWidth);
     }, [containerRef]);
 
-    const syncFromContainer = useCallback(() => {
-        const container = containerRef?.current;
-        if (!container) return;
-        setScrollLeft(container.scrollLeft);
-    }, [containerRef]);
+    const scheduleMeasure = useCallback(() => {
+        if (measureRafIdRef.current) return;
+        measureRafIdRef.current = requestAnimationFrame(() => {
+            measureRafIdRef.current = 0;
+            measure();
+        });
+    }, [measure]);
 
     useEffect(() => {
         const container = containerRef?.current;
         if (!container) return undefined;
         measure();
-        container.addEventListener('scroll', syncFromContainer, { passive: true });
-        const resizeObserver = new ResizeObserver(measure);
+        const resizeObserver = new ResizeObserver(scheduleMeasure);
         resizeObserver.observe(container);
         if (trackRef.current) resizeObserver.observe(trackRef.current);
-        const mutationObserver = new MutationObserver(measure);
+        const mutationObserver = new MutationObserver(scheduleMeasure);
         mutationObserver.observe(container, { childList: true, subtree: true });
         return () => {
-            container.removeEventListener('scroll', syncFromContainer);
+            if (measureRafIdRef.current) cancelAnimationFrame(measureRafIdRef.current);
             resizeObserver.disconnect();
             mutationObserver.disconnect();
         };
-    }, [containerRef, measure, syncFromContainer]);
+    }, [containerRef, measure, scheduleMeasure]);
+
+    const maxScroll = scrollWidth - clientWidth;
+
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            if (maxScroll >= 0 && scrollXRef.current > maxScroll + CLAMP_TOLERANCE) {
+                applyScrollX(maxScroll);
+            }
+        }, 250);
+        return () => clearTimeout(timeoutId);
+    }, [maxScroll, applyScrollX]);
+
+    const setClampedScrollX = useCallback((next) => {
+        applyScrollX(clamp(next, 0, Math.max(0, maxScroll)));
+    }, [maxScroll, applyScrollX]);
 
     const stopAutoScroll = useCallback(() => {
         const state = autoScrollRef.current;
@@ -74,10 +101,9 @@ export default function TableHorizontalScrollbar({ containerRef }) {
             stopAutoScroll();
             return;
         }
-        const max = container.scrollWidth - container.clientWidth;
-        container.scrollLeft = clamp(container.scrollLeft + velocity * MAX_SPEED, 0, max);
+        setClampedScrollX(scrollXRef.current + velocity * MAX_SPEED);
         state.rafId = requestAnimationFrame(step);
-    }, [containerRef, stopAutoScroll]);
+    }, [containerRef, setClampedScrollX, stopAutoScroll]);
 
     const maybeStartAutoScroll = useCallback(() => {
         const state = autoScrollRef.current;
@@ -118,51 +144,58 @@ export default function TableHorizontalScrollbar({ containerRef }) {
         stopAutoScroll();
     }, [stopAutoScroll]);
 
+    const handleContainerWheel = useCallback((event) => {
+        if (maxScroll <= 0) return;
+        const horizontalIntent = event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY);
+        if (!horizontalIntent) return;
+        const rawDelta = event.deltaX !== 0 ? event.deltaX : event.deltaY;
+        const delta = event.deltaMode === 1 ? rawDelta * WHEEL_LINE_HEIGHT : rawDelta;
+        event.preventDefault();
+        setClampedScrollX(scrollXRef.current + delta);
+    }, [maxScroll, setClampedScrollX]);
+
     useEffect(() => {
         const container = containerRef?.current;
         if (!container) return undefined;
         container.addEventListener('mousedown', handleContainerMouseDown);
+        container.addEventListener('wheel', handleContainerWheel, { passive: false });
         document.addEventListener('mousemove', handleDocumentMouseMove);
         document.addEventListener('mouseup', handleDocumentMouseUp);
         return () => {
             container.removeEventListener('mousedown', handleContainerMouseDown);
+            container.removeEventListener('wheel', handleContainerWheel);
             document.removeEventListener('mousemove', handleDocumentMouseMove);
             document.removeEventListener('mouseup', handleDocumentMouseUp);
             stopAutoScroll();
         };
-    }, [containerRef, handleContainerMouseDown, handleDocumentMouseMove, handleDocumentMouseUp, stopAutoScroll]);
+    }, [containerRef, handleContainerMouseDown, handleContainerWheel, handleDocumentMouseMove, handleDocumentMouseUp, stopAutoScroll]);
 
-    const maxScroll = scrollWidth - clientWidth;
     const thumbWidth = trackWidth > 0 ? Math.max(40, (clientWidth / scrollWidth) * trackWidth) : 0;
     const thumbTravel = trackWidth - thumbWidth;
-    const thumbLeft = maxScroll > 0 && thumbTravel > 0 ? (scrollLeft / maxScroll) * thumbTravel : 0;
+    const thumbLeft = maxScroll > 0 && thumbTravel > 0 ? (scrollX / maxScroll) * thumbTravel : 0;
 
     const scrollToClientX = useCallback((clientX) => {
-        const container = containerRef?.current;
         const track = trackRef.current;
-        if (!container || !track || thumbTravel <= 0) return;
+        if (!track || thumbTravel <= 0) return;
         const trackLeft = track.getBoundingClientRect().left;
         const target = ((clientX - trackLeft - thumbWidth / 2) / thumbTravel) * maxScroll;
-        container.scrollLeft = clamp(target, 0, maxScroll);
-    }, [containerRef, thumbTravel, thumbWidth, maxScroll]);
+        setClampedScrollX(target);
+    }, [thumbTravel, thumbWidth, maxScroll, setClampedScrollX]);
 
     const handleThumbPointerDown = useCallback((event) => {
-        const container = containerRef?.current;
-        if (!container) return;
         event.preventDefault();
         event.stopPropagation();
         event.currentTarget.setPointerCapture(event.pointerId);
-        dragRef.current = { startX: event.clientX, startScrollLeft: container.scrollLeft };
-    }, [containerRef]);
+        dragRef.current = { startX: event.clientX, startScrollX: scrollXRef.current };
+    }, []);
 
     const handleThumbPointerMove = useCallback((event) => {
-        const container = containerRef?.current;
         const drag = dragRef.current;
-        if (!container || !drag || thumbTravel <= 0) return;
+        if (!drag || thumbTravel <= 0) return;
         const delta = event.clientX - drag.startX;
-        const target = drag.startScrollLeft + (delta / thumbTravel) * maxScroll;
-        container.scrollLeft = clamp(target, 0, maxScroll);
-    }, [containerRef, thumbTravel, maxScroll]);
+        const target = drag.startScrollX + (delta / thumbTravel) * maxScroll;
+        setClampedScrollX(target);
+    }, [thumbTravel, maxScroll, setClampedScrollX]);
 
     const handleThumbPointerUp = useCallback((event) => {
         if (event.currentTarget.hasPointerCapture(event.pointerId)) {

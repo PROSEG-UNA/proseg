@@ -1,21 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchVehicles } from '../services/vehicles/vehiclesService';
 import { getFriendlyApiErrorMessage } from '../../../common/utils';
-import { vehicleStatusLabel } from '../transportUtils';
 import { keepPreviousPage, queryKeys } from '../../../common/query';
 
 function mapVehicleToRow(vehicle) {
     return {
         id: vehicle.id,
         plate: vehicle.plate ?? '—',
-        brand: vehicle.brand ?? '—',
-        model: vehicle.model ?? '—',
-        year: vehicle.year ?? '—',
+        type: vehicle.type ?? '',
         capacity: vehicle.capacity ?? '—',
-        status: vehicleStatusLabel(vehicle.status),
-        statusRaw: vehicle.status ?? '',
-        createdAt: vehicle.createdAt ?? null,
-        updatedAt: vehicle.updatedAt ?? null,
+        available: Boolean(vehicle.available),
     };
 }
 

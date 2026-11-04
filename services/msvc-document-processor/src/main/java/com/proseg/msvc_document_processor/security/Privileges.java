@@ -9,6 +9,15 @@ public final class Privileges {
         public static final String EXPORTAR = "EXPORTAR_ACTIVOS";
     }
 
+    public static final class Giras {
+        public static final String IMPORTAR = "IMPORTAR_GIRAS";
+        public static final String EXPORTAR = "EXPORTAR_GIRAS";
+    }
+
+    public static final class Choferes {
+        public static final String LEER = "LEER_CHOFERES";
+    }
+
     public static final class SolicitudesMantenimiento {
         public static final String LEER = "LEER_SOLICITUDES_MANTENIMIENTO";
     }

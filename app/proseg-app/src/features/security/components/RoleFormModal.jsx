@@ -112,7 +112,7 @@ const DOMAIN_META = {
         lightBg:    '#ecfeff',
         darkBg:     'rgba(22,78,99,0.35)',
         icon: LocalShippingIcon,
-        description: 'Choferes, vehículos, giras y asignaciones',
+        description: 'Depuración de giras, choferes y vehículos',
     },
 };
 

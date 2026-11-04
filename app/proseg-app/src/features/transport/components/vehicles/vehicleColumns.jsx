@@ -2,44 +2,35 @@ import Chip from '@mui/material/Chip';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RowActionsMenu from '../../../../common/components/RowActionsMenu.jsx';
-import { formatDateTime, getStatusChipColor } from '../../transportUtils';
+import { VEHICLE_TYPE_OPTIONS, vehicleTypeLabel } from '../../transportUtils';
 
 export function getVehicleColumns() {
     return [
         { accessorKey: 'plate', header: 'Placa', size: 150, grow: false },
-        { accessorKey: 'brand', header: 'Marca', size: 180, grow: false },
-        { accessorKey: 'model', header: 'Modelo', size: 180, grow: false },
-        { accessorKey: 'year', header: 'Año', size: 110, grow: false },
+        {
+            accessorKey: 'type',
+            header: 'Tipo',
+            size: 170,
+            grow: false,
+            filterVariant: 'select',
+            filterSelectOptions: VEHICLE_TYPE_OPTIONS,
+            Cell: ({ cell }) => (cell.getValue() ? vehicleTypeLabel(cell.getValue()) : '—'),
+        },
         { accessorKey: 'capacity', header: 'Capacidad', size: 120, grow: false },
         {
-            accessorKey: 'status',
+            accessorKey: 'available',
             header: 'Estado',
             size: 150,
             grow: false,
-            Cell: ({ row, cell }) => (
+            enableColumnFilter: false,
+            Cell: ({ cell }) => (
                 <Chip
-                    label={cell.getValue() ?? '—'}
+                    label={cell.getValue() ? 'Disponible' : 'No disponible'}
                     size="small"
-                    color={getStatusChipColor(row.original.statusRaw)}
+                    color={cell.getValue() ? 'success' : 'error'}
                     variant="outlined"
                 />
             ),
-        },
-        {
-            accessorKey: 'createdAt',
-            header: 'Creado',
-            size: 170,
-            grow: false,
-            enableColumnFilter: false,
-            Cell: ({ cell }) => formatDateTime(cell.getValue()),
-        },
-        {
-            accessorKey: 'updatedAt',
-            header: 'Actualizado',
-            size: 170,
-            grow: false,
-            enableColumnFilter: false,
-            Cell: ({ cell }) => formatDateTime(cell.getValue()),
         },
     ];
 }
