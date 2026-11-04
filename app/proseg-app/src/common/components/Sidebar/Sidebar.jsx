@@ -242,7 +242,16 @@ export function Sidebar() {
                     <img
                         src={resolvedMode === 'dark' ? '/logo_una_blanco.png' : '/logo_una.png'}
                         alt="Logo UNA"
+                        role="link"
+                        tabIndex={0}
+                        aria-label="Ir al inicio"
                         onClick={() => navigate('/home')}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                navigate('/home');
+                            }
+                        }}
                         style={{ maxWidth: '60%', height: 'auto', maxHeight: '60px', cursor: 'pointer' }}
                     />
                 )}

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useMediaQuery } from '@mui/material';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import Menu from '@mui/material/Menu';
@@ -8,6 +9,7 @@ import ListItemText from '@mui/material/ListItemText';
 import SettingsIcon from '@mui/icons-material/Settings';
 
 export default function RowActionsMenu({ actions = [], tooltip = 'Ver acción' }) {
+    const isTouch = useMediaQuery('(pointer: coarse)', { noSsr: true });
     const [anchorEl, setAnchorEl] = useState(null);
     const open = Boolean(anchorEl);
 
@@ -32,7 +34,7 @@ export default function RowActionsMenu({ actions = [], tooltip = 'Ver acción' }
     return (
         <>
             <Tooltip title={tooltip}>
-                <IconButton size="small" onClick={handleOpen}>
+                <IconButton size={isTouch ? 'medium' : 'small'} aria-label={tooltip} onClick={handleOpen}>
                     <SettingsIcon fontSize="small" sx={{ color: 'primary.icon' }} />
                 </IconButton>
             </Tooltip>

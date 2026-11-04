@@ -85,6 +85,7 @@ export function LoginPage() {
         <>
             <Helmet>
                 <title>{`Iniciar sesión - ${APP_CONFIG.name}`}</title>
+                <meta name="description" content="Iniciá sesión para acceder a la gestión de servicios institucionales." />
             </Helmet>
             <PageShell />
             <GeneralModal
@@ -95,6 +96,7 @@ export function LoginPage() {
                 fullScreenAt="xs"
                 icon={AdminPanelSettingsIcon}
                 title={APP_CONFIG.fullName}
+                titleComponent="h1"
                 subtitle="Gestión de Servicios Institucionales"
                 loading={loading}
                 footerLeft={

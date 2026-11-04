@@ -33,6 +33,14 @@ public class TicketException extends BaseException {
         );
     }
 
+    public static TicketException attachPhotosForbidden() {
+        return new TicketException(
+                HttpStatus.FORBIDDEN,
+                "TICKET_ATTACH_PHOTOS_FORBIDDEN",
+                "No tienes permisos para adjuntar imágenes al ticket."
+        );
+    }
+
     public static TicketException assignableUsersForbidden() {
         return new TicketException(
                 HttpStatus.FORBIDDEN,

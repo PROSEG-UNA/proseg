@@ -32,6 +32,22 @@ public class SecurityConfig {
                                 "/api/v1/document-processor/imports/assets/**"
                         ).hasAuthority(Privileges.Activos.IMPORTAR)
 
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/document-processor/imports/tours"
+                        ).hasAuthority(Privileges.Giras.IMPORTAR)
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/document-processor/imports/tours/**"
+                        ).hasAuthority(Privileges.Giras.IMPORTAR)
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/document-processor/exports/tours/**"
+                        ).hasAuthority(Privileges.Giras.EXPORTAR)
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/document-processor/exports/drivers/**"
+                        ).hasAuthority(Privileges.Choferes.LEER)
+
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/document-processor/exports/assets/**"
                         ).hasAnyAuthority(Privileges.Activos.IMPORTAR, Privileges.Activos.EXPORTAR)
