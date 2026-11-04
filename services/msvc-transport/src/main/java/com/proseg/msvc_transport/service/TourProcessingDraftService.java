@@ -673,14 +673,29 @@ public class TourProcessingDraftService {
         List<TourProcessingDraftTour> tours = tourRepository.findAllByDraftIdOrderByRowNumberAsc(draftId);
         List<TourProcessingDraftAssignment> assignments = assignmentsOf(tours);
         List<Vehicle> vehicles = vehicleRepository.findAll();
+        List<Driver> drivers = driverRepository.findAll();
+        Map<UUID, Vehicle> vehiclesById = DriverHoursRules.vehiclesById(vehicles);
+        List<TourProcessingVehicleAutoAssignResponseDto.TourIssue> preservedWarnings = new ArrayList<>();
+        for (TourProcessingDraftAssignment assignment : assignments) {
+            if (!assignment.isActive() || assignment.getResourceType() != ResourceType.INTERNAL || assignment.getVehicleId() == null) continue;
+            Vehicle vehicle = vehiclesById.get(assignment.getVehicleId());
+            List<String> reasons = new ArrayList<>();
+            if (vehicle == null) {
+                reasons.add("El vehículo asignado no existe en el catálogo. Se conservó la asignación existente.");
+            } else {
+                if (vehicle.getCapacity() == null) {
+                    reasons.add("El vehículo " + vehicle.getPlate() + " no tiene capacidad de pasajeros registrada. Se conservó la asignación existente.");
+                } else if (vehicle.getCapacity() < assignment.getPassengers()) {
+                    reasons.add("El vehículo " + vehicle.getPlate() + " no tiene capacidad para " + assignment.getPassengers() + " pasajeros. Se conservó la asignación existente.");
+                }
+                if (!vehicle.isAvailable()) {
+                    reasons.add("El vehículo " + vehicle.getPlate() + " no está disponible. Se conservó la asignación existente.");
+                }
+            }
+            if (!reasons.isEmpty()) preservedWarnings.add(vehicleIssue(assignment, reasons));
+        }
         int groupedVehiclesBefore = (int) assignments.stream().filter(a -> a.getTour().isDistributed())
                 .filter(a -> a.getVehicleId() != null).count();
-        if (assignments.stream().anyMatch(a -> a.isActive() && a.getTour().isDistributed())) {
-            autoAssignDrivers(draftId, a -> a.getTour().isDistributed(), false);
-        }
-        int groupedVehiclesAdded = (int) assignments.stream().filter(a -> a.getTour().isDistributed())
-                .filter(a -> a.getVehicleId() != null).count() - groupedVehiclesBefore;
-
         int clearedTours = 0;
         for (TourProcessingDraftAssignment assignment : assignments) {
             if (assignment.getResourceType() != ResourceType.INTERNAL) {
@@ -692,14 +707,80 @@ public class TourProcessingDraftService {
             }
         }
 
+        Predicate<TourProcessingDraftAssignment> assignedDriverGroups = assignment -> assignment.getTour().isDistributed()
+                && assignment.getTour().getAssignments().stream().anyMatch(part -> part.getDriverId() != null);
+        if (assignments.stream().anyMatch(assignment -> assignment.isActive() && assignedDriverGroups.test(assignment))) {
+            autoAssignDrivers(draftId, assignedDriverGroups, false);
+        }
+
+        List<TourProcessingDraftAssignment> pendingWithDriver = assignments.stream()
+                .filter(TourProcessingDraftAssignment::isActive)
+                .filter(assignment -> assignment.getResourceType() == ResourceType.INTERNAL)
+                .filter(assignment -> !assignment.getTour().isDistributed())
+                .filter(assignment -> assignment.getDriverId() != null && assignment.getVehicleId() == null)
+                .toList();
+        Map<TourProcessingDraftAssignment, Vehicle> assignedWithDriver = new VehicleAutoAssigner(vehicles, drivers, assignments)
+                .assign(pendingWithDriver);
+        applyVehicleAssignments(assignments, assignedWithDriver);
+
+        TourProcessingDriverAutoAssignResponseDto groupResult = null;
+        if (assignments.stream().anyMatch(a -> a.isActive() && a.getTour().isDistributed())) {
+            groupResult = autoAssignDrivers(draftId, a -> a.getTour().isDistributed(), false);
+        }
+        int groupedVehiclesAdded = (int) assignments.stream().filter(a -> a.getTour().isDistributed())
+                .filter(a -> a.getVehicleId() != null).count() - groupedVehiclesBefore;
+
         List<TourProcessingDraftAssignment> pendingTours = assignments.stream()
                 .filter(TourProcessingDraftAssignment::isActive)
                 .filter(assignment -> assignment.getResourceType() == ResourceType.INTERNAL)
                 .filter(assignment -> assignment.getVehicleId() == null)
                 .toList();
-        Map<TourProcessingDraftAssignment, Vehicle> result = new VehicleAutoAssigner(vehicles, driverRepository.findAll(), assignments)
-                .assign(pendingTours);
+        VehicleAutoAssigner assigner = new VehicleAutoAssigner(vehicles, drivers, assignments);
+        Map<TourProcessingDraftAssignment, Vehicle> result = assigner.assign(pendingTours);
 
+        applyVehicleAssignments(assignments, result);
+
+        Map<UUID, List<String>> groupReasons = new HashMap<>();
+        if (groupResult != null) {
+            groupResult.getUnassignedDetails().forEach(issue -> groupReasons.putIfAbsent(issue.rowId(), issue.reasons()));
+            groupResult.getPreservedAssignmentWarnings().forEach(issue -> groupReasons.putIfAbsent(issue.rowId(), issue.reasons()));
+        }
+        List<TourProcessingVehicleAutoAssignResponseDto.TourIssue> unassignedDetails = new ArrayList<>();
+        for (TourProcessingDraftAssignment assignment : assignments) {
+            if (!assignment.isActive()) continue;
+            if (assignment.getResourceType() == ResourceType.INTERNAL && assignment.getVehicleId() == null) {
+                List<String> reasons = assignment.getTour().isDistributed()
+                        ? groupReasons.getOrDefault(assignment.getTour().getId(),
+                                List.of("No se encontró una combinación completa de choferes y vehículos para todos los viajes de esta gira."))
+                        : assigner.reasonsForUnassigned(assignment);
+                unassignedDetails.add(vehicleIssue(assignment, reasons));
+            } else if (assignment.getResourceType() == ResourceType.BORROWED_VEHICLE && assignment.getBorrowedVehicle() == null) {
+                unassignedDetails.add(vehicleIssue(assignment, List.of("Selecciona el vehículo prestado de esta gira.")));
+            }
+        }
+
+        markDuplicates(tours);
+        summarize(draft, tours);
+
+        tourRepository.saveAll(tours);
+        return TourProcessingVehicleAutoAssignResponseDto.builder()
+                .clearedTours(clearedTours)
+                .assignedTours(assignedWithDriver.size() + result.size() + groupedVehiclesAdded)
+                .unassignedTours(unassignedDetails.size())
+                .unassignedDetails(unassignedDetails)
+                .preservedAssignmentWarnings(preservedWarnings)
+                .build();
+    }
+
+    private static TourProcessingVehicleAutoAssignResponseDto.TourIssue vehicleIssue(
+            TourProcessingDraftAssignment assignment, List<String> reasons) {
+        String number = assignment.getNumber();
+        if (assignment.getTour().isDistributed()) number += " - viaje " + assignment.getPart();
+        return new TourProcessingVehicleAutoAssignResponseDto.TourIssue(assignment.getId(), number, reasons);
+    }
+
+    private void applyVehicleAssignments(List<TourProcessingDraftAssignment> assignments,
+                                         Map<TourProcessingDraftAssignment, Vehicle> result) {
         Map<String, Vehicle> vehicleByKey = new HashMap<>();
         result.forEach((assignment, vehicle) -> vehicleByKey.put(assignmentKey(assignment), vehicle));
         assignments.stream()
@@ -711,16 +792,6 @@ public class TourProcessingDraftService {
                     assignment.setVehicle(vehicle.getPlate());
                     assignment.setVehicleId(vehicle.getId());
                 });
-
-        markDuplicates(tours);
-        summarize(draft, tours);
-
-        tourRepository.saveAll(tours);
-        return TourProcessingVehicleAutoAssignResponseDto.builder()
-                .clearedTours(clearedTours)
-                .assignedTours(result.size() + groupedVehiclesAdded)
-                .unassignedTours(pendingTours.size() - result.size())
-                .build();
     }
 
     @Transactional

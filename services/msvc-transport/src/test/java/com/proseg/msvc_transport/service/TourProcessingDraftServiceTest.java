@@ -1215,6 +1215,98 @@ class TourProcessingDraftServiceTest {
     }
 
     @Test
+    void assignsVehicleToExistingDriverBeforeCompletingDistributedTour() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        draft.setYear(2026);
+        draft.setMonth(5);
+        draft.setBusinessDays(21);
+        TourProcessingDraftTour withDriver = shortRow(draft, 1, "200", "2026-05-04", "08:00", "10:00", "Daniel Zuniga");
+        withDriver.setPriority(2);
+        withDriver.primaryAssignment().setVehicle(null);
+        TourProcessingDraftTour distributed = shortRow(draft, 2, "100", "2026-05-04", "08:00", "10:00", null);
+        distributed.setPassengers(6);
+        distributed.primaryAssignment().setPassengers(3);
+        distributed.primaryAssignment().setVehicle(null);
+        distributed.addAssignment(TourProcessingDraftAssignment.builder().id(UUID.randomUUID()).passengers(3).build());
+        stubDraft(draft, withDriver, distributed);
+        when(driverRepository.findAll()).thenReturn(List.of(
+                Driver.builder().id(UUID.randomUUID()).name("Daniel Zuniga").build(),
+                Driver.builder().id(UUID.randomUUID()).name("Ana").build(),
+                Driver.builder().id(UUID.randomUUID()).name("Beto").build()
+        ));
+        when(vehicleRepository.findAll()).thenReturn(List.of(
+                Vehicle.builder().id(UUID.randomUUID()).plate("100-001").capacity(3).build(),
+                Vehicle.builder().id(UUID.randomUUID()).plate("200-002").capacity(3).build()
+        ));
+
+        TourProcessingVehicleAutoAssignResponseDto result = service.autoAssignVehicles(draft.getId());
+
+        assertThat(withDriver.primaryAssignment().getVehicle()).isEqualTo("100-001");
+        assertThat(distributed.getAssignments()).allSatisfy(part -> assertThat(part.getVehicle()).isNull());
+        assertThat(result.getAssignedTours()).isEqualTo(1);
+    }
+
+    @Test
+    void completesDistributedTourWithExistingDriverBeforeTourWithoutDriver() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        draft.setYear(2026);
+        draft.setMonth(5);
+        draft.setBusinessDays(21);
+        TourProcessingDraftTour withDriver = shortRow(draft, 1, "200", "2026-05-04", "08:00", "10:00", "Ana");
+        withDriver.setPriority(2);
+        withDriver.setPassengers(6);
+        withDriver.primaryAssignment().setPassengers(3);
+        withDriver.primaryAssignment().setVehicle(null);
+        withDriver.addAssignment(TourProcessingDraftAssignment.builder().id(UUID.randomUUID()).passengers(3).build());
+        TourProcessingDraftTour withoutDriver = shortRow(draft, 2, "100", "2026-05-04", "08:00", "10:00", null);
+        withoutDriver.setPassengers(6);
+        withoutDriver.primaryAssignment().setPassengers(3);
+        withoutDriver.primaryAssignment().setVehicle(null);
+        withoutDriver.addAssignment(TourProcessingDraftAssignment.builder().id(UUID.randomUUID()).passengers(3).build());
+        stubDraft(draft, withDriver, withoutDriver);
+        when(driverRepository.findAll()).thenReturn(List.of(
+                Driver.builder().id(UUID.randomUUID()).name("Ana").build(),
+                Driver.builder().id(UUID.randomUUID()).name("Beto").build(),
+                Driver.builder().id(UUID.randomUUID()).name("Caro").build()
+        ));
+        when(vehicleRepository.findAll()).thenReturn(List.of(
+                Vehicle.builder().id(UUID.randomUUID()).plate("100-001").capacity(3).build(),
+                Vehicle.builder().id(UUID.randomUUID()).plate("200-002").capacity(3).build()
+        ));
+
+        TourProcessingVehicleAutoAssignResponseDto result = service.autoAssignVehicles(draft.getId());
+
+        assertThat(withDriver.getAssignments()).allSatisfy(part -> assertThat(part.getVehicle()).isNotNull());
+        assertThat(withoutDriver.getAssignments()).allSatisfy(part -> assertThat(part.getVehicle()).isNull());
+        assertThat(result.getAssignedTours()).isEqualTo(2);
+        assertThat(result.getUnassignedDetails()).hasSize(2)
+                .allSatisfy(issue -> assertThat(issue.reasons()).anyMatch(reason -> reason.contains("combinación completa")));
+    }
+
+    @Test
+    void reportsWhyVehicleCouldNotBeAssignedAndFlagsExistingVehicleWithoutCapacity() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        TourProcessingDraftTour pending = entity(draft, 1, "100", "Cartago");
+        pending.primaryAssignment().setVehicle(null);
+        pending.setPassengers(10);
+        pending.primaryAssignment().setPassengers(10);
+        TourProcessingDraftTour kept = entity(draft, 2, "200", "Heredia");
+        kept.primaryAssignment().setVehicle("300-003");
+        stubDraft(draft, pending, kept);
+        when(vehicleRepository.findAll()).thenReturn(List.of(
+                Vehicle.builder().id(UUID.randomUUID()).plate("300-003").build()
+        ));
+
+        TourProcessingVehicleAutoAssignResponseDto result = service.autoAssignVehicles(draft.getId());
+
+        assertThat(result.getUnassignedDetails()).hasSize(1);
+        assertThat(result.getUnassignedDetails().get(0).reasons()).anyMatch(reason -> reason.contains("capacidad registrada"));
+        assertThat(result.getPreservedAssignmentWarnings()).hasSize(1);
+        assertThat(result.getPreservedAssignmentWarnings().get(0).reasons()).anyMatch(reason -> reason.contains("no tiene capacidad"));
+        assertThat(kept.primaryAssignment().getVehicle()).isEqualTo("300-003");
+    }
+
+    @Test
     void rejectsVehicleAutoAssignOnRegisteredDraft() {
         TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.REGISTERED);
         stubDraft(draft);
@@ -1253,6 +1345,20 @@ class TourProcessingDraftServiceTest {
         assertThat(external.primaryAssignment().getResourceType()).isEqualTo(ResourceType.EXTERNAL);
         assertThat(distributedChild.primaryAssignment().getPart()).isEqualTo(2);
         verify(draftHoursService).syncChanged(eq(draft), anyMap(), anyList());
+    }
+
+    @Test
+    void countsBorrowedToursWithoutVehicleAsUnassigned() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        TourProcessingDraftTour borrowed = entity(draft, 1, "200", "Heredia");
+        borrowed.primaryAssignment().setResourceType(ResourceType.BORROWED_VEHICLE);
+        borrowed.primaryAssignment().setVehicle(null);
+        stubDraft(draft, borrowed);
+
+        TourProcessingVehicleAutoAssignResponseDto result = service.autoAssignVehicles(draft.getId());
+
+        assertThat(result.getUnassignedTours()).isEqualTo(1);
+        assertThat(result.getUnassignedDetails().get(0).reasons()).containsExactly("Selecciona el vehículo prestado de esta gira.");
     }
 
     @Test

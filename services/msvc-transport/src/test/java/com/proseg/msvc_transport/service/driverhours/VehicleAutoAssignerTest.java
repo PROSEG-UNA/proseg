@@ -35,12 +35,12 @@ class VehicleAutoAssignerTest {
     }
 
     @Test
-    void acceptsVehiclesWithoutCapacityAndRejectsTooSmallOnes() {
+    void rejectsVehiclesWithoutCapacityAndTooSmallOnes() {
         Vehicle small = vehicle("100-001", VehicleType.SEDAN, 4);
         Vehicle unknownCapacity = vehicle("200-002", VehicleType.MICROBUS, null);
         TourProcessingDraftAssignment tour = tourFor(10);
 
-        assertThat(run(List.of(small, unknownCapacity), List.of(), List.of(tour))).containsEntry(tour, unknownCapacity);
+        assertThat(run(List.of(small, unknownCapacity), List.of(), List.of(tour))).isEmpty();
     }
 
     @Test
@@ -130,5 +130,67 @@ class VehicleAutoAssignerTest {
         List<TourProcessingDraftAssignment> rows = new ArrayList<>(List.of(priorityTwo, priorityOne));
 
         assertThat(run(List.of(onlyVehicle), List.of(), rows)).containsOnlyKeys(priorityOne);
+    }
+
+    @Test
+    void explainsWhyATourStaysWithoutVehicle() {
+        Driver ana = driver("Ana", VehicleType.SEDAN);
+        Vehicle sedan = vehicle("100-001", VehicleType.SEDAN, 5);
+        Vehicle microbus = vehicle("200-002", VehicleType.MICROBUS, 20);
+        TourProcessingDraftAssignment tour = tourFor(3);
+        TourProcessingDraftAssignment assignedToAna = assigned(tourFor(3), ana);
+        TourProcessingDraftAssignment first = sameDayTour("1", "2026-05-06", "08:00", "10:00");
+        TourProcessingDraftAssignment second = sameDayTour("2", "2026-05-06", "09:00", "11:00");
+        VehicleAutoAssigner busy = new VehicleAutoAssigner(List.of(sedan), List.of(), List.of(first, second));
+        busy.assign(List.of(first, second));
+
+        assertThat(new VehicleAutoAssigner(List.of(), List.of(), List.of(tour)).reasonsForUnassigned(tour))
+                .containsExactly("No hay vehículos disponibles en el catálogo.");
+        assertThat(new VehicleAutoAssigner(List.of(vehicle("300-003", VehicleType.SEDAN, 2)), List.of(), List.of(tour)).reasonsForUnassigned(tour))
+                .containsExactly("Ningún vehículo disponible tiene capacidad registrada y suficiente para 3 pasajeros.");
+        assertThat(new VehicleAutoAssigner(List.of(microbus), List.of(ana), List.of(assignedToAna)).reasonsForUnassigned(assignedToAna))
+                .containsExactly("El chofer Ana no puede conducir los vehículos con capacidad suficiente para esta gira.");
+        assertThat(busy.reasonsForUnassigned(second))
+                .containsExactly("Los vehículos con capacidad suficiente están ocupados durante el horario de esta gira.");
+    }
+
+    @Test
+    void assignsVehicleToTourWithDriverBeforeHigherPriorityTourWithoutDriver() {
+        Driver ana = driver("Ana", VehicleType.SEDAN);
+        Vehicle onlyVehicle = vehicle("100-001", VehicleType.SEDAN, 5);
+        TourProcessingDraftAssignment withDriver = assigned(sameDayTour("1", "2026-05-06", "08:00", "10:00"), ana);
+        withDriver.getTour().setPriority(2);
+        TourProcessingDraftAssignment withoutDriver = sameDayTour("2", "2026-05-06", "09:00", "11:00");
+
+        assertThat(run(List.of(onlyVehicle), List.of(ana), List.of(withoutDriver, withDriver)))
+                .containsOnlyKeys(withDriver);
+    }
+
+    @Test
+    void reservesLargerVehicleForTourWithMorePassengers() {
+        Vehicle microbus = vehicle("100-001", VehicleType.MICROBUS, 20);
+        Vehicle sedan = vehicle("200-002", VehicleType.SEDAN, 4);
+        TourProcessingDraftAssignment small = tourFor(3);
+        TourProcessingDraftAssignment large = sameDayTour("2", "2026-05-06", "09:00", "11:00");
+        large.setPassengers(15);
+        large.getTour().setPassengers(15);
+
+        assertThat(run(List.of(microbus, sedan), List.of(), List.of(small, large)))
+                .containsEntry(small, sedan)
+                .containsEntry(large, microbus);
+    }
+
+    @Test
+    void movesNewVehicleAssignmentToCompleteLaterTour() {
+        Driver ana = driver("Ana", VehicleType.SEDAN, VehicleType.MICROBUS);
+        Driver beto = driver("Beto", VehicleType.SEDAN);
+        Vehicle sedan = vehicle("100-001", VehicleType.SEDAN, 4);
+        Vehicle microbus = vehicle("200-002", VehicleType.MICROBUS, 10);
+        TourProcessingDraftAssignment first = assigned(sameDayTour("1", "2026-05-06", "08:00", "10:00"), ana);
+        TourProcessingDraftAssignment second = assigned(sameDayTour("2", "2026-05-06", "09:00", "11:00"), beto);
+
+        assertThat(run(List.of(sedan, microbus), List.of(ana, beto), List.of(first, second)))
+                .containsEntry(first, microbus)
+                .containsEntry(second, sedan);
     }
 }
