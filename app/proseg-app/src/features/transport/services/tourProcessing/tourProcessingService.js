@@ -153,12 +153,3 @@ export async function autoAssignTourProcessingDraftVehicles(draftId) {
 export async function clearTourProcessingDraftAssignments(draftId) {
     await axios.post(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/assignments/clear`, null, transportConfig);
 }
-
-export async function fetchTourProcessingHistory(options = {}) {
-    return fetchPage(TRANSPORT_ENDPOINTS.tourProcessingHistory, options);
-}
-
-export async function fetchTourProcessingHistoryById(historyId) {
-    const { data } = await axios.get(`${TRANSPORT_ENDPOINTS.tourProcessingHistory}/${historyId}`, transportConfig);
-    return data?.data ?? null;
-}

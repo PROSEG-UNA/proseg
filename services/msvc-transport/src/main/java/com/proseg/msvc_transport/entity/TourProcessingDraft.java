@@ -89,6 +89,4 @@ public class TourProcessingDraft extends BaseEntity {
     private LocalDate maxReturnDate;
 
     private LocalDateTime registeredAt;
-
-    private UUID tourProcessingExecutionId;
 }

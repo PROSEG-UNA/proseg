@@ -41,8 +41,6 @@ class SecurityConfigTest {
     @CsvSource({
             "GET,/tour-processing/imports/schema,IMPORTAR_GIRAS,200",
             "GET,/tour-processing/imports/schema,LEER_GIRAS,403",
-            "GET,/tour-processing/history,LEER_GIRAS,200",
-            "GET,/tour-processing/history/1,EXPORTAR_GIRAS,200",
             "GET,/tour-processing/drafts,IMPORTAR_GIRAS,200",
             "GET,/tour-processing/drafts/1,CREAR_GIRAS,200",
             "GET,/tour-processing/drafts/1/rows,EDITAR_GIRAS,200",

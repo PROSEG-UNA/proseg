@@ -13,9 +13,7 @@ BEGIN
             ('cleaning_draft_tour_table', 'tour_processing_draft_tour_table'),
             ('cleaning_draft_assignment_table', 'tour_processing_draft_assignment_table'),
             ('cleaning_draft_day_table', 'tour_processing_draft_day_table'),
-            ('cleaning_draft_import_row_table', 'tour_processing_draft_import_row_table'),
-            ('cleaning_execution_table', 'tour_processing_execution_table'),
-            ('cleaning_execution_detail_table', 'tour_processing_execution_detail_table')
+            ('cleaning_draft_import_row_table', 'tour_processing_draft_import_row_table')
         ) AS table_names(old_name, new_name)
     LOOP
         IF to_regclass(item.old_name) IS NOT NULL THEN
@@ -31,13 +29,6 @@ BEGIN
         WHERE table_name = 'tour_processing_draft_table' AND column_name = 'cleaning_execution_id'
     ) THEN
         ALTER TABLE tour_processing_draft_table RENAME COLUMN cleaning_execution_id TO tour_processing_execution_id;
-    END IF;
-
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'tour_processing_execution_detail_table' AND column_name = 'cleaning_execution_id'
-    ) THEN
-        ALTER TABLE tour_processing_execution_detail_table RENAME COLUMN cleaning_execution_id TO tour_processing_execution_id;
     END IF;
 
     FOR item IN

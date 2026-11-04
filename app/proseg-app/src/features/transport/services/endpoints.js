@@ -3,7 +3,6 @@ export const TRANSPORT_ENDPOINTS = {
     vehicles: '/api/v1/transport/vehicles',
     borrowedVehicles: '/api/v1/transport/borrowed-vehicles',
     tourProcessing: '/api/v1/transport/tour-processing',
-    tourProcessingHistory: '/api/v1/transport/tour-processing/history',
     tourProcessingDrafts: '/api/v1/transport/tour-processing/drafts',
 };
 

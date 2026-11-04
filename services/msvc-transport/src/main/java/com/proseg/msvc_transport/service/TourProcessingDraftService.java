@@ -1249,7 +1249,6 @@ public class TourProcessingDraftService {
                 .minDepartureDate(draft.getMinDepartureDate())
                 .maxReturnDate(draft.getMaxReturnDate())
                 .registeredAt(draft.getRegisteredAt())
-                .tourProcessingExecutionId(draft.getTourProcessingExecutionId())
                 .build();
     }
 

@@ -50,6 +50,26 @@ class TransportSchemaMigrationTest {
     }
 
     @Test
+    void dropsExecutionDetailsBeforeTheirExecutions() {
+        tableExists("cleaning_execution_detail_table");
+        tableExists("cleaning_execution_table");
+        tableExists("tour_processing_execution_detail_table");
+        tableExists("tour_processing_execution_table");
+        when(jdbc.queryForObject("select exists(select 1 from cleaning_execution_detail_table)", Boolean.class)).thenReturn(false);
+        when(jdbc.queryForObject("select exists(select 1 from cleaning_execution_table)", Boolean.class)).thenReturn(false);
+        when(jdbc.queryForObject("select exists(select 1 from tour_processing_execution_detail_table)", Boolean.class)).thenReturn(false);
+        when(jdbc.queryForObject("select exists(select 1 from tour_processing_execution_table)", Boolean.class)).thenReturn(false);
+
+        migration.afterSingletonsInstantiated();
+
+        InOrder order = inOrder(jdbc);
+        order.verify(jdbc).execute("drop table cleaning_execution_detail_table");
+        order.verify(jdbc).execute("drop table cleaning_execution_table");
+        order.verify(jdbc).execute("drop table tour_processing_execution_detail_table");
+        order.verify(jdbc).execute("drop table tour_processing_execution_table");
+    }
+
+    @Test
     void keepsLegacyTablesWithData() {
         tableExists("tour_table");
         when(jdbc.queryForObject("select exists(select 1 from tour_table)", Boolean.class)).thenReturn(true);

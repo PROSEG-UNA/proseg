@@ -34,5 +34,4 @@ public class TourProcessingDraftResponseDto {
     private LocalDate minDepartureDate;
     private LocalDate maxReturnDate;
     private LocalDateTime registeredAt;
-    private UUID tourProcessingExecutionId;
 }

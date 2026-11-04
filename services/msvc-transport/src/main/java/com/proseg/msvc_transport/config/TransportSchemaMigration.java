@@ -18,7 +18,15 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class TransportSchemaMigration implements SmartInitializingSingleton {
-    private static final List<String> LEGACY_TABLES = List.of("assignment_table", "tour_table", "vehicle_maintenance_table");
+    private static final List<String> LEGACY_TABLES = List.of(
+            "assignment_table",
+            "tour_table",
+            "vehicle_maintenance_table",
+            "cleaning_execution_detail_table",
+            "cleaning_execution_table",
+            "tour_processing_execution_detail_table",
+            "tour_processing_execution_table"
+    );
 
     private final JdbcTemplate jdbc;
     private final PlatformTransactionManager transactionManager;

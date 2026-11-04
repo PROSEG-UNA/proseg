@@ -60,8 +60,6 @@ public class SecurityConfig {
                         .hasAuthority(Privileges.Tours.IMPORTAR)
                         .requestMatchers(
                                 HttpMethod.GET,
-                                transportRoute + "/tour-processing/history",
-                                transportRoute + "/tour-processing/history/**",
                                 transportRoute + "/tour-processing/drafts",
                                 transportRoute + "/tour-processing/drafts/**"
                         )

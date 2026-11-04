@@ -14,8 +14,6 @@ import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowDayRes
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowRequestDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowResponseDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDriverAutoAssignResponseDto;
-import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingExecutionDetailViewResponseDto;
-import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingExecutionSummaryResponseDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingImportSchemaDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingVehicleAutoAssignResponseDto;
 import com.proseg.msvc_transport.dto.tourprocessing.FinalCommissionCheckDto;
@@ -23,7 +21,6 @@ import com.proseg.msvc_transport.dto.tourprocessing.FinalCommissionReportDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourControlReportDto;
 import com.proseg.msvc_transport.dto.response.OvertimeRequestReportDto;
 import com.proseg.msvc_transport.service.TourProcessingDraftService;
-import com.proseg.msvc_transport.service.TourProcessingHistoryService;
 import com.proseg.msvc_transport.service.FinalCommissionService;
 import com.proseg.msvc_transport.service.TourControlReportService;
 import jakarta.validation.Valid;
@@ -43,7 +40,6 @@ import java.util.UUID;
 public class TourProcessingController {
 
     private final TourProcessingDraftService tourProcessingDraftService;
-    private final TourProcessingHistoryService tourProcessingHistoryService;
     private final FinalCommissionService finalCommissionService;
     private final TourControlReportService tourControlReportService;
 
@@ -253,23 +249,6 @@ public class TourProcessingController {
     @GetMapping("/drafts/months/{year}/{month}/tour-control")
     public ResponseEntity<ApiResponse<TourControlReportDto>> findMonthTourControl(@PathVariable int year, @PathVariable int month) {
         return ApiResponseBuilder.ok(tourControlReportService.reportForMonth(year, month), "Datos del Control de Giras");
-    }
-
-    @GetMapping("/history")
-    public ResponseEntity<ApiResponse<PageResponse<TourProcessingExecutionSummaryResponseDto>>> findHistory(
-            @RequestParam(required = false) String search,
-            @RequestParam Map<String, String> allParams,
-            @PageableDefault(size = 10, page = 0) Pageable pageable
-    ) {
-        return ApiResponseBuilder.ok(
-                PageMapper.from(tourProcessingHistoryService.findAll(search, columnFilters(allParams), pageable)),
-                "Historial de depuraciones"
-        );
-    }
-
-    @GetMapping("/history/{id}")
-    public ResponseEntity<ApiResponse<TourProcessingExecutionDetailViewResponseDto>> findHistoryById(@PathVariable UUID id) {
-        return ApiResponseBuilder.ok(tourProcessingHistoryService.findById(id), "Detalle de depuración");
     }
 
     private Map<String, String> columnFilters(Map<String, String> allParams) {
