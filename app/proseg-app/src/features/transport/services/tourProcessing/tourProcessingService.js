@@ -37,6 +37,10 @@ export async function exportTourProcessingDraftTourControl(draftId) {
     return downloadFile(`${TRANSPORT_DOCUMENT_ENDPOINTS.tourProcessingDraftExport}/${draftId}/tour-control`, undefined, TOUR_CONTROL_FALLBACK_FILE_NAME);
 }
 
+export async function exportMonthTourControl(year, month) {
+    return downloadFile(`${TRANSPORT_DOCUMENT_ENDPOINTS.tourProcessingMonthExport}/${year}/${month}/tour-control`, undefined, TOUR_CONTROL_FALLBACK_FILE_NAME);
+}
+
 export async function checkTourProcessingDraftFinalCommission(draftId) {
     const { data } = await axios.get(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/final-commission/check`, transportConfig);
     return data?.data ?? null;

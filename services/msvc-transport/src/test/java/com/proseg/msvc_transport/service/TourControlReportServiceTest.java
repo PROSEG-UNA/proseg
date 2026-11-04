@@ -11,6 +11,7 @@ import com.proseg.msvc_transport.entity.DriverUnit;
 import com.proseg.msvc_transport.entity.ResourceType;
 import com.proseg.msvc_transport.entity.TourApprovalStatus;
 import com.proseg.msvc_transport.entity.Vehicle;
+import com.proseg.msvc_transport.exception.TransportException;
 import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
@@ -25,6 +26,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -47,8 +49,10 @@ class TourControlReportServiceTest {
     @BeforeEach
     void setUp() {
         TourProcessingDraftRepository draftRepository = mock(TourProcessingDraftRepository.class);
-        when(draftRepository.findById(draftId)).thenReturn(Optional.of(TourProcessingDraft.builder().id(draftId)
-                .status(TourProcessingDraftStatus.DRAFT).year(2026).month(5).businessDays(28).build()));
+        TourProcessingDraft draft = TourProcessingDraft.builder().id(draftId)
+                .status(TourProcessingDraftStatus.DRAFT).year(2026).month(5).businessDays(28).build();
+        when(draftRepository.findById(draftId)).thenReturn(Optional.of(draft));
+        when(draftRepository.findFirstByYearAndMonthOrderByImportedAtDesc(2026, 5)).thenReturn(Optional.of(draft));
         tourStore = mock(DraftTourStore.class);
         dayRepository = mock(TourProcessingDraftDayRepository.class);
         when(dayRepository.findByAssignmentIdIn(any())).thenReturn(List.of());
@@ -57,6 +61,26 @@ class TourControlReportServiceTest {
         VehicleRepository vehicleRepository = mock(VehicleRepository.class);
         when(vehicleRepository.findAll()).thenReturn(List.of(bus));
         service = new TourControlReportService(draftRepository, tourStore, dayRepository, driverRepository, vehicleRepository);
+    }
+
+    @Test
+    void buildsTheReportOfAMonthFromItsLatestDraft() {
+        when(tourStore.findPrimariesByDraftId(draftId)).thenReturn(List.of());
+
+        TourControlReportDto report = service.reportForMonth(2026, 5);
+
+        assertThat(report.getYear()).isEqualTo(2026);
+        assertThat(report.getMonth()).isEqualTo(5);
+    }
+
+    @Test
+    void rejectsMonthsWithoutADraftAndInvalidMonths() {
+        assertThatThrownBy(() -> service.reportForMonth(2026, 6)).isInstanceOfSatisfying(TransportException.class, exception -> {
+            assertThat(exception.getErrorCode()).isEqualTo("TOUR_PROCESSING_DRAFT_MONTH_NOT_FOUND");
+            assertThat(exception.getMessage()).contains("junio de 2026");
+        });
+        assertThatThrownBy(() -> service.reportForMonth(2026, 13)).isInstanceOfSatisfying(TransportException.class,
+                exception -> assertThat(exception.getErrorCode()).isEqualTo("INVALID_MONTH"));
     }
 
     @Test

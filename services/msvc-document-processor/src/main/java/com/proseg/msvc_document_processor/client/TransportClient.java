@@ -49,6 +49,9 @@ public interface TransportClient {
     @GetMapping("/v1/transport/tour-processing/drafts/{id}/tour-control")
     ApiResponse<TourControlReportDto> getTourControlReport(@PathVariable("id") UUID id);
 
+    @GetMapping("/v1/transport/tour-processing/drafts/months/{year}/{month}/tour-control")
+    ApiResponse<TourControlReportDto> getMonthTourControlReport(@PathVariable("year") int year, @PathVariable("month") int month);
+
     @GetMapping("/v1/transport/drivers/months/{year}/{month}/overtime-request")
     ApiResponse<OvertimeRequestReportDto> getOvertimeRequestReport(
             @PathVariable("year") int year,

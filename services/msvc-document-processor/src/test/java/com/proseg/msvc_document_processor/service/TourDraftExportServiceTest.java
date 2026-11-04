@@ -189,6 +189,11 @@ class TourDraftExportServiceTest {
         }
 
         @Override
+        public ApiResponse<TourControlReportDto> getMonthTourControlReport(int year, int month) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public ApiResponse<OvertimeRequestReportDto> getOvertimeRequestReport(int year, int month) {
             throw new UnsupportedOperationException();
         }

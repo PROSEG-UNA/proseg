@@ -11,5 +11,6 @@ export const TRANSPORT_DOCUMENT_ENDPOINTS = {
     tourProcessingImport: '/api/v1/document-processor/imports/tours',
     tourProcessingImportTemplate: '/api/v1/document-processor/imports/tours/template',
     tourProcessingDraftExport: '/api/v1/document-processor/exports/tours/drafts',
+    tourProcessingMonthExport: '/api/v1/document-processor/exports/tours/months',
     driverOvertimeRequestExport: '/api/v1/document-processor/exports/drivers/overtime-request',
 };

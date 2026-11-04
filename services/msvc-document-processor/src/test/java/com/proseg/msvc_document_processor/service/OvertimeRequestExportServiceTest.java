@@ -93,6 +93,11 @@ class OvertimeRequestExportServiceTest {
         }
 
         @Override
+        public ApiResponse<TourControlReportDto> getMonthTourControlReport(int year, int month) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public ApiResponse<OvertimeRequestReportDto> getOvertimeRequestReport(int year, int month) {
             requestedPeriod = List.of(year, month);
             return new ApiResponse<>("ok", report, 200);

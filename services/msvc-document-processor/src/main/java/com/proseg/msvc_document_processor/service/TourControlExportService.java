@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 @Service
 @RequiredArgsConstructor
@@ -30,7 +31,14 @@ public class TourControlExportService {
     private final TourControlWorkbookGenerator workbookGenerator;
 
     public DocumentFile export(UUID draftId) {
-        TourControlReportDto report = read(draftId);
+        return toFile(read(() -> transportClient.getTourControlReport(draftId)));
+    }
+
+    public DocumentFile export(int year, int month) {
+        return toFile(read(() -> transportClient.getMonthTourControlReport(year, month)));
+    }
+
+    private DocumentFile toFile(TourControlReportDto report) {
         return new DocumentFile(fileName(report.getYear(), report.getMonth()), workbookGenerator.generate(report));
     }
 
@@ -38,9 +46,9 @@ public class TourControlExportService {
         return FILE_PREFIX + MONTH_NAMES.get(month - 1) + " " + String.format("%02d", year % 100) + FILE_EXTENSION;
     }
 
-    private TourControlReportDto read(UUID draftId) {
+    private TourControlReportDto read(Supplier<ApiResponse<TourControlReportDto>> request) {
         try {
-            ApiResponse<TourControlReportDto> response = transportClient.getTourControlReport(draftId);
+            ApiResponse<TourControlReportDto> response = request.get();
             if (response == null || response.getData() == null) {
                 throw DocumentProcessorException.transportReadFailed();
             }

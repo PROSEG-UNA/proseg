@@ -17,13 +17,16 @@ import com.proseg.msvc_transport.repository.VehicleRepository;
 import com.proseg.msvc_transport.service.driverhours.DriverHoursRules;
 import com.proseg.msvc_transport.service.driverhours.OrdinaryWindow;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.Collator;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.YearMonth;
+import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -60,15 +63,32 @@ public class TourControlReportService {
 
     @Transactional(readOnly = true)
     public TourControlReportDto report(UUID draftId) {
-        TourProcessingDraft draft = draftRepository.findById(draftId)
-                .orElseThrow(() -> TransportException.notFound(DRAFT_RESOURCE, draftId.toString()));
+        return build(draftRepository.findById(draftId)
+                .orElseThrow(() -> TransportException.notFound(DRAFT_RESOURCE, draftId.toString())));
+    }
+
+    @Transactional(readOnly = true)
+    public TourControlReportDto reportForMonth(int year, int month) {
+        if (month < 1 || month > 12) {
+            throw TransportException.badRequest("INVALID_MONTH", "El mes debe estar entre 1 y 12");
+        }
+        return build(draftRepository.findFirstByYearAndMonthOrderByImportedAtDesc(year, month)
+                .orElseThrow(() -> new TransportException(
+                        HttpStatus.NOT_FOUND,
+                        "TOUR_PROCESSING_DRAFT_MONTH_NOT_FOUND",
+                        "No hay un borrador de depuración para "
+                                + Month.of(month).getDisplayName(TextStyle.FULL, SPANISH) + " de " + year
+                )));
+    }
+
+    private TourControlReportDto build(TourProcessingDraft draft) {
         if (draft.getYear() == null || draft.getMonth() == null || draft.getBusinessDays() == null) {
             throw TransportException.unprocessable("TOUR_PROCESSING_DRAFT_WITHOUT_PERIOD", "El borrador no tiene mes ni días hábiles definidos");
         }
         List<Driver> catalog = driverRepository.findAll();
         Map<UUID, Driver> driversById = DriverHoursRules.driversById(catalog);
         Map<UUID, Vehicle> vehiclesById = DriverHoursRules.vehiclesById(vehicleRepository.findAll());
-        List<TourProcessingDraftTour> tours = tourStore.findPrimariesByDraftId(draftId).stream().sorted(TOUR_ORDER).toList();
+        List<TourProcessingDraftTour> tours = tourStore.findPrimariesByDraftId(draft.getId()).stream().sorted(TOUR_ORDER).toList();
         List<UUID> attendedIds = tours.stream()
                 .filter(TourProcessingDraftTour::isApproved)
                 .flatMap(tour -> tour.getAssignments().stream())

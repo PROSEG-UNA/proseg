@@ -21,6 +21,7 @@ import { usePersistedMonth } from '../../hooks/usePersistedMonth.js';
 import { useTransportDriverMonthsData } from '../../hooks/useTransportDriverMonthsData.js';
 import { useTransportDriverMonthSurplusCap } from '../../hooks/useTransportDriverMonthSurplusCap.js';
 import { exportDriverOvertimeRequest } from '../../services/drivers/driversService';
+import { exportMonthTourControl } from '../../services/tourProcessing/tourProcessingService';
 import { downloadBlob } from '../../transportUtils.js';
 import { queryKeys } from '../../../../common/query';
 
@@ -50,6 +51,8 @@ export default function DriversPage() {
     const canManageDrivers = hasPermission(PERMISSIONS.TRANSPORT.DRIVERS.MANAGE);
     const canDeleteDrivers = hasPermission(PERMISSIONS.TRANSPORT.DRIVERS.DELETE);
     const periodLabel = monthData.enabled ? shortPeriodLabel(year, month) : null;
+    const canExportOvertime = Boolean(periodLabel) && canReadDrivers;
+    const canExportTourControl = Boolean(periodLabel) && hasPermission(PERMISSIONS.TRANSPORT.TOURS.EXPORT);
 
     const overtimeRequestMutation = useMutation({
         mutationFn: () => exportDriverOvertimeRequest(year, month),
@@ -58,9 +61,22 @@ export default function DriversPage() {
             setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo generar la solicitud de horas extra') });
         },
     });
+    const tourControlMutation = useMutation({
+        mutationFn: () => exportMonthTourControl(year, month),
+        onSuccess: ({ blob, fileName }) => downloadBlob(blob, fileName),
+        onError: (error) => {
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo generar el control de giras') });
+        },
+    });
     const exportingOvertimeRequest = overtimeRequestMutation.isPending;
+    const exportingTourControl = tourControlMutation.isPending;
 
     const closeOptions = () => setOptionsAnchor(null);
+
+    const handleExportTourControl = () => {
+        closeOptions();
+        if (!tourControlMutation.isPending) tourControlMutation.mutate();
+    };
 
     const handleExportOvertimeRequest = () => {
         closeOptions();
@@ -91,7 +107,7 @@ export default function DriversPage() {
                 <PageHeader
                     title="Choferes"
                     description="Gestión de choferes."
-                    action={canManageDrivers || periodLabel ? (
+                    action={canManageDrivers || canExportOvertime || canExportTourControl ? (
                         <>
                             <PrimaryButton
                                 onClick={(event) => setOptionsAnchor(event.currentTarget)}
@@ -116,13 +132,13 @@ export default function DriversPage() {
                                         <ListItemText>Crear chofer</ListItemText>
                                     </MenuItem>
                                 )}
-                                {periodLabel && (
-                                    <MenuItem onClick={closeOptions}>
+                                {canExportTourControl && (
+                                    <MenuItem onClick={handleExportTourControl} disabled={exportingTourControl}>
                                         <ListItemIcon><DownloadOutlinedIcon fontSize="small" /></ListItemIcon>
                                         <ListItemText>{`Descargar 'Control de Giras ${periodLabel}'`}</ListItemText>
                                     </MenuItem>
                                 )}
-                                {periodLabel && canReadDrivers && (
+                                {canExportOvertime && (
                                     <MenuItem onClick={handleExportOvertimeRequest} disabled={exportingOvertimeRequest}>
                                         <ListItemIcon><DownloadOutlinedIcon fontSize="small" /></ListItemIcon>
                                         <ListItemText>{`Descargar 'Solicitud de Horas Extra ${periodLabel}'`}</ListItemText>
@@ -133,7 +149,7 @@ export default function DriversPage() {
                     ) : null}
                 />
 
-                {exportingOvertimeRequest && <LinearProgress sx={{ mt: 2 }} />}
+                {(exportingOvertimeRequest || exportingTourControl) && <LinearProgress sx={{ mt: 2 }} />}
 
                 <Stack
                     direction={{ xs: 'column', sm: 'row' }}

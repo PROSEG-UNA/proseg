@@ -250,6 +250,11 @@ public class TourProcessingController {
         return ApiResponseBuilder.ok(tourControlReportService.report(id), "Datos del Control de Giras");
     }
 
+    @GetMapping("/drafts/months/{year}/{month}/tour-control")
+    public ResponseEntity<ApiResponse<TourControlReportDto>> findMonthTourControl(@PathVariable int year, @PathVariable int month) {
+        return ApiResponseBuilder.ok(tourControlReportService.reportForMonth(year, month), "Datos del Control de Giras");
+    }
+
     @GetMapping("/history")
     public ResponseEntity<ApiResponse<PageResponse<TourProcessingExecutionSummaryResponseDto>>> findHistory(
             @RequestParam(required = false) String search,

@@ -1,10 +1,12 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AppTheme from '../../../../../common/theme/AppTheme';
 import DriversPage from '../DriversPage.jsx';
+import { exportMonthTourControl } from '../../../services/tourProcessing/tourProcessingService';
+import { downloadBlob } from '../../../transportUtils.js';
 
 const granted = vi.hoisted(() => ({ permissions: [] }));
 
@@ -24,6 +26,11 @@ vi.mock('../../../components/drivers/DriversTable.jsx', () => ({ default: () => 
 vi.mock('../../../components/drivers/DriverFormModal.jsx', () => ({ default: () => null }));
 vi.mock('../../../components/drivers/DriverSurplusSummary.jsx', () => ({ default: () => null }));
 vi.mock('../../../services/drivers/driversService', () => ({ exportDriverOvertimeRequest: vi.fn() }));
+vi.mock('../../../services/tourProcessing/tourProcessingService', () => ({ exportMonthTourControl: vi.fn() }));
+vi.mock('../../../transportUtils.js', async (importOriginal) => ({
+    ...(await importOriginal()),
+    downloadBlob: vi.fn(),
+}));
 
 vi.mock('../../../hooks/usePersistedMonth.js', () => ({
     usePersistedMonth: () => [dayjs('2026-05-01'), vi.fn()],
@@ -50,6 +57,30 @@ beforeEach(() => {
 });
 
 afterEach(cleanup);
+
+describe('Control de Giras del mes', () => {
+    it('descarga el archivo del mes seleccionado con EXPORTAR_GIRAS', async () => {
+        const file = { blob: new Blob(['control']), fileName: 'Control de Giras Mayo 26.xlsx' };
+        exportMonthTourControl.mockResolvedValue(file);
+        granted.permissions = ['LEER_CHOFERES', 'EXPORTAR_GIRAS'];
+        renderPage();
+
+        await userEvent.click(screen.getByRole('button', { name: 'Opciones' }));
+        await userEvent.click(screen.getByRole('menuitem', { name: /Control de Giras/ }));
+
+        expect(exportMonthTourControl).toHaveBeenCalledWith(2026, 5);
+        await waitFor(() => expect(downloadBlob).toHaveBeenCalledWith(file.blob, file.fileName));
+    });
+
+    it('no la ofrece sin EXPORTAR_GIRAS', async () => {
+        granted.permissions = ['LEER_CHOFERES'];
+        renderPage();
+
+        await userEvent.click(screen.getByRole('button', { name: 'Opciones' }));
+
+        expect(screen.queryByRole('menuitem', { name: /Control de Giras/ })).toBeNull();
+    });
+});
 
 describe('permisos de la Solicitud de Horas Extra', () => {
     it('la ofrece con LEER_CHOFERES', async () => {

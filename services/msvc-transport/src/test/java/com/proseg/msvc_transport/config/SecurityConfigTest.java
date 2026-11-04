@@ -48,6 +48,8 @@ class SecurityConfigTest {
             "GET,/tour-processing/drafts/1/rows,EDITAR_GIRAS,200",
             "GET,/tour-processing/drafts/1/final-commission,ELIMINAR_GIRAS,200",
             "GET,/tour-processing/drafts/1/tour-control,EXPORTAR_GIRAS,200",
+            "GET,/tour-processing/drafts/months/2026/5/tour-control,EXPORTAR_GIRAS,200",
+            "GET,/tour-processing/drafts/months/2026/5/tour-control,LEER_CHOFERES,403",
             "GET,/tour-processing/drafts,GESTIONAR_GIRAS,403",
             "POST,/tour-processing/drafts,IMPORTAR_GIRAS,200",
             "POST,/tour-processing/drafts,CREAR_GIRAS,403",

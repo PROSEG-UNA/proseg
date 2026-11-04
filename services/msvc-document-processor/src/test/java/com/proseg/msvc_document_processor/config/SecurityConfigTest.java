@@ -46,6 +46,8 @@ class SecurityConfigTest {
             "GET,/exports/tours/drafts/1,EXPORTAR_GIRAS,200",
             "GET,/exports/tours/drafts/1/final-commission,EXPORTAR_GIRAS,200",
             "GET,/exports/tours/drafts/1/tour-control,LEER_GIRAS,403",
+            "GET,/exports/tours/months/2026/5/tour-control,EXPORTAR_GIRAS,200",
+            "GET,/exports/tours/months/2026/5/tour-control,LEER_CHOFERES,403",
             "GET,/exports/drivers/overtime-request,LEER_CHOFERES,200",
             "GET,/exports/drivers/overtime-request,EXPORTAR_GIRAS,403"
     })

@@ -52,6 +52,18 @@ public class TourExportController {
                 .body(export.content());
     }
 
+    @GetMapping("/months/{year}/{month}/tour-control")
+    public ResponseEntity<byte[]> exportMonthTourControl(@PathVariable int year, @PathVariable int month) {
+        DocumentFile export = tourControlExportService.export(year, month);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(ExportFormat.XLSX.getContentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                        .filename(export.fileName(), StandardCharsets.UTF_8)
+                        .build()
+                        .toString())
+                .body(export.content());
+    }
+
     @GetMapping("/drafts/{draftId}/tour-control")
     public ResponseEntity<byte[]> exportTourControl(@PathVariable UUID draftId) {
         DocumentFile export = tourControlExportService.export(draftId);
