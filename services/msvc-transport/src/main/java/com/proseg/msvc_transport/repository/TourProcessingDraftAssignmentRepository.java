@@ -104,4 +104,25 @@ public interface TourProcessingDraftAssignmentRepository extends JpaRepository<T
                and a.tour.id in (select t.id from TourProcessingDraftTour t where t.draft.status = :status)
             """)
     int unlinkVehicle(@Param("vehicleId") UUID vehicleId, @Param("status") TourProcessingDraftStatus status);
+
+    @Query(value = """
+            select exists (
+                select 1
+                  from tour_processing_draft_assignment_table a
+                  join tour_processing_draft_tour_table t on t.id = a.tour_id
+                  join tour_processing_draft_table d on d.id = t.draft_id
+                 where a.borrowed_vehicle_id = :borrowedVehicleId
+                   and d.status = 'DRAFT'
+                   and not d.is_deleted
+            ) or exists (
+                select 1
+                  from tour_processing_draft_import_row_table r
+                  join tour_processing_draft_table d on d.id = r.draft_id
+                 cross join lateral jsonb_array_elements(r.payload -> 'assignments') part
+                 where part ->> 'borrowedVehicleId' = cast(:borrowedVehicleId as text)
+                   and d.status = 'DRAFT'
+                   and not d.is_deleted
+            )
+            """, nativeQuery = true)
+    boolean isBorrowedVehicleInOpenDraft(@Param("borrowedVehicleId") UUID borrowedVehicleId);
 }

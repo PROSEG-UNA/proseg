@@ -1035,7 +1035,7 @@ public class TourProcessingDraftService {
                 if (!plate.isBlank() && !"null".equals(plate)) vehicles.add(plate);
                 if (type == ResourceType.BORROWED_VEHICLE) {
                     if (assignment.getBorrowedVehicleId() == null) return List.of("Selecciona el vehículo prestado de cada asignación");
-                    BorrowedVehicle borrowed = borrowedVehicleRepository.findById(assignment.getBorrowedVehicleId()).orElse(null);
+                    BorrowedVehicle borrowed = borrowedVehicleRepository.findByIdAndIsDeletedFalse(assignment.getBorrowedVehicleId()).orElse(null);
                     if (borrowed == null) return List.of("El vehículo prestado seleccionado no existe");
                     if (borrowed.getCapacity() != null && borrowed.getCapacity() < assignment.getPassengers()) {
                         return List.of("El vehículo prestado " + borrowed.getPlate() + " no tiene capacidad para " + assignment.getPassengers() + " pasajeros");
@@ -1054,7 +1054,7 @@ public class TourProcessingDraftService {
             if (row.getBorrowedVehicleId() == null) {
                 return List.of("Selecciona el vehículo prestado para esta gira");
             }
-            BorrowedVehicle borrowedVehicle = borrowedVehicleRepository.findById(row.getBorrowedVehicleId()).orElse(null);
+            BorrowedVehicle borrowedVehicle = borrowedVehicleRepository.findByIdAndIsDeletedFalse(row.getBorrowedVehicleId()).orElse(null);
             if (borrowedVehicle == null) {
                 return List.of("El vehículo prestado seleccionado no existe");
             }
@@ -1069,7 +1069,7 @@ public class TourProcessingDraftService {
         if (borrowedVehicleId == null) {
             return null;
         }
-        return borrowedVehicleRepository.findById(borrowedVehicleId)
+        return borrowedVehicleRepository.findByIdAndIsDeletedFalse(borrowedVehicleId)
                 .orElseThrow(() -> TransportException.notFound("Vehículo prestado", borrowedVehicleId.toString()));
     }
 

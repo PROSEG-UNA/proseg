@@ -17,7 +17,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.UuidGenerator;
-import org.hibernate.annotations.Where;
 
 import java.util.UUID;
 
@@ -29,7 +28,6 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 @SQLDelete(sql = "UPDATE borrowed_vehicle_table SET is_deleted = true WHERE id = ?")
-@Where(clause = "is_deleted = false")
 public class BorrowedVehicle extends BaseEntity {
 
     @Id

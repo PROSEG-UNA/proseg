@@ -4,10 +4,13 @@ import com.proseg.msvc_transport.config.TransportSchemaMigration;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftCreateRequestDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowRequestDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowDayRequestDto;
+import com.proseg.msvc_transport.dto.request.BorrowedVehicleRequestDto;
 import com.proseg.msvc_transport.entity.Driver;
+import com.proseg.msvc_transport.entity.ResourceType;
 import com.proseg.msvc_transport.entity.TourApprovalStatus;
 import com.proseg.msvc_transport.entity.TourProcessingDraftStatus;
 import com.proseg.msvc_transport.entity.TourProcessingDraftImportRow;
+import com.proseg.msvc_transport.entity.VehicleType;
 import com.proseg.msvc_transport.repository.TourProcessingDraftRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
 import com.proseg.msvc_transport.security.CurrentUserResolver;
@@ -56,6 +59,7 @@ class TransportPersistenceTest {
     @Autowired TourProcessingDraftRepository draftRepository;
     @Autowired DriverRepository driverRepository;
     @Autowired DriverService driverService;
+    @Autowired BorrowedVehicleService borrowedVehicles;
     @Autowired DriverMonthService months;
     @Autowired EntityManager entityManager;
     @Autowired EntityManagerFactory entityManagerFactory;
@@ -210,6 +214,48 @@ class TransportPersistenceTest {
         assertThat(closed.getOrdinaryHoursAccrued()).isEqualTo(before.getOrdinaryHoursAccrued());
         assertThatThrownBy(() -> drafts.create(request)).hasMessageContaining("ya fue terminada");
         assertThat(drafts.reopen(created.getDraftId()).getStatus()).isEqualTo(TourProcessingDraftStatus.DRAFT);
+    }
+
+    @Test
+    void protectsBorrowedVehiclesInOpenDraftsAndKeepsThemReadableAfterRetiring() {
+        when(currentUserResolver.resolve()).thenReturn("test");
+        var saved = borrowedVehicles.create(BorrowedVehicleRequestDto.builder().plate("SAVED-" + UUID.randomUUID().toString().substring(0, 8))
+                .capacity(10).type(VehicleType.MICROBUS).build());
+        var imported = borrowedVehicles.create(BorrowedVehicleRequestDto.builder().plate("RAW-" + UUID.randomUUID().toString().substring(0, 8))
+                .capacity(10).type(VehicleType.MICROBUS).build());
+        var free = borrowedVehicles.create(BorrowedVehicleRequestDto.builder().plate("FREE-" + UUID.randomUUID().toString().substring(0, 8))
+                .capacity(10).type(VehicleType.MICROBUS).build());
+        var first = TourProcessingDraftRowRequestDto.builder().rowNumber(1).number("BORROWED-1")
+                .resourceType(ResourceType.BORROWED_VEHICLE).borrowedVehicleId(saved.getId()).passengers(3)
+                .executingUnit("Unidad").responsible("Responsable").destination("Heredia").durationDays(1).priority(1)
+                .departureDate(LocalDate.of(2095, 5, 4)).returnDate(LocalDate.of(2095, 5, 4))
+                .departureTime(LocalTime.of(8, 0)).returnTime(LocalTime.of(16, 0)).build();
+        var second = new TourProcessingDraftRowRequestDto();
+        org.springframework.beans.BeanUtils.copyProperties(first, second);
+        second.setRowNumber(2);
+        second.setBorrowedVehicleId(imported.getId());
+        var created = drafts.create(TourProcessingDraftCreateRequestDto.builder().fileName("borrowed.xlsx").fileType("XLSX")
+                .year(2095).month(5).businessDays(21).rows(List.of(first, second)).build());
+        entityManager.flush();
+
+        assertThatThrownBy(() -> borrowedVehicles.delete(saved.getId())).hasMessageContaining("borrador abierto");
+        assertThatThrownBy(() -> borrowedVehicles.delete(imported.getId())).hasMessageContaining("borrador abierto");
+        borrowedVehicles.delete(free.getId());
+
+        drafts.finish(created.getDraftId());
+        borrowedVehicles.delete(saved.getId());
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(drafts.findRows(created.getDraftId(), null, Map.of(), PageRequest.of(0, 10)).getContent())
+                .anySatisfy(row -> assertThat(row.getBorrowedVehiclePlate()).isEqualTo(saved.getPlate()));
+        assertThat(borrowedVehicles.findAll(null, Map.of(), PageRequest.of(0, 100)).getContent())
+                .noneSatisfy(vehicle -> assertThat(vehicle.getId()).isEqualTo(saved.getId()));
+
+        var restored = borrowedVehicles.create(BorrowedVehicleRequestDto.builder().plate(saved.getPlate())
+                .capacity(12).type(VehicleType.MICROBUS).build());
+        assertThat(restored.getId()).isEqualTo(saved.getId());
+        assertThat(restored.getCapacity()).isEqualTo(12);
     }
 
     @Test

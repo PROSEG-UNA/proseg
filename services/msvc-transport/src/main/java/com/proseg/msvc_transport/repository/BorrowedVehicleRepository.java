@@ -16,4 +16,6 @@ public interface BorrowedVehicleRepository extends JpaRepository<BorrowedVehicle
     boolean existsByPlateIgnoreCaseAndIdNot(String plate, UUID id);
 
     Optional<BorrowedVehicle> findByPlateIgnoreCase(String plate);
+
+    Optional<BorrowedVehicle> findByIdAndIsDeletedFalse(UUID id);
 }
