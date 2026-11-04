@@ -710,30 +710,6 @@ class TourProcessingDraftServiceTest {
     }
 
     @Test
-    void reportsHowManyToursAreNotApprovedOnlyForPendingDrafts() {
-        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
-        draft.setTotalRows(3);
-        draft.setDuplicateRows(0);
-        draft.setConflictingRows(0);
-        draft.setBlocksDetected(0);
-        TourProcessingDraftTour notApproved = entity(draft, 1, "100", "Cartago");
-        notApproved.setApprovalStatus(TourApprovalStatus.NOT_APPROVED);
-        TourProcessingDraftTour repeatedNotApproved = entity(draft, 2, "100", "Cartago");
-        repeatedNotApproved.setApprovalStatus(TourApprovalStatus.NOT_APPROVED);
-        repeatedNotApproved.setDuplicateRank(2);
-        when(draftRepository.findById(draft.getId())).thenReturn(Optional.of(draft));
-        when(rowRepository.findAllByDraftIdOrderByRowNumberAsc(draft.getId())).thenReturn(List.of(notApproved, repeatedNotApproved));
-        when(rowRepository.findPrimariesByDraftId(draft.getId())).thenReturn(List.of(notApproved, entity(draft, 3, "200", "Heredia")));
-        when(vehicleRepository.findAll()).thenReturn(List.of());
-
-        assertThat(service.findById(draft.getId()).getNotApprovedRows()).isEqualTo(1);
-        verify(rowRepository, never()).findAllByDraftIdOrderByRowNumberAsc(draft.getId());
-
-        draft.setStatus(TourProcessingDraftStatus.REGISTERED);
-        assertThat(service.findById(draft.getId()).getNotApprovedRows()).isZero();
-    }
-
-    @Test
     void draftDetailCountsOnlyPrimaryToursWithoutLoadingRepeatedRows() {
         TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
         draft.setTotalRows(3);
@@ -752,7 +728,6 @@ class TourProcessingDraftServiceTest {
         var response = service.findById(draft.getId());
 
         assertThat(response.getOversizedRows()).isEqualTo(1);
-        assertThat(response.getNotApprovedRows()).isEqualTo(1);
         verify(rowRepository, never()).findAllByDraftIdOrderByRowNumberAsc(draft.getId());
     }
 

@@ -5,10 +5,8 @@ import {
     Alert,
     Box,
     Button,
-    Checkbox,
     Chip,
     Container,
-    FormControlLabel,
     IconButton,
     LinearProgress,
     ListItemIcon,
@@ -39,7 +37,6 @@ import AutoFixHighOutlinedIcon from '@mui/icons-material/AutoFixHighOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import RouteOutlinedIcon from '@mui/icons-material/RouteOutlined';
-import SaveAltOutlinedIcon from '@mui/icons-material/SaveAltOutlined';
 import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
@@ -51,7 +48,6 @@ import TableBase from '../../../../common/components/TablaBase.jsx';
 import TableSelectFilter from '../../../../common/components/TableSelectFilter.jsx';
 import RowActionsMenu from '../../../../common/components/RowActionsMenu.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
-import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { usePermissions } from '../../../../common/hooks/index.js';
 import { queryKeys } from '../../../../common/query';
@@ -69,7 +65,6 @@ import {
     exportTourProcessingDraftFinalCommission,
     exportTourProcessingDraftTourControl,
     finishTourProcessingDraft,
-    registerTourProcessingDraft,
     rejectTourProcessingDraftIncompleteTours,
     reopenTourProcessingDraft,
     splitTourProcessingDraftOversizedRows,
@@ -249,14 +244,6 @@ const DraftRowsTable = memo(function DraftRowsTable({
     );
 });
 
-function registerResultMessage(result) {
-    const parts = [`Se registraron ${result?.importedRows ?? 0} giras.`];
-    if (result?.replacedRows) parts.push(`Se reemplazaron ${result.replacedRows} giras existentes.`);
-    parts.push(`Choferes: ${result?.createdDrivers ?? 0} creados, ${result?.updatedDrivers ?? 0} actualizados.`);
-    parts.push(`Vehículos: ${result?.createdVehicles ?? 0} creados, ${result?.updatedVehicles ?? 0} actualizados.`);
-    return parts.join('\n');
-}
-
 function autoAssignDriversResultMessage(result) {
     const parts = [`Se asignó chofer a ${result?.assignedTours ?? 0} giras.`];
     if (result?.unassignedTours) parts.push(`${result.unassignedTours} giras quedaron sin chofer.`);
@@ -296,10 +283,8 @@ export default function TourProcessingDraftPage() {
     const accentColor = theme.vars.palette.tones.rose.fg;
 
     const [optionsAnchor, setOptionsAnchor] = useState(null);
-    const [registerOpen, setRegisterOpen] = useState(false);
     const [finishOpen, setFinishOpen] = useState(false);
     const [reopenOpen, setReopenOpen] = useState(false);
-    const [replaceExisting, setReplaceExisting] = useState(false);
     const [deleteDuplicatesOpen, setDeleteDuplicatesOpen] = useState(false);
     const [splitOversizedOpen, setSplitOversizedOpen] = useState(false);
     const [dismissedOversizedRows, setDismissedOversizedRows] = useState(null);
@@ -376,21 +361,6 @@ export default function TourProcessingDraftPage() {
         error: rowsError,
         totalElements,
     } = useTourProcessingDraftRows(draftId, requestParams, { enabled: viewTab === 'rows' });
-
-    const registerMutation = useMutation({
-        mutationFn: (replaceExistingInRange) => registerTourProcessingDraft(draftId, replaceExistingInRange),
-        onSuccess: (result) => {
-            setRegisterOpen(false);
-            setAlert({ type: 'success', message: registerResultMessage(result) });
-            void queryClient.invalidateQueries({ queryKey: queryKeys.transport.tourProcessing() });
-            void queryClient.invalidateQueries({ queryKey: queryKeys.transport.drivers() });
-            void queryClient.invalidateQueries({ queryKey: queryKeys.transport.vehicles() });
-        },
-        onError: (error) => {
-            setRegisterOpen(false);
-            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudieron registrar las giras') });
-        },
-    });
 
     const finishMutation = useMutation({
         mutationFn: () => finishTourProcessingDraft(draftId),
@@ -767,8 +737,6 @@ export default function TourProcessingDraftPage() {
     const conflictingRows = draft?.conflictingRows ?? 0;
     const duplicateRows = draft?.duplicateRows ?? 0;
     const oversizedRows = draft?.oversizedRows ?? 0;
-    const notApprovedRows = draft?.notApprovedRows ?? 0;
-    const registering = registerMutation.isPending;
     const exporting = exportMutation.isPending;
     const autoAssigningDrivers = autoAssignDriversMutation.isPending;
     const autoAssigningUlloa = autoAssignUlloaMutation.isPending;
@@ -781,8 +749,7 @@ export default function TourProcessingDraftPage() {
     const periodLabel = draft?.year && draft?.month ? shortPeriodLabel(draft.year, draft.month) : null;
     const exportLabel = draft?.year && draft?.month ? `Descargar '${draftPeriodLabel(draft)}'` : 'Descargar borrador';
     const hasAssignmentReport = assignmentReport?.draftId === draftId;
-    const busy = registering || finishMutation.isPending || reopenMutation.isPending || autoAssigningDrivers || autoAssigningUlloa || autoAssigningVehicles || autoAssigningBoth || clearingAssignments || deleteDuplicatesMutation.isPending || splitOversizedMutation.isPending;
-    const draftRange = `${formatDate(draft?.minDepartureDate)} a ${formatDate(draft?.maxReturnDate)}`;
+    const busy = finishMutation.isPending || reopenMutation.isPending || autoAssigningDrivers || autoAssigningUlloa || autoAssigningVehicles || autoAssigningBoth || clearingAssignments || deleteDuplicatesMutation.isPending || splitOversizedMutation.isPending;
     const pageTitle = draft?.year && draft?.month
         ? `Depuración de giras ${draftPeriodLabel(draft).toLowerCase()}`
         : 'Depuración de giras';
@@ -861,10 +828,6 @@ export default function TourProcessingDraftPage() {
 
     const confirmFinalCommission = (options) => {
         if (!finalCommissionMutation.isPending) finalCommissionMutation.mutate(options);
-    };
-
-    const confirmRegister = () => {
-        if (!registerMutation.isPending) registerMutation.mutate(replaceExisting);
     };
 
     const confirmAutoAssignDrivers = () => {
@@ -1169,59 +1132,6 @@ export default function TourProcessingDraftPage() {
                 onConfirm={() => { if (!reopenMutation.isPending) reopenMutation.mutate(); }}
                 onClose={reopenMutation.isPending ? undefined : () => setReopenOpen(false)}
             />
-
-            <GeneralModal
-                open={registerOpen}
-                onClose={registering ? undefined : () => setRegisterOpen(false)}
-                icon={SaveAltOutlinedIcon}
-                title="Registrar giras"
-                subtitle={draft?.fileName ?? ''}
-                maxWidth="sm"
-                loading={registering}
-                secondaryButton={{ label: 'Cancelar', onClick: () => setRegisterOpen(false), disabled: registering }}
-                primaryButton={{
-                    label: registering ? 'Registrando...' : 'Registrar giras',
-                    onClick: confirmRegister,
-                    disabled: registering,
-                }}
-            >
-                <Stack spacing={2} sx={{ p: 3 }}>
-                    <Typography sx={{ fontSize: 14 }}>
-                        Se registrarán <strong>{(draft?.totalRows ?? 0) - duplicateRows - notApprovedRows}</strong> giras, una por cada Numero del borrador.
-                    </Typography>
-                    {duplicateRows > 0 && (
-                        <Typography sx={{ fontSize: 13.5, color: 'text.secondary' }}>
-                            Se omitirán {duplicateRows} filas repetidas: son la misma gira listada en cada día que abarca.
-                        </Typography>
-                    )}
-                    {notApprovedRows > 0 && (
-                        <Alert severity="warning" variant="outlined">
-                            Se omitirán {notApprovedRows} giras no aprobadas: no se registrarán ni cuentan en las horas de los choferes.
-                        </Alert>
-                    )}
-                    <Box sx={{ p: 1.5, borderRadius: '8px', border: '1px solid', borderColor: replaceExisting ? 'warning.main' : 'divider' }}>
-                        <FormControlLabel
-                            control={(
-                                <Checkbox
-                                    size="small"
-                                    checked={replaceExisting}
-                                    onChange={(event) => setReplaceExisting(event.target.checked)}
-                                    disabled={registering}
-                                />
-                            )}
-                            label={<Typography sx={{ fontSize: 13.5, fontWeight: 600 }}>Reemplazar giras existentes en el rango</Typography>}
-                        />
-                        <Typography sx={{ color: 'text.secondary', fontSize: 12.5, pl: 3.8 }}>
-                            Rango del archivo: {draftRange}
-                        </Typography>
-                    </Box>
-                    {replaceExisting && (
-                        <Alert severity="warning" variant="outlined">
-                            Se eliminarán todas las giras que empiecen entre el {formatDate(draft?.minDepartureDate)} y el {formatDate(draft?.maxReturnDate)}, aunque no vengan en este archivo. Sus asignaciones quedarán sin gira asociada.
-                        </Alert>
-                    )}
-                </Stack>
-            </GeneralModal>
 
             <DialogModal
                 open={Boolean(rowToDelete)}

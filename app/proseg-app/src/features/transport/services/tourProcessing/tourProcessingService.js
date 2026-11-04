@@ -150,14 +150,6 @@ export async function clearTourProcessingDraftAssignments(draftId) {
     await axios.post(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/assignments/clear`, null, transportConfig);
 }
 
-export async function registerTourProcessingDraft(draftId, replaceExistingInRange) {
-    const { data } = await axios.post(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/register`, null, {
-        ...transportConfig,
-        params: { replaceExistingInRange },
-    });
-    return data?.data ?? null;
-}
-
 export async function fetchTourProcessingHistory(options = {}) {
     return fetchPage(TRANSPORT_ENDPOINTS.tourProcessingHistory, options);
 }

@@ -6,31 +6,22 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingExecutionDetailResponseDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingExecutionDetailViewResponseDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingExecutionSummaryResponseDto;
-import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingRegisterResponseDto;
 import com.proseg.msvc_transport.entity.TourProcessingExecution;
 import com.proseg.msvc_transport.entity.TourProcessingExecutionDetail;
-import com.proseg.msvc_transport.entity.TourProcessingExecutionStatus;
 import com.proseg.msvc_transport.exception.TransportException;
 import com.proseg.msvc_transport.repository.TourProcessingExecutionDetailRepository;
 import com.proseg.msvc_transport.repository.TourProcessingExecutionRepository;
 import jakarta.persistence.criteria.Predicate;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -64,70 +55,6 @@ public class TourProcessingHistoryService {
     private final TourProcessingExecutionRepository tourProcessingExecutionRepository;
     private final TourProcessingExecutionDetailRepository tourProcessingExecutionDetailRepository;
     private final ObjectMapper objectMapper;
-
-    @Transactional
-    public UUID recordSuccess(
-            TourProcessingAuditData audit,
-            TourProcessingRegisterResponseDto response,
-            String executedBy,
-            LocalDateTime processStartedAt,
-            LocalDateTime processFinishedAt,
-            LocalDateTime replacedRangeStart,
-            LocalDateTime replacedRangeEnd,
-            List<TourProcessingDetailDraft> details
-    ) {
-        TourProcessingExecutionStatus finalStatus = response.getImportedRows() < response.getRequestedRows()
-                ? TourProcessingExecutionStatus.PARTIAL
-                : TourProcessingExecutionStatus.SUCCESS;
-        TourProcessingExecution execution = buildExecution(
-                audit,
-                response,
-                executedBy,
-                processStartedAt,
-                processFinishedAt,
-                finalStatus,
-                null,
-                replacedRangeStart,
-                replacedRangeEnd
-        );
-        TourProcessingExecution saved = tourProcessingExecutionRepository.save(execution);
-        saveDetails(saved, details);
-        return saved.getId();
-    }
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public UUID recordFailure(
-            TourProcessingAuditData audit,
-            String executedBy,
-            LocalDateTime processStartedAt,
-            LocalDateTime processFinishedAt,
-            Exception exception,
-            List<TourProcessingDetailDraft> details
-    ) {
-        TourProcessingRegisterResponseDto failed = TourProcessingRegisterResponseDto.builder()
-                .requestedRows(audit.requestedRows())
-                .importedRows(0)
-                .replacedRows(0)
-                .createdDrivers(0)
-                .updatedDrivers(0)
-                .createdVehicles(0)
-                .updatedVehicles(0)
-                .build();
-        TourProcessingExecution execution = buildExecution(
-                audit,
-                failed,
-                executedBy,
-                processStartedAt,
-                processFinishedAt,
-                TourProcessingExecutionStatus.FAILED,
-                exception.getMessage(),
-                null,
-                null
-        );
-        TourProcessingExecution saved = tourProcessingExecutionRepository.save(execution);
-        saveDetails(saved, details);
-        return saved.getId();
-    }
 
     @Transactional(readOnly = true)
     public Page<TourProcessingExecutionSummaryResponseDto> findAll(String search, Map<String, String> filters, Pageable pageable) {
@@ -176,73 +103,6 @@ public class TourProcessingHistoryService {
                 .errorMessage(execution.getErrorMessage())
                 .details(details)
                 .build();
-    }
-
-    private TourProcessingExecution buildExecution(
-            TourProcessingAuditData audit,
-            TourProcessingRegisterResponseDto response,
-            String executedBy,
-            LocalDateTime processStartedAt,
-            LocalDateTime processFinishedAt,
-            TourProcessingExecutionStatus status,
-            String errorMessage,
-            LocalDateTime replacedRangeStart,
-            LocalDateTime replacedRangeEnd
-    ) {
-        int totalReadRecords = Math.max(0, audit.totalRowsRead());
-        int validRecords = Math.max(0, audit.validRows());
-        int invalidRecords = Math.max(0, audit.invalidRows());
-        int duplicatesDetected = Math.max(0, audit.duplicatesDetected());
-        String fileName = safe(audit.fileName(), "archivo_desconocido");
-        String fileType = safe(audit.fileType(), "DESCONOCIDO").toUpperCase(Locale.ROOT);
-        long duration = Math.max(0L, java.time.Duration.between(processStartedAt, processFinishedAt).toMillis());
-
-        return TourProcessingExecution.builder()
-                .executedAt(processFinishedAt)
-                .executedBy(safe(executedBy, "usuario_desconocido"))
-                .fileName(fileName)
-                .fileType(fileType)
-                .processStartedAt(processStartedAt)
-                .processFinishedAt(processFinishedAt)
-                .durationMs(duration)
-                .totalReadRecords(totalReadRecords)
-                .validRecords(validRecords)
-                .invalidRecords(invalidRecords)
-                .duplicatesDetected(duplicatesDetected)
-                .createdDrivers(response.getCreatedDrivers())
-                .updatedDrivers(response.getUpdatedDrivers())
-                .createdVehicles(response.getCreatedVehicles())
-                .updatedVehicles(response.getUpdatedVehicles())
-                .createdTours(response.getImportedRows())
-                .updatedTours(0)
-                .replacedExistingTours(audit.replaceExistingInRange())
-                .replacedRangeStart(replacedRangeStart)
-                .replacedRangeEnd(replacedRangeEnd)
-                .finalStatus(status)
-                .errorMessage(errorMessage)
-                .executionDate(processFinishedAt.toLocalDate())
-                .build();
-    }
-
-    private void saveDetails(TourProcessingExecution execution, List<TourProcessingDetailDraft> details) {
-        if (details == null || details.isEmpty()) {
-            return;
-        }
-        List<TourProcessingExecutionDetail> entities = details.stream()
-                .map(detail -> TourProcessingExecutionDetail.builder()
-                        .tourProcessingExecution(execution)
-                        .originalRowNumber(detail.getOriginalRowNumber())
-                        .originalData(writeJson(detail.getOriginalData()))
-                        .normalizedData(writeJson(detail.getNormalizedData()))
-                        .recordType(detail.getRecordType())
-                        .actionPerformed(detail.getActionPerformed())
-                        .processingResult(detail.getProcessingResult())
-                        .rejectionReason(detail.getRejectionReason())
-                        .observations(detail.getObservations())
-                        .validationErrors(detail.getValidationErrors())
-                        .build())
-                .toList();
-        tourProcessingExecutionDetailRepository.saveAll(entities);
     }
 
     private TourProcessingExecutionSummaryResponseDto toSummaryDto(TourProcessingExecution entity) {
@@ -389,14 +249,6 @@ public class TourProcessingHistoryService {
                 || trimmed.matches("^\\d{8,}$");
     }
 
-    private String writeJson(Map<String, String> values) {
-        try {
-            return objectMapper.writeValueAsString(values == null ? Map.of() : values);
-        } catch (JsonProcessingException ex) {
-            throw TransportException.badRequest("TOUR_PROCESSING_HISTORY_JSON_WRITE_ERROR", "No se pudo serializar el detalle de depuración");
-        }
-    }
-
     private Map<String, String> readJsonMap(String json) {
         if (json == null || json.isBlank()) {
             return new LinkedHashMap<>();
@@ -406,35 +258,5 @@ public class TourProcessingHistoryService {
         } catch (JsonProcessingException ex) {
             throw TransportException.badRequest("TOUR_PROCESSING_HISTORY_JSON_READ_ERROR", "No se pudo deserializar el detalle de depuración");
         }
-    }
-
-    public record TourProcessingAuditData(
-            String fileName,
-            String fileType,
-            int totalRowsRead,
-            int validRows,
-            int invalidRows,
-            int duplicatesDetected,
-            int requestedRows,
-            boolean replaceExistingInRange
-    ) {}
-
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class TourProcessingDetailDraft {
-        private Integer originalRowNumber;
-        @Builder.Default
-        private Map<String, String> originalData = Map.of();
-        @Builder.Default
-        private Map<String, String> normalizedData = Map.of();
-        private String recordType;
-        private String actionPerformed;
-        private String processingResult;
-        private String rejectionReason;
-        private String observations;
-        private String validationErrors;
     }
 }

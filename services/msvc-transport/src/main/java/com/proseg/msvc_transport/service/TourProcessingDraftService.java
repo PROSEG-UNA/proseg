@@ -188,10 +188,6 @@ public class TourProcessingDraftService {
         if (draft.getStatus() == TourProcessingDraftStatus.DRAFT) {
             List<TourProcessingDraftTour> tours = tourRepository.findPrimariesByDraftId(id);
             response.setOversizedRows(oversizedToursOf(tours, vehicleRepository.findAll()).size());
-            response.setNotApprovedRows((int) tours.stream()
-                    .filter(TourProcessingDraftTour::isPrimary)
-                    .filter(tour -> !tour.isApproved())
-                    .count());
         }
         return response;
     }

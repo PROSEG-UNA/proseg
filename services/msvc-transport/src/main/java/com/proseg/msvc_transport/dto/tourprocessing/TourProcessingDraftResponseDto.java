@@ -27,7 +27,6 @@ public class TourProcessingDraftResponseDto {
     private int duplicateRows;
     private int conflictingRows;
     private int oversizedRows;
-    private int notApprovedRows;
     private int blocksDetected;
     private Integer year;
     private Integer month;

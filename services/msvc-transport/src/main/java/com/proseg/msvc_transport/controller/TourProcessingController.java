@@ -17,7 +17,6 @@ import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDriverAutoAssi
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingExecutionDetailViewResponseDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingExecutionSummaryResponseDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingImportSchemaDto;
-import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingRegisterResponseDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingVehicleAutoAssignResponseDto;
 import com.proseg.msvc_transport.dto.tourprocessing.FinalCommissionCheckDto;
 import com.proseg.msvc_transport.dto.tourprocessing.FinalCommissionReportDto;
@@ -25,7 +24,6 @@ import com.proseg.msvc_transport.dto.tourprocessing.TourControlReportDto;
 import com.proseg.msvc_transport.dto.response.OvertimeRequestReportDto;
 import com.proseg.msvc_transport.service.TourProcessingDraftService;
 import com.proseg.msvc_transport.service.TourProcessingHistoryService;
-import com.proseg.msvc_transport.service.TourProcessingService;
 import com.proseg.msvc_transport.service.FinalCommissionService;
 import com.proseg.msvc_transport.service.TourControlReportService;
 import jakarta.validation.Valid;
@@ -44,7 +42,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TourProcessingController {
 
-    private final TourProcessingService tourProcessingService;
     private final TourProcessingDraftService tourProcessingDraftService;
     private final TourProcessingHistoryService tourProcessingHistoryService;
     private final FinalCommissionService finalCommissionService;
@@ -251,17 +248,6 @@ public class TourProcessingController {
     @GetMapping("/drafts/{id}/tour-control")
     public ResponseEntity<ApiResponse<TourControlReportDto>> findDraftTourControl(@PathVariable UUID id) {
         return ApiResponseBuilder.ok(tourControlReportService.report(id), "Datos del Control de Giras");
-    }
-
-    @PostMapping("/drafts/{id}/register")
-    public ResponseEntity<ApiResponse<TourProcessingRegisterResponseDto>> registerDraft(
-            @PathVariable UUID id,
-            @RequestParam(defaultValue = "false") boolean replaceExistingInRange
-    ) {
-        return ApiResponseBuilder.ok(
-                tourProcessingService.registerDraft(id, replaceExistingInRange),
-                "Giras registradas correctamente"
-        );
     }
 
     @GetMapping("/history")

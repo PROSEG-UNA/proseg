@@ -54,7 +54,6 @@ import static org.mockito.Mockito.when;
 @Transactional
 class TransportPersistenceTest {
     @Autowired TourProcessingDraftService drafts;
-    @Autowired TourProcessingService registration;
     @Autowired OvertimeRequestReportService reports;
     @Autowired TourProcessingDraftRepository draftRepository;
     @Autowired DriverRepository driverRepository;
@@ -113,7 +112,16 @@ class TransportPersistenceTest {
 
     @Test
     void readsRealPagesSummariesAndDatesWithoutQueriesPerRow() {
-        UUID id = jdbc.queryForObject("select id from tour_processing_draft_table where not is_deleted order by imported_at desc limit 1", UUID.class);
+        when(currentUserResolver.resolve()).thenReturn("test");
+        Driver catalogDriver = driverRepository.save(Driver.builder().name("Test " + UUID.randomUUID()).status("ACTIVE").build());
+        var row = TourProcessingDraftRowRequestDto.builder().rowNumber(1).number("PAGE-1")
+                .driver(catalogDriver.getName()).passengers(3).executingUnit("Unidad").responsible("Responsable")
+                .destination("Heredia").durationDays(1).priority(1).departureDate(LocalDate.of(2096, 5, 4))
+                .returnDate(LocalDate.of(2096, 5, 4)).departureTime(LocalTime.of(8, 0))
+                .returnTime(LocalTime.of(16, 0)).build();
+        UUID id = drafts.create(TourProcessingDraftCreateRequestDto.builder().fileName("pages.xlsx").fileType("XLSX")
+                .year(2096).month(5).businessDays(21).rows(List.of(row)).build()).getDraftId();
+        entityManager.flush();
         var statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
         entityManager.clear();
         statistics.clear();
@@ -208,7 +216,7 @@ class TransportPersistenceTest {
     @Test
     void closedDraftKeepsDriverTotalsAndBlocksAnotherDraftForTheMonth() {
         when(currentUserResolver.resolve()).thenReturn("test");
-        var driver = driverRepository.findAll().stream().filter(value -> "ACTIVE".equals(value.getStatus())).findFirst().orElseThrow();
+        var driver = driverRepository.save(Driver.builder().name("Test " + UUID.randomUUID()).status("ACTIVE").build());
         var row = TourProcessingDraftRowRequestDto.builder().rowNumber(1).number("CLOSE-1")
                 .driver(driver.getName()).passengers(3).executingUnit("Unidad").responsible("Responsable")
                 .destination("Heredia").durationDays(1).priority(1).departureDate(LocalDate.of(2099, 5, 4))
@@ -336,7 +344,7 @@ class TransportPersistenceTest {
     }
 
     @Test
-    void savesEditsRecalculatesOnlyActiveDaysAndRegistersWithoutCopyingTours() {
+    void savesEditsAndRecalculatesOnlyActiveDays() {
         when(currentUserResolver.resolve()).thenReturn("test");
         Driver driver = driverRepository.save(Driver.builder().name("Test " + UUID.randomUUID()).build());
         var row = TourProcessingDraftRowRequestDto.builder().rowNumber(1).number("TEST-1")
@@ -361,9 +369,7 @@ class TransportPersistenceTest {
         entityManager.flush();
         assertThat(drafts.findRow(created.getDraftId(), saved.getId()).getDays()).isEmpty();
         drafts.updateRowApprovalStatus(created.getDraftId(), saved.getId(), TourApprovalStatus.APPROVED);
-        var registered = registration.registerDraft(created.getDraftId(), false);
         entityManager.flush();
-        assertThat(registered.getImportedRows()).isEqualTo(1);
-        assertThat(registered.getTourProcessingExecutionId()).isNotNull();
+        assertThat(drafts.findRow(created.getDraftId(), saved.getId()).getDays()).hasSize(1);
     }
 }
