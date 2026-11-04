@@ -1243,6 +1243,7 @@ export default function TourProcessingDraftPage() {
                     check={finalCommissionCheck}
                     subtitle={periodLabel ? `Comisión Final ${periodLabel}` : ''}
                     downloading={finalCommissionMutation.isPending}
+                    canRejectIncomplete={canEditTours}
                     onClose={() => setFinalCommissionCheck(null)}
                     onConfirm={confirmFinalCommission}
                 />

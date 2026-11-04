@@ -43,10 +43,12 @@ class FinalCommissionServiceTest {
     private DraftHoursService draftHoursService;
     private FinalCommissionService service;
 
+    private TourProcessingDraft draft;
+
     @BeforeEach
     void setUp() {
         TourProcessingDraftRepository draftRepository = mock(TourProcessingDraftRepository.class);
-        TourProcessingDraft draft = TourProcessingDraft.builder().id(draftId).status(TourProcessingDraftStatus.DRAFT)
+        draft = TourProcessingDraft.builder().id(draftId).status(TourProcessingDraftStatus.DRAFT)
                 .year(2026).month(5).businessDays(28).duplicateRows(0).conflictingRows(0).build();
         when(draftRepository.findById(draftId)).thenReturn(Optional.of(draft));
         when(draftRepository.findByIdForUpdate(draftId)).thenReturn(Optional.of(draft));
@@ -77,6 +79,38 @@ class FinalCommissionServiceTest {
         });
         assertThatThrownBy(() -> service.report(draftId)).isInstanceOf(TransportException.class);
         assertThatThrownBy(() -> service.rejectIncompleteTours(draftId)).isInstanceOf(TransportException.class);
+    }
+
+    @Test
+    void blocksClosedDraftsWithIncompleteToursUntilTheyReturnToDraft() {
+        draft.setStatus(TourProcessingDraftStatus.CLOSED);
+        TourProcessingDraftTour withoutVehicle = tour("4010", 1, 3, "2026-05-05");
+        assign(withoutVehicle.addAssignment(part(3)), ana, null);
+        when(tourStore.findPrimariesByDraftId(draftId)).thenReturn(List.of(withoutVehicle));
+
+        FinalCommissionCheckDto check = service.check(draftId);
+
+        assertThat(check.getBlockers()).singleElement().satisfies(issue -> {
+            assertThat(issue.getCode()).isEqualTo("CLOSED_WITH_INCOMPLETE_TOURS");
+            assertThat(issue.getDetails()).containsExactly("Gira 4010 (05/05/2026), prioridad 1, 3 pasajeros: sin vehículo");
+        });
+        assertThatThrownBy(() -> service.rejectIncompleteTours(draftId))
+                .isInstanceOf(TransportException.class)
+                .hasMessageContaining("Devuélvela a borrador");
+    }
+
+    @Test
+    void doesNotAskToReopenRegisteredDrafts() {
+        draft.setStatus(TourProcessingDraftStatus.REGISTERED);
+        TourProcessingDraftTour withoutVehicle = tour("4011", 1, 3, "2026-05-05");
+        assign(withoutVehicle.addAssignment(part(3)), ana, null);
+        when(tourStore.findPrimariesByDraftId(draftId)).thenReturn(List.of(withoutVehicle));
+
+        assertThat(service.check(draftId).getBlockers()).singleElement()
+                .satisfies(issue -> assertThat(issue.getTitle()).doesNotContain("Devuélvela a borrador"));
+        assertThatThrownBy(() -> service.rejectIncompleteTours(draftId))
+                .isInstanceOf(TransportException.class)
+                .hasMessageContaining("ya fue registrado");
     }
 
     @Test

@@ -53,6 +53,14 @@ describe('TourProcessingFinalCommissionDialog', () => {
         expect(screen.queryByText('No hay vehículos asignados')).toBeNull();
     });
 
+    it('no ofrece la descarga si hay giras incompletas y el usuario no puede editarlas', () => {
+        renderDialog({ check: findingsCheck, canRejectIncomplete: false });
+
+        expect(screen.getByText(/necesitas permiso para editar giras/)).toBeTruthy();
+        expect(screen.getByText('Gira 03625 (02/05/2026), prioridad 1, 3 pasajeros: sin vehículo')).toBeTruthy();
+        expect(screen.queryByRole('button', { name: 'Descargar de todos modos' })).toBeNull();
+    });
+
     it('detecta si la revisión no tiene hallazgos', () => {
         expect(hasFinalCommissionFindings({ blockers: [], errors: [], warnings: [], rejections: null })).toBe(false);
         expect(hasFinalCommissionFindings(findingsCheck)).toBe(true);

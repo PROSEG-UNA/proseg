@@ -73,7 +73,7 @@ public class FinalCommissionService {
         TourProcessingDraft draft = getDraft(draftId);
         Snapshot snapshot = snapshot(draft);
         return FinalCommissionCheckDto.builder()
-                .blockers(blockers(snapshot))
+                .blockers(blockers(draft, snapshot))
                 .errors(errors(draft, snapshot))
                 .warnings(warnings(draft, snapshot))
                 .rejections(rejections(snapshot))
@@ -85,7 +85,9 @@ public class FinalCommissionService {
         TourProcessingDraft draft = draftRepository.findByIdForUpdate(draftId)
                 .orElseThrow(() -> TransportException.notFound(DRAFT_RESOURCE, draftId.toString()));
         if (draft.getStatus() != TourProcessingDraftStatus.DRAFT) {
-            throw TransportException.conflict("TOUR_PROCESSING_DRAFT_ALREADY_REGISTERED", "No se puede editar un borrador que ya fue registrado");
+            throw draft.getStatus() == TourProcessingDraftStatus.CLOSED
+                    ? TransportException.conflict("TOUR_PROCESSING_DRAFT_CLOSED", "No se puede editar una depuración terminada. Devuélvela a borrador")
+                    : TransportException.conflict("TOUR_PROCESSING_DRAFT_ALREADY_REGISTERED", "No se puede editar un borrador que ya fue registrado");
         }
         requireBusinessDays(draft);
         Snapshot snapshot = snapshot(draft);
@@ -189,12 +191,24 @@ public class FinalCommissionService {
                 .toList();
     }
 
-    private List<FinalCommissionCheckDto.Issue> blockers(Snapshot snapshot) {
-        List<String> details = snapshot.partial().stream()
+    private List<FinalCommissionCheckDto.Issue> blockers(TourProcessingDraft draft, Snapshot snapshot) {
+        List<FinalCommissionCheckDto.Issue> blockers = new ArrayList<>();
+        List<String> partial = snapshot.partial().stream()
                 .map(tour -> tourLabel(tour) + ": viajes sin chofer o vehículo: " + missingParts(tour, snapshot))
                 .toList();
-        return details.isEmpty() ? List.of() : List.of(issue("PARTIAL_DISTRIBUTION",
-                "Giras divididas en varios viajes donde algunos viajes tienen chofer y vehículo y otros no", details));
+        if (!partial.isEmpty()) {
+            blockers.add(issue("PARTIAL_DISTRIBUTION",
+                    "Giras divididas en varios viajes donde algunos viajes tienen chofer y vehículo y otros no. Cada viaje debe tenerlos, o ninguno de ellos",
+                    partial));
+        }
+        if (draft.getStatus() != TourProcessingDraftStatus.DRAFT && !snapshot.incomplete().isEmpty()) {
+            blockers.add(issue("CLOSED_WITH_INCOMPLETE_TOURS",
+                    draft.getStatus() == TourProcessingDraftStatus.CLOSED
+                            ? "Giras sin chofer o sin vehículo en una depuración terminada. Devuélvela a borrador para resolverlas"
+                            : "Giras sin chofer o sin vehículo en un borrador registrado, que ya no se puede editar",
+                    incompleteDetails(snapshot)));
+        }
+        return blockers;
     }
 
     private String missingParts(TourProcessingDraftTour tour, Snapshot snapshot) {
@@ -243,12 +257,16 @@ public class FinalCommissionService {
     }
 
     private FinalCommissionCheckDto.Issue rejections(Snapshot snapshot) {
-        List<String> details = snapshot.incomplete().stream()
+        List<String> details = incompleteDetails(snapshot);
+        return details.isEmpty() ? null : issue("NOT_APPROVED", "Giras sin chofer o sin vehículo que cambiarán a estado No aprobada", details);
+    }
+
+    private List<String> incompleteDetails(Snapshot snapshot) {
+        return snapshot.incomplete().stream()
                 .sorted(REPORT_ORDER)
                 .map(tour -> tourLabel(tour) + ", prioridad " + tour.getPriority() + ", " + tour.getPassengers()
                         + " pasajeros: " + missingResources(tour, snapshot))
                 .toList();
-        return details.isEmpty() ? null : issue("NOT_APPROVED", "Giras sin chofer o sin vehículo que cambiarán a estado No aprobada", details);
     }
 
     private String missingResources(TourProcessingDraftTour tour, Snapshot snapshot) {

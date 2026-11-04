@@ -26,10 +26,11 @@ function IssueCard({ issue, color, acknowledgeLabel, acknowledged, onToggle }) {
     );
 }
 
-export default function TourProcessingFinalCommissionDialog({ open, check, subtitle, downloading, onClose, onConfirm }) {
+export default function TourProcessingFinalCommissionDialog({ open, check, subtitle, downloading, canRejectIncomplete = true, onClose, onConfirm }) {
     const [acknowledged, setAcknowledged] = useState(() => new Set());
     const blockers = check?.blockers ?? [];
-    const blocked = blockers.length > 0;
+    const needsRejectionPermission = Boolean(check?.rejections) && !canRejectIncomplete;
+    const blocked = blockers.length > 0 || needsRejectionPermission;
     const pending = finalCommissionIssueKeys(check).filter((key) => !acknowledged.has(key));
 
     const toggle = (key) => () => setAcknowledged((current) => {
@@ -58,7 +59,9 @@ export default function TourProcessingFinalCommissionDialog({ open, check, subti
             <Stack spacing={2} sx={{ p: 3 }}>
                 {blocked ? (
                     <Alert severity="error" variant="outlined">
-                        No se puede descargar la Comisión Final. Cada viaje de estas giras debe tener chofer y vehículo, o ninguno de sus viajes debe tenerlos.
+                        {blockers.length > 0
+                            ? 'No se puede descargar la Comisión Final. Resuelve primero lo siguiente.'
+                            : 'No se puede descargar la Comisión Final. Hay giras sin chofer o vehículo y necesitas permiso para editar giras.'}
                     </Alert>
                 ) : (
                     <Typography sx={{ fontSize: 13.5 }}>
@@ -68,6 +71,9 @@ export default function TourProcessingFinalCommissionDialog({ open, check, subti
                 {blockers.map((issue) => (
                     <IssueCard key={issue.code} issue={issue} color="error" />
                 ))}
+                {needsRejectionPermission && blockers.length === 0 && (
+                    <IssueCard issue={check.rejections} color="error" />
+                )}
                 {!blocked && FINAL_COMMISSION_SECTIONS.map((section) => (check?.[section.key]?.length ? (
                     <Stack key={section.key} spacing={1.25}>
                         <Typography sx={{ fontWeight: 800, fontSize: 14 }}>{section.heading}</Typography>
