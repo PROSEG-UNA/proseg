@@ -28,7 +28,7 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.GET, transportRoute + "/status").permitAll()
                         .requestMatchers(HttpMethod.GET, transportRoute + "/drivers", transportRoute + "/drivers/**")
-                        .hasAuthority(Privileges.Drivers.LEER)
+                        .hasAnyAuthority(Privileges.Drivers.LEER, Privileges.Drivers.GESTIONAR, Privileges.Drivers.ELIMINAR)
                         .requestMatchers(HttpMethod.POST, transportRoute + "/drivers")
                         .hasAuthority(Privileges.Drivers.GESTIONAR)
                         .requestMatchers(HttpMethod.PUT, transportRoute + "/drivers/**")
@@ -39,7 +39,7 @@ public class SecurityConfig {
                         .hasAuthority(Privileges.Drivers.GESTIONAR)
 
                         .requestMatchers(HttpMethod.GET, transportRoute + "/vehicles", transportRoute + "/vehicles/**")
-                        .hasAuthority(Privileges.Vehicles.LEER)
+                        .hasAnyAuthority(Privileges.Vehicles.LEER, Privileges.Vehicles.GESTIONAR, Privileges.Vehicles.ELIMINAR)
                         .requestMatchers(HttpMethod.POST, transportRoute + "/vehicles")
                         .hasAuthority(Privileges.Vehicles.GESTIONAR)
                         .requestMatchers(HttpMethod.PUT, transportRoute + "/vehicles/**")
@@ -48,7 +48,7 @@ public class SecurityConfig {
                         .hasAuthority(Privileges.Vehicles.ELIMINAR)
 
                         .requestMatchers(HttpMethod.GET, transportRoute + "/borrowed-vehicles", transportRoute + "/borrowed-vehicles/**")
-                        .hasAuthority(Privileges.Vehicles.LEER)
+                        .hasAnyAuthority(Privileges.Vehicles.LEER, Privileges.Vehicles.GESTIONAR, Privileges.Vehicles.ELIMINAR)
                         .requestMatchers(HttpMethod.POST, transportRoute + "/borrowed-vehicles")
                         .hasAuthority(Privileges.Vehicles.GESTIONAR)
                         .requestMatchers(HttpMethod.PUT, transportRoute + "/borrowed-vehicles/**")

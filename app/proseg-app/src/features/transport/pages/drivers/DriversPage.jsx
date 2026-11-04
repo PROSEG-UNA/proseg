@@ -46,6 +46,7 @@ export default function DriversPage() {
     const monthData = useTransportDriverMonthsData(year, month);
     const { surplusHoursPerDriver } = useTransportDriverMonthSurplusCap(year, month);
     const showEmptyMonthNotice = monthData.enabled && !monthData.loading && !monthData.hasAnyRecord;
+    const canReadDrivers = hasPermission(PERMISSIONS.TRANSPORT.DRIVERS.READ);
     const canManageDrivers = hasPermission(PERMISSIONS.TRANSPORT.DRIVERS.MANAGE);
     const canDeleteDrivers = hasPermission(PERMISSIONS.TRANSPORT.DRIVERS.DELETE);
     const periodLabel = monthData.enabled ? shortPeriodLabel(year, month) : null;
@@ -121,7 +122,7 @@ export default function DriversPage() {
                                         <ListItemText>{`Descargar 'Control de Giras ${periodLabel}'`}</ListItemText>
                                     </MenuItem>
                                 )}
-                                {periodLabel && (
+                                {periodLabel && canReadDrivers && (
                                     <MenuItem onClick={handleExportOvertimeRequest} disabled={exportingOvertimeRequest}>
                                         <ListItemIcon><DownloadOutlinedIcon fontSize="small" /></ListItemIcon>
                                         <ListItemText>{`Descargar 'Solicitud de Horas Extra ${periodLabel}'`}</ListItemText>

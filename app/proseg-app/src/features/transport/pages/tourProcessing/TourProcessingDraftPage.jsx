@@ -339,6 +339,9 @@ export default function TourProcessingDraftPage() {
     const canExportTours = hasAnyPermission([
         PERMISSIONS.TRANSPORT.TOURS.EXPORT,
     ]);
+    const canReadDrivers = hasAnyPermission([
+        PERMISSIONS.TRANSPORT.DRIVERS.READ,
+    ]);
     const canReadTourProcessing = hasAnyPermission([
         PERMISSIONS.TRANSPORT.TOURS.READ,
         PERMISSIONS.TRANSPORT.TOURS.IMPORT,
@@ -759,7 +762,8 @@ export default function TourProcessingDraftPage() {
     const canEditRows = isOpenDraft && canEditTours;
     const canDeleteRows = isOpenDraft && canDeleteTours;
     const canReopen = draft?.status === 'CLOSED' && canEditTours;
-    const hasOptions = canCreateRows || canEditRows || canReopen || canExportTours;
+    const canExportOvertime = canReadDrivers && Boolean(draft?.year && draft?.month);
+    const hasOptions = canCreateRows || canEditRows || canReopen || canExportTours || canExportOvertime;
     const conflictingRows = draft?.conflictingRows ?? 0;
     const duplicateRows = draft?.duplicateRows ?? 0;
     const oversizedRows = draft?.oversizedRows ?? 0;
@@ -987,25 +991,27 @@ export default function TourProcessingDraftPage() {
                                                 <ListItemText>Devolver a borrador</ListItemText>
                                             </MenuItem>
                                         )}
-                                        {canExportTours && (
+                                        {(canExportTours || canExportOvertime) && (
                                             <NestedMenuItem label="Descargar" icon={<DownloadOutlinedIcon fontSize="small" />}>
-                                                <MenuItem onClick={handleExport} disabled={exporting}>
-                                                    <ListItemIcon><DownloadOutlinedIcon fontSize="small" /></ListItemIcon>
-                                                    <ListItemText>{exportLabel}</ListItemText>
-                                                </MenuItem>
-                                                {periodLabel && (
+                                                {canExportTours && (
+                                                    <MenuItem onClick={handleExport} disabled={exporting}>
+                                                        <ListItemIcon><DownloadOutlinedIcon fontSize="small" /></ListItemIcon>
+                                                        <ListItemText>{exportLabel}</ListItemText>
+                                                    </MenuItem>
+                                                )}
+                                                {canExportTours && periodLabel && (
                                                     <MenuItem onClick={handleExportTourControl} disabled={exportingTourControl}>
                                                         <ListItemIcon><DownloadOutlinedIcon fontSize="small" /></ListItemIcon>
                                                         <ListItemText>{`Descargar 'Control de Giras ${periodLabel}'`}</ListItemText>
                                                     </MenuItem>
                                                 )}
-                                                {periodLabel && (
+                                                {canExportOvertime && (
                                                     <MenuItem onClick={handleExportOvertimeRequest} disabled={exportingOvertimeRequest}>
                                                         <ListItemIcon><DownloadOutlinedIcon fontSize="small" /></ListItemIcon>
                                                         <ListItemText>{`Descargar 'Solicitud de Horas Extra ${periodLabel}'`}</ListItemText>
                                                     </MenuItem>
                                                 )}
-                                                {periodLabel && (
+                                                {canExportTours && periodLabel && (
                                                     <MenuItem onClick={handleExportFinalCommission} disabled={exportingFinalCommission}>
                                                         <ListItemIcon><DownloadOutlinedIcon fontSize="small" /></ListItemIcon>
                                                         <ListItemText>{`Descargar 'Comisión Final ${periodLabel}'`}</ListItemText>

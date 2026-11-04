@@ -8,8 +8,13 @@ import TourProcessingDraftPage from '../TourProcessingDraftPage.jsx';
 import { fetchTourProcessingDraftRows, finishTourProcessingDraft, reopenTourProcessingDraft, updateTourProcessingDraftRowApprovalStatus } from '../../../services/tourProcessing/tourProcessingService.js';
 import { queryKeys } from '../../../../../common/query';
 
+const granted = vi.hoisted(() => ({ permissions: null }));
+
 vi.mock('../../../../../common/hooks/index.js', () => ({
-    usePermissions: () => ({ hasAnyPermission: () => true }),
+    usePermissions: () => ({
+        hasAnyPermission: (permissions) => granted.permissions === null
+            || permissions.some((permission) => granted.permissions.includes(permission)),
+    }),
 }));
 
 vi.mock('../../../../../common/components/TablaBase.jsx', () => ({
@@ -54,7 +59,25 @@ const rows = [
     { id: 'row-2', number: '200', approvalStatus: 'APPROVED' },
 ];
 
+const renderDraftPage = () => render(
+    <AppTheme defaultColorScheme="light">
+        <QueryClientProvider client={new QueryClient()}>
+            <MemoryRouter initialEntries={['/transporte/depuracion/borradores/draft-1']}>
+                <Routes>
+                    <Route path="/transporte/depuracion/borradores/:draftId" element={<TourProcessingDraftPage />} />
+                </Routes>
+            </MemoryRouter>
+        </QueryClientProvider>
+    </AppTheme>,
+);
+
+const openOptions = async () => {
+    await userEvent.click(await screen.findByRole('button', { name: 'Opciones' }));
+    return within(screen.getByRole('menu')).getAllByRole('menuitem').map((item) => item.textContent);
+};
+
 beforeEach(async () => {
+    granted.permissions = null;
     localStorage.clear();
     const { fetchTourProcessingDraft } = await import('../../../services/tourProcessing/tourProcessingService.js');
     fetchTourProcessingDraft.mockReset();
@@ -132,6 +155,67 @@ describe('estado de depuración', () => {
 afterEach(() => {
     cleanup();
     localStorage.clear();
+});
+
+describe('permisos del borrador', () => {
+    it('solo deja ver el borrador con LEER_GIRAS', async () => {
+        granted.permissions = ['LEER_GIRAS'];
+        renderDraftPage();
+
+        const row = await screen.findByTestId('row-row-1');
+        expect(within(row).getByRole('button', { name: 'Editar' })).toBeDisabled();
+        expect(within(row).getByRole('button', { name: 'Eliminar' })).toBeDisabled();
+        expect(screen.queryByRole('button', { name: 'Opciones' })).toBeNull();
+    });
+
+    it('con CREAR_GIRAS permite crear pero no editar', async () => {
+        granted.permissions = ['CREAR_GIRAS'];
+        renderDraftPage();
+
+        const row = await screen.findByTestId('row-row-1');
+        expect(within(row).getByRole('button', { name: 'Editar' })).toBeDisabled();
+        expect(await openOptions()).toEqual(['Crear gira']);
+    });
+
+    it('con EDITAR_GIRAS permite editar sin eliminar', async () => {
+        granted.permissions = ['EDITAR_GIRAS'];
+        renderDraftPage();
+
+        const row = await screen.findByTestId('row-row-1');
+        expect(within(row).getByRole('button', { name: 'Editar' })).toBeEnabled();
+        expect(within(row).getByRole('button', { name: 'Eliminar' })).toBeDisabled();
+        const options = await openOptions();
+        expect(options).toContain('Terminar depuración');
+        expect(options).not.toContain('Crear gira');
+    });
+
+    it('con ELIMINAR_GIRAS permite eliminar sin editar', async () => {
+        granted.permissions = ['ELIMINAR_GIRAS'];
+        renderDraftPage();
+
+        const row = await screen.findByTestId('row-row-1');
+        expect(within(row).getByRole('button', { name: 'Eliminar' })).toBeEnabled();
+        expect(within(row).getByRole('button', { name: 'Editar' })).toBeDisabled();
+    });
+
+    it('separa las descargas de giras de la solicitud de horas extra', async () => {
+        granted.permissions = ['EXPORTAR_GIRAS'];
+        const { unmount } = renderDraftPage();
+
+        await userEvent.click(await screen.findByRole('button', { name: 'Opciones' }));
+        await userEvent.click(screen.getByRole('menuitem', { name: 'Descargar' }));
+        expect(await screen.findByRole('menuitem', { name: /Control de Giras/ })).toBeInTheDocument();
+        expect(screen.queryByRole('menuitem', { name: /Solicitud de Horas Extra/ })).toBeNull();
+        unmount();
+
+        granted.permissions = ['LEER_GIRAS', 'LEER_CHOFERES'];
+        renderDraftPage();
+
+        await userEvent.click(await screen.findByRole('button', { name: 'Opciones' }));
+        await userEvent.click(screen.getByRole('menuitem', { name: 'Descargar' }));
+        expect(await screen.findByRole('menuitem', { name: /Solicitud de Horas Extra/ })).toBeInTheDocument();
+        expect(screen.queryByRole('menuitem', { name: /Control de Giras/ })).toBeNull();
+    });
 });
 
 describe('aprobación de filas', () => {
