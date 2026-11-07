@@ -78,6 +78,37 @@ class FinalCommissionWorkbookGeneratorTest {
         assertThat(number("RESUMEN", "R8")).isCloseTo(4.0, within(0.001));
     }
 
+    @Test
+    void availableHoursAddUpEachActiveDriversOwnBusinessDaysAndMax() throws IOException {
+        assertThat(hasNumber(16 * 28 * 8)).isTrue();
+        assertThat(hasNumber(16 * 37.5)).isTrue();
+
+        FinalCommissionReportDto custom = report();
+        custom.setActiveDriversBusinessDays(16 * 28 - 7);
+        custom.setActiveDriversSurplusCap(16 * 37.5 - 9.5);
+        workbook = new XSSFWorkbook(new ByteArrayInputStream(new FinalCommissionWorkbookGenerator().generate(custom)));
+        workbook.getCreationHelper().createFormulaEvaluator().evaluateAll();
+
+        assertThat(hasNumber((16 * 28 - 7) * 8)).isTrue();
+        assertThat(hasNumber(16 * 37.5 - 9.5)).isTrue();
+        assertThat(hasNumber(16 * 28 * 8)).isFalse();
+        assertThat(hasNumber(16 * 37.5)).isFalse();
+    }
+
+    private boolean hasNumber(double expected) {
+        for (Sheet sheet : workbook) {
+            for (Row row : sheet) {
+                for (Cell cell : row) {
+                    if (cell.getCellType() == org.apache.poi.ss.usermodel.CellType.NUMERIC
+                            && Math.abs(cell.getNumericCellValue() - expected) < 1e-9) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     private List<String> sheetNames() {
         return java.util.stream.IntStream.range(0, workbook.getNumberOfSheets()).mapToObj(workbook::getSheetName).toList();
     }

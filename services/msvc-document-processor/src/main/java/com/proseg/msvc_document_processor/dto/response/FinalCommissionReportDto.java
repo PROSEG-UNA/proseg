@@ -21,6 +21,8 @@ public class FinalCommissionReportDto {
     private int businessDays;
     private double surplusCapPerDriver;
     private int activeDrivers;
+    private Integer activeDriversBusinessDays;
+    private Double activeDriversSurplusCap;
     private List<Tour> tours;
 
     @Getter

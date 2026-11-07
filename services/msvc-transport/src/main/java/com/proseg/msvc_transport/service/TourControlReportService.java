@@ -14,6 +14,7 @@ import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
 import com.proseg.msvc_transport.repository.VehicleRepository;
+import com.proseg.msvc_transport.service.driverhours.DriverBusinessDays;
 import com.proseg.msvc_transport.service.driverhours.DriverHoursRules;
 import com.proseg.msvc_transport.service.driverhours.OrdinaryWindow;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +61,7 @@ public class TourControlReportService {
     private final TourProcessingDraftDayRepository dayRepository;
     private final DriverRepository driverRepository;
     private final VehicleRepository vehicleRepository;
+    private final DriverBusinessDaysService businessDaysService;
 
     @Transactional(readOnly = true)
     public TourControlReportDto report(UUID draftId) {
@@ -85,6 +87,7 @@ public class TourControlReportService {
         if (draft.getYear() == null || draft.getMonth() == null || draft.getBusinessDays() == null) {
             throw TransportException.unprocessable("TOUR_PROCESSING_DRAFT_WITHOUT_PERIOD", "El borrador no tiene mes ni días hábiles definidos");
         }
+        DriverBusinessDays businessDays = businessDaysService.forDraft(draft);
         List<Driver> catalog = driverRepository.findAll();
         Map<UUID, Driver> driversById = DriverHoursRules.driversById(catalog);
         Map<UUID, Vehicle> vehiclesById = DriverHoursRules.vehiclesById(vehicleRepository.findAll());
@@ -133,7 +136,7 @@ public class TourControlReportService {
                 .month(draft.getMonth())
                 .businessDays(draft.getBusinessDays())
                 .weekdays(weekdays(draft.getYear(), draft.getMonth()))
-                .drivers(roster.stream().map(driver -> toDriver(driver, scheduledDrivers.get(driver))).toList())
+                .drivers(roster.stream().map(driver -> toDriver(driver, scheduledDrivers.get(driver), businessDays)).toList())
                 .entries(entries)
                 .build();
     }
@@ -257,11 +260,12 @@ public class TourControlReportService {
         return Math.round(hours * 100) / 100.0;
     }
 
-    private TourControlReportDto.Driver toDriver(Driver driver, HoursTotals totals) {
+    private TourControlReportDto.Driver toDriver(Driver driver, HoursTotals totals, DriverBusinessDays businessDays) {
         OrdinaryWindow window = OrdinaryWindow.of(driver);
         boolean known = totals == null || totals.complete;
         return TourControlReportDto.Driver.builder()
                 .name(driver.getName())
+                .businessDays(businessDays.businessDaysOf(driver))
                 .ordinaryStart(window.start())
                 .ordinaryEnd(window.end())
                 .surplusHours(known ? round(totals == null ? 0 : totals.surplus) : null)

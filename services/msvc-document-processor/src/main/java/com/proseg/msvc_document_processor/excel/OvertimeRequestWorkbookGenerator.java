@@ -65,7 +65,8 @@ public class OvertimeRequestWorkbookGenerator {
 
     private static final String TOTAL_OVERTIME_LABEL = "TOTAL DE HORAS DE TIEMPO EXTRAORDINARIO REQUERIDAS";
     private static final String TOTAL_SURPLUS_LABEL = "TOTAL DE HORAS SOBRESUELDO QUE SE EJECUTARÁN";
-    private static final String TOTAL_CAP_LABEL = "TOTAL DE HORAS SOBRESUELDO POR CUMPLIR";
+    private static final double CAP_TOLERANCE = 1e-9;
+    private static final String TOTAL_CAP_LABEL ="TOTAL DE HORAS SOBRESUELDO POR CUMPLIR";
     private static final String CAP_PER_DRIVER_LABEL = "HORAS SOBRESUELDO POR CUMPLIR POR CHOFER";
     private static final String DIFFERENCE_LABEL = "DIFERENCIA EN HORAS SOBRESUELDO";
     private static final String COMPLIANCE_TOTAL_LABEL = "% CUMPLIMIENTO DEL SOB.";
@@ -187,13 +188,17 @@ public class OvertimeRequestWorkbookGenerator {
 
         int totalRow = lastDataRow + 2;
         int complianceRow = totalRow + 1;
-        writeMerged(sheet, totalRow, complianceRow, 0, NOTE_LAST_COLUMN, note(report), styles.note);
+        writeMerged(sheet, totalRow, complianceRow, 0, NOTE_LAST_COLUMN, note(report, driver), styles.note);
         writeLabel(sheet, totalRow, TOTAL_LABEL, styles.totalLabel);
         writeFormula(sheet, totalRow, SURPLUS_COLUMN, sum(SURPLUS_COLUMN, firstDataRow, lastDataRow), styles.totalHours);
         writeFormula(sheet, totalRow, OVERTIME_COLUMN, sum(OVERTIME_COLUMN, firstDataRow, lastDataRow), styles.totalHours);
         writeLabel(sheet, complianceRow, COMPLIANCE_LABEL, styles.totalLabel);
         Cell capCell = cell(sheet, complianceRow, SURPLUS_COLUMN, styles.totalHours);
-        capCells.add(capCell);
+        if (usesTheDefaultCap(driver, report)) {
+            capCells.add(capCell);
+        } else {
+            capCell.setCellValue(driver.getSurplusCap());
+        }
         String surplusTotal = ref(SURPLUS_COLUMN, totalRow);
         String cap = ref(SURPLUS_COLUMN, complianceRow);
         writeFormula(sheet, complianceRow, OVERTIME_COLUMN, "IF(" + cap + "=0,0," + surplusTotal + "/" + cap + ")", styles.totalPercent);
@@ -376,8 +381,13 @@ public class OvertimeRequestWorkbookGenerator {
         printSetup.setFitHeight((short) 0);
     }
 
-    private String note(OvertimeRequestReportDto report) {
-        return "Nota: Cantidad de horas de sobresueldo correspondiente a los " + report.getBusinessDays()
+    private boolean usesTheDefaultCap(OvertimeRequestReportDto.DriverBlock driver, OvertimeRequestReportDto report) {
+        return driver.getSurplusCap() == null || Math.abs(driver.getSurplusCap() - report.getSurplusCapPerDriver()) < CAP_TOLERANCE;
+    }
+
+    private String note(OvertimeRequestReportDto report, OvertimeRequestReportDto.DriverBlock driver) {
+        int businessDays = driver.getBusinessDays() == null ? report.getBusinessDays() : driver.getBusinessDays();
+        return "Nota: Cantidad de horas de sobresueldo correspondiente a los " + businessDays
                 + " días de " + MONTH_NAMES.get(report.getMonth() - 1) + " del " + report.getYear();
     }
 

@@ -18,6 +18,7 @@ import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
 import com.proseg.msvc_transport.repository.VehicleRepository;
+import com.proseg.msvc_transport.service.driverhours.DriverBusinessDays;
 import com.proseg.msvc_transport.service.driverhours.DriverHoursRules;
 import com.proseg.msvc_transport.service.driverhours.DriverMonthTotals;
 import com.proseg.msvc_transport.service.driverhours.DriverWorkload;
@@ -67,6 +68,7 @@ public class FinalCommissionService {
     private final DriverRepository driverRepository;
     private final VehicleRepository vehicleRepository;
     private final DraftHoursService draftHoursService;
+    private final DriverBusinessDaysService businessDaysService;
 
     @Transactional(readOnly = true)
     public FinalCommissionCheckDto check(UUID draftId) {
@@ -123,16 +125,19 @@ public class FinalCommissionService {
         Map<UUID, List<TourProcessingDraftDay>> daysByAssignment = attendedIds.isEmpty() ? Map.of()
                 : dayRepository.findByAssignmentIdIn(attendedIds).stream()
                 .collect(Collectors.groupingBy(day -> day.getAssignment().getId()));
-        int activeDrivers = (int) snapshot.driversById().values().stream()
+        DriverBusinessDays businessDays = businessDaysService.forDraft(draft);
+        List<Driver> activeRoster = snapshot.driversById().values().stream()
                 .filter(driver -> driver.getOrganizationalUnit() == DriverUnit.GENERAL_SERVICES)
                 .filter(driver -> ACTIVE_STATUS.equalsIgnoreCase(driver.getStatus()))
-                .count();
+                .toList();
         return FinalCommissionReportDto.builder()
                 .year(draft.getYear())
                 .month(draft.getMonth())
                 .businessDays(draft.getBusinessDays())
-                .surplusCapPerDriver(DriverHoursRules.surplusCap(draft.getBusinessDays()))
-                .activeDrivers(activeDrivers)
+                .surplusCapPerDriver(businessDays.defaultSurplusCap())
+                .activeDrivers(activeRoster.size())
+                .activeDriversBusinessDays(activeRoster.stream().mapToInt(businessDays::businessDaysOf).sum())
+                .activeDriversSurplusCap(activeRoster.stream().mapToDouble(businessDays::surplusCapOf).sum())
                 .tours(snapshot.tours().stream()
                         .sorted(REPORT_ORDER)
                         .map(tour -> toReportTour(tour, snapshot, daysByAssignment))
@@ -314,7 +319,7 @@ public class FinalCommissionService {
             Snapshot snapshot,
             List<TourProcessingDraftAssignment> attendedParts
     ) {
-        double surplusCap = DriverHoursRules.surplusCap(draft.getBusinessDays());
+        DriverBusinessDays businessDays = businessDaysService.forDraft(draft);
         Set<LocalDate> monthWeekends = DriverHoursRules.monthWeekends(draft.getYear(), draft.getMonth());
         Map<UUID, DriverWorkload> workloads = DriverWorkload.fromAssignments(
                 attendedParts, snapshot.driversById(), draftHoursService.manualDays(draft.getId()));
@@ -333,6 +338,7 @@ public class FinalCommissionService {
                 .forEach(entry -> {
                     Driver driver = entry.getKey();
                     DriverWorkload workload = entry.getValue();
+                    double surplusCap = businessDays.surplusCapOf(driver);
                     DriverMonthTotals totals = workload.totals(surplusCap, monthWeekends);
                     String name = driver.getName();
                     if (!ACTIVE_STATUS.equalsIgnoreCase(driver.getStatus())) {

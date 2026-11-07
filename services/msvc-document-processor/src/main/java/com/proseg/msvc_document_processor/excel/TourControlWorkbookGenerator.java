@@ -400,6 +400,10 @@ public class TourControlWorkbookGenerator {
         return computed == 0 ? outsideWindow(start, driver) + outsideWindow(end, driver) : computed;
     }
 
+    private int businessDaysOf(TourControlReportDto.Driver driver, TourControlReportDto report) {
+        return driver.getBusinessDays() == null ? report.getBusinessDays() : driver.getBusinessDays();
+    }
+
     private double surplusAdjustment(TourControlReportDto.Driver driver, double weekdayHours, int businessDays) {
         if (driver.getSurplusHours() == null) {
             return 0;
@@ -519,7 +523,8 @@ public class TourControlWorkbookGenerator {
             boolean last = row == lastRow;
             String cap = ref(CAP_COLUMN, row);
             String weekdaySum = ref(WEEKDAY_SUM_COLUMN, row);
-            double surplusAdjustment = surplusAdjustment(drivers.get(index), weekdayHours[index], report.getBusinessDays());
+            int driverBusinessDays = businessDaysOf(drivers.get(index), report);
+            double surplusAdjustment = surplusAdjustment(drivers.get(index), weekdayHours[index], driverBusinessDays);
             setFormula(cell(sheet, row, AVAILABLE_COLUMN, styles.summaryValue(Kind.DECIMAL, false, false)), "+" + cap + "-" + weekdaySum);
             setValue(cell(sheet, row, NAME_COLUMN, styles.summaryValue(Kind.TEXT, false, last)), upper(drivers.get(index).getName()));
             setFormula(cell(sheet, row, SUMMARY_SURPLUS_COLUMN, styles.summaryValue(Kind.DECIMAL, false, last)),
@@ -532,7 +537,7 @@ public class TourControlWorkbookGenerator {
             setFormula(cell(sheet, row, CAP_COLUMN, styles.summaryValue(Kind.DECIMAL, true, last)),
                     "ROUNDUP(ROUND(" + ref(DAYS_COLUMN, row) + "*" + ref(FACTOR_COLUMN, row) + "*2,6),0)/2");
             cell(sheet, row, CAP_COLUMN + 1, styles.summaryValue(Kind.TEXT, false, last));
-            setValue(cell(sheet, row, DAYS_COLUMN, styles.summaryValue(Kind.ONE_DECIMAL, true, last)), report.getBusinessDays());
+            setValue(cell(sheet, row, DAYS_COLUMN, styles.summaryValue(Kind.ONE_DECIMAL, true, last)), driverBusinessDays);
             setValue(cell(sheet, row, FACTOR_COLUMN, styles.summaryValue(Kind.DECIMAL, true, false)), SURPLUS_FACTOR);
             setValue(cell(sheet, row, ORDINARY_DAYS_COLUMN, styles.summaryValue(Kind.INTEGER, true, last)), report.getWeekdays());
             setFormula(cell(sheet, row, ORDINARY_HOURS_COLUMN, styles.summaryValue(Kind.DECIMAL, false, last)),

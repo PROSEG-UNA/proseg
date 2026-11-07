@@ -12,6 +12,7 @@ import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftAssignmentRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
+import com.proseg.msvc_transport.service.driverhours.DriverBusinessDays;
 import com.proseg.msvc_transport.service.driverhours.DriverHoursRules;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -44,6 +45,7 @@ public class OvertimeRequestReportService {
     private final TourProcessingDraftAssignmentRepository assignmentRepository;
     private final TourProcessingDraftDayRepository dayRepository;
     private final DriverRepository driverRepository;
+    private final DriverBusinessDaysService businessDaysService;
 
     @Transactional(readOnly = true)
     public OvertimeRequestReportDto build(int year, int month) {
@@ -83,6 +85,7 @@ public class OvertimeRequestReportService {
     @Transactional(readOnly = true)
     public OvertimeRequestReportDto listDriverSummaries(TourProcessingDraft draft) {
         requireBusinessDays(draft);
+        DriverBusinessDays businessDays = businessDaysService.forDraft(draft);
         Map<UUID, TourProcessingDraftDayRepository.DriverTotals> totals = dayRepository.summarizeByDriver(draft.getId()).stream()
                 .collect(Collectors.toMap(TourProcessingDraftDayRepository.DriverTotals::getDriverId, value -> value));
         Collator collator = Collator.getInstance(SPANISH);
@@ -93,11 +96,13 @@ public class OvertimeRequestReportService {
                     return OvertimeRequestReportDto.DriverBlock.builder().id(driver.getId()).name(driver.getName())
                             .organizationalUnit(driver.getOrganizationalUnit().name())
                             .status(ACTIVE_STATUS.equalsIgnoreCase(driver.getStatus()) ? ACTIVE_STATUS : "INACTIVE")
+                            .businessDays(businessDays.businessDaysOf(driver))
+                            .surplusCap(businessDays.surplusCapOf(driver))
                             .surplusHours(total == null ? 0 : round(total.getSurplusHours()))
                             .overtimeHours(total == null ? 0 : round(total.getOvertimeHours())).tours(List.of()).build();
                 }).toList();
         return OvertimeRequestReportDto.builder().year(draft.getYear()).month(draft.getMonth())
-                .businessDays(draft.getBusinessDays()).surplusCapPerDriver(DriverHoursRules.surplusCap(draft.getBusinessDays()))
+                .businessDays(draft.getBusinessDays()).surplusCapPerDriver(businessDays.defaultSurplusCap())
                 .drivers(drivers).build();
     }
 
@@ -117,6 +122,7 @@ public class OvertimeRequestReportService {
     @Transactional(readOnly = true)
     public OvertimeRequestReportDto buildDailySchedule(TourProcessingDraft draft, java.time.LocalDate date) {
         requireBusinessDays(draft);
+        DriverBusinessDays businessDays = businessDaysService.forDraft(draft);
         List<TourProcessingDraftDay> days = dayRepository.findByDraftIdAndDate(draft.getId(), date);
         Map<UUID, List<TourProcessingDraftDay>> byAssignment = days.stream()
                 .collect(Collectors.groupingBy(day -> day.getAssignment().getId()));
@@ -126,7 +132,7 @@ public class OvertimeRequestReportService {
         List<OvertimeRequestReportDto.DriverBlock> drivers = driverRepository.findAll().stream()
                 .filter(driver -> ACTIVE_STATUS.equalsIgnoreCase(driver.getStatus()) || byDriver.containsKey(driver.getId()))
                 .sorted(Comparator.comparing(Driver::getName, collator))
-                .map(driver -> toDriverBlock(driver, byDriver.getOrDefault(driver.getId(), List.of()), byAssignment, false)).toList();
+                .map(driver -> toDriverBlock(driver, byDriver.getOrDefault(driver.getId(), List.of()), byAssignment, false, businessDays)).toList();
         Map<UUID, TourProcessingDraftDayRepository.DriverTotals> monthlyTotals = dayRepository.summarizeByDriver(draft.getId()).stream()
                 .collect(Collectors.toMap(TourProcessingDraftDayRepository.DriverTotals::getDriverId, value -> value));
         drivers.forEach(driver -> {
@@ -135,12 +141,12 @@ public class OvertimeRequestReportService {
             driver.setOvertimeHours(totals == null ? 0 : round(totals.getOvertimeHours()));
         });
         return OvertimeRequestReportDto.builder().year(draft.getYear()).month(draft.getMonth())
-                .businessDays(draft.getBusinessDays()).surplusCapPerDriver(DriverHoursRules.surplusCap(draft.getBusinessDays()))
+                .businessDays(draft.getBusinessDays()).surplusCapPerDriver(businessDays.defaultSurplusCap())
                 .drivers(drivers).build();
     }
 
     private OvertimeRequestReportDto buildReport(TourProcessingDraft draft, boolean onlyExtraHours, UUID onlyDriverId) {
-        double surplusCap = DriverHoursRules.surplusCap(draft.getBusinessDays());
+        DriverBusinessDays businessDays = businessDaysService.forDraft(draft);
         List<Driver> catalog = driverRepository.findAll().stream()
                 .filter(driver -> onlyDriverId == null || onlyDriverId.equals(driver.getId()))
                 .toList();
@@ -160,14 +166,14 @@ public class OvertimeRequestReportService {
         List<OvertimeRequestReportDto.DriverBlock> drivers = catalog.stream()
                 .filter(driver -> ACTIVE_STATUS.equalsIgnoreCase(driver.getStatus()) || rowsByDriverId.containsKey(driver.getId()))
                 .sorted(Comparator.comparing(Driver::getName, collator))
-                .map(driver -> toDriverBlock(driver, rowsByDriverId.getOrDefault(driver.getId(), List.of()), daysByRowId, onlyExtraHours))
+                .map(driver -> toDriverBlock(driver, rowsByDriverId.getOrDefault(driver.getId(), List.of()), daysByRowId, onlyExtraHours, businessDays))
                 .toList();
 
         return OvertimeRequestReportDto.builder()
                 .year(draft.getYear())
                 .month(draft.getMonth())
                 .businessDays(draft.getBusinessDays())
-                .surplusCapPerDriver(surplusCap)
+                .surplusCapPerDriver(businessDays.defaultSurplusCap())
                 .drivers(drivers)
                 .build();
     }
@@ -176,7 +182,8 @@ public class OvertimeRequestReportService {
             Driver driver,
             List<TourProcessingDraftAssignment> driverRows,
             Map<UUID, List<TourProcessingDraftDay>> daysByRowId,
-            boolean onlyExtraHours
+            boolean onlyExtraHours,
+            DriverBusinessDays businessDays
     ) {
         List<OvertimeRequestReportDto.TourBlock> tours = driverRows.stream()
                 .sorted(Comparator.comparing(TourProcessingDraftAssignment::getDepartureDate).thenComparing(TourProcessingDraftAssignment::getNumber))
@@ -186,6 +193,8 @@ public class OvertimeRequestReportService {
         return OvertimeRequestReportDto.DriverBlock.builder()
                 .id(driver.getId())
                 .name(driver.getName())
+                .businessDays(businessDays.businessDaysOf(driver))
+                .surplusCap(businessDays.surplusCapOf(driver))
                 .surplusHours(round(tours.stream().flatMap(tour -> tour.getDays().stream()).mapToDouble(OvertimeRequestReportDto.TourDay::getSurplusHours).sum()))
                 .overtimeHours(round(tours.stream().flatMap(tour -> tour.getDays().stream()).mapToDouble(OvertimeRequestReportDto.TourDay::getOvertimeHours).sum()))
                 .tours(tours)

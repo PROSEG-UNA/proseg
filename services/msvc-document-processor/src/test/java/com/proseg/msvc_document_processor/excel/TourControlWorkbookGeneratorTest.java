@@ -76,6 +76,21 @@ class TourControlWorkbookGeneratorTest {
     }
 
     @Test
+    void usesEachDriversOwnBusinessDaysForTheirSurplusMax() throws IOException {
+        TourControlReportDto custom = report();
+        custom.getDrivers().get(1).setBusinessDays(21);
+        workbook = new XSSFWorkbook(new ByteArrayInputStream(new TourControlWorkbookGenerator().generate(custom)));
+        workbook.getCreationHelper().createFormulaEvaluator().evaluateAll();
+
+        int summary = rowOf("HRS.EXTRAOFICIAL", 6, "NOMBRE") + 1;
+
+        assertThat(number("HRS.EXTRAOFICIAL", "N" + summary)).isEqualTo(28);
+        assertThat(number("HRS.EXTRAOFICIAL", "L" + summary)).isCloseTo(37.5, within(0.001));
+        assertThat(number("HRS.EXTRAOFICIAL", "N" + (summary + 1))).isEqualTo(21);
+        assertThat(number("HRS.EXTRAOFICIAL", "L" + (summary + 1))).isCloseTo(28.0, within(0.001));
+    }
+
+    @Test
     void addsBlocksForDaysAfterTheMonthWhenToursContinue() {
         int lastBlock = rowOf("HRS.EXTRAOFICIAL", 6, "NOMBRE") - 1;
         while (cell("HRS.EXTRAOFICIAL", "A" + lastBlock) == null || !"FECHA DE ".equals(cellText("A" + lastBlock))) {

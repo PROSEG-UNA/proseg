@@ -465,8 +465,8 @@ public class FinalCommissionWorkbookGenerator {
             surplusAvailable.setCellFormula("+" + source + ref(SURPLUS_HOURS_COLUMN, internal.availableRow())
                     + "-" + source + ref(SURPLUS_HOURS_COLUMN, internal.workedRow()));
         } else {
-            ordinaryAvailable.setCellValue((double) report.getActiveDrivers() * report.getBusinessDays() * ORDINARY_HOURS_PER_DAY);
-            surplusAvailable.setCellValue(report.getActiveDrivers() * report.getSurplusCapPerDriver());
+            ordinaryAvailable.setCellValue(activeDriversBusinessDays(report) * ORDINARY_HOURS_PER_DAY);
+            surplusAvailable.setCellValue(activeDriversSurplusCap(report));
         }
         SheetRows result = new SheetRows(rows.name(), rows.firstDataRow(), rows.lastDataRow(), workedRow, availableRow);
         if (tail != Tail.FULL) {
@@ -483,6 +483,18 @@ public class FinalCommissionWorkbookGenerator {
         writeFormula(sheet, usageRow, ORDINARY_HOURS_COLUMN, ratio(ref(ORDINARY_HOURS_COLUMN, workedRow), ref(ORDINARY_HOURS_COLUMN, availableRow)), styles.tailPercent);
         writeFormula(sheet, usageRow, SURPLUS_HOURS_COLUMN, ratio(worked, available), styles.tailPercent);
         return result;
+    }
+
+    private double activeDriversBusinessDays(FinalCommissionReportDto report) {
+        return report.getActiveDriversBusinessDays() == null
+                ? (double) report.getActiveDrivers() * report.getBusinessDays()
+                : report.getActiveDriversBusinessDays();
+    }
+
+    private double activeDriversSurplusCap(FinalCommissionReportDto report) {
+        return report.getActiveDriversSurplusCap() == null
+                ? report.getActiveDrivers() * report.getSurplusCapPerDriver()
+                : report.getActiveDriversSurplusCap();
     }
 
     private void writeTailLabel(Sheet sheet, int rowIndex, String label, Styles styles) {

@@ -12,6 +12,7 @@ import com.proseg.msvc_transport.entity.ResourceType;
 import com.proseg.msvc_transport.entity.TourApprovalStatus;
 import com.proseg.msvc_transport.entity.Vehicle;
 import com.proseg.msvc_transport.exception.TransportException;
+import com.proseg.msvc_transport.repository.DriverMonthBusinessDaysRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
@@ -35,7 +36,7 @@ class TourControlReportServiceTest {
 
     private final UUID draftId = UUID.randomUUID();
     private final Driver zoe = Driver.builder().id(UUID.randomUUID()).name("Zoe Mora").status("ACTIVE")
-            .ordinaryStart(LocalTime.of(11, 0)).ordinaryEnd(LocalTime.of(20, 0)).build();
+            .ordinaryStart(LocalTime.of(12, 0)).ordinaryEnd(LocalTime.of(21, 0)).build();
     private final Driver ana = Driver.builder().id(UUID.randomUUID()).name("Ana Pérez").status("ACTIVE").build();
     private final Driver retired = Driver.builder().id(UUID.randomUUID()).name("Luis Rojas").status("INACTIVE").build();
     private final Driver guest = Driver.builder().id(UUID.randomUUID()).name("Jorge Mena").status("ACTIVE")
@@ -60,7 +61,8 @@ class TourControlReportServiceTest {
         when(driverRepository.findAll()).thenReturn(List.of(zoe, ana, retired, guest));
         VehicleRepository vehicleRepository = mock(VehicleRepository.class);
         when(vehicleRepository.findAll()).thenReturn(List.of(bus));
-        service = new TourControlReportService(draftRepository, tourStore, dayRepository, driverRepository, vehicleRepository);
+        service = new TourControlReportService(draftRepository, tourStore, dayRepository, driverRepository, vehicleRepository,
+                new DriverBusinessDaysService(mock(DriverMonthBusinessDaysRepository.class)));
     }
 
     @Test
@@ -90,7 +92,8 @@ class TourControlReportServiceTest {
         TourControlReportDto report = service.report(draftId);
 
         assertThat(report.getDrivers()).extracting(TourControlReportDto.Driver::getName).containsExactly("Ana Pérez", "Zoe Mora");
-        assertThat(report.getDrivers().get(1).getOrdinaryStart()).isEqualTo(11.0);
+        assertThat(report.getDrivers().get(1).getOrdinaryStart()).isEqualTo(12.0);
+        assertThat(report.getDrivers().get(1).getOrdinaryEnd()).isEqualTo(21.0);
         assertThat(report.getDrivers().get(0).getOrdinaryEnd()).isEqualTo(16.5);
         assertThat(report.getWeekdays()).isEqualTo(21);
     }
