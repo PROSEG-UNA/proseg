@@ -86,17 +86,18 @@ function TourIssuesTable({ items }) {
     );
 }
 
-function SurplusDeficitsTable({ deficits, targetHours }) {
+function SurplusDeficitsTable({ deficits, targetHours, targets }) {
     return (
         <Stack spacing={1.5}>
             <Typography variant="body2" color="text.secondary">
-                Sobresueldo pendiente para alcanzar el 95% ({hours(targetHours)} h)
+                Sobresueldo pendiente para alcanzar el 95% del máximo de cada chofer
             </Typography>
             <TableContainer component={Paper} variant="outlined">
                 <Table size="small">
                     <TableHead>
                         <TableRow>
                             <TableCell sx={{ fontWeight: 700 }}>Chofer</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 700 }}>Meta (95%)</TableCell>
                             <TableCell align="right" sx={{ fontWeight: 700 }}>Horas faltantes</TableCell>
                         </TableRow>
                     </TableHead>
@@ -104,6 +105,7 @@ function SurplusDeficitsTable({ deficits, targetHours }) {
                         {deficits.map(([name, missing]) => (
                             <TableRow key={name}>
                                 <TableCell>{name}</TableCell>
+                                <TableCell align="right">{hours(targets?.[name] ?? targetHours)} h</TableCell>
                                 <TableCell align="right">{hours(missing)} h</TableCell>
                             </TableRow>
                         ))}
@@ -114,16 +116,104 @@ function SurplusDeficitsTable({ deficits, targetHours }) {
     );
 }
 
+const percent = (value) => Number(value).toLocaleString('es-CR', { maximumFractionDigits: 1 });
+
+function CoverageIssuesTable({ title, items }) {
+    return (
+        <Stack spacing={1}>
+            <Typography variant="body2" color="text.secondary">{title}</Typography>
+            <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                    <TableHead>
+                        <TableRow>
+                            <TableCell sx={{ width: 110, fontWeight: 700 }}>Gira</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Motivo</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {items.map((item) => (
+                            <TableRow key={item.rowId}>
+                                <TableCell sx={{ verticalAlign: 'top', fontWeight: 700 }}>{item.number}</TableCell>
+                                <TableCell>{item.reasons.join(' ')}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </TableContainer>
+        </Stack>
+    );
+}
+
+function MandatoryCoverageSection({ coverage, priorityOneUnassigned }) {
+    const covering = coverage.coveringDrivers ?? [];
+    const warnings = coverage.warnings ?? [];
+    const unattended = coverage.unattendedDetails ?? [];
+
+    return (
+        <Stack spacing={2}>
+            <Typography variant="body2" color="text.secondary">
+                Giras de prioridad 1 con menos de 5 pasajeros. Las que tocan fin de semana se cubren con choferes cubridores aunque no lleguen al 95 % de sobresueldo.
+            </Typography>
+            <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap">
+                <StatTile label="Obligatorias" value={coverage.total} />
+                <StatTile label="Con 95 % cumplido" value={coverage.fulfilled} color="success.main" />
+                <StatTile label="Con advertencia" value={coverage.withWarning} />
+                <StatTile label="Sin atender" value={coverage.unattended} />
+            </Stack>
+            <Typography variant="body2" color="text.secondary">
+                Las atendidas de lunes a viernes dentro de horario no necesitan el 95 % y cuentan como cumplidas.
+            </Typography>
+            <Typography variant="body2">
+                {`Choferes por debajo del 95 %: ${coverage.driversBelowTarget ?? 0}. De ellos, ${coverage.driversBelowTargetByConcentration ?? 0} quedaron así porque el sobresueldo se concentró en los cubridores.`}
+            </Typography>
+            {priorityOneUnassigned != null && (
+                <Typography variant="body2">{`Giras de prioridad 1 sin atender en total: ${priorityOneUnassigned}.`}</Typography>
+            )}
+            {covering.length > 0 && (
+                <Stack spacing={1}>
+                    <Typography variant="body2" color="text.secondary">Cubridores y su sobresueldo final</Typography>
+                    <TableContainer component={Paper} variant="outlined">
+                        <Table size="small">
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell sx={{ fontWeight: 700 }}>Chofer</TableCell>
+                                    <TableCell sx={{ fontWeight: 700 }}>Giras obligatorias</TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 700 }}>Sobresueldo</TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 700 }}>% del máximo</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {covering.map((driver) => (
+                                    <TableRow key={driver.name}>
+                                        <TableCell>{driver.name}</TableCell>
+                                        <TableCell>{(driver.tourNumbers ?? []).join(', ')}</TableCell>
+                                        <TableCell align="right">{hours(driver.surplusHours)} h</TableCell>
+                                        <TableCell align="right">{percent(driver.surplusPercent)} %</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </Stack>
+            )}
+            {warnings.length > 0 && <CoverageIssuesTable title="Atendidas con advertencia" items={warnings} />}
+            {unattended.length > 0 && <CoverageIssuesTable title="Obligatorias sin atender y su motivo" items={unattended} />}
+        </Stack>
+    );
+}
+
 function ReportBody({ result }) {
     const pending = result.unassignedDetails ?? [];
     const warnings = result.preservedAssignmentWarnings ?? [];
     const deficits = Object.entries(result.surplusDeficits ?? {});
+    const coverage = result.mandatoryCoverage;
     const [activeKey, setActiveKey] = useState(null);
 
     const sections = [
         { key: 'pending', label: 'Giras pendientes', count: pending.length },
         { key: 'warnings', label: 'Requieren revisión', count: warnings.length },
         { key: 'deficits', label: 'Sobresueldo', count: deficits.length },
+        { key: 'mandatory', label: 'Obligatorias', count: coverage?.total ?? 0 },
     ].filter((section) => section.count > 0);
     const current = sections.find((section) => section.key === activeKey) ?? sections[0];
 
@@ -133,6 +223,7 @@ function ReportBody({ result }) {
                 <StatTile label="Asignadas" value={result.assignedTours ?? 0} color="success.main" />
                 <StatTile label="Pendientes" value={result.unassignedTours ?? 0} />
                 <StatTile label="Requieren revisión" value={warnings.length} />
+                {result.priorityOneUnassigned != null && <StatTile label="Prioridad 1 sin atender" value={result.priorityOneUnassigned} />}
             </Stack>
 
             {result.optimizationLimitReached && (
@@ -163,7 +254,12 @@ function ReportBody({ result }) {
                     <Box sx={{ px: { xs: 2.5, sm: 3 }, py: 2 }}>
                         {current.key === 'pending' && <TourIssuesTable key="pending" items={pending} />}
                         {current.key === 'warnings' && <TourIssuesTable key="warnings" items={warnings} />}
-                        {current.key === 'deficits' && <SurplusDeficitsTable deficits={deficits} targetHours={result.surplusTargetHours} />}
+                        {current.key === 'deficits' && (
+                            <SurplusDeficitsTable deficits={deficits} targetHours={result.surplusTargetHours} targets={result.surplusTargets} />
+                        )}
+                        {current.key === 'mandatory' && (
+                            <MandatoryCoverageSection coverage={coverage} priorityOneUnassigned={result.priorityOneUnassigned} />
+                        )}
                     </Box>
                 </>
             )}

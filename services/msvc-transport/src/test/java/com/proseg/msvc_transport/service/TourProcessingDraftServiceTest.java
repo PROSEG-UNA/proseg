@@ -12,6 +12,7 @@ import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingImportColumnDt
 import com.proseg.msvc_transport.dto.response.OvertimeRequestReportDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowDayResponseDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowResponseDto;
+import com.proseg.msvc_transport.entity.DriverMonthBusinessDays;
 import com.proseg.msvc_transport.entity.TourProcessingDraft;
 import com.proseg.msvc_transport.entity.TourProcessingDraftTour;
 import com.proseg.msvc_transport.entity.TourProcessingDraftAssignment;
@@ -74,10 +75,12 @@ class TourProcessingDraftServiceTest {
     private BorrowedVehicleRepository borrowedVehicleRepository;
     private DraftHoursService draftHoursService;
     private OvertimeRequestReportService overtimeRequestReportService;
+    private InMemoryBusinessDays businessDays;
     private TourProcessingDraftService service;
 
     @BeforeEach
     void setUp() {
+        businessDays = new InMemoryBusinessDays();
         draftRepository = mock(TourProcessingDraftRepository.class);
         rowRepository = mock(DraftTourStore.class);
         assignmentRepository = mock(TourProcessingDraftAssignmentRepository.class);
@@ -104,6 +107,7 @@ class TourProcessingDraftServiceTest {
                 vehicleRepository,
                 borrowedVehicleRepository,
                 draftHoursService,
+                businessDays.service(),
                 overtimeRequestReportService,
                 currentUserResolver,
                 Validation.buildDefaultValidatorFactory().getValidator(),
@@ -476,6 +480,28 @@ class TourProcessingDraftServiceTest {
         assertThat(oneDayTour.getDurationDays()).isEqualTo(1);
         assertThat(oneDayTour.getReturnDate()).isEqualTo(LocalDate.of(2026, 5, 4));
         verify(draftHoursService, never()).syncChanged(any(), anyMap(), anyList());
+    }
+
+    @Test
+    void doesNotBlockIncreasingTheDurationIntoAWeekendThatExceedsTheWeekendCap() {
+        TourProcessingDraft draft = draftWithPeriod();
+        TourProcessingDraftTour friday = oneDayTour(draft);
+        friday.setDepartureDate(LocalDate.of(2026, 5, 22));
+        friday.setReturnDate(LocalDate.of(2026, 5, 22));
+        stubDraft(draft, friday,
+                shortRow(draft, 9, "201", "2026-05-02", "08:00", "10:00", "Daniel Zuniga"),
+                shortRow(draft, 10, "202", "2026-05-09", "08:00", "10:00", "Daniel Zuniga"),
+                shortRow(draft, 11, "203", "2026-05-16", "08:00", "10:00", "Daniel Zuniga"),
+                fullDayRow(draft, 12, "204", "2026-05-11", "Daniel Zuniga"),
+                fullDayRow(draft, 13, "205", "2026-05-12", "Daniel Zuniga"));
+        when(driverRepository.findAll()).thenReturn(List.of(catalogDriver()));
+        TourProcessingDraftRowRequestDto request = row(8, "100", "Cartago");
+        request.setDepartureDate(LocalDate.of(2026, 5, 22));
+        request.setReturnDate(LocalDate.of(2026, 5, 23));
+
+        service.updateRow(draft.getId(), friday.getId(), request);
+
+        assertThat(friday.getReturnDate()).isEqualTo(LocalDate.of(2026, 5, 23));
     }
 
     @Test
@@ -1072,6 +1098,132 @@ class TourProcessingDraftServiceTest {
     }
 
     @Test
+    void autoAssignGivesTheWeekendTourToTheDriverWhoReachedNinetyFivePercentOfTheirOwnMax() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        draft.setYear(2026);
+        draft.setMonth(5);
+        draft.setBusinessDays(28);
+        Driver ana = Driver.builder().id(UUID.randomUUID()).name("Ana").status("ACTIVE").build();
+        Driver beto = Driver.builder().id(UUID.randomUUID()).name("Beto").status("ACTIVE").build();
+        businessDays.customize(ana.getId(), 2026, 5, 14);
+        TourProcessingDraftTour weekend = shortRow(draft, 7, "9", "2026-05-09", "08:00", "12:00", null);
+        stubDraft(draft,
+                shortRow(draft, 1, "1", "2026-05-04", "16:30", "23:30", "Ana"),
+                shortRow(draft, 2, "2", "2026-05-05", "16:30", "23:30", "Ana"),
+                shortRow(draft, 3, "3", "2026-05-06", "16:30", "21:30", "Ana"),
+                shortRow(draft, 4, "4", "2026-05-04", "16:30", "23:30", "Beto"),
+                shortRow(draft, 5, "5", "2026-05-05", "16:30", "23:30", "Beto"),
+                shortRow(draft, 6, "6", "2026-05-06", "16:30", "21:30", "Beto"),
+                weekend);
+        when(driverRepository.findAll()).thenReturn(List.of(ana, beto));
+
+        TourProcessingDriverAutoAssignResponseDto result = service.autoAssignDrivers(draft.getId());
+
+        assertThat(weekend.primaryAssignment().getDriver()).isEqualTo("Ana");
+        assertThat(result.getAssignedTours()).isEqualTo(1);
+        assertThat(result.getSurplusDeficits()).containsOnlyKeys("Beto");
+        assertThat(result.getSurplusTargets()).containsOnlyKeys("Beto");
+        assertThat(result.getSurplusTargets().get("Beto")).isEqualTo(35.625);
+        assertThat(result.getSurplusTargetHours()).isEqualTo(35.625);
+    }
+
+    @Test
+    void autoAssignLeavesTheSameWeekendTourPendingWhenEveryoneUsesTheMonthValue() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        draft.setYear(2026);
+        draft.setMonth(5);
+        draft.setBusinessDays(28);
+        Driver ana = Driver.builder().id(UUID.randomUUID()).name("Ana").status("ACTIVE").build();
+        Driver beto = Driver.builder().id(UUID.randomUUID()).name("Beto").status("ACTIVE").build();
+        TourProcessingDraftTour weekend = shortRow(draft, 7, "9", "2026-05-09", "08:00", "12:00", null);
+        weekend.setPassengers(5);
+        stubDraft(draft,
+                shortRow(draft, 1, "1", "2026-05-04", "16:30", "23:30", "Ana"),
+                shortRow(draft, 2, "2", "2026-05-05", "16:30", "23:30", "Ana"),
+                shortRow(draft, 3, "3", "2026-05-06", "16:30", "21:30", "Ana"),
+                shortRow(draft, 4, "4", "2026-05-04", "16:30", "23:30", "Beto"),
+                shortRow(draft, 5, "5", "2026-05-05", "16:30", "23:30", "Beto"),
+                shortRow(draft, 6, "6", "2026-05-06", "16:30", "21:30", "Beto"),
+                weekend);
+        when(driverRepository.findAll()).thenReturn(List.of(ana, beto));
+
+        TourProcessingDriverAutoAssignResponseDto result = service.autoAssignDrivers(draft.getId());
+
+        assertThat(weekend.primaryAssignment().getDriver()).isNull();
+        assertThat(result.getAssignedTours()).isZero();
+        assertThat(result.getSurplusDeficits()).containsOnlyKeys("Ana", "Beto");
+        assertThat(result.getMandatoryCoverage().total()).isEqualTo(6);
+        assertThat(result.getMandatoryCoverage().fulfilled()).isEqualTo(6);
+        assertThat(result.getMandatoryCoverage().coveringDrivers()).isEmpty();
+    }
+
+    @Test
+    void autoAssignCoversAnObligatoryWeekendTourWithAWarningAndReportsTheCoverageSummary() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        draft.setYear(2026);
+        draft.setMonth(5);
+        draft.setBusinessDays(28);
+        Driver ana = Driver.builder().id(UUID.randomUUID()).name("Ana").status("ACTIVE").build();
+        Driver beto = Driver.builder().id(UUID.randomUUID()).name("Beto").status("ACTIVE").build();
+        TourProcessingDraftTour weekend = shortRow(draft, 7, "9", "2026-05-09", "08:00", "12:00", null);
+        TourProcessingDraftTour largeWeekend = shortRow(draft, 8, "10", "2026-05-16", "08:00", "12:00", null);
+        largeWeekend.setPassengers(5);
+        stubDraft(draft,
+                shortRow(draft, 1, "1", "2026-05-04", "16:30", "23:30", "Ana"),
+                shortRow(draft, 2, "2", "2026-05-05", "16:30", "23:30", "Ana"),
+                shortRow(draft, 3, "3", "2026-05-06", "16:30", "21:30", "Ana"),
+                shortRow(draft, 4, "4", "2026-05-04", "16:30", "23:30", "Beto"),
+                shortRow(draft, 5, "5", "2026-05-05", "16:30", "23:30", "Beto"),
+                shortRow(draft, 6, "6", "2026-05-06", "16:30", "21:30", "Beto"),
+                weekend, largeWeekend);
+        when(driverRepository.findAll()).thenReturn(List.of(ana, beto));
+
+        TourProcessingDriverAutoAssignResponseDto result = service.autoAssignDrivers(draft.getId());
+
+        assertThat(weekend.primaryAssignment().getDriver()).isNotNull();
+        assertThat(largeWeekend.primaryAssignment().getDriver()).isNull();
+        assertThat(result.getAssignedTours()).isEqualTo(1);
+        assertThat(result.getUnassignedTours()).isEqualTo(1);
+        assertThat(result.getPriorityOneUnassigned()).isEqualTo(1);
+        TourProcessingDriverAutoAssignResponseDto.MandatoryCoverage coverage = result.getMandatoryCoverage();
+        assertThat(coverage.total()).isEqualTo(7);
+        assertThat(coverage.withWarning()).isEqualTo(1);
+        assertThat(coverage.fulfilled()).isEqualTo(6);
+        assertThat(coverage.unattended()).isZero();
+        assertThat(coverage.warnings()).hasSize(1);
+        assertThat(coverage.warnings().get(0).rowId()).isEqualTo(weekend.getId());
+        assertThat(coverage.warnings().get(0).number()).isEqualTo("9");
+        assertThat(coverage.warnings().get(0).reasons().get(0)).contains("con sobresueldo al");
+        assertThat(coverage.coveringDrivers()).hasSize(1);
+        assertThat(coverage.coveringDrivers().get(0).name()).isEqualTo(weekend.primaryAssignment().getDriver());
+        assertThat(coverage.driversBelowTarget()).isEqualTo(2);
+    }
+
+    @Test
+    void importingAndAutoAssigningNeverTouchTheCustomizedBusinessDays() {
+        Driver ana = Driver.builder().id(UUID.randomUUID()).name("Ana").status("ACTIVE").build();
+        businessDays.customize(ana.getId(), 2026, 5, 21);
+        when(driverRepository.findAll()).thenReturn(List.of(ana));
+
+        service.create(request(List.of(row(8, "03625", "Tayutic"), row(12, "04504", "Merced"))));
+
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        draft.setYear(2026);
+        draft.setMonth(5);
+        draft.setBusinessDays(28);
+        TourProcessingDraftTour pending = shortRow(draft, 1, "1", "2026-05-04", "08:00", "18:00", null);
+        stubDraft(draft, pending);
+        service.autoAssignDrivers(draft.getId());
+        service.clearAssignments(draft.getId());
+
+        assertThat(businessDays.storedValue(ana.getId(), 2026, 5)).isEqualTo(21);
+        assertThat(businessDays.storedRecords()).isEqualTo(1);
+        verify(businessDays.repository(), times(1)).save(any(DriverMonthBusinessDays.class));
+        verify(businessDays.repository(), never()).delete(any(DriverMonthBusinessDays.class));
+        verify(businessDays.repository(), never()).deleteAll();
+    }
+
+    @Test
     void autoAssignReportsManualExceptionsWithoutChangingThemOrExternalDrivers() {
         TourProcessingDraft draft = draftWithBusinessDays(28);
         draft.setYear(2026);
@@ -1125,7 +1277,7 @@ class TourProcessingDraftServiceTest {
         draft.setYear(2026);
         draft.setMonth(5);
         Driver ricardo = Driver.builder().id(UUID.randomUUID()).name("Ricardo Jovane").status("ACTIVE")
-                .ordinaryStart(LocalTime.of(11, 0)).ordinaryEnd(LocalTime.of(20, 0))
+                .ordinaryStart(LocalTime.of(12, 0)).ordinaryEnd(LocalTime.of(21, 0))
                 .ulloaShifts(EnumSet.of(UlloaShift.AFTERNOON)).build();
         Driver laura = Driver.builder().id(UUID.randomUUID()).name("Laura Mora").status("ACTIVE").build();
         TourProcessingDraftTour afternoon = ulloaRow(draft, 1, "1", "2026-05-05", "12:00", "22:00", null);

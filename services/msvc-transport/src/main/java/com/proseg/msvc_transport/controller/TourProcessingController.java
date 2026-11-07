@@ -214,7 +214,7 @@ public class TourProcessingController {
     public ResponseEntity<ApiResponse<TourProcessingDriverAutoAssignResponseDto>> autoAssignDraftUlloaDrivers(@PathVariable UUID id) {
         return ApiResponseBuilder.ok(
                 tourProcessingDraftService.autoAssignUlloaDrivers(id),
-                "Choferes de Ulloa autoasignados"
+                "Choferes de Periféricas autoasignados"
         );
     }
 

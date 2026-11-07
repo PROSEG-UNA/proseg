@@ -115,7 +115,7 @@ const FILTERABLE_COLUMNS = new Set([
 ]);
 
 const AUTO_ASSIGN_DRIVERS_MESSAGE = 'Las giras con varios viajes se completan en conjunto, asignando choferes y vehículos compatibles. Si no se puede completar una gira, se conservan sus asignaciones existentes y no se agregan partes sueltas.\n\nSi hay choferes asignados que no existen en el catálogo del sistema (marcados con el ícono de advertencia), esas filas quedarán sin chofer y la autoasignación intentará completarlas.\n\nLas giras que ya tienen un chofer del catálogo se respetan y no se reasignan.';
-const AUTO_ASSIGN_ULLOA_DRIVERS_MESSAGE = 'Solo se asignan las giras de Programa De Servicios Generales hacia Ulloa (Barreal) que no tienen chofer, usando los choferes con turno de Ulloa configurado.\n\nSi alguna gira de Ulloa tiene un chofer que no existe en el catálogo del sistema (marcado con el ícono de advertencia), esa fila quedará sin chofer y se intentará completar. Las demás giras no se tocan.';
+const AUTO_ASSIGN_ULLOA_DRIVERS_MESSAGE = 'Solo se asignan las giras Periféricas de Programa De Servicios Generales que no tienen chofer, usando los choferes marcados como conductores de giras Periféricas según su horario ordinario.\n\nSi alguna gira Periférica tiene un chofer que no existe en el catálogo del sistema (marcado con el ícono de advertencia), esa fila quedará sin chofer y se intentará completar. Las demás giras no se tocan.';
 const AUTO_ASSIGN_DRIVERS_AND_VEHICLES_MESSAGE = 'Primero se autoasignan los choferes y después los vehículos.\n\nSi hay choferes o vehículos asignados que no existen en el catálogo del sistema (marcados con el ícono de advertencia), esas filas quedarán vacías y la autoasignación intentará completarlas.\n\nLas giras que ya tienen chofer o vehículo del catálogo se respetan y no se reasignan.';
 const AUTO_ASSIGN_VEHICLES_MESSAGE = 'Las giras que ya tienen chofer del catálogo reciben prioridad para asignarles vehículo. En giras con varios viajes también se buscan los choferes faltantes para completar la gira en conjunto. Las asignaciones existentes se conservan.\n\nSi hay vehículos asignados que no existen en el catálogo del sistema o que no son una placa (marcados con el ícono de advertencia), esas filas quedarán sin vehículo y la autoasignación intentará completarlas.\n\nLas giras que ya tienen un vehículo del catálogo se respetan y no se reasignan.';
 
@@ -248,13 +248,15 @@ function autoAssignDriversResultMessage(result) {
     const parts = [`Se asignó chofer a ${result?.assignedTours ?? 0} giras.`];
     if (result?.unassignedTours) parts.push(`${result.unassignedTours} giras quedaron sin chofer.`);
     if (result?.clearedTours) parts.push(`Se vaciaron ${result.clearedTours} giras que tenían un chofer fuera del catálogo.`);
+    if (result?.mandatoryCoverage?.withWarning) parts.push(`${result.mandatoryCoverage.withWarning} giras obligatorias quedaron asignadas con advertencia de sobresueldo.`);
+    if (result?.mandatoryCoverage?.unattended) parts.push(`${result.mandatoryCoverage.unattended} giras obligatorias quedaron sin atender.`);
     return parts.join('\n');
 }
 
 function autoAssignUlloaDriversResultMessage(result) {
-    const parts = [`Se asignó chofer a ${result?.assignedTours ?? 0} giras de Ulloa.`];
-    if (result?.unassignedTours) parts.push(`${result.unassignedTours} giras de Ulloa quedaron sin chofer.`);
-    if (result?.clearedTours) parts.push(`Se vaciaron ${result.clearedTours} giras de Ulloa que tenían un chofer fuera del catálogo.`);
+    const parts = [`Se asignó chofer a ${result?.assignedTours ?? 0} giras Periféricas.`];
+    if (result?.unassignedTours) parts.push(`${result.unassignedTours} giras Periféricas quedaron sin chofer.`);
+    if (result?.clearedTours) parts.push(`Se vaciaron ${result.clearedTours} giras Periféricas que tenían un chofer fuera del catálogo.`);
     return parts.join('\n');
 }
 
@@ -442,7 +444,7 @@ export default function TourProcessingDraftPage() {
         },
         onError: (error) => {
             setAutoAssignUlloaOpen(false);
-            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudieron autoasignar los choferes de Ulloa') });
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudieron autoasignar los choferes de Periféricas') });
         },
     });
 
@@ -924,7 +926,7 @@ export default function TourProcessingDraftPage() {
                                                 </MenuItem>
                                                 <MenuItem onClick={handleAutoAssignUlloa}>
                                                     <ListItemIcon><RouteOutlinedIcon fontSize="small" /></ListItemIcon>
-                                                    <ListItemText>Autoasignar choferes - Solo Ulloa (Barreal)</ListItemText>
+                                                    <ListItemText>Autoasignar choferes - Solo Periféricas</ListItemText>
                                                 </MenuItem>
                                                 <MenuItem onClick={handleAutoAssignBoth}>
                                                     <ListItemIcon><GroupsOutlinedIcon fontSize="small" /></ListItemIcon>
@@ -1183,7 +1185,7 @@ export default function TourProcessingDraftPage() {
             <DialogModal
                 open={autoAssignUlloaOpen}
                 type="warning"
-                title="Autoasignar choferes - Solo Ulloa (Barreal)"
+                title="Autoasignar choferes - Solo Periféricas"
                 message={AUTO_ASSIGN_ULLOA_DRIVERS_MESSAGE}
                 confirmLabel={autoAssigningUlloa ? 'Asignando...' : 'Sí, autoasignar'}
                 onConfirm={confirmAutoAssignUlloa}

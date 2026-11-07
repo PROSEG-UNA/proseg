@@ -68,6 +68,22 @@ public class DriverWorkload {
         return copy;
     }
 
+    public DriverWorkload copy() {
+        DriverWorkload copy = new DriverWorkload(window, manualDays);
+        tours.forEach(copy::add);
+        return copy;
+    }
+
+    public DriverWorkload withoutAnyOf(Set<TourProcessingDraftAssignment> excluded) {
+        DriverWorkload copy = new DriverWorkload(window, manualDays);
+        tours.stream().filter(tour -> !excluded.contains(tour)).forEach(copy::add);
+        return copy;
+    }
+
+    public boolean containsAnyOf(Set<TourProcessingDraftAssignment> candidates) {
+        return tours.stream().anyMatch(candidates::contains);
+    }
+
     public List<TourProcessingDraftAssignment> tours() {
         return List.copyOf(tours);
     }

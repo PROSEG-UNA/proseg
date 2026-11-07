@@ -35,6 +35,7 @@ import com.proseg.msvc_transport.repository.DriverRepository;
 import com.proseg.msvc_transport.repository.VehicleRepository;
 import com.proseg.msvc_transport.security.CurrentUserResolver;
 import com.proseg.msvc_transport.service.driverhours.DriverAutoAssigner;
+import com.proseg.msvc_transport.service.driverhours.MandatoryCoverageSummary;
 import com.proseg.msvc_transport.service.driverhours.DriverHoursRules;
 import com.proseg.msvc_transport.service.driverhours.DriverRejection;
 import com.proseg.msvc_transport.service.driverhours.ManualDays;
@@ -97,6 +98,7 @@ public class TourProcessingDraftService {
     private final VehicleRepository vehicleRepository;
     private final BorrowedVehicleRepository borrowedVehicleRepository;
     private final DraftHoursService draftHoursService;
+    private final DriverBusinessDaysService businessDaysService;
     private final OvertimeRequestReportService overtimeRequestReportService;
     private final CurrentUserResolver currentUserResolver;
     private final Validator validator;
@@ -386,7 +388,7 @@ public class TourProcessingDraftService {
             }
         }
 
-        double surplusCap = DriverHoursRules.surplusCap(draft.getBusinessDays());
+        double surplusCap = businessDaysService.surplusCap(draft, driverId);
         double newSurplusTotal = otherSurplus + request.getSurplusHours();
         double newOvertimeTotal = otherOvertime + request.getOvertimeHours();
 
@@ -580,7 +582,7 @@ public class TourProcessingDraftService {
         DriverAutoAssigner assigner = new DriverAutoAssigner(
                 draft.getYear(),
                 draft.getMonth(),
-                draft.getBusinessDays(),
+                businessDaysService.forDraft(draft),
                 catalog,
                 vehicleRepository.findAll(),
                 assignments,
@@ -626,9 +628,39 @@ public class TourProcessingDraftService {
                         .map(entry -> new TourProcessingDriverAutoAssignResponseDto.TourIssue(entry.getKey().getTour().getId(),
                                 entry.getKey().getNumber(), entry.getValue())).distinct().toList())
                 .surplusDeficits(assigner.surplusDeficits())
-                .surplusTargetHours(assigner.surplusTargetHours())
+                .surplusTargets(assigner.surplusTargets())
+                .surplusTargetHours(assigner.defaultSurplusTargetHours())
                 .optimizationLimitReached(assigner.optimizationLimitReached())
+                .mandatoryCoverage(mandatoryCoverageOf(assigner.coverageSummary()))
+                .priorityOneUnassigned(priorityOneUnassigned(pendingDriverTours(assignments, scope)))
                 .build();
+    }
+
+    private static TourProcessingDriverAutoAssignResponseDto.MandatoryCoverage mandatoryCoverageOf(MandatoryCoverageSummary summary) {
+        return new TourProcessingDriverAutoAssignResponseDto.MandatoryCoverage(
+                summary.total(),
+                summary.fulfilled(),
+                summary.withWarning(),
+                summary.unattended(),
+                summary.warnings().stream().map(TourProcessingDraftService::coverageIssueOf).toList(),
+                summary.unattendedTours().stream().map(TourProcessingDraftService::coverageIssueOf).toList(),
+                summary.coveringDrivers().stream().map(driver -> new TourProcessingDriverAutoAssignResponseDto.CoveringDriver(
+                        driver.name(), driver.surplusHours(), driver.targetHours(), driver.surplusPercent(), driver.tourNumbers())).toList(),
+                summary.driversBelowTarget(),
+                summary.driversBelowTargetByConcentration()
+        );
+    }
+
+    private static TourProcessingDriverAutoAssignResponseDto.TourIssue coverageIssueOf(MandatoryCoverageSummary.TourNote note) {
+        return new TourProcessingDriverAutoAssignResponseDto.TourIssue(note.tourId(), note.number(), List.of(note.message()));
+    }
+
+    private static int priorityOneUnassigned(List<TourProcessingDraftAssignment> pending) {
+        return (int) pending.stream()
+                .filter(assignment -> assignment.getPriority() != null && assignment.getPriority() <= 1)
+                .map(assignment -> assignment.getTour().getId())
+                .distinct()
+                .count();
     }
 
     private void requireAutoAssignPeriod(TourProcessingDraft draft) {
@@ -921,7 +953,7 @@ public class TourProcessingDraftService {
         if (driver == null) {
             return;
         }
-        new DriverAutoAssigner(draft.getYear(), draft.getMonth(), draft.getBusinessDays(), driverCatalog, List.of(), others, manualDays)
+        new DriverAutoAssigner(draft.getYear(), draft.getMonth(), businessDaysService.forDraft(draft), driverCatalog, List.of(), others, manualDays)
                 .rejectionFor(driver, tour)
                 .filter(rejection -> REAPPROVAL_BLOCKING_REASONS.contains(rejection.reason()))
                 .ifPresent(rejection -> {
@@ -963,9 +995,10 @@ public class TourProcessingDraftService {
         List<TourProcessingDraftAssignment> others = assignments.stream()
                 .filter(other -> other != current)
                 .toList();
-        new DriverAutoAssigner(draft.getYear(), draft.getMonth(), draft.getBusinessDays(), driverRepository.findAll(), List.of(), others,
+        new DriverAutoAssigner(draft.getYear(), draft.getMonth(), businessDaysService.forDraft(draft), driverRepository.findAll(), List.of(), others,
                 draftHoursService.manualDays(draft.getId()))
                 .rejectionFor(requestedDriver, candidate)
+                .filter(rejection -> rejection.reason() != DriverRejection.Reason.WEEKEND_CAP_EXCEEDED)
                 .ifPresent(rejection -> {
                     throw TransportException.unprocessable(
                             "TOUR_PROCESSING_DRAFT_ROW_DRIVER_UNAVAILABLE",

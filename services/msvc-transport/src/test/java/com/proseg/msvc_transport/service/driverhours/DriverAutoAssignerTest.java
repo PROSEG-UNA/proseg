@@ -30,6 +30,8 @@ import static com.proseg.msvc_transport.service.driverhours.DriverHoursTestRows.
 import static com.proseg.msvc_transport.service.driverhours.DriverHoursTestRows.ulloaDriver;
 import static com.proseg.msvc_transport.service.driverhours.DriverHoursTestRows.ulloaTour;
 import static com.proseg.msvc_transport.service.driverhours.DriverHoursTestRows.vehicle;
+import static com.proseg.msvc_transport.service.driverhours.DriverHoursTestRows.withPassengers;
+import static com.proseg.msvc_transport.service.driverhours.DriverHoursTestRows.withPriority;
 import static com.proseg.msvc_transport.service.driverhours.DriverHoursTestRows.withVehicle;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -196,7 +198,7 @@ class DriverAutoAssignerTest {
     }
 
     @Test
-    void usesLastFreeWeekendWhenNoOtherDriverIsAvailable() {
+    void leavesTheWeekendUnassignedWhenTheOnlyDriverAlreadyReachedTheWeekendCap() {
         Driver ana = driver("Ana");
         TourProcessingDraftAssignment lastWeekend = sameDayTour("9", "2026-05-30", "08:00", "10:00");
         List<TourProcessingDraftAssignment> rows = new ArrayList<>(List.of(
@@ -209,8 +211,10 @@ class DriverAutoAssignerTest {
                 assigned(fullSurplusTour("7", "2026-05-13"), ana),
                 lastWeekend
         ));
+        DriverAutoAssigner assigner = new DriverAutoAssigner(2026, 5, MAY_BUSINESS_DAYS, List.of(ana), rows);
 
-        assertThat(run(List.of(ana), rows)).containsEntry(lastWeekend, ana);
+        assertThat(assigner.assign(List.of(lastWeekend))).isEmpty();
+        assertThat(assigner.reasonsForUnassigned(lastWeekend, false)).anyMatch(reason -> reason.contains("máximo de 3"));
     }
 
     @Test
@@ -253,7 +257,7 @@ class DriverAutoAssignerTest {
     void leavesTheWeekendTourUnassignedWhenNoDriverCanMeetTheSurplusThreshold() {
         Driver ana = driver("Ana");
         Driver beto = driver("Beto");
-        TourProcessingDraftAssignment saturday = sameDayTour("9", "2026-05-02", "08:00", "10:00");
+        TourProcessingDraftAssignment saturday = withPassengers(sameDayTour("9", "2026-05-02", "08:00", "10:00"), 5);
         List<TourProcessingDraftAssignment> rows = new ArrayList<>(List.of(
                 assigned(sameDayTour("1", "2026-05-04", "16:30", "17:30"), beto),
                 saturday
@@ -265,7 +269,7 @@ class DriverAutoAssignerTest {
     @Test
     void replacesAHigherPriorityWeekendTourWithWeekdaySurplusHours() {
         Driver ana = driver("Ana");
-        TourProcessingDraftAssignment weekend = tour("1", "2026-05-09", "08:00", "2026-05-11", "08:00");
+        TourProcessingDraftAssignment weekend = withPassengers(tour("1", "2026-05-09", "08:00", "2026-05-11", "08:00"), 5);
         TourProcessingDraftAssignment weekday = sameDayTour("2", "2026-05-11", "07:30", "20:30");
         weekday.getTour().setPriority(2);
         List<TourProcessingDraftAssignment> rows = List.of(weekend, weekday);
@@ -279,7 +283,7 @@ class DriverAutoAssignerTest {
     @Test
     void replacesOneWeekendTourWithMultipleWeekdayToursToReachTheThreshold() {
         Driver ana = driver("Ana");
-        TourProcessingDraftAssignment weekend = tour("1", "2026-05-08", "16:30", "2026-05-12", "08:00");
+        TourProcessingDraftAssignment weekend = withPassengers(tour("1", "2026-05-08", "16:30", "2026-05-12", "08:00"), 5);
         TourProcessingDraftAssignment monday = fullSurplusTour("2", "2026-05-11");
         TourProcessingDraftAssignment tuesday = sameDayTour("3", "2026-05-12", "00:00", "22:30");
         monday.getTour().setPriority(2);
@@ -441,10 +445,15 @@ class DriverAutoAssignerTest {
                     .filter(row -> changes.containsKey(row) ? driver.equals(changes.get(row)) : driver.getName().equals(row.getDriver()))
                     .forEach(workload::add);
             DriverMonthTotals totals = workload.totals(cap, DriverHoursRules.monthWeekends(2026, 5));
+            assertThat(totals.weekendsWorked()).isLessThanOrEqualTo(WeekendCap.forWeekendsInMonth(DriverHoursRules.monthWeekends(2026, 5).size()));
             assertThat(totals.overtimeHours()).isLessThanOrEqualTo(DriverHoursRules.MONTHLY_OVERTIME_CAP);
             assertThat(totals.surplusHours()).isLessThanOrEqualTo(cap);
-            if (totals.overtimeHours() > 0) {
-                assertThat(totals.surplusHours()).isGreaterThanOrEqualTo(cap * DriverHoursRules.SURPLUS_CUTOFF_RATIO);
+            if (totals.overtimeHours() > 0 && totals.surplusHours() < cap * DriverHoursRules.SURPLUS_CUTOFF_RATIO) {
+                DriverWorkload withoutMandatoryExtras = new DriverWorkload(driver);
+                workload.tours().stream()
+                        .filter(tour -> !(MandatoryCoverage.isMandatory(tour) && MandatoryCoverage.requiresExtras(tour)))
+                        .forEach(withoutMandatoryExtras::add);
+                assertThat(withoutMandatoryExtras.totals(cap, DriverHoursRules.monthWeekends(2026, 5)).overtimeHours()).isZero();
             }
             if (!"ACTIVE".equals(driver.getStatus())) {
                 assertThat(workload.tours()).isEmpty();
@@ -570,7 +579,7 @@ class DriverAutoAssignerTest {
     };
 
     private Driver afternoonDriver(String name) {
-        Driver driver = driverWithSchedule(name, "11:00", "20:00");
+        Driver driver = driverWithSchedule(name, "12:00", "21:00");
         driver.setUlloaShifts(EnumSet.of(UlloaShift.AFTERNOON));
         return driver;
     }
@@ -611,7 +620,7 @@ class DriverAutoAssignerTest {
     void stopsWithAnExplainedDeficitWhenOnlyOrdinaryHoursAreAvailable() {
         Driver ana = driver("Ana");
         TourProcessingDraftAssignment ordinary = sameDayTour("1", "2026-05-04", "08:00", "10:00");
-        TourProcessingDraftAssignment weekend = sameDayTour("2", "2026-05-09", "08:00", "10:00");
+        TourProcessingDraftAssignment weekend = withPassengers(sameDayTour("2", "2026-05-09", "08:00", "10:00"), 5);
         List<TourProcessingDraftAssignment> rows = List.of(ordinary, weekend);
         DriverAutoAssigner assigner = new DriverAutoAssigner(2026, 5, MAY_BUSINESS_DAYS, List.of(ana), rows);
 
@@ -651,7 +660,7 @@ class DriverAutoAssignerTest {
 
     @Test
     void neverCombinesUlloaShortMorningAndAfternoonIntoFifteenAndAHalfHours() {
-        Driver ana = ulloaDriver("Ana", UlloaShift.SHORT_MORNING, UlloaShift.AFTERNOON);
+        Driver ana = ulloaDriver("Ana", UlloaShift.SHORT_MORNING);
         TourProcessingDraftAssignment morning = ulloaTour("1", "2026-05-04", UlloaShift.SHORT_MORNING);
         TourProcessingDraftAssignment afternoon = ulloaTour("2", "2026-05-04", UlloaShift.AFTERNOON);
         List<TourProcessingDraftAssignment> rows = List.of(morning, afternoon);
@@ -824,7 +833,259 @@ class DriverAutoAssignerTest {
         DriverWorkload workload = new DriverWorkload(ricardo);
         rows.forEach(workload::add);
         DriverMonthTotals totals = workload.totals(DriverHoursRules.surplusCap(MAY_BUSINESS_DAYS), DriverHoursRules.monthWeekends(2026, 5));
-        assertThat(totals.ordinaryHours()).isEqualTo(160.0);
-        assertThat(totals.surplusHours() + totals.overtimeHours()).isEqualTo(40.0);
+        assertThat(totals.ordinaryHours()).isEqualTo(180.0);
+        assertThat(totals.surplusHours() + totals.overtimeHours()).isEqualTo(20.0);
+    }
+
+    @Test
+    void aDriverCanWorkAThirdWeekendInAMonthWithFiveWeekends() {
+        Driver ana = driver("Ana");
+        TourProcessingDraftAssignment thirdWeekend = sameDayTour("9", "2026-05-16", "08:00", "10:00");
+        List<TourProcessingDraftAssignment> rows = new ArrayList<>(List.of(
+                assigned(sameDayTour("1", "2026-05-02", "08:00", "10:00"), ana),
+                assigned(sameDayTour("2", "2026-05-09", "08:00", "10:00"), ana),
+                assigned(fullSurplusTour("5", "2026-05-11"), ana),
+                assigned(fullSurplusTour("6", "2026-05-12"), ana),
+                assigned(fullSurplusTour("7", "2026-05-13"), ana),
+                thirdWeekend
+        ));
+
+        assertThat(run(List.of(ana), rows)).containsOnlyKeys(thirdWeekend).containsEntry(thirdWeekend, ana);
+    }
+
+    @Test
+    void aDriverCannotWorkAFourthWeekendInAMonthWithFiveWeekendsAndAnotherDriverTakesIt() {
+        Driver ana = driver("Ana");
+        Driver beto = driver("Beto");
+        TourProcessingDraftAssignment fourthWeekend = sameDayTour("9", "2026-05-23", "08:00", "10:00");
+        List<TourProcessingDraftAssignment> rows = new ArrayList<>(List.of(
+                assigned(sameDayTour("1", "2026-05-02", "08:00", "10:00"), ana),
+                assigned(sameDayTour("2", "2026-05-09", "08:00", "10:00"), ana),
+                assigned(sameDayTour("3", "2026-05-16", "08:00", "10:00"), ana),
+                assigned(fullSurplusTour("5", "2026-05-11"), ana),
+                assigned(fullSurplusTour("6", "2026-05-12"), ana),
+                assigned(fullSurplusTour("7", "2026-05-13"), ana),
+                assigned(fullSurplusTour("8", "2026-05-04"), beto),
+                assigned(fullSurplusTour("10", "2026-05-05"), beto),
+                assigned(fullSurplusTour("11", "2026-05-06"), beto),
+                fourthWeekend
+        ));
+
+        assertThat(run(List.of(ana, beto), rows)).containsOnlyKeys(fourthWeekend).containsEntry(fourthWeekend, beto);
+    }
+
+    @Test
+    void aDriverCannotWorkAThirdWeekendInAMonthWithFourWeekends() {
+        Driver ana = driver("Ana");
+        TourProcessingDraftAssignment thirdWeekend = sameDayTour("9", "2027-02-20", "08:00", "10:00");
+        List<TourProcessingDraftAssignment> rows = new ArrayList<>(List.of(
+                assigned(sameDayTour("1", "2027-02-06", "08:00", "10:00"), ana),
+                assigned(sameDayTour("2", "2027-02-13", "08:00", "10:00"), ana),
+                assigned(fullSurplusTour("5", "2027-02-08"), ana),
+                assigned(fullSurplusTour("6", "2027-02-09"), ana),
+                thirdWeekend
+        ));
+        DriverAutoAssigner assigner = new DriverAutoAssigner(2027, 2, 20, List.of(ana), rows);
+
+        assertThat(DriverHoursRules.monthWeekends(2027, 2)).hasSize(4);
+        assertThat(assigner.assign(List.of(thirdWeekend))).isEmpty();
+        assertThat(assigner.reasonsForUnassigned(thirdWeekend, false)).anyMatch(reason -> reason.contains("máximo de 2"));
+    }
+
+    @Test
+    void aDriverCanWorkTheSecondWeekendInAMonthWithFourWeekends() {
+        Driver ana = driver("Ana");
+        TourProcessingDraftAssignment secondWeekend = sameDayTour("9", "2027-02-13", "08:00", "10:00");
+        List<TourProcessingDraftAssignment> rows = new ArrayList<>(List.of(
+                assigned(sameDayTour("1", "2027-02-06", "08:00", "10:00"), ana),
+                assigned(fullSurplusTour("5", "2027-02-08"), ana),
+                assigned(fullSurplusTour("6", "2027-02-09"), ana),
+                secondWeekend
+        ));
+
+        Map<TourProcessingDraftAssignment, Driver> result = new DriverAutoAssigner(2027, 2, 20, List.of(ana), rows).assign(List.of(secondWeekend));
+
+        assertThat(result).containsOnlyKeys(secondWeekend).containsEntry(secondWeekend, ana);
+    }
+
+    @Test
+    void octoberTwentyTwentySixHasFiveWeekendsSoTheFourthIsRefusedAndSaturdayThirtyOneStillCounts() {
+        Driver ana = driver("Ana");
+        TourProcessingDraftAssignment saturdayThirtyOne = sameDayTour("9", "2026-10-31", "08:00", "10:00");
+        List<TourProcessingDraftAssignment> rows = new ArrayList<>(List.of(
+                assigned(sameDayTour("1", "2026-10-03", "08:00", "10:00"), ana),
+                assigned(sameDayTour("2", "2026-10-10", "08:00", "10:00"), ana),
+                assigned(sameDayTour("3", "2026-10-17", "08:00", "10:00"), ana),
+                assigned(fullSurplusTour("5", "2026-10-05"), ana),
+                assigned(fullSurplusTour("6", "2026-10-06"), ana),
+                assigned(fullSurplusTour("7", "2026-10-07"), ana),
+                saturdayThirtyOne
+        ));
+        DriverAutoAssigner assigner = new DriverAutoAssigner(2026, 10, 22, List.of(ana), rows);
+
+        assertThat(DriverHoursRules.monthWeekends(2026, 10)).hasSize(5).contains(LocalDate.of(2026, 10, 31));
+        assertThat(assigner.assign(List.of(saturdayThirtyOne))).isEmpty();
+        assertThat(assigner.reasonsForUnassigned(saturdayThirtyOne, false)).anyMatch(reason -> reason.contains("máximo de 3"));
+    }
+
+    @Test
+    void anExistingManualAssignmentAboveTheWeekendCapIsPreservedAndStillAllowsWeekdayTours() {
+        Driver ana = driver("Ana");
+        TourProcessingDraftAssignment weekday = sameDayTour("9", "2026-05-14", "08:00", "10:00");
+        List<TourProcessingDraftAssignment> rows = new ArrayList<>(List.of(
+                assigned(sameDayTour("1", "2026-05-02", "08:00", "10:00"), ana),
+                assigned(sameDayTour("2", "2026-05-09", "08:00", "10:00"), ana),
+                assigned(sameDayTour("3", "2026-05-16", "08:00", "10:00"), ana),
+                assigned(sameDayTour("4", "2026-05-23", "08:00", "10:00"), ana),
+                assigned(fullSurplusTour("5", "2026-05-11"), ana),
+                assigned(fullSurplusTour("6", "2026-05-12"), ana),
+                assigned(fullSurplusTour("7", "2026-05-13"), ana),
+                weekday
+        ));
+
+        assertThat(run(List.of(ana), rows)).containsOnlyKeys(weekday).containsEntry(weekday, ana);
+    }
+
+    private TourProcessingDraftAssignment requestedBy(TourProcessingDraftAssignment tour, String requester) {
+        tour.getTour().setResponsible(requester);
+        return tour;
+    }
+
+    @Test
+    void assignsTheTourToTheDriverWhoseNameMatchesTheRequesterEvenWhenAnotherDriverIsLessLoaded() {
+        Driver ana = driver("Ana Pérez");
+        Driver beto = driver("Beto Mora");
+        TourProcessingDraftAssignment requested = requestedBy(sameDayTour("2", "2026-05-05", "08:00", "10:00"), "ANA PEREZ");
+        List<TourProcessingDraftAssignment> rows = new ArrayList<>(List.of(
+                assigned(sameDayTour("1", "2026-05-04", "08:00", "12:00"), ana), requested));
+
+        assertThat(run(List.of(ana, beto), rows)).containsEntry(requested, ana);
+        requested.getTour().setResponsible("Otra Persona");
+        assertThat(run(List.of(ana, beto), rows)).containsEntry(requested, beto);
+    }
+
+    @Test
+    void matchesRequestersByWordsIgnoringAccentsCaseAndExtraSpacesAndAdditionalSurnames() {
+        Driver daniel = driver("Daniel Zúñiga Álvarez");
+        Driver beto = driver("Beto Mora");
+        TourProcessingDraftAssignment requested = requestedBy(sameDayTour("2", "2026-05-05", "08:00", "10:00"), "  daniel   ZUNIGA ");
+        List<TourProcessingDraftAssignment> rows = new ArrayList<>(List.of(
+                assigned(sameDayTour("1", "2026-05-04", "08:00", "12:00"), daniel), requested));
+
+        assertThat(run(List.of(daniel, beto), rows)).containsEntry(requested, daniel);
+    }
+
+    @Test
+    void fallsBackToTheNormalFlowWhenTheRequesterDriverHasAScheduleConflict() {
+        Driver ana = driver("Ana Pérez");
+        Driver beto = driver("Beto Mora");
+        TourProcessingDraftAssignment requested = requestedBy(sameDayTour("2", "2026-05-05", "09:00", "11:00"), "Ana Perez");
+        List<TourProcessingDraftAssignment> rows = new ArrayList<>(List.of(
+                assigned(sameDayTour("1", "2026-05-05", "08:00", "12:00"), ana), requested));
+
+        assertThat(run(List.of(ana, beto), rows)).containsEntry(requested, beto);
+    }
+
+    @Test
+    void fallsBackToTheNormalFlowWhenTheRequesterDriverCannotTakeAnotherWeekend() {
+        Driver ana = driver("Ana Pérez");
+        Driver beto = driver("Beto Mora");
+        TourProcessingDraftAssignment requested = requestedBy(sameDayTour("9", "2026-05-23", "08:00", "10:00"), "Ana Perez");
+        List<TourProcessingDraftAssignment> rows = new ArrayList<>(List.of(
+                assigned(sameDayTour("1", "2026-05-02", "08:00", "10:00"), ana),
+                assigned(sameDayTour("2", "2026-05-09", "08:00", "10:00"), ana),
+                assigned(sameDayTour("3", "2026-05-16", "08:00", "10:00"), ana),
+                assigned(fullSurplusTour("5", "2026-05-11"), ana),
+                assigned(fullSurplusTour("6", "2026-05-12"), ana),
+                assigned(fullSurplusTour("7", "2026-05-13"), ana),
+                assigned(fullSurplusTour("8", "2026-05-04"), beto),
+                assigned(fullSurplusTour("10", "2026-05-05"), beto),
+                assigned(fullSurplusTour("11", "2026-05-06"), beto),
+                requested));
+
+        assertThat(run(List.of(ana, beto), rows)).containsEntry(requested, beto);
+    }
+
+    @Test
+    void ignoresTheRequesterRuleWhenTheNameMatchesMoreThanOneActiveDriverOrNone() {
+        Driver anaMora = driver("Ana Pérez Mora");
+        Driver anaSolis = driver("Ana Pérez Solís");
+        Driver beto = driver("Beto Rojas");
+        TourProcessingDraftAssignment ambiguous = requestedBy(sameDayTour("3", "2026-05-06", "08:00", "10:00"), "Ana Perez");
+        TourProcessingDraftAssignment unknown = requestedBy(sameDayTour("4", "2026-05-07", "08:00", "10:00"), "Carlos Ruiz");
+        TourProcessingDraftAssignment singleWord = requestedBy(sameDayTour("5", "2026-05-08", "08:00", "10:00"), "Ana");
+        List<TourProcessingDraftAssignment> rows = new ArrayList<>(List.of(
+                assigned(sameDayTour("1", "2026-05-04", "08:00", "12:00"), anaMora),
+                assigned(sameDayTour("2", "2026-05-05", "08:00", "12:00"), anaSolis),
+                ambiguous, unknown, singleWord));
+
+        List<Driver> catalog = List.of(anaMora, anaSolis, beto);
+
+        Map<TourProcessingDraftAssignment, Driver> withRequesters = run(catalog, rows);
+        ambiguous.getTour().setResponsible("Persona Ajena");
+        unknown.getTour().setResponsible("Persona Ajena");
+        singleWord.getTour().setResponsible("Persona Ajena");
+        Map<TourProcessingDraftAssignment, Driver> withoutRequesters = run(catalog, rows);
+
+        assertThat(withRequesters).containsOnlyKeys(ambiguous, unknown, singleWord).isEqualTo(withoutRequesters);
+    }
+
+    @Test
+    void anInactiveDriverDoesNotMatchTheRequester() {
+        Driver ana = driver("Ana Pérez");
+        ana.setStatus("INACTIVE");
+        Driver beto = driver("Beto Mora");
+        TourProcessingDraftAssignment requested = requestedBy(sameDayTour("2", "2026-05-05", "08:00", "10:00"), "Ana Perez");
+
+        assertThat(run(List.of(ana, beto), new ArrayList<>(List.of(requested)))).containsOnlyKeys(requested).containsEntry(requested, beto);
+    }
+
+    @Test
+    void doesNotTouchToursThatAlreadyHaveADriverEvenIfTheRequesterIsAnotherDriver() {
+        Driver ana = driver("Ana Pérez");
+        Driver beto = driver("Beto Mora");
+        TourProcessingDraftAssignment taken = assigned(requestedBy(sameDayTour("2", "2026-05-05", "08:00", "10:00"), "Ana Perez"), beto);
+
+        assertThat(run(List.of(ana, beto), new ArrayList<>(List.of(taken)))).isEmpty();
+    }
+
+    @Test
+    void theRequesterRuleDoesNotApplyToThePeripheralOnlyRun() {
+        Driver ricardo = afternoonDriver("Ricardo Jovane");
+        Driver daniel = afternoonDriver("Daniel Zuniga");
+        TourProcessingDraftAssignment ulloa = requestedBy(ulloaTour("1", "2026-05-05", UlloaShift.AFTERNOON), "Daniel Zuniga");
+        TourProcessingDraftAssignment regular = requestedBy(sameDayTour("2", "2026-05-06", "08:00", "10:00"), "Ricardo Jovane");
+        List<TourProcessingDraftAssignment> rows = new ArrayList<>(List.of(ulloa, regular));
+
+        Map<TourProcessingDraftAssignment, Driver> result = new DriverAutoAssigner(
+                2026, 5, MAY_BUSINESS_DAYS, List.of(ricardo, daniel), rows
+        ).assignUlloaOnly(rows);
+
+        assertThat(result).containsOnlyKeys(ulloa);
+    }
+
+    @Test
+    void theRequesterRuleRunsBeforeThePeripheralPass() {
+        Driver ricardo = afternoonDriver("Ricardo Jovane");
+        Driver daniel = afternoonDriver("Daniel Zuniga");
+        TourProcessingDraftAssignment ulloa = requestedBy(ulloaTour("1", "2026-05-05", UlloaShift.AFTERNOON), "Daniel Zuniga");
+        List<TourProcessingDraftAssignment> rows = new ArrayList<>(List.of(ulloa));
+
+        assertThat(run(List.of(ricardo, daniel), rows)).containsEntry(ulloa, daniel);
+    }
+
+    @Test
+    void thePeripheralPassUsesTheDriversOrdinaryScheduleToChooseTheShift() {
+        Driver standardWindow = ulloaDriver("Mora", UlloaShift.AFTERNOON);
+        Driver afternoonWindow = afternoonDriver("Tarde");
+        TourProcessingDraftAssignment afternoon = ulloaTour("1", "2026-05-05", UlloaShift.AFTERNOON);
+        TourProcessingDraftAssignment morning = ulloaTour("2", "2026-05-05", UlloaShift.MORNING);
+        List<TourProcessingDraftAssignment> rows = new ArrayList<>(List.of(afternoon, morning));
+
+        Map<TourProcessingDraftAssignment, Driver> result = new DriverAutoAssigner(
+                2026, 5, MAY_BUSINESS_DAYS, List.of(standardWindow, afternoonWindow), rows
+        ).assignUlloaOnly(rows);
+
+        assertThat(result).containsEntry(afternoon, afternoonWindow).containsEntry(morning, standardWindow);
     }
 }
