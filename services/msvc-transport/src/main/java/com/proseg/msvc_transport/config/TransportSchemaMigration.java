@@ -39,6 +39,7 @@ public class TransportSchemaMigration implements SmartInitializingSingleton {
             apply(2, "db/transport-phase2.sql");
             apply(3, "db/transport-import-rows.sql");
             apply(5, "db/transport-closed-draft.sql");
+            apply(6, "db/transport-driver-ordinary-schedules.sql");
             LEGACY_TABLES.forEach(this::dropIfEmpty);
         });
     }

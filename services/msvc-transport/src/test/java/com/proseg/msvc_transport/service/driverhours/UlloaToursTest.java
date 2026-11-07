@@ -1,9 +1,14 @@
 package com.proseg.msvc_transport.service.driverhours;
 
+import com.proseg.msvc_transport.entity.Driver;
 import com.proseg.msvc_transport.entity.TourProcessingDraftAssignment;
 import com.proseg.msvc_transport.entity.UlloaShift;
 import org.junit.jupiter.api.Test;
 
+import java.util.EnumSet;
+
+import static com.proseg.msvc_transport.service.driverhours.DriverHoursTestRows.driver;
+import static com.proseg.msvc_transport.service.driverhours.DriverHoursTestRows.driverWithSchedule;
 import static com.proseg.msvc_transport.service.driverhours.DriverHoursTestRows.sameDayTour;
 import static com.proseg.msvc_transport.service.driverhours.DriverHoursTestRows.tour;
 import static com.proseg.msvc_transport.service.driverhours.DriverHoursTestRows.ulloaTour;
@@ -58,5 +63,28 @@ class UlloaToursTest {
         withoutData.getTour().setDestination(null);
 
         assertThat(UlloaTours.isUlloaTour(withoutData)).isFalse();
+    }
+
+    @Test
+    void theStandardScheduleCoversTheTwoMorningShiftsAndTheAfternoonScheduleCoversTheAfternoon() {
+        assertThat(UlloaTours.shiftsCoveredBy(OrdinaryWindow.STANDARD))
+                .containsExactlyInAnyOrder(UlloaShift.SHORT_MORNING, UlloaShift.MORNING);
+        assertThat(UlloaTours.shiftsCoveredBy(OrdinaryWindow.AFTERNOON)).containsExactly(UlloaShift.AFTERNOON);
+    }
+
+    @Test
+    void onlyPeripheralDriversCoverAShiftAndOnlyThroughTheirOrdinarySchedule() {
+        Driver standard = driver("Ana");
+        standard.setUlloaShifts(EnumSet.of(UlloaShift.MORNING));
+        Driver afternoon = driverWithSchedule("Ricardo", "12:00", "21:00");
+        afternoon.setUlloaShifts(EnumSet.of(UlloaShift.AFTERNOON));
+        Driver notPeripheral = driverWithSchedule("Daniel", "12:00", "21:00");
+
+        assertThat(UlloaTours.isCoveredBy(standard, UlloaShift.SHORT_MORNING)).isTrue();
+        assertThat(UlloaTours.isCoveredBy(standard, UlloaShift.MORNING)).isTrue();
+        assertThat(UlloaTours.isCoveredBy(standard, UlloaShift.AFTERNOON)).isFalse();
+        assertThat(UlloaTours.isCoveredBy(afternoon, UlloaShift.AFTERNOON)).isTrue();
+        assertThat(UlloaTours.isCoveredBy(afternoon, UlloaShift.MORNING)).isFalse();
+        assertThat(UlloaTours.isCoveredBy(notPeripheral, UlloaShift.AFTERNOON)).isFalse();
     }
 }

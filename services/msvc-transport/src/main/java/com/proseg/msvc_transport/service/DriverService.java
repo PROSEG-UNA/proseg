@@ -8,6 +8,7 @@ import com.proseg.msvc_transport.exception.TransportException;
 import com.proseg.msvc_transport.repository.DriverRepository;
 import com.proseg.msvc_transport.service.driverhours.DriverHoursRules;
 import com.proseg.msvc_transport.service.driverhours.OrdinaryWindow;
+import com.proseg.msvc_transport.service.driverhours.UlloaTours;
 import com.proseg.msvc_transport.specification.GenericSpecifications;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -90,9 +91,7 @@ public class DriverService {
     }
 
     private void updateEntity(Driver entity, DriverRequestDto request) {
-        LocalTime ordinaryStart = Optional.ofNullable(request.getOrdinaryStart()).orElseGet(() -> DriverHoursRules.timeOf(DriverHoursRules.ORDINARY_START));
-        LocalTime ordinaryEnd = Optional.ofNullable(request.getOrdinaryEnd()).orElseGet(() -> DriverHoursRules.timeOf(DriverHoursRules.ORDINARY_END));
-        validateOrdinarySchedule(ordinaryStart, ordinaryEnd);
+        OrdinaryWindow window = ordinaryWindowOf(request);
         entity.setName(request.getName().trim());
         entity.setStatus(request.getStatus());
         entity.setOrganizationalUnit(request.getOrganizationalUnit() == null
@@ -100,22 +99,20 @@ public class DriverService {
                 : request.getOrganizationalUnit());
         entity.setRestrictions(request.getRestrictions());
         entity.setAllowedVehicleTypes(new HashSet<>(request.getAllowedVehicleTypes()));
-        entity.setOrdinaryStart(ordinaryStart);
-        entity.setOrdinaryEnd(ordinaryEnd);
-        entity.setUlloaShifts(new HashSet<>(request.getUlloaShifts()));
+        entity.setOrdinaryStart(window.startTime());
+        entity.setOrdinaryEnd(window.endTime());
+        entity.setUlloaShifts(request.getUlloaShifts().isEmpty()
+                ? new HashSet<>()
+                : new HashSet<>(UlloaTours.shiftsCoveredBy(window)));
     }
 
-    private void validateOrdinarySchedule(LocalTime start, LocalTime end) {
-        if (!start.isBefore(end)) {
-            throw TransportException.unprocessable("DRIVER_INVALID_ORDINARY_SCHEDULE", "El horario ordinario debe terminar después de la hora de inicio");
-        }
-        double hours = DriverHoursRules.hourOf(end) - DriverHoursRules.hourOf(start);
-        if (hours > DriverHoursRules.MAX_ORDINARY_HOURS_PER_DAY + DriverHoursRules.HOURS_TOLERANCE) {
-            throw TransportException.unprocessable(
-                    "DRIVER_INVALID_ORDINARY_SCHEDULE",
-                    "El horario ordinario no puede superar las " + (int) DriverHoursRules.MAX_ORDINARY_HOURS_PER_DAY + " horas por día"
-            );
-        }
+    private OrdinaryWindow ordinaryWindowOf(DriverRequestDto request) {
+        LocalTime start = Optional.ofNullable(request.getOrdinaryStart()).orElseGet(OrdinaryWindow.STANDARD::startTime);
+        LocalTime end = Optional.ofNullable(request.getOrdinaryEnd()).orElseGet(OrdinaryWindow.STANDARD::endTime);
+        return OrdinaryWindow.allowed(start, end).orElseThrow(() -> TransportException.unprocessable(
+                "DRIVER_INVALID_ORDINARY_SCHEDULE",
+                "El horario ordinario debe ser de " + OrdinaryWindow.allowedDescription()
+        ));
     }
 
     public DriverResponseDto toResponse(Driver entity) {
