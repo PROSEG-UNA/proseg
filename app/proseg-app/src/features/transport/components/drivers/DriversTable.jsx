@@ -16,7 +16,7 @@ const COLUMN_TO_BACKEND_KEY = {
     organizationalUnit: 'organizationalUnit',
 };
 
-export default function DriversTable({ onEditDriver, monthData, surplusHoursPerDriver }) {
+export default function DriversTable({ onEditDriver, monthData }) {
     const [pagination, setPagination] = usePersistedPagination('drivers-table-page-size');
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
@@ -82,16 +82,18 @@ export default function DriversTable({ onEditDriver, monthData, surplusHoursPerD
         return rows.map((row) => {
             const driverMonth = monthData.byDriverId.get(row.id);
             const surplusHoursAccrued = driverMonth?.surplusHoursAccrued ?? 0;
+            const surplusCap = driverMonth?.surplusCap ?? 0;
             return {
                 ...row,
+                businessDays: driverMonth?.businessDays ?? null,
                 ordinaryHoursAccrued: driverMonth?.ordinaryHoursAccrued ?? 0,
-                surplusExecutionRatio: surplusHoursPerDriver > 0 ? surplusHoursAccrued / surplusHoursPerDriver : null,
+                surplusExecutionRatio: surplusCap > 0 ? surplusHoursAccrued / surplusCap : null,
                 surplusHoursAccrued,
                 overtimeHoursAccrued: driverMonth?.overtimeHoursAccrued ?? 0,
                 weekendsWorked: driverMonth?.weekendsWorked ?? 0,
             };
         });
-    }, [rows, showMonthColumns, monthData, surplusHoursPerDriver]);
+    }, [rows, showMonthColumns, monthData]);
 
     const columns = useMemo(() => getDriverColumns({ showMonthColumns }), [showMonthColumns]);
 

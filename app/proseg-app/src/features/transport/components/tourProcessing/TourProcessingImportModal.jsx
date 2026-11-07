@@ -236,7 +236,8 @@ export default function TourProcessingImportModal({ open, onClose }) {
 
                     <Box sx={{ mb: 2 }}>
                         <TextField
-                            label="Días hábiles del mes"
+                            label="Días hábiles por defecto de los choferes"
+                            helperText="Cada chofer parte de este valor. Después puedes cambiarlo por chofer en la pantalla de Choferes."
                             value={businessDays}
                             onChange={(event) => setBusinessDays(event.target.value.replace(/\D/g, '').slice(0, 2))}
                             onBlur={() => setBusinessDaysTouched(true)}

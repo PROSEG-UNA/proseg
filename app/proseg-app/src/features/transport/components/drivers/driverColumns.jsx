@@ -50,6 +50,14 @@ export function getDriverColumns({ showMonthColumns = false } = {}) {
     return [
         ...baseColumns,
         {
+            accessorKey: 'businessDays',
+            header: 'Días Hábiles',
+            size: 140,
+            grow: false,
+            enableColumnFilter: false,
+            Cell: ({ cell }) => cell.getValue() ?? '—',
+        },
+        {
             accessorKey: 'ordinaryHoursAccrued',
             header: 'H. Ordinarias',
             size: 150,

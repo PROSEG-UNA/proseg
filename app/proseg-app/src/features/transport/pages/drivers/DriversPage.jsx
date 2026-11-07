@@ -45,7 +45,7 @@ export default function DriversPage() {
     const year = selectedMonth?.year();
     const month = selectedMonth ? selectedMonth.month() + 1 : undefined;
     const monthData = useTransportDriverMonthsData(year, month);
-    const { surplusHoursPerDriver } = useTransportDriverMonthSurplusCap(year, month);
+    const { businessDays: defaultBusinessDays, surplusHoursPerDriver } = useTransportDriverMonthSurplusCap(year, month);
     const showEmptyMonthNotice = monthData.enabled && !monthData.loading && !monthData.hasAnyRecord;
     const canReadDrivers = hasPermission(PERMISSIONS.TRANSPORT.DRIVERS.READ);
     const canManageDrivers = hasPermission(PERMISSIONS.TRANSPORT.DRIVERS.MANAGE);
@@ -98,6 +98,13 @@ export default function DriversPage() {
         void queryClient.invalidateQueries({ queryKey: queryKeys.transport.drivers() });
         void queryClient.invalidateQueries({ queryKey: queryKeys.transport.tourProcessingDrafts() });
     };
+
+    const refreshDriverMonth = () => {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.transport.driverMonths(year, month) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.transport.tourProcessingDrafts() });
+    };
+
+    const editingDriverMonth = driverFormId ? monthData.byDriverId?.get(driverFormId) : undefined;
 
     if (!canViewDrivers) return <AccessDeniedState />;
 
@@ -179,7 +186,7 @@ export default function DriversPage() {
                 </Stack>
 
                 <Box sx={{ pt: 3 }}>
-                    <DriversTable onEditDriver={openEditDriver} monthData={monthData} surplusHoursPerDriver={surplusHoursPerDriver} />
+                    <DriversTable onEditDriver={openEditDriver} monthData={monthData} />
                 </Box>
             </Container>
 
@@ -191,6 +198,11 @@ export default function DriversPage() {
                     canDelete={canDeleteDrivers}
                     onClose={() => setDriverFormOpen(false)}
                     onSaved={refreshDrivers}
+                    onBusinessDaysSaved={refreshDriverMonth}
+                    period={monthData.enabled ? { year, month, label: periodLabel } : null}
+                    monthBusinessDays={editingDriverMonth?.businessDays ?? null}
+                    defaultBusinessDays={defaultBusinessDays ?? null}
+                    businessDaysCustomized={Boolean(editingDriverMonth?.businessDaysCustomized)}
                     onDeleted={() => {
                         refreshDrivers();
                         setAlert({ type: 'success', message: 'Chofer eliminado correctamente' });

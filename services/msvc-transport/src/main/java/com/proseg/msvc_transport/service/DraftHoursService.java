@@ -7,6 +7,7 @@ import com.proseg.msvc_transport.entity.Driver;
 import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
 import com.proseg.msvc_transport.service.driverhours.DayAllocation;
+import com.proseg.msvc_transport.service.driverhours.DriverBusinessDays;
 import com.proseg.msvc_transport.service.driverhours.DriverHoursRules;
 import com.proseg.msvc_transport.service.driverhours.DriverWorkload;
 import com.proseg.msvc_transport.service.driverhours.ManualDays;
@@ -35,6 +36,7 @@ public class DraftHoursService {
 
     private final DriverRepository driverRepository;
     private final TourProcessingDraftDayRepository dayRepository;
+    private final DriverBusinessDaysService businessDaysService;
 
     public static Map<UUID, Set<WorkloadSlot>> workloadSlots(List<TourProcessingDraftAssignment> assignments) {
         Map<UUID, Set<WorkloadSlot>> slots = new HashMap<>();
@@ -79,7 +81,7 @@ public class DraftHoursService {
         if (draft.getYear() == null || draft.getMonth() == null || draft.getBusinessDays() == null) {
             return;
         }
-        double surplusCap = DriverHoursRules.surplusCap(draft.getBusinessDays());
+        DriverBusinessDays businessDays = businessDaysService.forDraft(draft);
         Map<UUID, Driver> driversById = DriverHoursRules.driversById(driverRepository.findAll());
         List<TourProcessingDraftDay> existing = dayRepository.findAllByDraftId(draft.getId());
         Map<UUID, List<TourProcessingDraftDay>> existingByAssignment = existing.stream()
@@ -102,7 +104,7 @@ public class DraftHoursService {
             if (onlyDriverIds != null && !onlyDriverIds.contains(driverId)) {
                 return;
             }
-            for (TourAllocation allocation : workload.allocations(surplusCap)) {
+            for (TourAllocation allocation : workload.allocations(businessDays.surplusCapOf(driverId))) {
                 TourProcessingDraftAssignment assignment = allocation.tour();
                 syncAssignmentDays(assignment, allocation.days(), existingByAssignment.getOrDefault(assignment.getId(), List.of()),
                         daysToSave, staleDayIds);

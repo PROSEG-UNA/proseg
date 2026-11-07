@@ -3,6 +3,7 @@ package com.proseg.msvc_transport.service;
 import com.proseg.msvc_transport.dto.response.DriverMonthSurplusCapResponseDto;
 import com.proseg.msvc_transport.entity.TourProcessingDraft;
 import com.proseg.msvc_transport.entity.Driver;
+import com.proseg.msvc_transport.entity.DriverMonthBusinessDays;
 import com.proseg.msvc_transport.entity.TourApprovalStatus;
 import com.proseg.msvc_transport.repository.TourProcessingDraftRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
@@ -23,24 +24,28 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class DraftHoursServiceTest {
     private DriverRepository driverRepository;
     private TourProcessingDraftDayRepository dayRepository;
+    private InMemoryBusinessDays businessDays;
     private DraftHoursService service;
 
     @BeforeEach
     void setUp() {
         driverRepository = mock(DriverRepository.class);
         dayRepository = mock(TourProcessingDraftDayRepository.class);
-        service = new DraftHoursService(driverRepository, dayRepository);
+        businessDays = new InMemoryBusinessDays();
+        service = new DraftHoursService(driverRepository, dayRepository, businessDays.service());
     }
 
     @Test
@@ -157,10 +162,91 @@ class DraftHoursServiceTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void splitsEachDriversHoursAgainstTheirOwnSurplusMax() {
+        Driver laura = Driver.builder().id(UUID.nameUUIDFromBytes("Laura Mora".getBytes())).name("Laura Mora").build();
+        Driver pedro = Driver.builder().id(UUID.nameUUIDFromBytes("Pedro Solis".getBytes())).name("Pedro Solis").build();
+        when(driverRepository.findAll()).thenReturn(List.of(laura, pedro));
+        businessDays.customize(laura.getId(), 2026, 5, 14);
+        TourProcessingDraft draft = TourProcessingDraft.builder().year(2026).month(5).businessDays(28).build();
+
+        service.syncAll(draft, List.of(
+                row("1", "Laura Mora", 1, "2026-05-05", "00:00", "2026-05-05", "23:30"),
+                row("2", "Laura Mora", 1, "2026-05-06", "00:00", "2026-05-06", "23:30"),
+                row("3", "Laura Mora", 1, "2026-05-07", "00:00", "2026-05-07", "23:30"),
+                row("4", "Pedro Solis", 1, "2026-05-05", "00:00", "2026-05-05", "23:30"),
+                row("5", "Pedro Solis", 1, "2026-05-06", "00:00", "2026-05-06", "23:30"),
+                row("6", "Pedro Solis", 1, "2026-05-07", "00:00", "2026-05-07", "23:30")
+        ));
+
+        ArgumentCaptor<List<TourProcessingDraftDay>> saved = ArgumentCaptor.forClass(List.class);
+        verify(dayRepository).saveAll(saved.capture());
+        assertThat(surplusOf(saved.getValue(), laura)).isEqualTo(19.0);
+        assertThat(overtimeOf(saved.getValue(), laura)).isEqualTo(24.5);
+        assertThat(surplusOf(saved.getValue(), pedro)).isEqualTo(37.5);
+        assertThat(overtimeOf(saved.getValue(), pedro)).isEqualTo(6.0);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void recalculatingOneDriverAfterEditingTheirDaysOnlyRewritesThatDriversHours() {
+        Driver laura = Driver.builder().id(UUID.nameUUIDFromBytes("Laura Mora".getBytes())).name("Laura Mora").build();
+        Driver pedro = Driver.builder().id(UUID.nameUUIDFromBytes("Pedro Solis".getBytes())).name("Pedro Solis").build();
+        when(driverRepository.findAll()).thenReturn(List.of(laura, pedro));
+        TourProcessingDraft draft = TourProcessingDraft.builder().year(2026).month(5).businessDays(28).build();
+        List<TourProcessingDraftAssignment> rows = List.of(
+                row("1", "Laura Mora", 1, "2026-05-05", "00:00", "2026-05-05", "23:30"),
+                row("2", "Laura Mora", 1, "2026-05-06", "00:00", "2026-05-06", "23:30"),
+                row("3", "Laura Mora", 1, "2026-05-07", "00:00", "2026-05-07", "23:30"),
+                row("4", "Pedro Solis", 1, "2026-05-05", "00:00", "2026-05-05", "23:30"));
+        businessDays.customize(laura.getId(), 2026, 5, 14);
+
+        service.syncDriver(draft, rows, laura.getId());
+
+        ArgumentCaptor<List<TourProcessingDraftDay>> saved = ArgumentCaptor.forClass(List.class);
+        verify(dayRepository).saveAll(saved.capture());
+        assertThat(saved.getValue()).hasSize(3).allMatch(day -> laura.getId().equals(day.getAssignment().getDriverId()));
+        assertThat(surplusOf(saved.getValue(), laura)).isEqualTo(19.0);
+        assertThat(overtimeOf(saved.getValue(), laura)).isEqualTo(24.5);
+    }
+
+    @Test
+    void recalculatingTheHoursNeverOverwritesTheCustomizedBusinessDays() {
+        Driver laura = Driver.builder().id(UUID.nameUUIDFromBytes("Laura Mora".getBytes())).name("Laura Mora").build();
+        when(driverRepository.findAll()).thenReturn(List.of(laura));
+        TourProcessingDraft draft = TourProcessingDraft.builder().year(2026).month(5).businessDays(28).build();
+        TourProcessingDraftAssignment tour = row("1", "Laura Mora", 1, "2026-05-05", "07:30", "2026-05-05", "12:00");
+        businessDays.customize(laura.getId(), 2026, 5, 21);
+
+        Map<UUID, Set<DraftHoursService.WorkloadSlot>> before = DraftHoursService.workloadSlots(List.of(tour));
+        service.syncAll(draft, List.of(tour));
+        tour.getTour().setReturnTime(LocalTime.parse("19:30"));
+        service.syncChanged(draft, before, List.of(tour));
+        service.syncDriver(draft, List.of(tour), laura.getId());
+        service.syncAll(draft, List.of());
+
+        assertThat(businessDays.storedValue(laura.getId(), 2026, 5)).isEqualTo(21);
+        assertThat(businessDays.storedRecords()).isEqualTo(1);
+        verify(businessDays.repository(), times(1)).save(any(DriverMonthBusinessDays.class));
+        verify(businessDays.repository(), never()).delete(any(DriverMonthBusinessDays.class));
+        verify(businessDays.repository(), never()).deleteAll();
+    }
+
+    @Test
     void syncSkipsDraftsWithoutPeriod() {
         service.syncAll(TourProcessingDraft.builder().build(), List.of());
         org.mockito.Mockito.verifyNoInteractions(driverRepository, dayRepository);
 
+    }
+
+    private double surplusOf(List<TourProcessingDraftDay> days, Driver driver) {
+        return days.stream().filter(day -> driver.getId().equals(day.getAssignment().getDriverId()))
+                .mapToDouble(TourProcessingDraftDay::getSurplusHours).sum();
+    }
+
+    private double overtimeOf(List<TourProcessingDraftDay> days, Driver driver) {
+        return days.stream().filter(day -> driver.getId().equals(day.getAssignment().getDriverId()))
+                .mapToDouble(TourProcessingDraftDay::getOvertimeHours).sum();
     }
 
     private TourProcessingDraftDay day(TourProcessingDraftAssignment row, String date) {

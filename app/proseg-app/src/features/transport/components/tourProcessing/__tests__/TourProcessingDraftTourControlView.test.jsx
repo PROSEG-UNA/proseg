@@ -79,7 +79,7 @@ describe('Control de giras', () => {
     it('muestra las horas de sobresueldo del mes', () => {
         renderView();
         expect(screen.getByText('Horas sobresueldo del mes')).toBeTruthy();
-        expect(screen.getByText(/40.*h por chofer/)).toBeTruthy();
+        expect(screen.getByText(/40.*h por defecto/)).toBeTruthy();
     });
 
     it.each([[true, 'edit'], [false, 'view']])('abre la gira por su id en modo %s/%s al tocar el detalle', async (canEdit, mode) => {
