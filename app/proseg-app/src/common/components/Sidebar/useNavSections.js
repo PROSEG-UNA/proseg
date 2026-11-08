@@ -17,6 +17,7 @@ import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import DirectionsCarFilledOutlinedIcon from '@mui/icons-material/DirectionsCarFilledOutlined';
+import DescriptionIcon from '@mui/icons-material/Description';
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import { PERMISSIONS } from '../../constants/permissions';
 import { usePermissions } from '../../hooks';
@@ -98,6 +99,12 @@ const registerPermissions = [
     PERMISSIONS.MAINTENANCE.REGISTERS.HISTORY,
 ];
 
+const formsPermissions = [
+    PERMISSIONS.FORMS.READ,
+    PERMISSIONS.FORMS.CREATE,
+    PERMISSIONS.FORMS.DELETE,
+];
+
 const transportDriverPermissions = [
     PERMISSIONS.TRANSPORT.DRIVERS.READ,
     PERMISSIONS.TRANSPORT.DRIVERS.MANAGE,
@@ -129,6 +136,7 @@ export function useNavSections() {
     const canViewSecuritySection = canViewUsersSubmodule || canViewRolesSubmodule;
     const canViewMaintenanceSection = hasAnyPermission(maintenancePermissions);
     const canViewRegistersSubmodule = hasAnyPermission(registerPermissions);
+    const canViewFormsSection = hasAnyPermission(formsPermissions);
     const canViewTicketsSubmodule = hasAnyPermission(ticketPermissions);
     const canViewDriversSubmodule = hasAnyPermission(transportDriverPermissions);
     const canViewVehiclesSubmodule = hasAnyPermission(transportVehiclePermissions);
@@ -177,6 +185,17 @@ export function useNavSections() {
             });
         }
 
+        if (canViewFormsSection) {
+            result.push({
+                key: 'forms',
+                icon: DescriptionIcon,
+                label: 'Formularios',
+                items: [
+                    { key: 'forms-registry', icon: DescriptionIcon, label: 'Registro de formularios', path: '/formularios' },
+                ],
+            });
+        }
+
         if (canViewTicketsSubmodule) {
             result.push({
                 key: 'tickets',
@@ -215,7 +234,7 @@ export function useNavSections() {
         }
 
         return result;
-    }, [canViewInventorySection, canViewLocationsSection, canViewSecuritySection, canViewUsersSubmodule, canViewRolesSubmodule, canViewMaintenanceSection, canViewRegistersSubmodule, canViewTicketsSubmodule, canViewTourProcessingSubmodule, canViewDriversSubmodule, canViewVehiclesSubmodule, canViewTransportSection]);
+    }, [canViewInventorySection, canViewLocationsSection, canViewSecuritySection, canViewUsersSubmodule, canViewRolesSubmodule, canViewMaintenanceSection, canViewRegistersSubmodule, canViewFormsSection, canViewTicketsSubmodule, canViewTourProcessingSubmodule, canViewDriversSubmodule, canViewVehiclesSubmodule, canViewTransportSection]);
 
     return { sections };
 }

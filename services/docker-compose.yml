@@ -400,6 +400,40 @@ services:
     networks:
       - proseg-net
 
+  msvc-forms:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        SERVICE_NAME: msvc-forms
+    container_name: msvc-forms
+    ports:
+      - "8092:8092"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://msvc-config:8888
+      - SERVER_PORT=8092
+      - SPRING_APPLICATION_NAME=msvc-forms
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/auth/realms/${KEYCLOAK_REALM:-proseg-realm}
+      - GATEWAY_BASE_URL=http://msvc-gateway:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      msvc-config:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -sS http://localhost:8092 >/dev/null 2>&1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+    networks:
+      - proseg-net
+
   msvc-email:
     build:
       context: .
