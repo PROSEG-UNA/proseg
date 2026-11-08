@@ -184,7 +184,7 @@ class FinalCommissionServiceTest {
         assertThat(report.getTours()).extracting(FinalCommissionReportDto.Tour::getNumber).containsExactly("4009", "4008");
         FinalCommissionReportDto.Tour first = report.getTours().get(0);
         assertThat(first.getCategory()).isEqualTo("INTERNAL");
-        assertThat(first.getVehicles()).isEqualTo(2);
+        assertThat(first.getVehicles()).isEqualTo(1);
         assertThat(first.getDays()).extracting(FinalCommissionReportDto.Day::getEnd).containsExactly(20.5, 14.0);
         assertThat(report.getTours().get(1).getCategory()).isEqualTo("NOT_APPROVED");
     }

@@ -220,9 +220,19 @@ public class OvertimeRequestReportService {
                 .vehicle(row.getResourceType() == ResourceType.BORROWED_VEHICLE
                         ? (row.getBorrowedVehicle() == null ? null : row.getBorrowedVehicle().getPlate())
                         : row.getVehicle())
-                .passengers(row.getPassengers())
+                .passengers(passengersOfDriver(row))
                 .days(tourDays)
                 .build();
+    }
+
+    private static Integer passengersOfDriver(TourProcessingDraftAssignment row) {
+        if (row.getDriverId() == null || row.getTour().getAssignments().size() < 2) {
+            return row.getPassengers();
+        }
+        return row.getTour().getAssignments().stream()
+                .filter(part -> row.getDriverId().equals(part.getDriverId()))
+                .mapToInt(part -> part.getPassengers() == null ? 0 : part.getPassengers())
+                .sum();
     }
 
     private OvertimeRequestReportDto.TourDay toTourDay(TourProcessingDraftDay day) {

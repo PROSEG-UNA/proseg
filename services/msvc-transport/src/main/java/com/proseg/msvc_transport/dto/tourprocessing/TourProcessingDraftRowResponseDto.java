@@ -33,6 +33,9 @@ public class TourProcessingDraftRowResponseDto {
     private TourApprovalStatus approvalStatus;
     private Integer passengers;
     private List<TourProcessingDraftAssignmentDto> assignments;
+    private int trips;
+    private Integer totalCapacity;
+    private int assignedPassengers;
     private String executingUnit;
     private String responsible;
     private String destination;

@@ -24,6 +24,7 @@ import com.proseg.msvc_transport.service.driverhours.DriverMonthTotals;
 import com.proseg.msvc_transport.service.driverhours.DriverWorkload;
 import com.proseg.msvc_transport.service.driverhours.OrdinaryWindow;
 import com.proseg.msvc_transport.service.driverhours.TourDaySpan;
+import com.proseg.msvc_transport.service.driverhours.TourTrips;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -165,7 +166,7 @@ public class FinalCommissionService {
                 .returnDate(tour.getReturnDate())
                 .returnTime(tour.getReturnTime())
                 .category(!tour.isApproved() || main == null ? NOT_APPROVED_CATEGORY : main.getResourceType().name())
-                .vehicles(Math.max(1, tour.getAssignments().size()))
+                .vehicles(TourTrips.distinctDrivers(tour))
                 .ordinaryStart(window.start())
                 .ordinaryEnd(window.end())
                 .days(reportDays(tour, main, daysByAssignment))
@@ -436,9 +437,12 @@ public class FinalCommissionService {
                 for (int j = i + 1; j < parts.size(); j++) {
                     TourProcessingDraftAssignment left = parts.get(i);
                     TourProcessingDraftAssignment right = parts.get(j);
-                    if (DriverHoursRules.toursOverlap(left, right)) {
-                        sharedVehicles.add("Placa " + plate + ": giras " + left.getNumber() + " y " + right.getNumber()
-                                + " (" + left.getDepartureDate().format(DATE) + ")");
+                    if (!DriverWorkload.sameTour(left, right) && DriverHoursRules.toursOverlap(left, right)) {
+                        String detail = "Placa " + plate + ": giras " + left.getNumber() + " y " + right.getNumber()
+                                + " (" + left.getDepartureDate().format(DATE) + ")";
+                        if (!sharedVehicles.contains(detail)) {
+                            sharedVehicles.add(detail);
+                        }
                     }
                 }
             }

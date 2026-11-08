@@ -9,6 +9,7 @@ import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowReques
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDriverAutoAssignResponseDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingVehicleAutoAssignResponseDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingImportColumnDto;
+import com.proseg.msvc_transport.dto.tourprocessing.TourSplitMode;
 import com.proseg.msvc_transport.dto.response.OvertimeRequestReportDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowDayResponseDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowResponseDto;
@@ -353,7 +354,7 @@ class TourProcessingDraftServiceTest {
     }
 
     @Test
-    void rejectsDistributionWhenPassengerCountsDoNotMatch() {
+    void acceptsDistributionWhenPassengerCountsDoNotMatch() {
         TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
         stubDraft(draft);
         TourProcessingDraftRowRequestDto request = row(1, "03170", "Barva");
@@ -363,10 +364,12 @@ class TourProcessingDraftServiceTest {
                 TourProcessingDraftAssignmentDto.builder().passengers(29).build()
         ));
 
-        assertThatThrownBy(() -> service.createRow(draft.getId(), request))
-                .isInstanceOf(TransportException.class)
-                .hasMessage("La suma de pasajeros por vehículo debe ser exactamente 70");
-        verify(rowRepository, never()).save(any());
+        var response = service.createRow(draft.getId(), request);
+
+        assertThat(response.getAssignments()).extracting(TourProcessingDraftAssignmentDto::getPassengers).containsExactly(40, 29);
+        assertThat(response.getTrips()).isEqualTo(2);
+        assertThat(response.getAssignedPassengers()).isEqualTo(69);
+        verify(rowRepository).save(any());
     }
 
     @Test
@@ -933,6 +936,82 @@ class TourProcessingDraftServiceTest {
         assertThat(oversized.primaryAssignment().getVehicle()).isEqualTo("301-295");
         assertThat(fits.getAssignments()).hasSize(1);
         verify(draftHoursService).syncChanged(any(), anyMap(), anyList());
+    }
+
+    @Test
+    void splitsToursKeepingTheSameDriverAndVehicleInEveryTripWhenAskedTo() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        TourProcessingDraftTour congress = entity(draft, 1, "100", "San José");
+        congress.setPassengers(150);
+        congress.primaryAssignment().setPassengers(150);
+        stubDraft(draft, congress);
+        when(vehicleRepository.findAll()).thenReturn(List.of(
+                Vehicle.builder().id(UUID.randomUUID()).plate("301-295").type(VehicleType.SEDAN).capacity(30).build()
+        ));
+
+        int split = service.splitOversizedRows(draft.getId(), TourSplitMode.SAME_DRIVER_AND_VEHICLE);
+
+        assertThat(split).isEqualTo(1);
+        assertThat(congress.getAssignments()).extracting(TourProcessingDraftAssignment::getPassengers).containsExactly(30, 30, 30, 30, 30);
+        assertThat(congress.getAssignments()).extracting(TourProcessingDraftAssignment::getDriver, TourProcessingDraftAssignment::getVehicle)
+                .containsOnly(tuple("Daniel Zuniga", "301-295"));
+        assertThat(congress.getAssignments()).extracting(TourProcessingDraftAssignment::getDriverId)
+                .containsOnly(congress.primaryAssignment().getDriverId());
+    }
+
+    @Test
+    void splitsEveryPartIntoCapacityRespectingTripsWithoutExceedingTheVehicleSeats() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        TourProcessingDraftTour fifty = entity(draft, 1, "100", "Cartago");
+        fifty.setPassengers(50);
+        fifty.primaryAssignment().setPassengers(50);
+        stubDraft(draft, fifty);
+        when(vehicleRepository.findAll()).thenReturn(List.of(
+                Vehicle.builder().id(UUID.randomUUID()).plate("301-295").type(VehicleType.SEDAN).capacity(30).build()
+        ));
+
+        service.splitOversizedRows(draft.getId(), TourSplitMode.SAME_DRIVER_AND_VEHICLE);
+
+        assertThat(fifty.getAssignments()).extracting(TourProcessingDraftAssignment::getPassengers).containsExactly(25, 25);
+    }
+
+    @Test
+    void acceptsTheSameDriverAndVehicleInEveryTripOfATourAndExposesTripsAndCapacity() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        stubDraft(draft);
+        when(vehicleRepository.findAll()).thenReturn(List.of(
+                Vehicle.builder().id(UUID.randomUUID()).plate("301-295").type(VehicleType.SEDAN).capacity(30).build()
+        ));
+        TourProcessingDraftRowRequestDto request = row(1, "03170", "Barva");
+        request.setPassengers(150);
+        request.setAssignments(java.util.stream.IntStream.range(0, 5).mapToObj(index -> TourProcessingDraftAssignmentDto.builder()
+                .driver("Daniel Zuniga").vehicle("301-295").resourceType(ResourceType.INTERNAL).passengers(30).build()).toList());
+
+        var response = service.createRow(draft.getId(), request);
+
+        assertThat(response.getAssignments()).hasSize(5);
+        assertThat(response.getTrips()).isEqualTo(5);
+        assertThat(response.getTotalCapacity()).isEqualTo(150);
+        assertThat(response.getAssignedPassengers()).isEqualTo(150);
+    }
+
+    @Test
+    void stillRejectsATripWithMorePassengersThanItsVehicleCapacity() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        stubDraft(draft);
+        when(vehicleRepository.findAll()).thenReturn(List.of(
+                Vehicle.builder().id(UUID.randomUUID()).plate("301-295").type(VehicleType.SEDAN).capacity(30).build()
+        ));
+        TourProcessingDraftRowRequestDto request = row(1, "03170", "Barva");
+        request.setPassengers(60);
+        request.setAssignments(List.of(
+                TourProcessingDraftAssignmentDto.builder().driver("Daniel Zuniga").vehicle("301-295").resourceType(ResourceType.INTERNAL).passengers(31).build(),
+                TourProcessingDraftAssignmentDto.builder().driver("Daniel Zuniga").vehicle("301-295").resourceType(ResourceType.INTERNAL).passengers(29).build()
+        ));
+
+        assertThatThrownBy(() -> service.createRow(draft.getId(), request))
+                .isInstanceOf(TransportException.class)
+                .hasMessage("El vehículo 301-295 no tiene capacidad para 31 pasajeros");
     }
 
     @Test

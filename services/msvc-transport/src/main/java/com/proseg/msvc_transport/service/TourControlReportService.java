@@ -109,8 +109,18 @@ public class TourControlReportService {
                 placements.add(new Placement(tourEntry(UNATTENDED_SECTION, tour, null, null), null));
                 continue;
             }
-            for (TourProcessingDraftAssignment part : tour.getAssignments()) {
-                placements.addAll(place(tour, part, driversById, vehiclesById, daysByAssignment, scheduledDrivers));
+            for (List<TourProcessingDraftAssignment> trips : tripsByDriver(tour)) {
+                List<Placement> placed = place(tour, trips.get(0), driversById, vehiclesById, daysByAssignment, scheduledDrivers);
+                if (trips.size() > 1) {
+                    int passengers = trips.stream().mapToInt(trip -> trip.getPassengers() == null ? 0 : trip.getPassengers()).sum();
+                    String plates = trips.stream().map(trip -> plateOf(trip, vehiclesById)).filter(Objects::nonNull)
+                            .distinct().collect(Collectors.joining(" / "));
+                    placed.forEach(placement -> {
+                        placement.entry().setPassengers(passengers);
+                        placement.entry().setPlate(plates.isEmpty() ? null : plates);
+                    });
+                }
+                placements.addAll(placed);
             }
         }
 
@@ -139,6 +149,15 @@ public class TourControlReportService {
                 .drivers(roster.stream().map(driver -> toDriver(driver, scheduledDrivers.get(driver), businessDays)).toList())
                 .entries(entries)
                 .build();
+    }
+
+    private List<List<TourProcessingDraftAssignment>> tripsByDriver(TourProcessingDraftTour tour) {
+        Map<Object, List<TourProcessingDraftAssignment>> groups = new LinkedHashMap<>();
+        for (TourProcessingDraftAssignment part : tour.getAssignments()) {
+            Object key = part.getResourceType() != ResourceType.EXTERNAL && part.getDriverId() != null ? part.getDriverId() : new Object();
+            groups.computeIfAbsent(key, ignored -> new ArrayList<>()).add(part);
+        }
+        return List.copyOf(groups.values());
     }
 
     private List<Placement> place(

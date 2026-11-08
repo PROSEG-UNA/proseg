@@ -16,6 +16,7 @@ import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowRespon
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDriverAutoAssignResponseDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingImportSchemaDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingVehicleAutoAssignResponseDto;
+import com.proseg.msvc_transport.dto.tourprocessing.TourSplitMode;
 import com.proseg.msvc_transport.dto.tourprocessing.FinalCommissionCheckDto;
 import com.proseg.msvc_transport.dto.tourprocessing.FinalCommissionReportDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourControlReportDto;
@@ -161,9 +162,12 @@ public class TourProcessingController {
     }
 
     @PostMapping("/drafts/{id}/split-oversized")
-    public ResponseEntity<ApiResponse<Integer>> splitDraftOversizedRows(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<Integer>> splitDraftOversizedRows(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "DISTINCT_VEHICLES") TourSplitMode mode
+    ) {
         return ApiResponseBuilder.ok(
-                tourProcessingDraftService.splitOversizedRows(id),
+                tourProcessingDraftService.splitOversizedRows(id, mode),
                 "Giras divididas por capacidad de vehículo"
         );
     }
