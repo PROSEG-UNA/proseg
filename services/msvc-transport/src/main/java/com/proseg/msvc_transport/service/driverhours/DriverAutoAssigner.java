@@ -340,6 +340,7 @@ public class DriverAutoAssigner {
                                  boolean ulloaOnly, boolean surplusOnly) {
         List<TourProcessingDraftAssignment> representatives = scope.stream()
                 .filter(part -> part.getTour().isDistributed()).filter(DriverAutoAssigner::hasValidSchedule)
+                .filter(part -> !TourTrips.sharesResources(part.getTour()))
                 .filter(part -> !ulloaOnly || UlloaTours.isUlloaTour(part))
                 .sorted(Comparator.comparingInt(DriverAutoAssigner::assignmentLevel)
                         .thenComparing(part -> part.getTour().getAssignments().stream().noneMatch(initialAssignments::containsKey))
@@ -880,6 +881,9 @@ public class DriverAutoAssigner {
     }
 
     private Evaluation evaluate(Driver driver, DriverWorkload workload, TourProcessingDraftAssignment tour, List<TourDaySpan> spans, boolean enforceSurplusThreshold) {
+        if (workload.holdsSiblingOf(tour)) {
+            workload = workload.withoutSiblingsOf(tour);
+        }
         Optional<TourProcessingDraftAssignment> overlapping = workload.findOverlap(tour);
         if (overlapping.isPresent()) {
             return Evaluation.rejected(DriverRejection.overlap(driver, overlapping.get()));

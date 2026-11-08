@@ -85,7 +85,47 @@ public class DriverWorkload {
     }
 
     public List<TourProcessingDraftAssignment> tours() {
-        return List.copyOf(tours);
+        return hourCarriers(tours);
+    }
+
+    public DriverWorkload withoutSiblingsOf(TourProcessingDraftAssignment assignment) {
+        DriverWorkload copy = new DriverWorkload(window, manualDays);
+        tours.stream().filter(tour -> !sharedTrip(tour, assignment)).forEach(copy::add);
+        return copy;
+    }
+
+    public boolean holdsSiblingOf(TourProcessingDraftAssignment assignment) {
+        return tours.stream().anyMatch(tour -> sharedTrip(tour, assignment));
+    }
+
+    public static boolean sameTour(TourProcessingDraftAssignment left, TourProcessingDraftAssignment right) {
+        return tourKey(left).equals(tourKey(right));
+    }
+
+    public static boolean sharedTrip(TourProcessingDraftAssignment existing, TourProcessingDraftAssignment candidate) {
+        return existing != candidate && sameTour(existing, candidate)
+                && candidate.getDriverId() != null && candidate.getDriverId().equals(existing.getDriverId());
+    }
+
+    public static boolean sharedVehicleTrip(TourProcessingDraftAssignment existing, TourProcessingDraftAssignment candidate) {
+        return existing != candidate && sameTour(existing, candidate)
+                && candidate.getVehicleId() != null && candidate.getVehicleId().equals(existing.getVehicleId());
+    }
+
+    private static Object tourKey(TourProcessingDraftAssignment assignment) {
+        return assignment.getTour().getId() != null ? assignment.getTour().getId() : assignment.getTour();
+    }
+
+    private static int partOf(TourProcessingDraftAssignment assignment) {
+        return assignment.getPart() == null ? Integer.MAX_VALUE : assignment.getPart();
+    }
+
+    private static List<TourProcessingDraftAssignment> hourCarriers(List<TourProcessingDraftAssignment> assignments) {
+        Map<Object, TourProcessingDraftAssignment> carriers = new LinkedHashMap<>();
+        for (TourProcessingDraftAssignment assignment : assignments) {
+            carriers.merge(tourKey(assignment), assignment, (kept, candidate) -> partOf(candidate) < partOf(kept) ? candidate : kept);
+        }
+        return List.copyOf(carriers.values());
     }
 
     public boolean overlaps(TourProcessingDraftAssignment tour) {
@@ -93,12 +133,12 @@ public class DriverWorkload {
     }
 
     public Optional<TourProcessingDraftAssignment> findOverlap(TourProcessingDraftAssignment tour) {
-        return tours.stream().filter(existing -> DriverHoursRules.toursOverlap(existing, tour)).findFirst();
+        return tours.stream().filter(existing -> !sharedTrip(existing, tour) && DriverHoursRules.toursOverlap(existing, tour)).findFirst();
     }
 
     public Map<LocalDate, Double> hoursByDate() {
         Map<LocalDate, Double> hoursByDate = new HashMap<>();
-        for (TourProcessingDraftAssignment tour : tours) {
+        for (TourProcessingDraftAssignment tour : hourCarriers(tours)) {
             Map<LocalDate, DayAllocation> manual = manualDays.of(tour);
             for (TourDaySpan span : DriverHoursRules.daySpans(tour)) {
                 DayAllocation edited = manual.get(span.date());
@@ -122,7 +162,8 @@ public class DriverWorkload {
         return allocationsOf(tours, surplusCap);
     }
 
-    private List<TourAllocation> allocationsOf(List<TourProcessingDraftAssignment> tours, double surplusCap) {
+    private List<TourAllocation> allocationsOf(List<TourProcessingDraftAssignment> assigned, double surplusCap) {
+        List<TourProcessingDraftAssignment> tours = hourCarriers(assigned);
         List<TourAllocation> allocations = new ArrayList<>();
         double accumulatedSurplus = 0;
         double reservedManualSurplus = tours.stream().flatMap(tour -> DriverHoursRules.daySpans(tour).stream()
