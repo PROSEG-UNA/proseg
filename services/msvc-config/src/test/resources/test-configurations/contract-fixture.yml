@@ -1,0 +1,3 @@
+contract:
+  application-only: application-value
+  precedence: application
