@@ -29,6 +29,11 @@ spring:
     properties:
       hibernate:
         dialect: ${SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT:org.hibernate.dialect.PostgreSQLDialect}
+        default_batch_fetch_size: 50
+        order_inserts: true
+        order_updates: true
+        jdbc:
+          batch_size: 50
 
 api:
   prefix: /api/v1/transport

@@ -17,6 +17,7 @@ import {
     Tabs,
     TextField,
     Typography,
+    useMediaQuery,
     useTheme,
 } from '@mui/material';
 import ConstructionIcon from '@mui/icons-material/Construction';
@@ -159,12 +160,15 @@ const buildAssigneeLabel = (userOption) => {
 
 export default function MaintenanceTicketFormModal({ open, onClose, onCreated, ticket = null, readOnly = false, loadingDetail = false }) {
     const theme = useTheme();
+    const canHover = useMediaQuery('(hover: hover) and (pointer: fine)', { noSsr: true });
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'), { noSsr: true });
     const accentColor = theme.vars.palette.tones.rose.fg;
 
     const { hasPermission } = usePermissions();
     const { user } = useContext(AuthContext);
     const canSetPriority = hasPermission(PERMISSIONS.MAINTENANCE.TICKETS.SET_PRIORITY);
     const canAssignTicket = hasPermission(PERMISSIONS.MAINTENANCE.TICKETS.ASSIGN_TICKET);
+    const canAttachImages = hasPermission(PERMISSIONS.MAINTENANCE.TICKETS.ATTACH_IMAGES);
     const isEditing = !!ticket?.id;
     const isReadOnly = !!readOnly;
 
@@ -1096,9 +1100,10 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                 ...(isEditing && !isRestrictedEditor && removedPhotoIds.length > 0 ? { removedPhotoIds } : {}),
             };
 
+            const photosToSend = canAttachImages ? photos : [];
             const savedTicket = isEditing
-                ? await updateMaintenanceTicket(ticket.id, payload, photos)
-                : await createMaintenanceTicket(payload, photos);
+                ? await updateMaintenanceTicket(ticket.id, payload, photosToSend)
+                : await createMaintenanceTicket(payload, photosToSend);
 
             if (isEditing && formValues.status && formValues.status !== ticket?.status) {
                 await updateMaintenanceTicketStatus(ticket.id, formValues.status);
@@ -1359,9 +1364,9 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                                     sx={{
                                                                         display: 'flex',
                                                                         alignItems: 'center',
-                                                                        opacity: hoveredCommentId === comment.id || editingCommentId === comment.id ? 1 : 0,
+                                                                        opacity: !canHover || hoveredCommentId === comment.id || editingCommentId === comment.id ? 1 : 0,
                                                                         transition: 'opacity 0.2s ease',
-                                                                        pointerEvents: hoveredCommentId === comment.id || editingCommentId === comment.id ? 'auto' : 'none',
+                                                                        pointerEvents: !canHover || hoveredCommentId === comment.id || editingCommentId === comment.id ? 'auto' : 'none',
                                                                     }}
                                                                 >
                                                                     {editingCommentId === comment.id ? (
@@ -1697,7 +1702,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
 
                     {activeTab === 'attachments' ? (
                         <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 3 }}>
-                            {!isReadOnly ? (
+                            {!isReadOnly && canAttachImages ? (
                                 <>
                                     <Typography sx={sectionTitleSx}>Agregar fotos</Typography>
 
@@ -1808,6 +1813,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                     )}
                                                     <IconButton
                                                         size="small"
+                                                        aria-label="Quitar archivo"
                                                         onClick={(event) => {
                                                             event.stopPropagation();
                                                             handleRemovePhoto(index);
@@ -1818,11 +1824,11 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                             right: 2,
                                                             bgcolor: 'rgba(0,0,0,0.55)',
                                                             color: '#fff',
-                                                            p: 0.25,
+                                                            p: { xs: 0.75, sm: 0.25 },
                                                             '&:hover': { bgcolor: 'rgba(0,0,0,0.75)' },
                                                         }}
                                                     >
-                                                        <CloseIcon sx={{ fontSize: 12 }} />
+                                                        <CloseIcon sx={{ fontSize: { xs: 16, sm: 12 } }} />
                                                     </IconButton>
                                                 </Box>
                                             ))}
@@ -1851,7 +1857,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                 p: 1,
                                             }}
                                         >
-                                            <Typography sx={{ fontWeight: 700, fontSize: 13.5 }}>
+                                            <Typography sx={{ fontWeight: 700, fontSize: 13.5, wordBreak: 'break-word' }}>
                                                 {photo.fileName ?? photo.objectName}
                                             </Typography>
                                             {!isReadOnly && isEditing ? (
@@ -1914,7 +1920,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                 </Typography>
                             ) : null}
 
-                            {!isReadOnly && photos.length > 0 ? (
+                            {!isReadOnly && canAttachImages && photos.length > 0 ? (
                                 <Typography sx={{ mt: 2, color: 'text.secondary', fontSize: 13.5 }}>
                                     {photos.length} archivo(s) listo(s) para adjuntar al guardar.
                                 </Typography>
@@ -1950,10 +1956,11 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                 onClose={() => setPhotoPreview(null)}
                 maxWidth="md"
                 fullWidth
+                fullScreen={isMobile}
                 slotProps={{
                     paper: {
                         sx: {
-                            borderRadius: '14px',
+                            borderRadius: isMobile ? 0 : '14px',
                             overflow: 'hidden',
                         },
                     },
@@ -1961,9 +1968,14 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             >
                 {photoPreview ? (
                     <Box sx={{ p: 1.5 }}>
-                        <Typography sx={{ fontWeight: 700, mb: 1, fontSize: 14 }}>
-                            {photoPreview.fileName ?? photoPreview.objectName}
-                        </Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <Typography sx={{ fontWeight: 700, fontSize: 14, minWidth: 0, wordBreak: 'break-word' }}>
+                                {photoPreview.fileName ?? photoPreview.objectName}
+                            </Typography>
+                            <IconButton aria-label="Cerrar vista previa" onClick={() => setPhotoPreview(null)} sx={{ flexShrink: 0 }}>
+                                <CloseIcon />
+                            </IconButton>
+                        </Box>
                         <Box
                             component="img"
                             src={photoPreview.imageUrl}

@@ -122,7 +122,11 @@
         "composite": false,
         "clientRole": false,
         "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {}
+        "attributes": {
+          "domain": [
+            "Transporte"
+          ]
+        }
       },
       {
         "id": "9aca9574-eecc-4389-86b6-a414b0577cf9",
@@ -237,15 +241,6 @@
         "attributes": {}
       },
       {
-        "id": "5492b49e-5aeb-41e5-91d9-ed96821c2a9a",
-        "name": "ACTUALIZAR_ASIGNACIONES",
-        "description": "",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {}
-      },
-      {
         "id": "c6f8b87f-b898-40c1-acc3-aaef39a4c500",
         "name": "LEER_USUARIOS_EMPRESAS",
         "description": "Consulta de asignaciones entre usuarios y empresas.",
@@ -259,15 +254,6 @@
         }
       },
       {
-        "id": "a7605541-9843-43f5-aa16-830dcf1ee28d",
-        "name": "LEER_MANTENIMIENTO_VEHICULOS",
-        "description": "",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {}
-      },
-      {
         "id": "02fe82d0-9252-401b-b1ce-dc1b36c70717",
         "name": "SELECCIONAR_EMPRESA_EN_SOLICITUD_MANTENIMIENTO",
         "description": "Elegir cualquier empresa al solicitar mantenimiento",
@@ -277,19 +263,6 @@
         "attributes": {
           "domain": [
             "Solicitud de mantenimiento"
-          ]
-        }
-      },
-      {
-        "id": "ef44bec4-d9cc-4592-98a5-308ccf140d6e",
-        "name": "LEER_ARCHIVOS",
-        "description": "Descargar archivos del sistema.",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {
-          "domain": [
-            "Archivos"
           ]
         }
       },
@@ -403,15 +376,6 @@
         }
       },
       {
-        "id": "e02a53cd-2c56-4fbd-802d-128df749b896",
-        "name": "GESTIONAR_GIRAS",
-        "description": "",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {}
-      },
-      {
         "id": "9864fc6e-f869-4cbd-8e98-cab21822a71f",
         "name": "ELIMINAR_EMPRESAS",
         "description": "Eliminación de empresas registradas en el sistema.",
@@ -457,7 +421,11 @@
         "composite": false,
         "clientRole": false,
         "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {}
+        "attributes": {
+          "domain": [
+            "Transporte"
+          ]
+        }
       },
       {
         "id": "6394ca7e-5997-46a1-8b3b-bf32179679f6",
@@ -508,18 +476,9 @@
         "composite": false,
         "clientRole": false,
         "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {}
-      },
-      {
-        "id": "580ff691-f0f2-4f6b-90cf-4ded3654d24a",
-        "name": "GESTIONAR_UBICACIONES",
-        "description": "Crear y editar ubicaciones",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
         "attributes": {
           "domain": [
-            "Ubicaciones"
+            "Transporte"
           ]
         }
       },
@@ -559,7 +518,11 @@
         "composite": false,
         "clientRole": false,
         "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {}
+        "attributes": {
+          "domain": [
+            "Inventario"
+          ]
+        }
       },
       {
         "id": "fa44c7a8-c2d2-4a58-9ef5-1862ce2c456e",
@@ -581,7 +544,11 @@
         "composite": false,
         "clientRole": false,
         "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {}
+        "attributes": {
+          "domain": [
+            "Transporte"
+          ]
+        }
       },
       {
         "id": "ebd43961-8e3a-44ac-8bfb-d6fa82794a1e",
@@ -599,19 +566,6 @@
       {
         "id": "dcf3fd65-5c74-4f88-b5eb-9e1c3aeb2d83",
         "name": "LEER_TICKET_MANTENIMIENTO",
-        "description": "",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {
-          "domain": [
-            "Tickets"
-          ]
-        }
-      },
-      {
-        "id": "51770ad6-5d68-45e9-a1c2-7ca7364b6cf6",
-        "name": "LEER_TICKETS_MANTENIMIENTO",
         "description": "",
         "composite": false,
         "clientRole": false,
@@ -645,7 +599,11 @@
         "composite": false,
         "clientRole": false,
         "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {}
+        "attributes": {
+          "domain": [
+            "Transporte"
+          ]
+        }
       },
       {
         "id": "e1e0b38c-f0c1-4c9f-b280-301a895f7357",
@@ -664,15 +622,6 @@
         }
       },
       {
-        "id": "fcf840ed-3f28-4407-a488-8899888c8f9c",
-        "name": "GESTIONAR_MANTENIMIENTO_VEHICULOS",
-        "description": "",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {}
-      },
-      {
         "id": "e8b459a5-fe30-4b0d-b328-1c7e1433b294",
         "name": "EDITAR_ROL",
         "description": "Modificar la configuración o permisos de un rol existente.",
@@ -687,15 +636,6 @@
             "Roles"
           ]
         }
-      },
-      {
-        "id": "6d6a3493-c352-40b3-90ef-2d6d8a8b9529",
-        "name": "GENERAR_ASIGNACIONES",
-        "description": "",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {}
       },
       {
         "id": "edb14f08-0eaf-4493-9826-44e14af874d3",
@@ -733,7 +673,11 @@
         "composite": false,
         "clientRole": false,
         "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {}
+        "attributes": {
+          "domain": [
+            "Transporte"
+          ]
+        }
       },
       {
         "id": "0c76df99-8a99-4ed4-802e-b68ab7c0abbd",
@@ -742,7 +686,11 @@
         "composite": false,
         "clientRole": false,
         "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {}
+        "attributes": {
+          "domain": [
+            "Transporte"
+          ]
+        }
       },
       {
         "id": "b48a70d5-70e8-449e-8860-420b4b440e63",
@@ -799,16 +747,11 @@
         "composite": false,
         "clientRole": false,
         "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {}
-      },
-      {
-        "id": "13aff295-e8b5-4bc1-8d43-efccea07bdc0",
-        "name": "ELIMINAR_MANTENIMIENTO_VEHICULOS",
-        "description": "",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {}
+        "attributes": {
+          "domain": [
+            "Transporte"
+          ]
+        }
       },
       {
         "id": "64d7e8df-5006-4b17-a7d3-31dc1e77117f",
@@ -836,19 +779,6 @@
         "attributes": {
           "domain": [
             "Ubicaciones"
-          ]
-        }
-      },
-      {
-        "id": "e434dfc0-2747-4f52-a82b-c267aa903f8c",
-        "name": "SUBIR_ARCHIVOS",
-        "description": "Subir archivos al sistema.",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
-        "attributes": {
-          "domain": [
-            "Archivos"
           ]
         }
       },
@@ -888,22 +818,18 @@
             "LEER_CHOFERES",
             "ACEPTAR_SOLICITUDES_MANTENIMIENTO",
             "GESTIONAR_EMPRESAS",
-            "GESTIONAR_UBICACIONES",
             "ELIMINAR_VEHICULOS",
             "ELIMINAR_TECNICOS_MANTENIMIENTO",
             "LEER_USUARIOS_POR_ROL",
             "LEER_VEHICULOS",
             "GESTIONAR_REGISTROS_MANTENIMIENTO",
             "ELIMINAR_EMPRESAS",
-            "GENERAR_ASIGNACIONES",
-            "GESTIONAR_MANTENIMIENTO_VEHICULOS",
             "ELIMINAR_UBICACIONES",
             "LEER_GIRAS",
             "ELIMINAR_SOLICITUDES_MANTENIMIENTO",
             "LEER_ROLES_BASE",
             "GESTIONAR_TECNICOS_MANTENIMIENTO",
             "ELIMINAR_CHOFERES",
-            "GESTIONAR_GIRAS",
             "LEER_EMPRESAS",
             "GESTIONAR_VEHICULOS",
             "GESTIONAR_CHOFERES",
@@ -925,16 +851,12 @@
             "ELIMINAR_USUARIOS_EMPRESAS",
             "LEER_ROLES_USUARIO",
             "EDITAR_TICKETS_MANTENIMIENTO",
-            "ACTUALIZAR_ASIGNACIONES",
-            "LEER_ARCHIVOS",
-            "LEER_TICKETS_MANTENIMIENTO",
             "APROBAR_USUARIO",
             "ELIMINAR_ROL",
             "GESTIONAR_USUARIOS_EMPRESAS",
             "CREAR_TICKETS_MANTENIMIENTO",
             "ELIMINAR_ROL_USUARIO",
             "LEER_ACTIVOS",
-            "LEER_MANTENIMIENTO_VEHICULOS",
             "LEER_TODOS_TICKETS_MANTENIMIENTO",
             "CANCELAR_SOLICITUDES_MANTENIMIENTO",
             "GESTIONAR_ACTIVOS",
@@ -943,15 +865,21 @@
             "CREAR_ROL",
             "SELECCIONAR_EMPRESA_EN_SOLICITUD_MANTENIMIENTO",
             "IMPORTAR_ACTIVOS",
-            "SUBIR_ARCHIVOS",
             "LEER_TICKET_MANTENIMIENTO",
             "EXPORTAR_ACTIVOS",
             "LEER_SOLICITUDES_MANTENIMIENTO",
             "LEER_USUARIOS_EMPRESAS",
             "LEER_UBICACIONES",
             "LEER_COMPOSITES_ROL",
-            "ELIMINAR_MANTENIMIENTO_VEHICULOS",
-            "EDITAR_ROL"
+            "EDITAR_ROL",
+            "ADJUNTAR_IMAGENES_TICKETS_MANTENIMIENTO",
+            "CREAR_GIRAS",
+            "CREAR_UBICACIONES",
+            "EDITAR_GIRAS",
+            "EDITAR_UBICACIONES",
+            "EXPORTAR_GIRAS",
+            "IMPORTAR_GIRAS",
+            "SUBIR_IMAGENES_ACTIVOS"
           ]
         },
         "clientRole": false,
@@ -1012,6 +940,211 @@
             "Usuarios"
           ]
         }
+      },
+      {
+        "id": "c39d863c-59b8-4c83-91b3-95078f58b238",
+        "name": "ADJUNTAR_IMAGENES_TICKETS_MANTENIMIENTO",
+        "description": "",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
+        "attributes": {
+          "domain": [
+            "Tickets"
+          ]
+        }
+      },
+      {
+        "id": "93fa8062-a2d1-4bec-bce4-1547e23df03e",
+        "name": "CREAR_GIRAS",
+        "description": "",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
+        "attributes": {
+          "domain": [
+            "Transporte"
+          ]
+        }
+      },
+      {
+        "id": "267d8479-4efc-422d-9a2d-b2093b6dbd68",
+        "name": "CREAR_UBICACIONES",
+        "description": "",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
+        "attributes": {
+          "domain": [
+            "Ubicaciones"
+          ]
+        }
+      },
+      {
+        "id": "3f152b0a-c902-45f7-879c-e1471eaa2e09",
+        "name": "EDITAR_GIRAS",
+        "description": "",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
+        "attributes": {
+          "domain": [
+            "Transporte"
+          ]
+        }
+      },
+      {
+        "id": "6546395c-ca8a-42fe-a7b1-c5ea77cc2185",
+        "name": "EDITAR_UBICACIONES",
+        "description": "",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
+        "attributes": {
+          "domain": [
+            "Ubicaciones"
+          ]
+        }
+      },
+      {
+        "id": "44b1eab3-c4c1-4c49-821c-662dad939ff0",
+        "name": "EXPORTAR_GIRAS",
+        "description": "",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
+        "attributes": {
+          "domain": [
+            "Transporte"
+          ]
+        }
+      },
+      {
+        "id": "bb46c56f-5297-4cd5-a647-7e03ce69dbab",
+        "name": "IMPORTAR_GIRAS",
+        "description": "",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
+        "attributes": {
+          "domain": [
+            "Transporte"
+          ]
+        }
+      },
+      {
+        "id": "68b8b9e3-1e89-44b8-9220-e786143e3352",
+        "name": "SUBIR_IMAGENES_ACTIVOS",
+        "description": "",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
+        "attributes": {
+          "domain": [
+            "Inventario"
+          ]
+        }
+      },
+      {
+        "id": "8a34206c-3680-4313-a843-cac96c08ea63",
+        "name": "ADMINISTRADOR_ACTIVOS",
+        "description": "",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "ACEPTAR_SOLICITUDES_MANTENIMIENTO",
+            "ADJUNTAR_IMAGENES_TICKETS_MANTENIMIENTO",
+            "APROBAR_USUARIO",
+            "ASIGNAR_PRIORIDAD_TICKETS_MANTENIMIENTO",
+            "ASIGNAR_ROL_USUARIO",
+            "ASIGNAR_TICKETS_MANTENIMIENTO",
+            "CANCELAR_SOLICITUDES_MANTENIMIENTO",
+            "COMENTAR_TICKETS_MANTENIMIENTO",
+            "CREAR_ROL",
+            "CREAR_TICKETS_MANTENIMIENTO",
+            "CREAR_USUARIO",
+            "CREAR_UBICACIONES",
+            "EDITAR_ROL",
+            "EDITAR_SOLICITUDES_MANTENIMIENTO",
+            "EDITAR_TICKETS_MANTENIMIENTO",
+            "EDITAR_UBICACIONES",
+            "ELIMINAR_ACTIVOS",
+            "ELIMINAR_EMPRESAS",
+            "ELIMINAR_ROL",
+            "ELIMINAR_ROL_USUARIO",
+            "ELIMINAR_SOLICITUDES_MANTENIMIENTO",
+            "ELIMINAR_TECNICOS_MANTENIMIENTO",
+            "ELIMINAR_TICKETS_MANTENIMIENTO",
+            "ELIMINAR_UBICACIONES",
+            "ELIMINAR_USUARIOS_EMPRESAS",
+            "EXPORTAR_ACTIVOS",
+            "GESTIONAR_ACTIVOS",
+            "GESTIONAR_EMPRESAS",
+            "GESTIONAR_REGISTROS_MANTENIMIENTO",
+            "GESTIONAR_TECNICOS_MANTENIMIENTO",
+            "GESTIONAR_USUARIOS_EMPRESAS",
+            "IMPORTAR_ACTIVOS",
+            "LEER_ACTIVOS",
+            "LEER_COMPOSITES_ROL",
+            "LEER_EMPRESAS",
+            "LEER_HISTORIAL_REGISTROS_MANTENIMIENTO",
+            "LEER_INVITACIONES_PENDIENTES",
+            "LEER_REGISTROS_MANTENIMIENTO",
+            "LEER_ROLES_BASE",
+            "LEER_ROLES_COMPUESTOS",
+            "LEER_ROLES_USUARIO",
+            "LEER_SOLICITUDES_MANTENIMIENTO",
+            "LEER_TECNICOS_MANTENIMIENTO",
+            "LEER_TICKET_MANTENIMIENTO",
+            "LEER_TODOS_TICKETS_MANTENIMIENTO",
+            "LEER_UBICACIONES",
+            "LEER_USUARIO",
+            "LEER_USUARIOS",
+            "LEER_USUARIOS_EMPRESAS",
+            "LEER_USUARIOS_POR_ROL",
+            "SELECCIONAR_EMPRESA_EN_SOLICITUD_MANTENIMIENTO",
+            "SOLICITAR_MANTENIMIENTO",
+            "SUBIR_IMAGENES_ACTIVOS"
+          ]
+        },
+        "clientRole": false,
+        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
+        "attributes": {}
+      },
+      {
+        "id": "3c5044f5-0d48-4b09-99ee-c6fd7b25b75c",
+        "name": "TECNICO_EMPRESA",
+        "description": "",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "ACEPTAR_SOLICITUDES_MANTENIMIENTO",
+            "ASIGNAR_PRIORIDAD_TICKETS_MANTENIMIENTO",
+            "ASIGNAR_TICKETS_MANTENIMIENTO",
+            "CANCELAR_SOLICITUDES_MANTENIMIENTO",
+            "COMENTAR_TICKETS_MANTENIMIENTO",
+            "CREAR_TICKETS_MANTENIMIENTO",
+            "EDITAR_SOLICITUDES_MANTENIMIENTO",
+            "EDITAR_TICKETS_MANTENIMIENTO",
+            "ELIMINAR_SOLICITUDES_MANTENIMIENTO",
+            "ELIMINAR_TECNICOS_MANTENIMIENTO",
+            "ELIMINAR_TICKETS_MANTENIMIENTO",
+            "GESTIONAR_REGISTROS_MANTENIMIENTO",
+            "GESTIONAR_TECNICOS_MANTENIMIENTO",
+            "LEER_EMPRESAS",
+            "LEER_HISTORIAL_REGISTROS_MANTENIMIENTO",
+            "LEER_REGISTROS_MANTENIMIENTO",
+            "LEER_SOLICITUDES_MANTENIMIENTO",
+            "LEER_TECNICOS_MANTENIMIENTO",
+            "LEER_TICKET_MANTENIMIENTO",
+            "LEER_TODOS_TICKETS_MANTENIMIENTO",
+            "LEER_USUARIOS_EMPRESAS",
+            "SOLICITAR_MANTENIMIENTO"
+          ]
+        },
+        "clientRole": false,
+        "containerId": "1658bd8f-a712-44ca-bc57-dc929bed5f8d",
+        "attributes": {}
       }
     ],
     "client": {

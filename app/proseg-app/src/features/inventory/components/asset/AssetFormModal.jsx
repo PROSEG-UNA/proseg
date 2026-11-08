@@ -33,6 +33,9 @@ import { useAssetCatalogOptions } from '../../hooks/useAssetCatalogOptions.js';
 import { useAssetComponents } from '../../hooks/useAssetComponents.js';
 import { useAssetPhotos } from '../../hooks/useAssetPhotos.js';
 import { queryKeys } from '../../../../common/query';
+import { usePermissions } from '../../../../common/hooks/usePermissions';
+import { PERMISSIONS } from '../../../../common/constants/permissions';
+import { AssetSectionTitle } from './AssetModalFields.jsx';
 
 const STATUS_OPTIONS = [
     { value: 'APROBADO', label: 'Aprobado' },
@@ -71,6 +74,8 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
     const [catalogModal, setCatalogModal] = useState(null);
     const fileInputRef = useRef(null);
     const queryClient = useQueryClient();
+    const { hasPermission } = usePermissions();
+    const canUploadImages = hasPermission(PERMISSIONS.INVENTORY.UPLOAD_IMAGES);
 
     const { formValues, setFormValues, errors, setErrors, touched, setTouched, saving, setSaving, alert, setAlert, loadingAsset, setLoadingAsset, assetNumberExists, setAssetNumberExists, showAssetNumberConfirm, setShowAssetNumberConfirm, pendingTypeChange, setPendingTypeChange } = formState;
     const { options, upsertOption, loadingOptions } = catalogOptions;
@@ -586,16 +591,25 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 }));
             }
 
-            if (photos.length > 0) {
+            if (canUploadImages && photos.length > 0) {
                 const results = await Promise.allSettled(
                     photos.map(async (photo) => {
                         const objectName = await uploadPhoto(savedAssetId, photo.file);
                         await registerArchive(savedAssetId, objectName);
                     })
                 );
-                const failed = results.filter(r => r.status === 'rejected').length;
+                const rejected = results.filter(r => r.status === 'rejected');
+                const failed = rejected.length;
                 if (failed > 0) {
-                    setAlert({ type: 'warning', message: `El activo se guardó, pero ${failed} imagen(es) no pudieron subirse.` });
+                    const forbidden = rejected.some(
+                        (r) => r.reason?.response?.status === 403
+                    );
+                    setAlert({
+                        type: forbidden ? 'error' : 'warning',
+                        message: forbidden
+                            ? 'No tienes permiso para subir imágenes de activos'
+                            : `El activo se guardó, pero ${failed} imagen(es) no pudieron subirse.`,
+                    });
                     onSaved?.();
                     onClose();
                     return;
@@ -742,15 +756,6 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         '&::-webkit-scrollbar-thumb:hover': { background: `color-mix(in srgb, ${accentColor} 45%, transparent)` },
     };
 
-    const sectionLabel = (text) => (
-        <Typography sx={{
-            fontSize: 11.5, fontWeight: 700, letterSpacing: '0.08em',
-            textTransform: 'uppercase', color: accentColor, mb: 1.5,
-        }}>
-            {text}
-        </Typography>
-    );
-
     const modelDisabled = saving || loadingOptions || !formValues.brandId || !formValues.typeId;
 
     return (
@@ -759,6 +764,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 open={open}
                 onClose={onClose}
                 maxWidth="md"
+                fillHeight
                 icon={Inventory2OutlinedIcon}
                 title={isEdit ? 'Editar Activo' : 'Nuevo Activo'}
                 subtitle={isEdit ? 'Actualiza los datos del activo' : 'Completa los datos para registrar el activo'}
@@ -777,7 +783,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
 
                     <Box>
-                        {sectionLabel('Identificación')}
+                        <AssetSectionTitle>Identificación</AssetSectionTitle>
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                             <Box>
                                 <TextField
@@ -817,7 +823,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     <Divider />
 
                     <Box>
-                        {sectionLabel('Clasificación')}
+                        <AssetSectionTitle>Clasificación</AssetSectionTitle>
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                             <SearchableSelect
                                 label="Marca" value={formValues.brandId} required
@@ -873,7 +879,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     <Divider />
 
                     <Box>
-                        {sectionLabel('Ubicación')}
+                        <AssetSectionTitle>Ubicación</AssetSectionTitle>
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                             <SearchableSelect
                                 label="Campus" value={formValues.campusId} required
@@ -949,7 +955,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     <Divider />
 
                     <Box>
-                        {sectionLabel('Estado')}
+                        <AssetSectionTitle>Estado</AssetSectionTitle>
                         <Box sx={{ display: 'grid', gridTemplateColumns: formValues.status === 'DE_BAJA' ? { xs: '1fr', sm: '1fr 1fr' } : '1fr', gap: 2 }}>
                             <TextField
                                 select label="Estado" value={formValues.status} required
@@ -988,7 +994,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     {requiresNetworkInterface && (
                         <>
                             <Box>
-                                {sectionLabel('IP y MAC')}
+                                <AssetSectionTitle>IP y MAC</AssetSectionTitle>
                                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                                     <TextField
                                         label="Dirección IP" value={formValues.ipAddress}
@@ -1042,7 +1048,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     )}
 
                     <Box>
-                        {sectionLabel('Fechas')}
+                        <AssetSectionTitle>Fechas</AssetSectionTitle>
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
                             <DatePicker
                                 label="Fecha de adquisición"
@@ -1071,7 +1077,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     <Divider />
 
                     <Box>
-                        {sectionLabel('Coordenadas')}
+                        <AssetSectionTitle>Coordenadas</AssetSectionTitle>
                         <CoordinateMapPicker
                             latitude={formValues.latitude}
                             longitude={formValues.longitude}
@@ -1088,7 +1094,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     <Divider />
 
                     <Box>
-                        {sectionLabel('Responsable')}
+                        <AssetSectionTitle>Responsable</AssetSectionTitle>
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2 }}>
                             <SearchableSelect
                                 label="Unidad Ejecutora" value={formValues.executingUnitId}
@@ -1141,7 +1147,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     <Divider />
 
                     <Box>
-                        {sectionLabel('Componentes asociados')}
+                        <AssetSectionTitle>Componentes asociados</AssetSectionTitle>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                             {components.length === 0 ? (
                                 <Typography sx={{ color: 'text.secondary', fontSize: 13.5 }}>
@@ -1258,80 +1264,84 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     <Divider />
 
                     <Box>
-                        {sectionLabel('Fotos')}
-                        <Box
-                            onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
-                            onDragLeave={() => setIsDragOver(false)}
-                            onDrop={e => { e.preventDefault(); setIsDragOver(false); handleFileSelect(e.dataTransfer.files); }}
-                            onClick={() => fileInputRef.current?.click()}
-                            sx={{
-                                border: '2px dashed',
-                                borderColor: isDragOver ? accentColor : 'divider',
-                                borderRadius: '12px',
-                                p: 3,
-                                display: 'flex', flexDirection: 'column',
-                                alignItems: 'center', justifyContent: 'center',
-                                gap: 1, cursor: 'pointer',
-                                bgcolor: isDragOver ? `color-mix(in srgb, ${accentColor} 5%, transparent)` : 'transparent',
-                                transition: 'all 0.2s',
-                                '&:hover': {
-                                    borderColor: accentColor,
-                                    bgcolor: `color-mix(in srgb, ${accentColor} 5%, transparent)`,
-                                },
-                            }}
-                        >
-                            <CloudUploadIcon sx={{ fontSize: 32, color: isDragOver ? accentColor : 'text.secondary' }} />
-                            <Typography sx={{ fontSize: 13.5, color: 'text.secondary', textAlign: 'center' }}>
-                                Arrastra imágenes aquí o{' '}
-                                <Typography component="span" sx={{ color: accentColor, fontWeight: 600 }}>
-                                    selecciona archivos
-                                </Typography>
-                            </Typography>
-                            <Typography sx={{ fontSize: 11.5, color: 'text.disabled' }}>
-                                JPG, PNG, WEBP
-                            </Typography>
-                        </Box>
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            style={{ display: 'none' }}
-                            onChange={e => { handleFileSelect(e.target.files); e.target.value = ''; }}
-                        />
-                        {photos.length > 0 && (
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 2 }}>
-                                {photos.map((photo, index) => (
-                                    <Box
-                                        key={index}
-                                        sx={{
-                                            position: 'relative', width: 80, height: 80,
-                                            borderRadius: '10px', overflow: 'hidden',
-                                            border: '1px solid', borderColor: 'divider',
-                                        }}
-                                    >
-                                        <Box
-                                            component="img"
-                                            src={photo.preview}
-                                            alt={photo.name}
-                                            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                        />
-                                        <IconButton
-                                            size="small"
-                                            onClick={e => { e.stopPropagation(); handleRemovePhoto(index); }}
-                                            sx={{
-                                                position: 'absolute', top: 2, right: 2,
-                                                bgcolor: 'rgba(0,0,0,0.55)', color: '#fff',
-                                                p: 0.25,
-                                                '&:hover': { bgcolor: 'rgba(0,0,0,0.75)' },
-                                            }}
-                                        >
-                                            <CloseIcon sx={{ fontSize: 12 }} />
-                                        </IconButton>
+                        <AssetSectionTitle>Fotos</AssetSectionTitle>
+                        {canUploadImages ? (
+                            <>
+                                <Box
+                                    onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
+                                    onDragLeave={() => setIsDragOver(false)}
+                                    onDrop={e => { e.preventDefault(); setIsDragOver(false); handleFileSelect(e.dataTransfer.files); }}
+                                    onClick={() => fileInputRef.current?.click()}
+                                    sx={{
+                                        border: '2px dashed',
+                                        borderColor: isDragOver ? accentColor : 'divider',
+                                        borderRadius: '12px',
+                                        p: 3,
+                                        display: 'flex', flexDirection: 'column',
+                                        alignItems: 'center', justifyContent: 'center',
+                                        gap: 1, cursor: 'pointer',
+                                        bgcolor: isDragOver ? `color-mix(in srgb, ${accentColor} 5%, transparent)` : 'transparent',
+                                        transition: 'all 0.2s',
+                                        '&:hover': {
+                                            borderColor: accentColor,
+                                            bgcolor: `color-mix(in srgb, ${accentColor} 5%, transparent)`,
+                                        },
+                                    }}
+                                >
+                                    <CloudUploadIcon sx={{ fontSize: 32, color: isDragOver ? accentColor : 'text.secondary' }} />
+                                    <Typography sx={{ fontSize: 13.5, color: 'text.secondary', textAlign: 'center' }}>
+                                        Arrastra imágenes aquí o{' '}
+                                        <Typography component="span" sx={{ color: accentColor, fontWeight: 600 }}>
+                                            selecciona archivos
+                                        </Typography>
+                                    </Typography>
+                                    <Typography sx={{ fontSize: 11.5, color: 'text.disabled' }}>
+                                        JPG, PNG, WEBP
+                                    </Typography>
+                                </Box>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    style={{ display: 'none' }}
+                                    onChange={e => { handleFileSelect(e.target.files); e.target.value = ''; }}
+                                />
+                                {photos.length > 0 && (
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 2 }}>
+                                        {photos.map((photo, index) => (
+                                            <Box
+                                                key={index}
+                                                sx={{
+                                                    position: 'relative', width: 80, height: 80,
+                                                    borderRadius: '10px', overflow: 'hidden',
+                                                    border: '1px solid', borderColor: 'divider',
+                                                }}
+                                            >
+                                                <Box
+                                                    component="img"
+                                                    src={photo.preview}
+                                                    alt={photo.name}
+                                                    sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                />
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={e => { e.stopPropagation(); handleRemovePhoto(index); }}
+                                                    sx={{
+                                                        position: 'absolute', top: 2, right: 2,
+                                                        bgcolor: 'rgba(0,0,0,0.55)', color: '#fff',
+                                                        p: 0.25,
+                                                        '&:hover': { bgcolor: 'rgba(0,0,0,0.75)' },
+                                                    }}
+                                                >
+                                                    <CloseIcon sx={{ fontSize: 12 }} />
+                                                </IconButton>
+                                            </Box>
+                                        ))}
                                     </Box>
-                                ))}
-                            </Box>
-                        )}
+                                )}
+                            </>
+                        ) : null}
 
                         {isEdit && existingPhotos.length > 0 && (
                             <Box sx={{ mt: 2.5 }}>

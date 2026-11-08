@@ -12,6 +12,7 @@ import ResetPasswordPage from './features/auth/pages/ResetPasswordPage';
 import SetPasswordPage from './features/security/pages/SetPasswordPage';
 import HomePage from './features/home/pages/HomePage.jsx';
 import AssetPage from './features/inventory/pages/AssetPage';
+import AssetExpirationPage from './features/inventory/pages/AssetExpirationPage';
 import SecurityPage from './features/security/pages/SecurityPage';
 import UserPage from './features/security/pages/UserPage';
 import RolePage from './features/security/pages/RolePage';
@@ -26,14 +27,28 @@ import LocationPage from './features/locations/pages/LocationPage';
 import EmailPage from './features/locations/pages/EmailPage';
 import TicketsPage from './features/maintenance/pages/TicketsPage.jsx';
 import TicketsDashboard from './features/maintenance/pages/TicketsDashboard.jsx';
-import TransportPage from './features/transport/pages/TransportPage.jsx';
 import DriversPage from './features/transport/pages/drivers/DriversPage.jsx';
 import VehiclesPage from './features/transport/pages/vehicles/VehiclesPage.jsx';
-import VehicleMaintenancePage from './features/transport/pages/maintenance/VehicleMaintenancePage.jsx';
-import ToursPage from './features/transport/pages/tours/ToursPage.jsx';
-import AssignmentPage from './features/transport/pages/assignment/AssignmentPage.jsx';
-import CleaningPage from './features/transport/pages/cleaning/CleaningPage.jsx';
 import FormsPage from './features/forms/pages/FormsPage.jsx';
+import TourProcessingPage from './features/transport/pages/tourProcessing/TourProcessingPage.jsx';
+import TourProcessingDraftPage from './features/transport/pages/tourProcessing/TourProcessingDraftPage.jsx';
+
+function migrateTourProcessingStorage() {
+    try {
+        for (const key of Object.keys(localStorage)) {
+            if (!key.startsWith('cleaning-')) continue;
+            const nextKey = key.replace(/^cleaning-/, 'tour-processing-');
+            if (localStorage.getItem(nextKey) === null) {
+                localStorage.setItem(nextKey, localStorage.getItem(key));
+            }
+            localStorage.removeItem(key);
+        }
+    } catch {
+        return;
+    }
+}
+
+migrateTourProcessingStorage();
 
 function App() {
     return (
@@ -55,7 +70,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Inicio" pageTitle="Inicio">
+                                                <DashboardLayout title="Inicio" pageTitle="Inicio" description="Consulta el resumen de servicios y el acceso a los módulos institucionales.">
                                                     <HomePage />
                                                 </DashboardLayout>
                                             }
@@ -68,8 +83,20 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Activos" pageTitle="Activos">
+                                                <DashboardLayout title="Gestión de Activos" pageTitle="Activos" description="Registra, consulta y actualiza los activos institucionales.">
                                                     <AssetPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/inventario/vencimientos"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Panel de Vencimientos" pageTitle="Panel de vencimientos" description="Revisa vencimientos de garantías y soporte de firmware de los activos.">
+                                                    <AssetExpirationPage />
                                                 </DashboardLayout>
                                             }
                                         />
@@ -81,7 +108,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Campus" pageTitle="Campus">
+                                                <DashboardLayout title="Gestión de Campus" pageTitle="Campus" description="Administra los campus y sedes de la universidad.">
                                                     <CampusPage />
                                                 </DashboardLayout>
                                             }
@@ -93,7 +120,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Edificios" pageTitle="Edificios">
+                                                <DashboardLayout title="Gestión de Edificios" pageTitle="Edificios" description="Registra y consulta los edificios de cada campus.">
                                                     <BuildingPage />
                                                 </DashboardLayout>
                                             }
@@ -105,7 +132,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Detalles de Ubicación" pageTitle="Detalles de Ubicación">
+                                                <DashboardLayout title="Gestión de Detalles de Ubicación" pageTitle="Detalles de Ubicación" description="Define espacios y detalles de ubicación dentro de los edificios.">
                                                     <LocationPage />
                                                 </DashboardLayout>
                                             }
@@ -117,7 +144,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Correos" pageTitle="Correos">
+                                                <DashboardLayout title="Gestión de Correos" pageTitle="Correos" description="Gestiona los correos asociados a los edificios.">
                                                     <EmailPage />
                                                 </DashboardLayout>
                                             }
@@ -129,7 +156,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Tickets" pageTitle="Tickets">
+                                                <DashboardLayout title="Gestión de Tickets" pageTitle="Mantenimiento" description="Administra empresas y solicitudes del mantenimiento institucional.">
                                                     <MaintenancePage />
                                                 </DashboardLayout>
                                             }
@@ -141,20 +168,8 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Técnicos" pageTitle="Técnicos">
+                                                <DashboardLayout title="Gestión de Técnicos" pageTitle="Técnicos" description="Administra los técnicos del mantenimiento institucional.">
                                                     <MaintenancePage />
-                                                </DashboardLayout>
-                                            }
-                                        />
-                                    }
-                                />
-                                <Route
-                                    path="/transporte"
-                                    element={
-                                        <ProtectedRoute
-                                            element={
-                                                <DashboardLayout title="Gestión de Transporte" pageTitle="Transporte">
-                                                    <TransportPage />
                                                 </DashboardLayout>
                                             }
                                         />
@@ -165,8 +180,20 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Depuración de Giras" pageTitle="Depuración">
-                                                    <CleaningPage />
+                                                <DashboardLayout title="Depuración de Giras" pageTitle="Depuración" description="Depura giras y consulta el historial de depuración del transporte.">
+                                                    <TourProcessingPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/transporte/depuracion/borradores/:draftId"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Borrador de Depuración de giras" pageTitle="Borrador de depuración" description="Revisa, asigna y registra las giras de un borrador de depuración.">
+                                                    <TourProcessingDraftPage />
                                                 </DashboardLayout>
                                             }
                                         />
@@ -177,7 +204,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Choferes" pageTitle="Choferes">
+                                                <DashboardLayout title="Gestión de Choferes" pageTitle="Choferes" description="Registra y consulta los choferes del transporte institucional.">
                                                     <DriversPage />
                                                 </DashboardLayout>
                                             }
@@ -189,44 +216,8 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Vehículos" pageTitle="Vehículos">
+                                                <DashboardLayout title="Gestión de Vehículos" pageTitle="Vehículos" description="Administra el parque de vehículos institucionales.">
                                                     <VehiclesPage />
-                                                </DashboardLayout>
-                                            }
-                                        />
-                                    }
-                                />
-                                <Route
-                                    path="/transporte/mantenimiento"
-                                    element={
-                                        <ProtectedRoute
-                                            element={
-                                                <DashboardLayout title="Mantenimiento de Vehículos" pageTitle="Mantenimiento">
-                                                    <VehicleMaintenancePage />
-                                                </DashboardLayout>
-                                            }
-                                        />
-                                    }
-                                />
-                                <Route
-                                    path="/transporte/giras"
-                                    element={
-                                        <ProtectedRoute
-                                            element={
-                                                <DashboardLayout title="Gestión de Giras" pageTitle="Giras">
-                                                    <ToursPage />
-                                                </DashboardLayout>
-                                            }
-                                        />
-                                    }
-                                />
-                                <Route
-                                    path="/transporte/asignaciones"
-                                    element={
-                                        <ProtectedRoute
-                                            element={
-                                                <DashboardLayout title="Gestión de Asignaciones" pageTitle="Asignaciones">
-                                                    <AssignmentPage />
                                                 </DashboardLayout>
                                             }
                                         />
@@ -249,7 +240,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Seguridad" pageTitle="Seguridad">
+                                                <DashboardLayout title="Gestión de Seguridad" pageTitle="Seguridad" description="Accede a la administración de usuarios, roles y permisos.">
                                                     <SecurityPage />
                                                 </DashboardLayout>
                                             }
@@ -261,7 +252,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Usuarios" pageTitle="Usuarios">
+                                                <DashboardLayout title="Gestión de Usuarios" pageTitle="Usuarios" description="Crea y administra los usuarios de la organización.">
                                                     <UserPage />
                                                 </DashboardLayout>
                                             }
@@ -273,7 +264,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Roles" pageTitle="Roles">
+                                                <DashboardLayout title="Gestión de Roles" pageTitle="Roles" description="Define roles y permisos de acceso al sistema.">
                                                     <RolePage />
                                                 </DashboardLayout>
                                             }
@@ -285,7 +276,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Empresas" pageTitle="Empresas">
+                                                <DashboardLayout title="Gestión de Empresas" pageTitle="Empresas" description="Registra las empresas proveedoras de mantenimiento.">
                                                     <CompaniesPage />
                                                 </DashboardLayout>
                                             }
@@ -297,7 +288,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Solicitudes" pageTitle="Solicitudes">
+                                                <DashboardLayout title="Gestión de Solicitudes" pageTitle="Solicitudes" description="Crea y consulta las solicitudes de mantenimiento.">
                                                     <RequestsPage />
                                                 </DashboardLayout>
                                             }
@@ -309,7 +300,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Registros" pageTitle="Registros">
+                                                <DashboardLayout title="Gestión de Registros" pageTitle="Registros" description="Consulta el historial de registros de mantenimiento.">
                                                     <MaintenanceRegisterPage />
                                                 </DashboardLayout>
                                             }
@@ -321,7 +312,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Gestión de Tickets" pageTitle="Tickets">
+                                                <DashboardLayout title="Gestión de Tickets" pageTitle="Tickets" description="Crea, consulta y da seguimiento a los tickets de mantenimiento.">
                                                     <TicketsPage />
                                                 </DashboardLayout>
                                             }
@@ -334,7 +325,7 @@ function App() {
                                     element={
                                         <ProtectedRoute
                                             element={
-                                                <DashboardLayout title="Dashboard de Tickets" pageTitle="Dashboard">
+                                                <DashboardLayout title="Dashboard de Tickets" pageTitle="Dashboard" description="Visualiza indicadores y el estado de los tickets de mantenimiento.">
                                                     <TicketsDashboard />
                                                 </DashboardLayout>
                                             }

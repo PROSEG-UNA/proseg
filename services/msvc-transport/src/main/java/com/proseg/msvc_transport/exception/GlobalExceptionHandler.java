@@ -6,6 +6,7 @@ import com.proseg.common.api.util.ApiResponseBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -32,6 +33,15 @@ public class GlobalExceptionHandler {
         return ApiResponseBuilder.error(
                 ex.getMessage() != null ? ex.getMessage() : "Argumento inválido",
                 List.of("INVALID_ARGUMENT"),
+                HttpStatus.BAD_REQUEST
+        );
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnreadableBody(HttpMessageNotReadableException ex) {
+        return ApiResponseBuilder.error(
+                "Cuerpo de la solicitud inválido",
+                List.of("INVALID_REQUEST_BODY"),
                 HttpStatus.BAD_REQUEST
         );
     }

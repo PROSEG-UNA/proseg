@@ -12,7 +12,6 @@ import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import InventoryIcon from '@mui/icons-material/Inventory';
-import FolderIcon from '@mui/icons-material/Folder';
 import BusinessIcon from '@mui/icons-material/Business';
 import ConstructionIcon from '@mui/icons-material/Construction';
 import AssignmentIcon from '@mui/icons-material/Assignment';
@@ -67,14 +66,6 @@ const DOMAIN_META = {
         icon: PushPinIcon,
         description: 'Gestión de campus, edificios y detalles de ubicación',
     },
-    Archivos: {
-        lightColor: '#7c3aed',
-        darkColor:  '#c084fc',
-        lightBg:    '#faf5ff',
-        darkBg:     'rgba(76,29,149,0.35)',
-        icon: FolderIcon,
-        description: 'Gestión y acceso a archivos del sistema',
-    },
     Empresas: {
         lightColor: '#059669',
         darkColor:  '#34d399',
@@ -121,7 +112,7 @@ const DOMAIN_META = {
         lightBg:    '#ecfeff',
         darkBg:     'rgba(22,78,99,0.35)',
         icon: LocalShippingIcon,
-        description: 'Choferes, vehículos, giras y asignaciones',
+        description: 'Depuración de giras, choferes y vehículos',
     },
 };
 

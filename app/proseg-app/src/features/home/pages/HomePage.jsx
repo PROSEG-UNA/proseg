@@ -24,7 +24,7 @@ import AssignmentIndOutlinedIcon from '@mui/icons-material/AssignmentIndOutlined
 
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
-import CleaningServicesOutlinedIcon from '@mui/icons-material/CleaningServicesOutlined';
+import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import EmailIcon from '@mui/icons-material/Email';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
@@ -293,6 +293,7 @@ export function HomePage() {
             <Container maxWidth="lg" sx={{ pt: { xs: 6, md: 9 }, pb: { xs: 4, md: 5 } }}>
                 <Box sx={{ maxWidth: 580 }}>
                     <Typography
+                        component="h1"
                         sx={{
                             fontWeight: 800,
                             fontSize: { xs: '2rem', sm: '2.6rem', md: '3rem' },
@@ -335,6 +336,7 @@ export function HomePage() {
                         })}
                     />
                     <Typography
+                        component="h2"
                         sx={{
                             fontSize: '0.72rem',
                             fontWeight: 800,
@@ -405,7 +407,7 @@ export function HomePage() {
                             pushCard('depuracion', (
                                 <FeatureCard
                                     fullHeight
-                                    icon={<CleaningServicesOutlinedIcon fontSize="inherit" />}
+                                    icon={<FactCheckOutlinedIcon fontSize="inherit" />}
                                     title="Transporte"
                                     description="Depuración de giras"
                                     buttonLabel="Ir a Depuración"

@@ -14,7 +14,7 @@ export function SecurityPage() {
 
       <Container maxWidth="lg" className="security-content">
           <Box sx={{ py: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-            <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 3 }}>
+            <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', mb: 3 }}>
               Bienvenido a Gestión de Seguridad
             </Typography>
             <Typography variant="body1" sx={{ color: 'text.secondary', mb: 4, maxWidth: '600px' }}>

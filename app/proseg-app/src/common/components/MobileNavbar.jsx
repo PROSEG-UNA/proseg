@@ -62,7 +62,8 @@ export function MobileNavbar() {
     PERMISSIONS.INVENTORY.MANAGE,
     PERMISSIONS.INVENTORY.DELETE,
     PERMISSIONS.INVENTORY.LOCATIONS.READ,
-    PERMISSIONS.INVENTORY.LOCATIONS.MANAGE,
+    PERMISSIONS.INVENTORY.LOCATIONS.CREATE,
+    PERMISSIONS.INVENTORY.LOCATIONS.UPDATE,
     PERMISSIONS.INVENTORY.LOCATIONS.DELETE,
   ]);
 
@@ -89,7 +90,10 @@ export function MobileNavbar() {
   ]);
 
   const inventoryItems = canViewInventorySection
-    ? [{ key: 'assets', label: 'Activos', path: '/inventario/activos' }]
+    ? [
+        { key: 'assets', label: 'Activos', path: '/inventario/activos' },
+        { key: 'expirations', label: 'Panel de vencimientos', path: '/inventario/vencimientos' },
+      ]
     : [];
 
   const securityItems = canViewSecuritySection
@@ -191,7 +195,16 @@ export function MobileNavbar() {
               <img
                 src="/logo_una.png"
                 alt="Logo UNA"
+                role="link"
+                tabIndex={0}
+                aria-label="Ir al inicio"
                 onClick={() => handleNavigation('/home')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleNavigation('/home');
+                  }
+                }}
                 style={{
                   maxWidth: '50%',
                   height: 'auto',

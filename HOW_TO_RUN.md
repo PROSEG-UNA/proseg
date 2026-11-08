@@ -207,6 +207,33 @@ docker volume rm proseg-dev_pgdata proseg-dev_kafkadata
 
 Si preferís empezar de cero del todo, `down -v` borra todos los volúmenes del proyecto de una.
 
+**Las imágenes no cambian cuando cambiás de rama.** `up -d` reutiliza la imagen que ya tenés compilada, aunque hayas hecho `git checkout` a otra rama. El frontend sí toma el código nuevo al instante, así que podés terminar con un frontend de una rama hablando con un backend compilado desde otra.
+
+| Síntoma | Qué pasó |
+|---|---|
+| Una pantalla nueva muestra `Ocurrió un error inesperado. Intenta de nuevo o contacta a soporte.` y antes funcionaba | El contenedor del servicio corre una imagen compilada desde otra rama, que no tiene el endpoint nuevo |
+| En los logs del servicio aparece `Failed to convert value of type 'java.lang.String' to required type 'java.util.UUID'` | El endpoint nuevo no existe en esa imagen, y la ruta cae en un `GET /{id}` que intenta convertir el texto a UUID |
+
+Se arregla recompilando el servicio afectado desde la rama correcta. Primero confirmá en qué rama estás:
+
+```bash
+git branch --show-current
+```
+
+Después recompilá el servicio. Por ejemplo, para inventario:
+
+```bash
+docker compose -f docker-compose.yml up -d --build msvc-inventory
+```
+
+Esperá uno o dos minutos a que arranque y recargá la página. Si el error sigue, revisá el log del servicio para ver la excepción real:
+
+```bash
+docker logs msvc-inventory --tail 150
+```
+
+Regla práctica: cada vez que cambiés a una rama que toca el backend, recompilá los servicios que esa rama modifica.
+
 ## Levantar el stack de producción en local
 
 Para verificar cómo queda el sistema tal como corre en el servidor —con el frontend dockerizado y Caddy al frente— hay un compose aparte:

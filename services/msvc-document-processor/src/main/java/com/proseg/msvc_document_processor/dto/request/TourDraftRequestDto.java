@@ -1,0 +1,29 @@
+package com.proseg.msvc_document_processor.dto.request;
+
+import lombok.*;
+
+import java.util.List;
+import java.util.Map;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class TourDraftRequestDto {
+    private String fileName;
+
+    private String fileType;
+
+    private int totalRowsRead;
+
+    private int blocksDetected;
+
+    private int year;
+
+    private int month;
+
+    private int businessDays;
+
+    private List<Map<String, Object>> rows;
+}
