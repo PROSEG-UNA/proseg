@@ -316,23 +316,17 @@ describe('TourProcessingDraftRowModal con fechas de regreso invalidas', () => {
 });
 
 describe('TourProcessingDraftRowModal con pasajeros distribuidos', () => {
-    it('exige que la suma de los vehículos coincida con el total antes de guardar', async () => {
+    it('permite guardar aunque la suma de los viajes no coincida con el total de pasajeros', async () => {
         renderModal('edit', { ...ROW, driver: null, vehicle: null });
 
-        await userEvent.click(screen.getByRole('button', { name: 'Distribuir pasajeros entre vehículos' }));
-        expect(screen.getByText('Vehículo 1')).toBeInTheDocument();
-        expect(screen.getByText('Vehículo 2')).toBeInTheDocument();
+        await userEvent.click(screen.getByRole('button', { name: 'Dividir en varios viajes' }));
+        expect(screen.getByText('Viaje 1')).toBeInTheDocument();
+        expect(screen.getByText('Viaje 2')).toBeInTheDocument();
 
         const passengerFields = screen.getAllByRole('textbox', { name: 'Pasajeros' });
         await userEvent.clear(passengerFields[0]);
         await userEvent.type(passengerFields[0], '6');
-        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
-        expect(updateTourProcessingDraftRow).not.toHaveBeenCalled();
-
-        await userEvent.click(screen.getByRole('button', { name: 'Aceptar' }));
-        await waitFor(() => expect(screen.queryByRole('button', { name: 'Aceptar' })).not.toBeInTheDocument());
-        await userEvent.clear(screen.getAllByRole('textbox', { name: 'Pasajeros' })[1]);
-        await userEvent.type(screen.getAllByRole('textbox', { name: 'Pasajeros' })[1], '9');
+        expect(screen.getByText('Faltan 2 pasajeros por cubrir.')).toBeInTheDocument();
         await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
 
         await waitFor(() => expect(updateTourProcessingDraftRow).toHaveBeenCalledTimes(1));
@@ -340,7 +334,29 @@ describe('TourProcessingDraftRowModal con pasajeros distribuidos', () => {
             passengers: 15,
             assignments: [
                 expect.objectContaining({ passengers: 6 }),
-                expect.objectContaining({ passengers: 9 }),
+                expect.objectContaining({ passengers: 7 }),
+            ],
+        }));
+    });
+
+    it('no marca error cuando el mismo chofer y vehículo se repiten en los viajes', async () => {
+        renderModal('edit', {
+            ...ROW,
+            driver: 'Ana',
+            vehicle: '301-627',
+            assignments: [
+                { rowId: 'a-1', driver: 'Ana', vehicle: '301-627', resourceType: 'INTERNAL', passengers: 8 },
+                { rowId: 'a-2', driver: 'Ana', vehicle: '301-627', resourceType: 'INTERNAL', passengers: 7 },
+            ],
+        });
+
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+        await waitFor(() => expect(updateTourProcessingDraftRow).toHaveBeenCalledTimes(1));
+        expect(updateTourProcessingDraftRow).toHaveBeenCalledWith('draft-1', 'row-1', expect.objectContaining({
+            assignments: [
+                expect.objectContaining({ driver: 'Ana', vehicle: '301-627', passengers: 8 }),
+                expect.objectContaining({ driver: 'Ana', vehicle: '301-627', passengers: 7 }),
             ],
         }));
     });

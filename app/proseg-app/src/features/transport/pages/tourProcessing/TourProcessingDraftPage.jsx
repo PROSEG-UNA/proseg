@@ -88,6 +88,7 @@ import TourProcessingDraftRowModal from '../../components/tourProcessing/TourPro
 import TourProcessingDriverAssignmentReport from '../../components/tourProcessing/TourProcessingDriverAssignmentReport.jsx';
 import TourProcessingAutoAssignmentInfoModal from '../../components/tourProcessing/TourProcessingAutoAssignmentInfoModal.jsx';
 import TourProcessingFinalCommissionDialog from '../../components/tourProcessing/TourProcessingFinalCommissionDialog.jsx';
+import TourProcessingSplitModeDialog from '../../components/tourProcessing/TourProcessingSplitModeDialog.jsx';
 import { hasFinalCommissionFindings } from '../../components/tourProcessing/finalCommissionIssues.js';
 import TourProcessingDraftDaysDetailPanel from '../../components/tourProcessing/TourProcessingDraftDaysDetailPanel.jsx';
 import TourProcessingDraftDriverScheduleView from '../../components/tourProcessing/TourProcessingDraftDriverScheduleView.jsx';
@@ -406,10 +407,10 @@ export default function TourProcessingDraftPage() {
     });
 
     const splitOversizedMutation = useMutation({
-        mutationFn: () => splitTourProcessingDraftOversizedRows(draftId),
+        mutationFn: (mode) => splitTourProcessingDraftOversizedRows(draftId, mode),
         onSuccess: (splitRows) => {
             setSplitOversizedOpen(false);
-            setAlert({ type: 'success', message: `Se dividieron ${splitRows} giras por la capacidad de sus vehículos. Asigna ahora los choferes y vehículos de cada parte.` });
+            setAlert({ type: 'success', message: `Se dividieron ${splitRows} giras por la capacidad de sus vehículos. Revisa los viajes de cada gira y completa los choferes y vehículos que falten.` });
             void invalidateTourProcessingDraft(queryClient, draftId);
         },
         onError: (error) => {
@@ -860,8 +861,8 @@ export default function TourProcessingDraftPage() {
         if (!deleteDuplicatesMutation.isPending) deleteDuplicatesMutation.mutate();
     };
 
-    const confirmSplitOversized = () => {
-        if (!splitOversizedMutation.isPending) splitOversizedMutation.mutate();
+    const confirmSplitOversized = (mode) => {
+        if (!splitOversizedMutation.isPending) splitOversizedMutation.mutate(mode);
     };
 
     const closeRowModal = () => setRowModal((current) => ({ ...current, open: false }));
@@ -1232,14 +1233,12 @@ export default function TourProcessingDraftPage() {
                 onClose={() => setDeleteDuplicatesOpen(false)}
             />
 
-            <DialogModal
+            <TourProcessingSplitModeDialog
                 open={splitOversizedOpen}
-                type="warning"
-                title="Dividir giras automáticamente"
-                message={`Se dividirán ${oversizedRows} giras cuyos pasajeros superan la capacidad de su vehículo. Cada una quedará repartida en tantos vehículos como haga falta, con los pasajeros distribuidos de forma equitativa.\n\nLa primera parte conserva el chofer y el vehículo actuales; las demás quedan sin asignar.`}
-                confirmLabel={splitOversizedMutation.isPending ? 'Dividiendo...' : 'Sí, dividir giras'}
+                oversizedRows={oversizedRows}
+                pending={splitOversizedMutation.isPending}
                 onConfirm={confirmSplitOversized}
-                onClose={splitOversizedMutation.isPending ? undefined : () => setSplitOversizedOpen(false)}
+                onClose={() => setSplitOversizedOpen(false)}
             />
 
             <DialogModal

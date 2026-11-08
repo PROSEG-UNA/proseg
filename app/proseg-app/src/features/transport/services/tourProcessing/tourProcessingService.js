@@ -126,8 +126,8 @@ export async function deleteTourProcessingDraftDuplicates(draftId) {
     return data?.data ?? 0;
 }
 
-export async function splitTourProcessingDraftOversizedRows(draftId) {
-    const { data } = await axios.post(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/split-oversized`, null, transportConfig);
+export async function splitTourProcessingDraftOversizedRows(draftId, mode = 'DISTINCT_VEHICLES') {
+    const { data } = await axios.post(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/split-oversized`, null, { ...transportConfig, params: { mode } });
     return data?.data ?? 0;
 }
 

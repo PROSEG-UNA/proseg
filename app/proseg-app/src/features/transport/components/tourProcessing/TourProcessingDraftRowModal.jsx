@@ -46,6 +46,7 @@ import {
 import TourProcessingCatalogField from './TourProcessingCatalogField.jsx';
 import DuplicateChip from './DuplicateChip.jsx';
 import TourProcessingDraftDistributionEditor from './TourProcessingDraftDistributionEditor.jsx';
+import { minimumTrips } from './tripDistribution.js';
 
 const RESOURCE_TYPE_OPTIONS = [
     { value: 'INTERNAL', label: 'Interno' },
@@ -379,20 +380,11 @@ function validate(values, vehicleOptions, borrowedVehicleOptions) {
     }
 
     if (values.assignments) {
-        const assigned = values.assignments.reduce((sum, assignment) => sum + Number(assignment.passengers || 0), 0);
-        if (assigned !== Number(values.passengers)) errors.assignments = 'La suma debe coincidir con el total de pasajeros';
-        const usedDrivers = new Set();
-        const usedVehicles = new Set();
         values.assignments.forEach((assignment) => {
             const passengers = Number(assignment.passengers);
-            if (!Number.isInteger(passengers) || passengers < 1) errors.assignments = 'Cada vehículo debe tener al menos un pasajero';
-            const driver = assignment.driver?.trim().toLowerCase();
-            if (driver && usedDrivers.has(driver)) errors.assignments = 'Un chofer no puede conducir dos vehículos de la misma gira';
-            if (driver) usedDrivers.add(driver);
+            if (!Number.isInteger(passengers) || passengers < 1) errors.assignments = 'Cada viaje debe tener al menos un pasajero';
             const type = assignment.resourceType || 'INTERNAL';
             const vehicle = type === 'BORROWED_VEHICLE' ? assignment.borrowedVehicleId : assignment.vehicle?.trim().toUpperCase();
-            if (vehicle && usedVehicles.has(vehicle)) errors.assignments = 'Un vehículo no puede aparecer dos veces en la misma gira';
-            if (vehicle) usedVehicles.add(vehicle);
             if (type === 'BORROWED_VEHICLE' && !assignment.borrowedVehicleId) errors.assignments = 'Selecciona cada vehículo prestado';
             const capacity = type === 'BORROWED_VEHICLE'
                 ? borrowedVehicleOptions.find((option) => option.id === assignment.borrowedVehicleId)?.capacity
@@ -558,6 +550,8 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
             }
             suggestedCount = Math.max(2, combinedCapacity >= passengers ? count : Math.ceil(passengers / capacities[0]));
         }
+        const selectedCapacity = values.resourceType === 'BORROWED_VEHICLE' ? selectedBorrowedCapacity : selectedVehicleCapacity;
+        suggestedCount = Math.max(suggestedCount, minimumTrips(passengers, selectedCapacity) ?? 0);
         suggestedCount = Math.min(suggestedCount, passengers);
         setValues((current) => ({
             ...current,
@@ -724,7 +718,7 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
                             size="small"
                             variant="outlined"
                         />
-                    ) : <Chip label={`${values.assignments.length} vehículos`} size="small" variant="outlined" />}
+                    ) : <Chip label={`${values.assignments.length} viajes`} size="small" variant="outlined" />}
                     {pendingContracting && (
                         <Chip label="Pendiente de contratar" size="small" color="warning" variant="outlined" />
                     )}
@@ -795,11 +789,11 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
                         </Box>
                         {values.assignments ? (
                             <Button onClick={stopDistribution} disabled={saving} size="small" sx={{ textTransform: 'none', fontWeight: 700 }}>
-                                Volver a un vehículo
+                                Volver a un solo viaje
                             </Button>
                         ) : (
                             <Button onClick={startDistribution} disabled={saving || passengers < 2} size="small" sx={{ textTransform: 'none', fontWeight: 700 }}>
-                                Distribuir pasajeros entre vehículos
+                                Dividir en varios viajes
                             </Button>
                         )}
                     </Box>

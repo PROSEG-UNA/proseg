@@ -1,7 +1,11 @@
+import { useState } from 'react';
 import { Autocomplete, Box, Button, Chip, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import TourProcessingCatalogField from './TourProcessingCatalogField.jsx';
+import {
+    TRIP_MODES, TRIP_MODE_HINTS, TRIP_MODE_LABELS, buildTrips, detectTripMode, minimumTrips,
+} from './tripDistribution.js';
 
 const RESOURCE_TYPES = [
     { value: 'INTERNAL', label: 'Interno' },
@@ -13,8 +17,28 @@ export default function TourProcessingDraftDistributionEditor({
     assignments, totalPassengers, onChange, isEdit, saving, fieldSx, borrowedVehicles, error,
     vehicleOptions,
 }) {
+    const [mode, setMode] = useState(() => detectTripMode(assignments));
+    const [tripCount, setTripCount] = useState(() => String(assignments.length));
+    const [driverCount, setDriverCount] = useState(() => String(Math.max(2, new Set(assignments.map((assignment) => assignment.driver?.trim().toLowerCase()).filter(Boolean)).size)));
     const totalAssigned = assignments.reduce((sum, assignment) => sum + Number(assignment.passengers || 0), 0);
     const remaining = Number(totalPassengers || 0) - totalAssigned;
+
+    const capacityOfResource = (resource) => {
+        if (resource.resourceType === 'BORROWED_VEHICLE') {
+            return borrowedVehicles.options.find((option) => option.id === resource.borrowedVehicleId)?.capacity;
+        }
+        if (resource.resourceType === 'INTERNAL' || !resource.resourceType) {
+            return vehicleOptions.find((option) => option.label.toUpperCase() === resource.vehicle?.trim().toUpperCase())?.capacity;
+        }
+        return null;
+    };
+    const capacities = assignments.map(capacityOfResource);
+    const totalCapacity = capacities.every((capacity) => capacity != null) ? capacities.reduce((sum, capacity) => sum + capacity, 0) : null;
+    const requiredTrips = minimumTrips(totalPassengers, capacityOfResource(assignments[0] ?? {}));
+
+    const distribute = () => onChange(buildTrips({
+        mode, passengers: totalPassengers, tripCount, driverCount, assignments, capacityOf: capacityOfResource,
+    }));
 
     const changeAssignment = (index, key, value) => onChange(assignments.map((assignment, currentIndex) => (
         currentIndex === index ? { ...assignment, [key]: value } : assignment
@@ -24,34 +48,88 @@ export default function TourProcessingDraftDistributionEditor({
         currentIndex === index ? { ...assignment, resourceType: type, vehicle: '', borrowedVehicleId: '' } : assignment
     )));
 
-    const removeAssignment = (index) => onChange(assignments.filter((_, currentIndex) => currentIndex !== index));
+    const removeAssignment = (index) => {
+        setTripCount(String(assignments.length - 1));
+        onChange(assignments.filter((_, currentIndex) => currentIndex !== index));
+    };
 
-    const addAssignment = () => onChange([...assignments, {
-        passengers: '', driver: '', vehicle: '', resourceType: 'INTERNAL', borrowedVehicleId: '',
-    }]);
+    const addAssignment = () => {
+        setTripCount(String(assignments.length + 1));
+        onChange([...assignments, {
+            passengers: '', driver: '', vehicle: '', resourceType: 'INTERNAL', borrowedVehicleId: '',
+        }]);
+    };
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
                 <Typography sx={{ fontSize: 13.5, fontWeight: 700 }}>Distribución de pasajeros</Typography>
-                <Chip
-                    size="small"
-                    color={remaining === 0 ? 'success' : 'warning'}
-                    variant="outlined"
-                    label={`${totalAssigned} de ${totalPassengers || 0} asignados`}
-                />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                    {totalCapacity != null && (
+                        <Chip size="small" variant="outlined" label={`${assignments.length} viajes · ${totalCapacity} espacios`} />
+                    )}
+                    <Chip
+                        size="small"
+                        color={remaining === 0 ? 'success' : 'warning'}
+                        variant="outlined"
+                        label={`${totalAssigned} de ${totalPassengers || 0} asignados`}
+                    />
+                </Box>
             </Box>
+            {isEdit && (
+                <Box sx={{ border: '1px dashed', borderColor: 'divider', borderRadius: 2, p: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    <Typography sx={{ fontSize: 13, fontWeight: 700 }}>Cómo repartir la gira</Typography>
+                    <ToggleButtonGroup
+                        value={mode}
+                        exclusive
+                        size="small"
+                        disabled={saving}
+                        onChange={(_, nextMode) => nextMode && setMode(nextMode)}
+                        aria-label="Manera de repartir la gira"
+                    >
+                        {Object.values(TRIP_MODES).map((value) => (
+                            <ToggleButton key={value} value={value} sx={{ textTransform: 'none', fontSize: 12 }}>
+                                {TRIP_MODE_LABELS[value]}
+                            </ToggleButton>
+                        ))}
+                    </ToggleButtonGroup>
+                    <Typography sx={{ fontSize: 12.5, color: 'text.secondary' }}>{TRIP_MODE_HINTS[mode]}</Typography>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: mode === TRIP_MODES.SHARED ? '180px 180px auto' : '180px auto' }, gap: 1.5, alignItems: 'start' }}>
+                        <TextField
+                            label="Cantidad de viajes"
+                            value={tripCount}
+                            onChange={(event) => setTripCount(event.target.value.replace(/[^0-9]/g, ''))}
+                            disabled={saving}
+                            size="small"
+                            slotProps={{ htmlInput: { inputMode: 'numeric' } }}
+                            helperText={requiredTrips != null && mode !== TRIP_MODES.DISTINCT ? `Mínimo ${requiredTrips} con ${capacityOfResource(assignments[0])} espacios` : ' '}
+                            sx={fieldSx}
+                        />
+                        {mode === TRIP_MODES.SHARED && (
+                            <TextField
+                                label="Cantidad de choferes"
+                                value={driverCount}
+                                onChange={(event) => setDriverCount(event.target.value.replace(/[^0-9]/g, ''))}
+                                disabled={saving}
+                                size="small"
+                                slotProps={{ htmlInput: { inputMode: 'numeric' } }}
+                                helperText=" "
+                                sx={fieldSx}
+                            />
+                        )}
+                        <Button onClick={distribute} disabled={saving} variant="outlined" size="small" sx={{ textTransform: 'none', fontWeight: 700, mt: 0.25 }}>
+                            Repartir pasajeros
+                        </Button>
+                    </Box>
+                </Box>
+            )}
             {assignments.map((assignment, index) => {
-                const capacity = assignment.resourceType === 'BORROWED_VEHICLE'
-                    ? borrowedVehicles.options.find((option) => option.id === assignment.borrowedVehicleId)?.capacity
-                    : assignment.resourceType === 'INTERNAL'
-                        ? vehicleOptions.find((option) => option.label.toUpperCase() === assignment.vehicle?.trim().toUpperCase())?.capacity
-                        : null;
+                const capacity = capacityOfResource(assignment);
                 return (
                 <Box key={index} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 2 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography sx={{ fontSize: 13, fontWeight: 700 }}>Vehículo {index + 1}</Typography>
+                            <Typography sx={{ fontSize: 13, fontWeight: 700 }}>Viaje {index + 1}</Typography>
                             {capacity != null && (
                                 <Chip
                                     size="small"
@@ -171,12 +249,15 @@ export default function TourProcessingDraftDistributionEditor({
             })}
             {isEdit && (
                 <Button startIcon={<AddOutlinedIcon />} onClick={addAssignment} disabled={saving} sx={{ alignSelf: 'flex-start', textTransform: 'none' }}>
-                    Agregar vehículo
+                    Agregar viaje
                 </Button>
             )}
-            {(remaining !== 0 || error) && (
-                <Typography role="alert" sx={{ color: 'error.main', fontSize: 12.5 }}>
-                    {error || (remaining > 0 ? `Faltan ${remaining} pasajeros por asignar` : `Hay ${-remaining} pasajeros de más`)}
+            {error && (
+                <Typography role="alert" sx={{ color: 'error.main', fontSize: 12.5 }}>{error}</Typography>
+            )}
+            {!error && remaining > 0 && (
+                <Typography sx={{ color: 'warning.main', fontSize: 12.5 }}>
+                    {`Faltan ${remaining} pasajeros por cubrir.`}
                 </Typography>
             )}
         </Box>
