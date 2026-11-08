@@ -331,10 +331,7 @@ export default function MaintenanceRequestFormModal({ open, onClose, onSaved, re
 
     const handleBlur = (key) => {
         setTouched((prev) => ({ ...prev, [key]: true }));
-        setFormValues((current) => {
-            validateField(key, current[key]);
-            return current;
-        });
+        validateField(key, formValues[key]);
     };
 
     const handleAddTechnician = () => {

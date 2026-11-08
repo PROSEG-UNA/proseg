@@ -1,6 +1,8 @@
 import axios from 'axios';
-import { TRANSPORT_ENDPOINTS } from '../endpoints';
-import { fetchPage, transportConfig } from '../api';
+import { TRANSPORT_DOCUMENT_ENDPOINTS, TRANSPORT_ENDPOINTS } from '../endpoints';
+import { downloadFile, fetchPage, transportConfig } from '../api';
+
+const OVERTIME_REQUEST_FALLBACK_FILE_NAME = 'Solicitud de Horas Extra.xlsx';
 
 export async function fetchDrivers(options = {}) {
     return fetchPage(TRANSPORT_ENDPOINTS.drivers, options);
@@ -9,6 +11,26 @@ export async function fetchDrivers(options = {}) {
 export async function fetchDriverById(driverId) {
     const { data } = await axios.get(`${TRANSPORT_ENDPOINTS.drivers}/${driverId}`, transportConfig);
     return data?.data ?? null;
+}
+
+export async function fetchDriverMonths(year, month) {
+    const { data } = await axios.get(`${TRANSPORT_ENDPOINTS.drivers}/months`, {
+        ...transportConfig,
+        params: { year, month },
+    });
+    return data?.data ?? [];
+}
+
+export async function fetchDriverMonthSurplusCap(year, month) {
+    const { data } = await axios.get(`${TRANSPORT_ENDPOINTS.drivers}/months/surplus-cap`, {
+        ...transportConfig,
+        params: { year, month },
+    });
+    return data?.data ?? null;
+}
+
+export async function exportDriverOvertimeRequest(year, month) {
+    return downloadFile(TRANSPORT_DOCUMENT_ENDPOINTS.driverOvertimeRequestExport, { year, month }, OVERTIME_REQUEST_FALLBACK_FILE_NAME);
 }
 
 export async function createDriver(payload) {

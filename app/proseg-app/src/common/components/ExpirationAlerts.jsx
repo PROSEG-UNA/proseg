@@ -53,7 +53,7 @@ export function ExpirationAlerts({ sx }) {
 
   return (
     <>
-      <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} sx={sx}>
+      <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} aria-label="Alertas de vencimiento" sx={sx}>
         <Badge color="warning" badgeContent={total}>
           <NotificationsIcon sx={{ fontSize: 20 }} />
         </Badge>

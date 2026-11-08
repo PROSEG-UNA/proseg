@@ -6,24 +6,27 @@ import { useDebounce } from '../../../../common/hooks/useDebounce.js';
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { deleteVehicle } from '../../services/vehicles/vehiclesService';
+import { usePersistedColumnVisibility } from '../../hooks/usePersistedColumnVisibility';
+import { usePersistedPagination } from '../../hooks/usePersistedPagination.js';
 import { useTransportVehiclesData } from '../../hooks/useTransportVehiclesData';
 import { getVehicleColumns, renderVehicleActions } from './vehicleColumns.jsx';
 import { queryKeys } from '../../../../common/query';
 
+const COLUMN_VISIBILITY_STORAGE_KEY = 'vehicles-table-column-visibility';
+
 const COLUMN_TO_BACKEND_KEY = {
     plate: 'plate',
-    brand: 'brand',
-    model: 'model',
-    year: 'year',
+    type: 'type',
     capacity: 'capacity',
-    statusRaw: 'status',
+    available: 'available',
 };
 
 export default function VehiclesTable({ onEditVehicle }) {
-    const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
+    const [pagination, setPagination] = usePersistedPagination('vehicles-table-page-size');
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
     const [sorting, setSorting] = useState([]);
+    const [columnVisibility, setColumnVisibility] = usePersistedColumnVisibility(COLUMN_VISIBILITY_STORAGE_KEY);
     const [alert, setAlert] = useState(null);
     const [vehicleToDelete, setVehicleToDelete] = useState(null);
     const queryClient = useQueryClient();
@@ -60,17 +63,17 @@ export default function VehiclesTable({ onEditVehicle }) {
     const handleGlobalFilterChange = useCallback((updater) => {
         setGlobalFilter((currentValue) => (typeof updater === 'function' ? updater(currentValue) : updater));
         setPagination((previousValue) => (previousValue.pageIndex === 0 ? previousValue : { ...previousValue, pageIndex: 0 }));
-    }, []);
+    }, [setPagination]);
 
     const handleColumnFiltersChange = useCallback((updater) => {
         setColumnFilters((currentValue) => (typeof updater === 'function' ? updater(currentValue) : updater));
         setPagination((previousValue) => (previousValue.pageIndex === 0 ? previousValue : { ...previousValue, pageIndex: 0 }));
-    }, []);
+    }, [setPagination]);
 
     const handleSortingChange = useCallback((updater) => {
         setSorting((currentValue) => (typeof updater === 'function' ? updater(currentValue) : updater));
         setPagination((previousValue) => (previousValue.pageIndex === 0 ? previousValue : { ...previousValue, pageIndex: 0 }));
-    }, []);
+    }, [setPagination]);
 
     const { rows, loading, fetching, error, totalElements } = useTransportVehiclesData({
         pageIndex: pagination.pageIndex,
@@ -84,10 +87,11 @@ export default function VehiclesTable({ onEditVehicle }) {
 
     const deleteVehicleMutation = useMutation({
         mutationFn: (vehicleId) => deleteVehicle(vehicleId),
-        onSuccess: async () => {
+        onSuccess: () => {
             setVehicleToDelete(null);
             setAlert({ type: 'success', message: 'Vehículo eliminado correctamente' });
-            await queryClient.invalidateQueries({ queryKey: queryKeys.transport.vehicles() });
+            void queryClient.invalidateQueries({ queryKey: queryKeys.transport.vehicles() });
+            void queryClient.invalidateQueries({ queryKey: queryKeys.transport.tourProcessingDrafts() });
         },
         onError: (deleteError) => {
             setAlert({ type: 'error', message: deleteError?.response?.data?.message ?? deleteError?.message ?? 'No se pudo eliminar el vehículo' });
@@ -116,6 +120,7 @@ export default function VehiclesTable({ onEditVehicle }) {
                 fetching={fetching}
                 error={error}
                 enableRowActions={canEdit || canDelete}
+                onRowClick={canEdit ? (row) => onEditVehicle(row.original) : undefined}
                 renderRowActions={renderVehicleActions({
                     onEdit: onEditVehicle,
                     onDelete: handleDelete,
@@ -132,13 +137,8 @@ export default function VehiclesTable({ onEditVehicle }) {
                     onGlobalFilterChange: handleGlobalFilterChange,
                     onColumnFiltersChange: handleColumnFiltersChange,
                     onSortingChange: handleSortingChange,
-                    state: { pagination, globalFilter, columnFilters, sorting },
-                    initialState: {
-                        columnVisibility: {
-                            updatedAt: false,
-                            createdAt: false,
-                        },
-                    },
+                    onColumnVisibilityChange: setColumnVisibility,
+                    state: { pagination, globalFilter, columnFilters, sorting, columnVisibility },
                 }}
                 enableGlobalFilter
             />

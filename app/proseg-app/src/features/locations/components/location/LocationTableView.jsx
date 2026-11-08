@@ -5,7 +5,7 @@ import LocationFormModal from './LocationFormModal.jsx';
 import BuildingEmailsModal from '../email/BuildingEmailModal.jsx';
 import CampusEmailsModal from '../email/CampusEmailModal.jsx';
 
-export default function LocationTableView({ table, fillToBottom = true, fitParent = false }) {
+export default function LocationTableView({ table, fillToBottom = true, fitParent = false, accessDeniedTitleComponent = 'h2' }) {
     const {
         config, title, columns,
         rows, loading, fetching, error, totalElements,
@@ -27,7 +27,7 @@ export default function LocationTableView({ table, fillToBottom = true, fitParen
     return (
         <>
             {!canView || isAccessDeniedError ? (
-                <AccessDeniedState />
+                <AccessDeniedState titleComponent={accessDeniedTitleComponent} />
             ) : (
                 <TableBase
                     columns={columns}

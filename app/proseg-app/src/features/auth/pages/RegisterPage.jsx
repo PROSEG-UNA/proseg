@@ -122,23 +122,32 @@ export function RegisterPage() {
             setTurnstileError('');
         };
 
+        const handleTurnstileError = () => setTurnstileError('No se pudo cargar el captcha de Turnstile.');
+
         const existingScript = document.querySelector(`script[src="${TURNSTILE_SCRIPT_SRC}"]`);
+        let script = null;
         if (!existingScript) {
-            const script = document.createElement('script');
+            script = document.createElement('script');
             script.src = TURNSTILE_SCRIPT_SRC;
             script.async = true;
             script.defer = true;
             script.onload = renderTurnstile;
-            script.onerror = () => setTurnstileError('No se pudo cargar el captcha de Turnstile.');
+            script.onerror = handleTurnstileError;
             document.head.appendChild(script);
         } else if (window.turnstile) {
             renderTurnstile();
         } else {
             existingScript.addEventListener('load', renderTurnstile, { once: true });
-            existingScript.addEventListener('error', () => setTurnstileError('No se pudo cargar el captcha de Turnstile.'), { once: true });
+            existingScript.addEventListener('error', handleTurnstileError, { once: true });
         }
 
         return () => {
+            existingScript?.removeEventListener('load', renderTurnstile);
+            existingScript?.removeEventListener('error', handleTurnstileError);
+            if (script) {
+                script.onload = null;
+                script.onerror = null;
+            }
             if (window.turnstile && turnstileWidgetIdRef.current !== null) {
                 window.turnstile.remove(turnstileWidgetIdRef.current);
                 turnstileWidgetIdRef.current = null;
@@ -165,6 +174,7 @@ export function RegisterPage() {
         <>
             <Helmet>
                 <title>{`Registro - ${APP_CONFIG.name}`}</title>
+                <meta name="description" content="Creá tu cuenta para acceder a la gestión de servicios institucionales." />
             </Helmet>
             <PageShell />
             <GeneralModal
@@ -175,6 +185,7 @@ export function RegisterPage() {
                 fullScreenAt="xs"
                 icon={PersonAddIcon}
                 title={APP_CONFIG.fullName}
+                titleComponent="h1"
                 subtitle="Gestión de Servicios Institucionales"
                 loading={loading}
                 footerLeft={

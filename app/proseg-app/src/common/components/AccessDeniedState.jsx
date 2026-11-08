@@ -5,6 +5,7 @@ import { useTheme } from '@mui/material/styles';
 export default function AccessDeniedState({
   title = 'No cuentas con permisos suficientes para realizar esta acción.',
   description = 'Tu perfil actual no tiene acceso a esta sección. Si crees que esto es un error, contacta al administrador del sistema.',
+  titleComponent = 'h1',
   actionLabel,
   onAction,
 }) {
@@ -66,6 +67,7 @@ export default function AccessDeniedState({
 
         <Typography
           variant="h5"
+          component={titleComponent}
           sx={{
             fontWeight: 800,
             color: 'text.primary',

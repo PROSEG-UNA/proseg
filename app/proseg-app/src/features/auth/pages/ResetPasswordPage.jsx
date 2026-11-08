@@ -123,7 +123,10 @@ function ForgotPasswordStep({ onSent }) {
 
     return (
         <>
-            <Helmet><title>{`Olvidé mi contraseña - ${APP_CONFIG.name}`}</title></Helmet>
+            <Helmet>
+                <title>{`Olvidé mi contraseña - ${APP_CONFIG.name}`}</title>
+                <meta name="description" content="Solicitá un enlace para restablecer tu contraseña." />
+            </Helmet>
             <LoginBackground />
             <GeneralModal
                 open={true}
@@ -133,6 +136,7 @@ function ForgotPasswordStep({ onSent }) {
                 fullScreenAt="xs"
                 icon={EmailOutlinedIcon}
                 title="Olvidé mi contraseña"
+                titleComponent="h1"
                 subtitle="Te enviaremos un enlace de restablecimiento"
                 loading={loading}
                 secondaryButton={{ label: 'Volver al login', onClick: () => navigate('/login') }}
@@ -186,7 +190,10 @@ function EmailSentView({ email }) {
 
     return (
         <>
-            <Helmet><title>{`Revisá tu correo - ${APP_CONFIG.name}`}</title></Helmet>
+            <Helmet>
+                <title>{`Revisá tu correo - ${APP_CONFIG.name}`}</title>
+                <meta name="description" content="Revisá tu correo para continuar con el restablecimiento de tu contraseña." />
+            </Helmet>
             <LoginBackground />
             <GeneralModal
                 open={true}
@@ -196,6 +203,7 @@ function EmailSentView({ email }) {
                 fullScreenAt="xs"
                 icon={EmailOutlinedIcon}
                 title="Revisá tu correo"
+                titleComponent="h1"
                 subtitle="El enlace puede tardar unos minutos"
                 primaryButton={{ label: 'Volver al inicio de sesión', onClick: () => navigate('/login') }}
             >
@@ -235,6 +243,10 @@ function InvalidTokenView() {
 
     return (
         <>
+            <Helmet>
+                <title>{`Enlace inválido - ${APP_CONFIG.name}`}</title>
+                <meta name="description" content="Este enlace de restablecimiento ya no es válido." />
+            </Helmet>
             <PatternBackground />
             <GeneralModal
                 open={true}
@@ -244,6 +256,7 @@ function InvalidTokenView() {
                 fullScreenAt="xs"
                 icon={ErrorIcon}
                 title="Enlace inválido"
+                titleComponent="h1"
                 subtitle="Este link ya no está disponible"
                 primaryButton={{ label: 'Solicitar nuevo enlace', onClick: () => navigate('/forgot-password') }}
             >
@@ -273,6 +286,10 @@ function SuccessView() {
 
     return (
         <>
+            <Helmet>
+                <title>{`Contraseña actualizada - ${APP_CONFIG.name}`}</title>
+                <meta name="description" content="Tu contraseña fue actualizada. Ya podés iniciar sesión." />
+            </Helmet>
             <PatternBackground />
             <GeneralModal
                 open={true}
@@ -282,6 +299,7 @@ function SuccessView() {
                 fullScreenAt="xs"
                 icon={CheckCircleIcon}
                 title="¡Contraseña actualizada!"
+                titleComponent="h1"
                 subtitle={`Ya podés iniciar sesión en ${APP_CONFIG.name}`}
                 primaryButton={{ label: 'Iniciar sesión', onClick: () => navigate('/login') }}
             >
@@ -371,6 +389,10 @@ function ResetPasswordForm({ token }) {
 
     return (
         <>
+            <Helmet>
+                <title>{`Restablecer contraseña - ${APP_CONFIG.name}`}</title>
+                <meta name="description" content="Ingresá una nueva contraseña para restablecer el acceso a tu cuenta." />
+            </Helmet>
             <PatternBackground />
             <GeneralModal
                 open={true}
@@ -380,6 +402,7 @@ function ResetPasswordForm({ token }) {
                 fullScreenAt="xs"
                 icon={LockResetIcon}
                 title="Restablecé tu contraseña"
+                titleComponent="h1"
                 subtitle="Ingresá tu nueva contraseña"
                 loading={loading}
                 footerLeft={

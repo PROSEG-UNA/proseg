@@ -195,7 +195,16 @@ export function MobileNavbar() {
               <img
                 src="/logo_una.png"
                 alt="Logo UNA"
+                role="link"
+                tabIndex={0}
+                aria-label="Ir al inicio"
                 onClick={() => handleNavigation('/home')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleNavigation('/home');
+                  }
+                }}
                 style={{
                   maxWidth: '50%',
                   height: 'auto',

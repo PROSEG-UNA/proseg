@@ -15,4 +15,6 @@ public class ColumnSchemaDto {
     private List<String> names;
 
     private String type;
+
+    private boolean required;
 }

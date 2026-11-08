@@ -17,6 +17,7 @@ import {
     Tabs,
     TextField,
     Typography,
+    useMediaQuery,
     useTheme,
 } from '@mui/material';
 import ConstructionIcon from '@mui/icons-material/Construction';
@@ -159,6 +160,8 @@ const buildAssigneeLabel = (userOption) => {
 
 export default function MaintenanceTicketFormModal({ open, onClose, onCreated, ticket = null, readOnly = false, loadingDetail = false }) {
     const theme = useTheme();
+    const canHover = useMediaQuery('(hover: hover) and (pointer: fine)', { noSsr: true });
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'), { noSsr: true });
     const accentColor = theme.vars.palette.tones.rose.fg;
 
     const { hasPermission } = usePermissions();
@@ -1361,9 +1364,9 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                                     sx={{
                                                                         display: 'flex',
                                                                         alignItems: 'center',
-                                                                        opacity: hoveredCommentId === comment.id || editingCommentId === comment.id ? 1 : 0,
+                                                                        opacity: !canHover || hoveredCommentId === comment.id || editingCommentId === comment.id ? 1 : 0,
                                                                         transition: 'opacity 0.2s ease',
-                                                                        pointerEvents: hoveredCommentId === comment.id || editingCommentId === comment.id ? 'auto' : 'none',
+                                                                        pointerEvents: !canHover || hoveredCommentId === comment.id || editingCommentId === comment.id ? 'auto' : 'none',
                                                                     }}
                                                                 >
                                                                     {editingCommentId === comment.id ? (
@@ -1810,6 +1813,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                     )}
                                                     <IconButton
                                                         size="small"
+                                                        aria-label="Quitar archivo"
                                                         onClick={(event) => {
                                                             event.stopPropagation();
                                                             handleRemovePhoto(index);
@@ -1820,11 +1824,11 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                             right: 2,
                                                             bgcolor: 'rgba(0,0,0,0.55)',
                                                             color: '#fff',
-                                                            p: 0.25,
+                                                            p: { xs: 0.75, sm: 0.25 },
                                                             '&:hover': { bgcolor: 'rgba(0,0,0,0.75)' },
                                                         }}
                                                     >
-                                                        <CloseIcon sx={{ fontSize: 12 }} />
+                                                        <CloseIcon sx={{ fontSize: { xs: 16, sm: 12 } }} />
                                                     </IconButton>
                                                 </Box>
                                             ))}
@@ -1853,7 +1857,7 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                                                 p: 1,
                                             }}
                                         >
-                                            <Typography sx={{ fontWeight: 700, fontSize: 13.5 }}>
+                                            <Typography sx={{ fontWeight: 700, fontSize: 13.5, wordBreak: 'break-word' }}>
                                                 {photo.fileName ?? photo.objectName}
                                             </Typography>
                                             {!isReadOnly && isEditing ? (
@@ -1952,10 +1956,11 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
                 onClose={() => setPhotoPreview(null)}
                 maxWidth="md"
                 fullWidth
+                fullScreen={isMobile}
                 slotProps={{
                     paper: {
                         sx: {
-                            borderRadius: '14px',
+                            borderRadius: isMobile ? 0 : '14px',
                             overflow: 'hidden',
                         },
                     },
@@ -1963,9 +1968,14 @@ export default function MaintenanceTicketFormModal({ open, onClose, onCreated, t
             >
                 {photoPreview ? (
                     <Box sx={{ p: 1.5 }}>
-                        <Typography sx={{ fontWeight: 700, mb: 1, fontSize: 14 }}>
-                            {photoPreview.fileName ?? photoPreview.objectName}
-                        </Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <Typography sx={{ fontWeight: 700, fontSize: 14, minWidth: 0, wordBreak: 'break-word' }}>
+                                {photoPreview.fileName ?? photoPreview.objectName}
+                            </Typography>
+                            <IconButton aria-label="Cerrar vista previa" onClick={() => setPhotoPreview(null)} sx={{ flexShrink: 0 }}>
+                                <CloseIcon />
+                            </IconButton>
+                        </Box>
                         <Box
                             component="img"
                             src={photoPreview.imageUrl}

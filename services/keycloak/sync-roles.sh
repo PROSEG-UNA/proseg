@@ -59,23 +59,23 @@ crear_rol_si_falta() {
   return 1
 }
 
-dominios_actuales() {
-  kc get roles -r "$REALM" -q briefRepresentation=false 2>/dev/null \
-    | tr -d '\r\n' \
-    | awk '{
-        total = split($0, bloques, /"name"[[:space:]]*:[[:space:]]*"/)
-        for (i = 2; i <= total; i++) {
-          bloque = bloques[i]
-          nombre = bloque
-          sub(/".*/, "", nombre)
-          if (match(bloque, /"domain"[[:space:]]*:[[:space:]]*\[[[:space:]]*"[^"]*"/)) {
-            dominio = substr(bloque, RSTART, RLENGTH)
-            sub(/.*\[[[:space:]]*"/, "", dominio)
-            sub(/"$/, "", dominio)
-            print nombre "\t" dominio
-          }
-        }
-      }'
+cargar_roles_remotos() {
+  local json resto nombre bloque
+  json=$(kc get roles -r "$REALM" -q briefRepresentation=false 2>/dev/null | tr -d '\r\n')
+  resto=$json
+  while [[ $resto =~ \"name\"[[:space:]]*:[[:space:]]*\"([^\"]*)\" ]]; do
+    nombre=${BASH_REMATCH[1]}
+    resto=${resto#*"${BASH_REMATCH[0]}"}
+    if [[ $resto =~ \"name\"[[:space:]]*:[[:space:]]*\" ]]; then
+      bloque=${resto%%"${BASH_REMATCH[0]}"*}
+    else
+      bloque=$resto
+    fi
+    existentes_remotos["$nombre"]=1
+    if [[ $bloque =~ \"domain\"[[:space:]]*:[[:space:]]*\[[[:space:]]*\"([^\"]*)\" ]]; then
+      dominios_remotos["$nombre"]=${BASH_REMATCH[1]}
+    fi
+  done
 }
 
 aplicar_dominio() {
@@ -163,9 +163,13 @@ revocar_rol_servicio() {
 }
 
 privilegios_del_realm() {
-  kc get roles -r "$REALM" --fields name,composite --format csv --noquotes 2>/dev/null \
-    | tr -d '\r' \
-    | awk -F, 'NF >= 2 && $2 == "false" { print $1 }'
+  local linea nombre compuesto
+  while IFS= read -r linea; do
+    [ -z "$linea" ] && continue
+    nombre=${linea%,*}
+    compuesto=${linea##*,}
+    [ "$compuesto" = "false" ] && printf '%s\n' "$nombre"
+  done < <(kc get roles -r "$REALM" --fields name,composite --format csv --noquotes 2>/dev/null | tr -d '\r')
 }
 
 esta_protegido() {
@@ -240,7 +244,7 @@ leer_archivo() {
 }
 
 declare -a privilegios roles servicios dominios_declarados
-declare -A dominios dominios_remotos
+declare -A dominios dominios_remotos existentes_remotos
 for servicio_declarado in $(grep -o '^\[servicio .*\]$' "$ARCHIVO" | sed -e 's/^\[servicio //' -e 's/\]$//' -e 's/[^a-zA-Z0-9]/_/g'); do
   eval "declare -a servicio_${servicio_declarado}=()"
 done
@@ -268,22 +272,23 @@ if [ "$errores" -gt 0 ]; then
   exit 1
 fi
 
+cargar_roles_remotos
+
 for privilegio in "${privilegios[@]}"; do
+  [ -n "${existentes_remotos["$privilegio"]:-}" ] && continue
   if crear_rol_si_falta "$privilegio" "privilegio"; then
     privilegios_creados=$((privilegios_creados + 1))
+    existentes_remotos["$privilegio"]=1
   fi
 done
 
 for rol in "${roles[@]}"; do
+  [ -n "${existentes_remotos["$rol"]:-}" ] && continue
   if crear_rol_si_falta "$rol" "rol"; then
     roles_creados=$((roles_creados + 1))
+    existentes_remotos["$rol"]=1
   fi
 done
-
-while IFS=$'\t' read -r nombre_remoto dominio_remoto; do
-  [ -z "$nombre_remoto" ] && continue
-  dominios_remotos["$nombre_remoto"]=$dominio_remoto
-done <<< "$(dominios_actuales)"
 
 for privilegio in "${privilegios[@]}"; do
   dominio=${dominios["$privilegio"]}
