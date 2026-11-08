@@ -6,6 +6,7 @@ import com.proseg.msvc_forms.validator.FormValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -60,5 +61,23 @@ public class GlobalExceptionHandler {
                 List.of("INTERNAL_ERROR"),
                 HttpStatus.INTERNAL_SERVER_ERROR
         );
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiErrorResponse> handleMethodNotSupported(
+            HttpRequestMethodNotSupportedException ex) {
+
+        log.warn("Método HTTP no permitido: {}", ex.getMethod());
+
+        ResponseEntity<ApiErrorResponse> response = ApiResponseBuilder.error(
+                "Método HTTP no permitido",
+                List.of("METHOD_NOT_ALLOWED"),
+                HttpStatus.METHOD_NOT_ALLOWED
+        );
+
+        return ResponseEntity.status(response.getStatusCode())
+                .headers(response.getHeaders())
+                .headers(ex.getHeaders())
+                .body(response.getBody());
     }
 }
