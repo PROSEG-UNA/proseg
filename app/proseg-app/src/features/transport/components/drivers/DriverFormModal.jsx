@@ -197,7 +197,12 @@ export default function DriverFormModal({
                         period.month,
                         businessDaysReset ? null : Number(businessDaysDraft),
                     );
-                    onBusinessDaysSaved?.();
+                    onBusinessDaysSaved?.({
+                        driverName: payload.name,
+                        previousBusinessDays: monthBusinessDays,
+                        businessDays: businessDaysReset ? defaultBusinessDays : Number(businessDaysDraft),
+                        reset: businessDaysReset,
+                    });
                 } catch (error) {
                     onSaved?.(saved);
                     setAlert({
@@ -297,6 +302,7 @@ export default function DriverFormModal({
                         value={formValues.organizationalUnit}
                         disabled={!canEdit}
                         onChange={(event) => handleChange('organizationalUnit', event.target.value)}
+                        sx={{ gridColumn: { md: '1 / -1' } }}
                         fullWidth
                     >
                         {DRIVER_UNIT_OPTIONS.map((option) => (

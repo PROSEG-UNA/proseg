@@ -224,6 +224,12 @@ describe('DriverFormModal con los días hábiles del mes', () => {
         await waitFor(() => expect(updateDriverMonthBusinessDays).toHaveBeenCalledWith('driver-1', 2026, 5, 21));
         expect(updateDriver).toHaveBeenCalledTimes(1);
         expect(onBusinessDaysSaved).toHaveBeenCalledTimes(1);
+        expect(onBusinessDaysSaved).toHaveBeenCalledWith({
+            driverName: 'Daniel Zuniga',
+            previousBusinessDays: 28,
+            businessDays: 21,
+            reset: false,
+        });
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 

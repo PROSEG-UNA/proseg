@@ -108,9 +108,19 @@ export default function DriversPage() {
         void queryClient.invalidateQueries({ queryKey: queryKeys.transport.tourProcessingDrafts() });
     };
 
-    const refreshDriverMonth = () => {
+    const handleBusinessDaysSaved = ({ driverName, previousBusinessDays, businessDays, reset }) => {
         void queryClient.invalidateQueries({ queryKey: queryKeys.transport.driverMonths(year, month) });
         void queryClient.invalidateQueries({ queryKey: queryKeys.transport.tourProcessingDrafts() });
+        const valueText = businessDays === null || businessDays === undefined ? '' : ` (${businessDays})`;
+        const previousText = previousBusinessDays === null || previousBusinessDays === undefined
+            ? ''
+            : `\nValor anterior: ${previousBusinessDays}`;
+        setAlert({
+            type: 'success',
+            message: reset
+                ? `Chofer: ${driverName}\nMes: ${periodLabel}\nLos días hábiles volvieron al valor del mes${valueText}${previousText}`
+                : `Chofer: ${driverName}\nMes: ${periodLabel}\nLos días hábiles se cambiaron correctamente a ${businessDays}${previousText}`,
+        });
     };
 
     const editingDriverMonth = driverFormId ? monthData.byDriverId?.get(driverFormId) : undefined;
@@ -236,7 +246,7 @@ export default function DriversPage() {
                     canDelete={canDeleteDrivers}
                     onClose={() => setDriverFormOpen(false)}
                     onSaved={refreshDrivers}
-                    onBusinessDaysSaved={refreshDriverMonth}
+                    onBusinessDaysSaved={handleBusinessDaysSaved}
                     period={monthData.enabled ? { year, month, label: periodLabel } : null}
                     monthBusinessDays={editingDriverMonth?.businessDays ?? null}
                     defaultBusinessDays={defaultBusinessDays ?? null}
