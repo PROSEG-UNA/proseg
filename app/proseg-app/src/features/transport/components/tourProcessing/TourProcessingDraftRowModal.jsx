@@ -48,6 +48,7 @@ import DuplicateChip from './DuplicateChip.jsx';
 import { describeDraftRowChanges } from './draftRowChanges.js';
 import TourProcessingDraftDistributionEditor from './TourProcessingDraftDistributionEditor.jsx';
 import TourProcessingTripSplitDialog from './TourProcessingTripSplitDialog.jsx';
+import TourObservationMatchIndicator from './TourObservationMatchIndicator.jsx';
 import { TRIP_MODES, buildTrips, minimumTrips } from './tripDistribution.js';
 
 const RESOURCE_TYPE_OPTIONS = [
@@ -462,7 +463,7 @@ function toPayload(values, rowNumber, wasDistributed) {
     };
 }
 
-function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions, showDelete, approvalStatus, onToggleApproval, onDelete, onSubmit, onInvalid }) {
+function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions, showDelete, approvalStatus, onToggleApproval, onDelete, onSubmit, onInvalid, onObservationReviewed }) {
     const theme = useTheme();
     const accentColor = theme.vars.palette.tones.rose.fg;
     const [values, setValues] = useState(() => toFormValues(row));
@@ -907,7 +908,16 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
             )}
 
             <Box>
-                {sectionLabel('Observaciones')}
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                    {sectionLabel('Observaciones')}
+                    <TourObservationMatchIndicator
+                        draftId={draftId}
+                        row={row}
+                        canReview={isEdit}
+                        allowReopen
+                        onReviewed={onObservationReviewed}
+                    />
+                </Box>
                 {renderField('observations', 'Observaciones', { multiline: true })}
             </Box>
 
@@ -963,7 +973,7 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
     );
 }
 
-export default function TourProcessingDraftRowModal({ open, mode, row, loadingRow = false, draftId, canDelete = true, onClose, onSaved, onDeleted, onEdit }) {
+export default function TourProcessingDraftRowModal({ open, mode, row, loadingRow = false, draftId, canDelete = true, onClose, onSaved, onDeleted, onEdit, onObservationReviewed }) {
     const theme = useTheme();
     const accentColor = theme.vars.palette.tones.rose.fg;
     const queryClient = useQueryClient();
@@ -1086,6 +1096,7 @@ export default function TourProcessingDraftRowModal({ open, mode, row, loadingRo
                         onDelete={() => setDeleteOpen(true)}
                         onSubmit={(payload) => saveMutation.mutate(payload)}
                         onInvalid={() => setAlert({ type: 'warning', message: 'Revisa los datos antes de continuar' })}
+                        onObservationReviewed={onObservationReviewed}
                     />
                 )}
             </GeneralModal>

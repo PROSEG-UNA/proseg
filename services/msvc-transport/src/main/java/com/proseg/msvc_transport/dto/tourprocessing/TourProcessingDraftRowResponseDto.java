@@ -51,6 +51,8 @@ public class TourProcessingDraftRowResponseDto {
     @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
     private LocalDate returnDate;
     private String observations;
+    private boolean observationReviewed;
+    private List<String> matchedObservationKeywords;
     private int duplicateGroupSize;
     private int duplicateRank;
     private boolean conflicting;

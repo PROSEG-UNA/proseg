@@ -12,6 +12,7 @@ import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowApprov
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowDayRequestDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowDayResponseDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowRequestDto;
+import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingObservationReviewedRequestDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowResponseDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDriverAutoAssignResponseDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingImportSchemaDto;
@@ -119,6 +120,20 @@ public class TourProcessingController {
         return ApiResponseBuilder.ok(
                 tourProcessingDraftService.updateRow(id, rowId, request),
                 "Fila del borrador de depuración actualizada"
+        );
+    }
+
+    @PatchMapping("/drafts/{id}/rows/{rowId}/observation-reviewed")
+    public ResponseEntity<ApiResponse<TourProcessingDraftRowResponseDto>> updateObservationReviewed(
+            @PathVariable UUID id,
+            @PathVariable UUID rowId,
+            @Valid @RequestBody TourProcessingObservationReviewedRequestDto request
+    ) {
+        return ApiResponseBuilder.ok(
+                tourProcessingDraftService.updateObservationReviewed(id, rowId, request.getReviewed()),
+                Boolean.TRUE.equals(request.getReviewed())
+                        ? "Observación marcada como revisada"
+                        : "Observación marcada como pendiente"
         );
     }
 

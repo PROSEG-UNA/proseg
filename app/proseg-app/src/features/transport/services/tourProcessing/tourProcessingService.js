@@ -107,6 +107,15 @@ export async function updateTourProcessingDraftRow(draftId, rowId, payload) {
     return data?.data ?? null;
 }
 
+export async function updateTourObservationReviewed(draftId, rowId, reviewed) {
+    const { data } = await axios.patch(
+        `${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/rows/${rowId}/observation-reviewed`,
+        { reviewed },
+        transportConfig,
+    );
+    return data?.data ?? null;
+}
+
 export async function updateTourProcessingDraftRowApprovalStatus(draftId, rowId, approvalStatus) {
     const { data } = await axios.patch(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/rows/${rowId}/approval-status`, { approvalStatus }, transportConfig);
     return data?.data ?? null;

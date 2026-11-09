@@ -4,6 +4,7 @@ export const TRANSPORT_ENDPOINTS = {
     borrowedVehicles: '/api/v1/transport/borrowed-vehicles',
     tourProcessing: '/api/v1/transport/tour-processing',
     tourProcessingDrafts: '/api/v1/transport/tour-processing/drafts',
+    observationKeywords: '/api/v1/transport/observation-keywords',
 };
 
 export const TRANSPORT_DOCUMENT_ENDPOINTS = {
