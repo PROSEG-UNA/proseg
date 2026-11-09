@@ -5,15 +5,17 @@ export const TRIP_MODES = {
 };
 
 export const TRIP_MODE_LABELS = {
-    [TRIP_MODES.DISTINCT]: 'Vehículos distintos',
+    [TRIP_MODES.DISTINCT]: 'Choferes distintos',
     [TRIP_MODES.SAME]: 'Un chofer y vehículo',
-    [TRIP_MODES.SHARED]: 'Varios choferes',
+    [TRIP_MODES.SHARED]: 'Choferes que repiten viajes',
 };
+
+export const EDITOR_TRIP_MODES = [TRIP_MODES.DISTINCT, TRIP_MODES.SHARED];
 
 export const TRIP_MODE_HINTS = {
     [TRIP_MODES.DISTINCT]: 'Cada viaje lleva su propio chofer y vehículo.',
     [TRIP_MODES.SAME]: 'Completa el chofer y el vehículo del Viaje 1: se repiten en todos los viajes y las horas de la gira se cuentan una sola vez.',
-    [TRIP_MODES.SHARED]: 'Completa chofer y vehículo de los primeros viajes, uno por chofer: los viajes se alternan entre ellos y las horas se cuentan una vez por chofer.',
+    [TRIP_MODES.SHARED]: 'Indica cuántos choferes hay y completa chofer y vehículo de los primeros viajes, uno por chofer. Con un solo chofer se repite en todos los viajes; con varios, los viajes se alternan entre ellos. Las horas se cuentan una vez por chofer.',
 };
 
 const BLANK_RESOURCE = { driver: '', vehicle: '', resourceType: 'INTERNAL', borrowedVehicleId: '', borrowedVehiclePlate: '' };
@@ -68,7 +70,7 @@ export function detectTripMode(assignments) {
     const repeatsDriver = new Set(drivers).size < drivers.length;
     const repeatsVehicle = new Set(vehicles).size < vehicles.length;
     if (!repeatsDriver && !repeatsVehicle) return TRIP_MODES.DISTINCT;
-    return new Set(drivers).size > 1 ? TRIP_MODES.SHARED : TRIP_MODES.SAME;
+    return TRIP_MODES.SHARED;
 }
 
 export function suggestedTripCount({ passengers, capacity, minimum = 2 }) {

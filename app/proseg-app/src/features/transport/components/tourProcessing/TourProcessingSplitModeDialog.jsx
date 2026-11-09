@@ -7,7 +7,7 @@ import { TRIP_MODES } from './tripDistribution.js';
 const OPTIONS = [
     {
         value: TRIP_MODES.DISTINCT,
-        label: 'Vehículos distintos',
+        label: 'Choferes distintos',
         description: 'Cada gira queda repartida en tantos viajes como haga falta. El primer viaje conserva el chofer y el vehículo actuales; los demás quedan sin asignar.',
     },
     {

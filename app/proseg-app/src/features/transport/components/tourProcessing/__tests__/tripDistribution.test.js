@@ -112,7 +112,7 @@ describe('buildTrips', () => {
 describe('detectTripMode', () => {
     it('reconoce la manera con la que quedó repartida una gira', () => {
         expect(detectTripMode([{ driver: 'Ana', vehicle: '301-1' }, { driver: 'Beto', vehicle: '301-2' }])).toBe(TRIP_MODES.DISTINCT);
-        expect(detectTripMode([{ driver: 'Ana', vehicle: '301-1' }, { driver: 'Ana', vehicle: '301-1' }])).toBe(TRIP_MODES.SAME);
+        expect(detectTripMode([{ driver: 'Ana', vehicle: '301-1' }, { driver: 'Ana', vehicle: '301-1' }])).toBe(TRIP_MODES.SHARED);
         expect(detectTripMode([
             { driver: 'Ana', vehicle: '301-1' }, { driver: 'Beto', vehicle: '301-2' }, { driver: 'Ana', vehicle: '301-1' },
         ])).toBe(TRIP_MODES.SHARED);

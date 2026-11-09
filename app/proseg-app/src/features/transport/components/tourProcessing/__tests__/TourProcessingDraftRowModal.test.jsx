@@ -112,6 +112,20 @@ describe('TourProcessingDraftRowModal y recargas pendientes', () => {
         unsubscribe();
     });
 
+    it('informa el número de la gira y lo que se cambió al guardar', async () => {
+        const { onSaved } = renderModal('edit', ROW);
+
+        await userEvent.type(screen.getByRole('textbox', { name: 'Observaciones' }), 'Salida temprano');
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+        await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+        expect(onSaved).toHaveBeenCalledWith({
+            created: false,
+            number: '04040',
+            changes: ['Observaciones: se agregó Salida temprano'],
+        });
+    });
+
     it('mantiene el modal y la caché al fallar el PUT', async () => {
         const queryClient = new QueryClient();
         const key = queryKeys.transport.tourProcessingDraftRows('draft-1', { page: 0 });
@@ -320,10 +334,11 @@ describe('TourProcessingDraftRowModal con pasajeros distribuidos', () => {
         renderModal('edit', { ...ROW, driver: null, vehicle: null });
 
         await userEvent.click(screen.getByRole('button', { name: 'Dividir en varios viajes' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Dividir' }));
         expect(screen.getByText('Viaje 1')).toBeInTheDocument();
         expect(screen.getByText('Viaje 2')).toBeInTheDocument();
 
-        const passengerFields = screen.getAllByRole('textbox', { name: 'Pasajeros' });
+        const passengerFields = await screen.findAllByRole('textbox', { name: 'Pasajeros' });
         await userEvent.clear(passengerFields[0]);
         await userEvent.type(passengerFields[0], '6');
         expect(screen.getByText('Faltan 2 pasajeros por cubrir.')).toBeInTheDocument();

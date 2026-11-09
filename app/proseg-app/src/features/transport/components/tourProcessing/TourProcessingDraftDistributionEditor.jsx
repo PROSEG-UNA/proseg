@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Autocomplete, Box, Button, Chip, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import DialogModal from '../../../../common/components/DialogModal.jsx';
 import TourProcessingCatalogField from './TourProcessingCatalogField.jsx';
 import {
-    TRIP_MODES, TRIP_MODE_HINTS, TRIP_MODE_LABELS, buildTrips, detectTripMode, minimumTrips,
+    EDITOR_TRIP_MODES, TRIP_MODES, TRIP_MODE_HINTS, TRIP_MODE_LABELS, buildTrips, detectTripMode, minimumTrips,
 } from './tripDistribution.js';
 
 const RESOURCE_TYPES = [
@@ -15,11 +16,11 @@ const RESOURCE_TYPES = [
 
 export default function TourProcessingDraftDistributionEditor({
     assignments, totalPassengers, onChange, isEdit, saving, fieldSx, borrowedVehicles, error,
-    vehicleOptions,
+    vehicleOptions, initialMode,
 }) {
-    const [mode, setMode] = useState(() => detectTripMode(assignments));
-    const [tripCount, setTripCount] = useState(() => String(assignments.length));
-    const [driverCount, setDriverCount] = useState(() => String(Math.max(2, new Set(assignments.map((assignment) => assignment.driver?.trim().toLowerCase()).filter(Boolean)).size)));
+    const [mode, setMode] = useState(() => initialMode ?? detectTripMode(assignments));
+    const [tripCount, setTripCount]= useState(() => String(assignments.length));
+    const driverCount = Math.max(1, new Set(assignments.map((assignment) => assignment.driver?.trim().toLowerCase()).filter(Boolean)).size);
     const totalAssigned = assignments.reduce((sum, assignment) => sum + Number(assignment.passengers || 0), 0);
     const remaining = Number(totalPassengers || 0) - totalAssigned;
 
@@ -47,6 +48,86 @@ export default function TourProcessingDraftDistributionEditor({
     const changeResourceType = (index, type) => onChange(assignments.map((assignment, currentIndex) => (
         currentIndex === index ? { ...assignment, resourceType: type, vehicle: '', borrowedVehicleId: '' } : assignment
     )));
+
+    const [pendingDriver, setPendingDriver] = useState(null);
+    const [driverFieldResets, setDriverFieldResets] = useState(0);
+    const [pendingDistinctSwitch, setPendingDistinctSwitch] = useState(false);
+    const [pendingSharedSwitch, setPendingSharedSwitch] = useState(false);
+
+    const driverKey = (assignment) => assignment.driver?.trim().toLowerCase();
+    const repeatedDriverTrips = assignments.filter((assignment, index) => (
+        Boolean(driverKey(assignment)) && assignments.findIndex((other) => driverKey(other) === driverKey(assignment)) !== index
+    )).length;
+
+    const everyTripHasOwnDriver = new Set(assignments.map(driverKey).filter(Boolean)).size >= assignments.length;
+
+    const changeMode = (nextMode) => {
+        if (nextMode === TRIP_MODES.SHARED && everyTripHasOwnDriver) {
+            setPendingSharedSwitch(true);
+            return;
+        }
+        if (nextMode === TRIP_MODES.DISTINCT && repeatedDriverTrips > 0) {
+            setPendingDistinctSwitch(true);
+            return;
+        }
+        setMode(nextMode);
+    };
+
+    const confirmSharedSwitch = () => {
+        const { driver, vehicle, resourceType, borrowedVehicleId, borrowedVehiclePlate } = assignments[0];
+        onChange(assignments.map((assignment) => ({
+            ...assignment, driver, vehicle, resourceType, borrowedVehicleId, borrowedVehiclePlate,
+        })));
+        setDriverFieldResets((current) => current + 1);
+        setMode(TRIP_MODES.SHARED);
+        setPendingSharedSwitch(false);
+    };
+
+    const confirmDistinctSwitch = () => {
+        const seen = new Set();
+        onChange(assignments.map((assignment) => {
+            const key = driverKey(assignment);
+            if (!key || !seen.has(key)) {
+                if (key) seen.add(key);
+                return assignment;
+            }
+            return { ...assignment, driver: '', vehicle: '', borrowedVehicleId: '', borrowedVehiclePlate: '' };
+        }));
+        setDriverFieldResets((current) => current + 1);
+        setMode(TRIP_MODES.DISTINCT);
+        setPendingDistinctSwitch(false);
+    };
+
+    const changeDriver = (index, value) => {
+        const drivers = new Set(assignments
+            .map((assignment, currentIndex) => (currentIndex === index ? value : assignment.driver))
+            .map((driver) => driver?.trim().toLowerCase())
+            .filter(Boolean));
+        const normalizedValue = value?.trim().toLowerCase();
+        const repeatsOtherTrip = Boolean(normalizedValue) && assignments.some((assignment, currentIndex) => (
+            currentIndex !== index && assignment.driver?.trim().toLowerCase() === normalizedValue
+        ));
+        if (mode === TRIP_MODES.DISTINCT && repeatsOtherTrip) {
+            setPendingDriver({ index, value, switchesToShared: true });
+            return;
+        }
+        if (mode === TRIP_MODES.SHARED && drivers.size >= assignments.length) {
+            setPendingDriver({ index, value, switchesToDistinct: true });
+            return;
+        }
+        changeAssignment(index, 'driver', value);
+    };
+
+    const confirmDriverChange = () => {
+        setMode(pendingDriver.switchesToShared ? TRIP_MODES.SHARED : TRIP_MODES.DISTINCT);
+        changeAssignment(pendingDriver.index, 'driver', pendingDriver.value);
+        setPendingDriver(null);
+    };
+
+    const cancelDriverChange = () => {
+        setPendingDriver(null);
+        setDriverFieldResets((current) => current + 1);
+    };
 
     const removeAssignment = (index) => {
         setTripCount(String(assignments.length - 1));
@@ -77,24 +158,25 @@ export default function TourProcessingDraftDistributionEditor({
                 </Box>
             </Box>
             {isEdit && (
-                <Box sx={{ border: '1px dashed', borderColor: 'divider', borderRadius: 2, p: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <Box sx={{ bgcolor: 'action.hover', borderRadius: 2, p: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                     <Typography sx={{ fontSize: 13, fontWeight: 700 }}>Cómo repartir la gira</Typography>
                     <ToggleButtonGroup
                         value={mode}
                         exclusive
                         size="small"
                         disabled={saving}
-                        onChange={(_, nextMode) => nextMode && setMode(nextMode)}
+                        sx={{ bgcolor: 'background.paper', alignSelf: 'flex-start' }}
+                        onChange={(_, nextMode) => nextMode && changeMode(nextMode)}
                         aria-label="Manera de repartir la gira"
                     >
-                        {Object.values(TRIP_MODES).map((value) => (
+                        {EDITOR_TRIP_MODES.map((value) => (
                             <ToggleButton key={value} value={value} sx={{ textTransform: 'none', fontSize: 12 }}>
                                 {TRIP_MODE_LABELS[value]}
                             </ToggleButton>
                         ))}
                     </ToggleButtonGroup>
                     <Typography sx={{ fontSize: 12.5, color: 'text.secondary' }}>{TRIP_MODE_HINTS[mode]}</Typography>
-                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: mode === TRIP_MODES.SHARED ? '180px 180px auto' : '180px auto' }, gap: 1.5, alignItems: 'start' }}>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: mode === TRIP_MODES.SHARED ? '180px 100px auto' : '180px auto' }, gap: 1.5, alignItems: 'start' }}>
                         <TextField
                             label="Cantidad de viajes"
                             value={tripCount}
@@ -106,18 +188,17 @@ export default function TourProcessingDraftDistributionEditor({
                             sx={fieldSx}
                         />
                         {mode === TRIP_MODES.SHARED && (
-                            <TextField
-                                label="Cantidad de choferes"
-                                value={driverCount}
-                                onChange={(event) => setDriverCount(event.target.value.replace(/[^0-9]/g, ''))}
-                                disabled={saving}
-                                size="small"
-                                slotProps={{ htmlInput: { inputMode: 'numeric' } }}
-                                helperText=" "
-                                sx={fieldSx}
-                            />
+                            <Box
+                                sx={{
+                                    height: 40, boxSizing: 'border-box', px: 2, display: 'inline-flex', alignItems: 'center', justifySelf: 'start',
+                                    border: '1px solid', borderColor: 'divider', borderRadius: '10px', bgcolor: 'action.selected',
+                                    fontSize: 13, fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap',
+                                }}
+                            >
+                                {`${driverCount} ${driverCount === 1 ? 'chofer' : 'choferes'}`}
+                            </Box>
                         )}
-                        <Button onClick={distribute} disabled={saving} variant="outlined" size="small" sx={{ textTransform: 'none', fontWeight: 700, mt: 0.25 }}>
+                        <Button onClick={distribute} disabled={saving} variant="contained" size="small" sx={{ textTransform: 'none', fontWeight: 700, height: 40 }}>
                             Repartir pasajeros
                         </Button>
                     </Box>
@@ -199,10 +280,11 @@ export default function TourProcessingDraftDistributionEditor({
                             />
                         ) : (
                             <TourProcessingCatalogField
+                                key={`driver-${index}-${driverFieldResets}`}
                                 kind="driver"
-                                generalServicesOnly
+                                unitTabs
                                 value={assignment.driver || ''}
-                                onChange={(value) => changeAssignment(index, 'driver', value)}
+                                onChange={(value) => changeDriver(index, value)}
                                 isEdit={isEdit}
                                 disabled={saving}
                                 sx={fieldSx}
@@ -252,6 +334,40 @@ export default function TourProcessingDraftDistributionEditor({
                     Agregar viaje
                 </Button>
             )}
+            <DialogModal
+                open={pendingSharedSwitch}
+                type="warning"
+                title="Cambiar a choferes que repiten viajes"
+                message={`Cada viaje tiene un chofer distinto, así que ninguno repetiría viaje. Al cambiar a "${TRIP_MODE_LABELS[TRIP_MODES.SHARED]}" se usará el chofer y el vehículo del Viaje 1 en todos los viajes y se perderán los demás. ¿Quieres continuar?`}
+                confirmLabel="Sí, cambiar de modo"
+                cancelLabel="No, mantener"
+                onConfirm={confirmSharedSwitch}
+                onClose={() => setPendingSharedSwitch(false)}
+            />
+            <DialogModal
+                open={pendingDistinctSwitch}
+                type="warning"
+                title="Cambiar a choferes distintos"
+                message={`Hay ${repeatedDriverTrips} ${repeatedDriverTrips === 1 ? 'viaje con un chofer repetido' : 'viajes con choferes repetidos'}. Al cambiar a "${TRIP_MODE_LABELS[TRIP_MODES.DISTINCT]}" solo se conservará cada chofer en su primera aparición; los demás viajes quedarán sin chofer ni vehículo. ¿Quieres continuar?`}
+                confirmLabel="Sí, cambiar de modo"
+                cancelLabel="No, mantener"
+                onConfirm={confirmDistinctSwitch}
+                onClose={() => setPendingDistinctSwitch(false)}
+            />
+            <DialogModal
+                open={Boolean(pendingDriver)}
+                type="warning"
+                title={pendingDriver?.switchesToShared ? 'Cambiar a choferes que repiten viajes' : 'Cambiar a choferes distintos'}
+                message={pendingDriver
+                    ? (pendingDriver.switchesToShared
+                        ? `${pendingDriver.value} ya tiene otro viaje, así que un chofer repetiría viaje. Se cambiará el modo a "${TRIP_MODE_LABELS[TRIP_MODES.SHARED]}". ¿Quieres continuar?`
+                        : `Con ${assignments.length} viajes y ${assignments.length} choferes ningún chofer repite viaje (estás agregando a ${pendingDriver.value}). ¿Quieres cambiar el modo a "${TRIP_MODE_LABELS[TRIP_MODES.DISTINCT]}"?`)
+                    : ''}
+                confirmLabel="Sí, cambiar de modo"
+                cancelLabel="No, mantener"
+                onConfirm={confirmDriverChange}
+                onClose={cancelDriverChange}
+            />
             {error && (
                 <Typography role="alert" sx={{ color: 'error.main', fontSize: 12.5 }}>{error}</Typography>
             )}

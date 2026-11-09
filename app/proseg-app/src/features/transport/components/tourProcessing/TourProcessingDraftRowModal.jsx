@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     Autocomplete,
@@ -47,7 +47,8 @@ import TourProcessingCatalogField from './TourProcessingCatalogField.jsx';
 import DuplicateChip from './DuplicateChip.jsx';
 import { describeDraftRowChanges } from './draftRowChanges.js';
 import TourProcessingDraftDistributionEditor from './TourProcessingDraftDistributionEditor.jsx';
-import { minimumTrips } from './tripDistribution.js';
+import TourProcessingTripSplitDialog from './TourProcessingTripSplitDialog.jsx';
+import { TRIP_MODES, buildTrips, minimumTrips } from './tripDistribution.js';
 
 const RESOURCE_TYPE_OPTIONS = [
     { value: 'INTERNAL', label: 'Interno' },
@@ -467,6 +468,9 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
     const [values, setValues] = useState(() => toFormValues(row));
     const [touched, setTouched] = useState({});
     const [submitted, setSubmitted] = useState(false);
+    const [splitDialogOpen, setSplitDialogOpen] = useState(false);
+    const [splitMode, setSplitMode] = useState(null);
+    const resourceSectionRef = useRef(null);
     const [days, setDays] = useState(() => row.days ?? []);
     const [distributionDays, setDistributionDays] = useState(() => row.assignments?.map((assignment) => ({
         rowId: assignment.rowId,
@@ -536,7 +540,20 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
             && selectedBorrowedCapacity != null && passengers > selectedBorrowedCapacity)
     );
 
-    const startDistribution = () => {
+    const capacityOfResource = (resource) => {
+        if (resource.resourceType === 'BORROWED_VEHICLE') {
+            return borrowedVehicles.options.find((option) => option.id === resource.borrowedVehicleId)?.capacity;
+        }
+        if (resource.resourceType === 'INTERNAL' || !resource.resourceType) {
+            return vehicleOptions.options.find((option) => option.label.toUpperCase() === resource.vehicle?.trim().toUpperCase())?.capacity;
+        }
+        return null;
+    };
+
+    const startDistribution = (mode) => {
+        setSplitDialogOpen(false);
+        setSplitMode(mode);
+        setTimeout(() => resourceSectionRef.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' }), 0);
         const capacities = vehicleOptions.options
             .filter((option) => option.available !== false && option.capacity > 0)
             .map((option) => option.capacity)
@@ -554,26 +571,33 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
         const selectedCapacity = values.resourceType === 'BORROWED_VEHICLE' ? selectedBorrowedCapacity : selectedVehicleCapacity;
         suggestedCount = Math.max(suggestedCount, minimumTrips(passengers, selectedCapacity) ?? 0);
         suggestedCount = Math.min(suggestedCount, passengers);
-        setValues((current) => ({
-            ...current,
-            assignments: Array.from({ length: suggestedCount }, (_, index) => ({
+        setValues((current) => {
+            const distinctAssignments = Array.from({ length: suggestedCount }, (_, index) => ({
                 passengers: String(Math.floor(passengers / suggestedCount) + (index < passengers % suggestedCount ? 1 : 0)),
                 driver: index === 0 ? current.driver : '',
                 vehicle: index === 0 ? current.vehicle : '',
                 resourceType: index === 0 ? current.resourceType : 'INTERNAL',
                 borrowedVehicleId: index === 0 ? current.borrowedVehicleId : '',
-            })),
-        }));
+            }));
+            return {
+                ...current,
+                assignments: mode === TRIP_MODES.DISTINCT ? distinctAssignments : buildTrips({
+                    mode, passengers, tripCount: suggestedCount, driverCount: 1, assignments: distinctAssignments, capacityOf: capacityOfResource,
+                }),
+            };
+        });
     };
 
-    const stopDistribution = () => setValues((current) => ({
+    const stopDistribution = () => {
+        setValues((current) => ({
         ...current,
         driver: current.assignments?.[0]?.driver ?? current.driver,
         vehicle: current.assignments?.[0]?.vehicle ?? current.vehicle,
         resourceType: current.assignments?.[0]?.resourceType ?? current.resourceType,
         borrowedVehicleId: current.assignments?.[0]?.borrowedVehicleId ?? current.borrowedVehicleId,
         assignments: null,
-    }));
+        }));
+    };
 
     const handleSubmit = (event) => {
         event.preventDefault();
@@ -696,7 +720,7 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
 
             <Divider />
 
-            <Box>
+            <Box ref={resourceSectionRef} sx={{ scrollMarginTop: 8 }}>
                 {sectionLabel('Chofer y vehículo')}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
                     {isEdit && !values.assignments ? (
@@ -719,7 +743,7 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
                             size="small"
                             variant="outlined"
                         />
-                    ) : <Chip label={`${values.assignments.length} viajes`} size="small" variant="outlined" />}
+                    ) : null}
                     {pendingContracting && (
                         <Chip label="Pendiente de contratar" size="small" color="warning" variant="outlined" />
                     )}
@@ -756,6 +780,7 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
                 </Box>}
                 {values.assignments && (
                     <TourProcessingDraftDistributionEditor
+                        initialMode={splitMode}
                         assignments={values.assignments}
                         totalPassengers={values.passengers}
                         onChange={(assignments) => handleChange('assignments', assignments)}
@@ -789,11 +814,11 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
                             )}
                         </Box>
                         {values.assignments ? (
-                            <Button onClick={stopDistribution} disabled={saving} size="small" sx={{ textTransform: 'none', fontWeight: 700 }}>
+                            <Button onClick={stopDistribution} disabled={saving} variant="outlined" size="small" sx={{ textTransform: 'none', fontWeight: 700 }}>
                                 Volver a un solo viaje
                             </Button>
                         ) : (
-                            <Button onClick={startDistribution} disabled={saving || passengers < 2} size="small" sx={{ textTransform: 'none', fontWeight: 700 }}>
+                            <Button onClick={() => setSplitDialogOpen(true)} disabled={saving || passengers < 2} variant={needsSeveralVehicles ? 'contained' : 'outlined'} size="small" sx={{ textTransform: 'none', fontWeight: 700 }}>
                                 Dividir en varios viajes
                             </Button>
                         )}
@@ -929,6 +954,11 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
                     </Box>
                 </>
             )}
+            <TourProcessingTripSplitDialog
+                open={splitDialogOpen}
+                onConfirm={startDistribution}
+                onClose={() => setSplitDialogOpen(false)}
+            />
         </Box>
     );
 }
