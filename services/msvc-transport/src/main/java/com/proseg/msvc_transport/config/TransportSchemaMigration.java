@@ -20,6 +20,7 @@ import java.util.List;
 public class TransportSchemaMigration implements SmartInitializingSingleton {
     private static final List<String> LEGACY_TABLES = List.of(
             "assignment_table",
+            "tour_assignment_table",
             "tour_table",
             "vehicle_maintenance_table",
             "cleaning_execution_detail_table",
