@@ -17,6 +17,7 @@ vi.mock('../../drivers/DriverFormModal.jsx', () => ({
     default: ({ initialValues, onSaved, onClose }) => (
         <div>
             <span>{`formulario-chofer:${initialValues.name}`}</span>
+            <span>{`unidad:${initialValues.organizationalUnit ?? ''}`}</span>
             <button type="button" onClick={() => { onSaved({ id: 'driver-3', name: 'Juan Chacón' }); onClose(); }}>
                 guardar-chofer
             </button>
@@ -32,6 +33,7 @@ const DRIVER_ENTRIES = [
     { label: 'Jorge Francisco Mena', unit: 'GENERAL_SERVICES', secondary: 'Servicios Generales · 07:30 a 16:30', searchText: 'Jorge Francisco Mena Servicios Generales 07:30 a 16:30' },
     { label: 'Miguel Fernandez', unit: 'GENERAL_SERVICES', secondary: 'Servicios Generales · 07:30 a 16:30', searchText: 'Miguel Fernandez Servicios Generales 07:30 a 16:30' },
     { label: 'Pedro Otra Unidad', unit: 'OTHER_UNIT', secondary: 'Otra Unidad · 07:30 a 16:30', searchText: 'Pedro Otra Unidad' },
+    { label: 'Juan Pérez', unit: 'OTHER_UNIT', secondary: 'Otra Unidad · 07:30 a 16:30', searchText: 'Juan Pérez' },
 ];
 
 const VEHICLE_ENTRIES = [
@@ -217,6 +219,76 @@ describe('TourProcessingCatalogField', () => {
         expect(screen.getByText(/Este valor no es una placa/)).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Agregar vehículo al sistema' })).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Seleccionar otro vehículo' })).toBeInTheDocument();
+    });
+
+    function LoanField() {
+        const [value, setValue] = useState('');
+        return (
+            <TourProcessingCatalogField
+                kind="driver"
+                otherUnitOnly
+                value={value}
+                onChange={setValue}
+                onBlur={vi.fn()}
+                isEdit
+                disabled={false}
+            />
+        );
+    }
+
+    it('en prestamo deja Juan escrito aunque Juan Perez este en la lista', async () => {
+        const queryClient = new QueryClient();
+        render(
+            <AppTheme defaultColorScheme="light">
+                <QueryClientProvider client={queryClient}><LoanField /></QueryClientProvider>
+            </AppTheme>,
+        );
+
+        await userEvent.type(screen.getByRole('combobox', { name: 'Chofer' }), 'Juan');
+        await userEvent.tab();
+
+        expect(screen.getByDisplayValue('Juan')).toBeInTheDocument();
+        expect(screen.getByText('El chofer no existe en el sistema. Lo puede dejar así o lo puede ingresar al sistema tocando este botón.')).toBeInTheDocument();
+        expect(screen.queryByRole('combobox', { name: 'Chofer' })).not.toBeInTheDocument();
+    });
+
+    it('en prestamo el boton abre el formulario con el nombre y otra unidad', async () => {
+        const queryClient = new QueryClient();
+        render(
+            <AppTheme defaultColorScheme="light">
+                <QueryClientProvider client={queryClient}><LoanField /></QueryClientProvider>
+            </AppTheme>,
+        );
+
+        await userEvent.type(screen.getByRole('combobox', { name: 'Chofer' }), 'Juan');
+        await userEvent.tab();
+        await userEvent.click(screen.getByRole('button', { name: 'Ingresar al sistema' }));
+
+        expect(screen.getByText('formulario-chofer:Juan')).toBeInTheDocument();
+        expect(screen.getByText('unidad:OTHER_UNIT')).toBeInTheDocument();
+    });
+
+    it('en prestamo solo lista choferes de otra unidad', async () => {
+        renderField({ value: '', otherUnitOnly: true });
+
+        await userEvent.click(screen.getByRole('combobox', { name: 'Chofer' }));
+
+        expect(await screen.findByRole('option', { name: /Pedro Otra Unidad/ })).toBeInTheDocument();
+        expect(screen.queryByRole('option', { name: /Jorge Francisco Mena/ })).not.toBeInTheDocument();
+    });
+
+    it('en prestamo una coincidencia exacta sigue en el combobox', () => {
+        renderField({ value: 'Pedro Otra Unidad', otherUnitOnly: true });
+
+        expect(screen.getByRole('combobox', { name: 'Chofer' })).toHaveValue('Pedro Otra Unidad');
+        expect(screen.queryByText(/El chofer no existe en el sistema/)).not.toBeInTheDocument();
+    });
+
+    it('en prestamo la lectura no muestra la advertencia de chofer inexistente', () => {
+        renderField({ value: 'Juan', otherUnitOnly: true, isEdit: false });
+
+        expect(screen.getByDisplayValue('Juan')).toBeInTheDocument();
+        expect(screen.queryByRole('img')).not.toBeInTheDocument();
     });
 
     it('muestra el icono de advertencia en modo lectura', () => {

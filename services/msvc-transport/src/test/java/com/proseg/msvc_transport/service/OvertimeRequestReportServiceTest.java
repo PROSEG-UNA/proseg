@@ -177,19 +177,25 @@ class OvertimeRequestReportServiceTest {
     }
 
     @Test
-    void buildScheduleUsesBorrowedVehiclePlate() {
+    void buildScheduleIgnoresAPersistedBorrowedDay() {
         TourProcessingDraft draft = TourProcessingDraft.builder().id(DRAFT_ID).year(2026).month(5).businessDays(28).build();
         when(driverRepository.findAll()).thenReturn(List.of(driver("Álvaro Parada", "ACTIVE")));
-        TourProcessingDraftAssignment tour = row("3622", "Álvaro Parada", "2026-05-08");
-        tour.setResourceType(ResourceType.BORROWED_VEHICLE);
-        tour.setVehicle("Vehículo prestado");
-        tour.setBorrowedVehicle(BorrowedVehicle.builder().plate("ABC-123").build());
-        when(rowRepository.findActiveByDraftId(DRAFT_ID)).thenReturn(List.of(tour));
+        TourProcessingDraftAssignment own = row("3622", "Álvaro Parada", "2026-05-08");
+        TourProcessingDraftAssignment borrowed = row("4040", "Álvaro Parada", "2026-05-09");
+        borrowed.setResourceType(ResourceType.BORROWED_VEHICLE);
+        borrowed.setVehicle("Vehículo prestado");
+        borrowed.setBorrowedVehicle(BorrowedVehicle.builder().plate("ABC-123").build());
+        when(rowRepository.findActiveByDraftId(DRAFT_ID)).thenReturn(List.of(own, borrowed));
         when(dayRepository.findByAssignmentIdIn(anyCollection())).thenReturn(List.of(
-                day(tour, "2026-05-08", "07:30", "16:00", 8.5, 0.0, 0.0)
+                day(own, "2026-05-08", "07:30", "16:00", 8.5, 1.0, 0.0),
+                day(borrowed, "2026-05-09", "08:00", "18:00", 0.0, 6.0, 4.0)
         ));
 
-        assertThat(service.buildSchedule(draft).getDrivers().get(0).getTours().get(0).getVehicle()).isEqualTo("ABC-123");
+        OvertimeRequestReportDto.DriverBlock driver = service.buildSchedule(draft).getDrivers().get(0);
+
+        assertThat(driver.getTours()).extracting(OvertimeRequestReportDto.TourBlock::getNumber).containsExactly("3622");
+        assertThat(driver.getSurplusHours()).isEqualTo(1.0);
+        assertThat(driver.getOvertimeHours()).isEqualTo(0.0);
     }
 
     @Test

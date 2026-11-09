@@ -360,7 +360,7 @@ public class TourProcessingDraftService {
             );
         }
 
-        validateDriverMonthlyCaps(draft, assignment.getDriverId(), dayId, request);
+        validateDriverMonthlyCaps(draft, assignment, dayId, request);
 
         day.setStartTime(request.getStartTime());
         day.setEndTime(request.getEndTime());
@@ -377,15 +377,20 @@ public class TourProcessingDraftService {
 
     private void validateDriverMonthlyCaps(
             TourProcessingDraft draft,
-            UUID driverId,
+            TourProcessingDraftAssignment assignment,
             UUID dayId,
             TourProcessingDraftRowDayRequestDto request
     ) {
+        if (assignment.getResourceType() != ResourceType.INTERNAL) {
+            return;
+        }
+        UUID driverId = assignment.getDriverId();
         double otherSurplus = 0;
         double otherOvertime = 0;
         if (driverId != null) {
             for (TourProcessingDraftDay other : dayRepository.findAllByDraftId(draft.getId())) {
                 if (other.getId().equals(dayId) || !driverId.equals(other.getAssignment().getDriverId())) continue;
+                if (other.getAssignment().getResourceType() != ResourceType.INTERNAL) continue;
                 otherSurplus += other.getSurplusHours();
                 otherOvertime += other.getOvertimeHours();
             }
@@ -620,7 +625,7 @@ public class TourProcessingDraftService {
         Map<String, Driver> driverByKey = new HashMap<>();
         result.forEach((assignment, driver) -> driverByKey.put(assignmentKey(assignment), driver));
         assignments.stream()
-                .filter(assignment -> assignment.getResourceType() != ResourceType.EXTERNAL)
+                .filter(assignment -> assignment.getResourceType() == ResourceType.INTERNAL)
                 .filter(assignment -> driverByKey.containsKey(assignmentKey(assignment)))
                 .forEach(assignment -> {
                     Driver driver = driverByKey.get(assignmentKey(assignment));
@@ -692,7 +697,7 @@ public class TourProcessingDraftService {
     private int clearUnknownDrivers(List<TourProcessingDraftAssignment> assignments, Predicate<TourProcessingDraftAssignment> scope) {
         int clearedTours = 0;
         for (TourProcessingDraftAssignment assignment : assignments) {
-            if (assignment.getResourceType() == ResourceType.EXTERNAL || !scope.test(assignment)) {
+            if (assignment.getResourceType() != ResourceType.INTERNAL || !scope.test(assignment)) {
                 continue;
             }
             if (assignment.getDriverId() == null && !DriverHoursRules.driverKey(assignment.getDriver()).isEmpty()) {
@@ -706,7 +711,7 @@ public class TourProcessingDraftService {
     private List<TourProcessingDraftAssignment> pendingDriverTours(List<TourProcessingDraftAssignment> assignments, Predicate<TourProcessingDraftAssignment> scope) {
         return assignments.stream()
                 .filter(TourProcessingDraftAssignment::isActive)
-                .filter(assignment -> assignment.getResourceType() != ResourceType.EXTERNAL)
+                .filter(assignment -> assignment.getResourceType() == ResourceType.INTERNAL)
                 .filter(assignment -> assignment.getDriverId() == null)
                 .filter(scope)
                 .toList();

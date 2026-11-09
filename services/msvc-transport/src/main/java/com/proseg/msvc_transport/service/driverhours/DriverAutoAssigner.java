@@ -97,7 +97,7 @@ public class DriverAutoAssigner {
         this.requesterMatcher = new RequesterMatcher(availableDrivers);
         Map<UUID, Driver> driversById = DriverHoursRules.driversById(catalog);
         List<TourProcessingDraftAssignment> internalRows = rows.stream()
-                .filter(row -> row.getResourceType() != ResourceType.EXTERNAL)
+                .filter(row -> row.getResourceType() == ResourceType.INTERNAL)
                 .toList();
         this.workloads = DriverWorkload.fromAssignments(
                 internalRows.stream().filter(DriverAutoAssigner::hasValidSchedule).toList(), driversById, manualDays);
@@ -294,7 +294,7 @@ public class DriverAutoAssigner {
         Set<TourProcessingDraftAssignment> tours = new LinkedHashSet<>(initialAssignments.keySet());
         pendingTours.stream()
                 .filter(DriverHoursRules::isActive)
-                .filter(tour -> tour.getResourceType() != ResourceType.EXTERNAL)
+                .filter(tour -> tour.getResourceType() == ResourceType.INTERNAL)
                 .forEach(tours::add);
         assignRequesterPending(tours, assignments);
         assignUlloaPending(tours, assignments);
@@ -313,7 +313,7 @@ public class DriverAutoAssigner {
         Set<TourProcessingDraftAssignment> tours = new LinkedHashSet<>(initialAssignments.keySet());
         pendingTours.stream()
                 .filter(DriverHoursRules::isActive)
-                .filter(tour -> tour.getResourceType() != ResourceType.EXTERNAL)
+                .filter(tour -> tour.getResourceType() == ResourceType.INTERNAL)
                 .filter(UlloaTours::isUlloaTour)
                 .forEach(tours::add);
         assignUlloaPending(tours, assignments);
@@ -354,7 +354,7 @@ public class DriverAutoAssigner {
                 parts.forEach(part -> groupFailures.put(part, "La distribución de pasajeros no coincide con el total de la gira."));
                 continue;
             }
-            if (parts.stream().filter(p -> p.getResourceType() != ResourceType.EXTERNAL)
+            if (parts.stream().filter(p -> p.getResourceType() == ResourceType.INTERNAL)
                     .allMatch(p -> assignments.containsKey(p) && (plannedVehicles.containsKey(p)
                             || p.getVehicleId() != null || p.getBorrowedVehicle() != null))) continue;
             groupAttempts = 0;
@@ -387,6 +387,9 @@ public class DriverAutoAssigner {
         Set<UUID> possibleVehicles = new LinkedHashSet<>();
         int internalParts = 0;
         for (TourProcessingDraftAssignment part : remaining) {
+            if (part.getResourceType() == ResourceType.BORROWED_VEHICLE) {
+                continue;
+            }
             if (part.getResourceType() == ResourceType.EXTERNAL) {
                 if (DriverHoursRules.driverKey(part.getDriver()).isEmpty() || DriverHoursRules.plateKey(part.getVehicle()).isEmpty()) return false;
                 continue;

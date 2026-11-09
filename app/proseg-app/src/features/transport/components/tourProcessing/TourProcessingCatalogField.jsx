@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Autocomplete, Box, Button, Chip, InputAdornment, TextField, Typography, createFilterOptions, useTheme } from '@mui/material';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
@@ -11,9 +11,11 @@ import DriverFormModal from '../drivers/DriverFormModal.jsx';
 import VehicleFormModal from '../vehicles/VehicleFormModal.jsx';
 import {
     GENERAL_SERVICES_UNIT,
+    OTHER_UNIT,
     canAddToCatalog,
     catalogEntryLabel,
     catalogEntryText,
+    driverMatchKey,
     missingCatalogMessage,
 } from './tourProcessingCatalogMatch.js';
 import MissingCatalogIcon from './MissingCatalogIcon.jsx';
@@ -42,6 +44,12 @@ const KIND_CONFIG = {
 };
 
 const filterCatalogEntries = createFilterOptions({ stringify: catalogEntryText });
+const UNLISTED_DRIVER_MESSAGE = 'El chofer no existe en el sistema. Lo puede dejar así o lo puede ingresar al sistema tocando este botón.';
+
+function hasCatalogMatch(value, options) {
+    const key = driverMatchKey(value);
+    return key !== '' && options.some((option) => driverMatchKey(option.label) === key);
+}
 
 function isSameEntry(option, value) {
     return catalogEntryLabel(option) === catalogEntryLabel(value);
@@ -61,22 +69,33 @@ function renderCatalogOption({ key, ...props }, option) {
     );
 }
 
-export default function TourProcessingCatalogField({ kind, value, onChange, onBlur, isEdit, disabled, errorText, generalServicesOnly = false, sx }) {
+export default function TourProcessingCatalogField({ kind, value, onChange, onBlur, isEdit, disabled, errorText, generalServicesOnly = false, otherUnitOnly = false, sx }) {
     const theme = useTheme();
     const accentColor = theme.vars.palette.tones.rose.fg;
     const queryClient = useQueryClient();
     const catalog = useTourProcessingCatalogMatch()[kind];
     const config = KIND_CONFIG[kind];
     const inputRef = useRef(null);
+    const inputValueRef = useRef(value || '');
+    const pickedRef = useRef(false);
     const [addOpen, setAddOpen] = useState(false);
+    const [revising, setRevising] = useState(false);
 
-    const missing = catalog.isMissing(value);
-    const options = useMemo(
-        () => (generalServicesOnly
-            ? catalog.options.filter((option) => (option.unit ?? GENERAL_SERVICES_UNIT) === GENERAL_SERVICES_UNIT)
-            : catalog.options),
-        [catalog.options, generalServicesOnly],
-    );
+    useEffect(() => {
+        inputValueRef.current = value || '';
+    }, [value]);
+
+    const missing = !otherUnitOnly && catalog.isMissing(value);
+    const options = useMemo(() => {
+        if (generalServicesOnly) {
+            return catalog.options.filter((option) => (option.unit ?? GENERAL_SERVICES_UNIT) === GENERAL_SERVICES_UNIT);
+        }
+        if (otherUnitOnly) {
+            return catalog.options.filter((option) => option.unit === OTHER_UNIT);
+        }
+        return catalog.options;
+    }, [catalog.options, generalServicesOnly, otherUnitOnly]);
+    const unlisted = otherUnitOnly && !revising && Boolean(String(value || '').trim()) && !hasCatalogMatch(value, options);
     const FormModal = config.FormModal;
 
     if (!isEdit) {
@@ -107,9 +126,39 @@ export default function TourProcessingCatalogField({ kind, value, onChange, onBl
                 ? [...current.filter((option) => option.id !== saved.id), config.toOption(saved)]
                 : current));
         }
-        onChange(config.savedValue(saved) || value);
+        const savedName = config.savedValue(saved) || value;
+        inputValueRef.current = savedName;
+        setRevising(false);
+        onChange(savedName);
         void queryClient.invalidateQueries({ queryKey: config.cacheKey() });
         void queryClient.invalidateQueries({ queryKey: queryKeys.transport.tourProcessingDrafts() });
+    };
+
+    const handleChange = (_, next, reason) => {
+        if (otherUnitOnly && reason === 'blur') return;
+        const label = catalogEntryLabel(next);
+        if (otherUnitOnly && reason === 'selectOption') {
+            pickedRef.current = true;
+            setRevising(false);
+        }
+        inputValueRef.current = label;
+        onChange(label);
+    };
+
+    const handleInputChange = (_, next, reason) => {
+        if (!otherUnitOnly) return;
+        if (reason === 'input' || reason === 'clear') {
+            inputValueRef.current = next;
+        }
+    };
+
+    const handleBlur = (event) => {
+        if (otherUnitOnly && !pickedRef.current) {
+            setRevising(false);
+            onChange(inputValueRef.current);
+        }
+        pickedRef.current = false;
+        onBlur?.(event);
     };
 
     const actionSx = {
@@ -121,11 +170,55 @@ export default function TourProcessingCatalogField({ kind, value, onChange, onBl
         '&:hover': { color: accentColor, bgcolor: 'action.hover' },
     };
 
+    const formInitialValues = otherUnitOnly
+        ? { ...config.toFormValues(value), organizationalUnit: OTHER_UNIT }
+        : config.toFormValues(value);
+
     return (
         <Box>
+            {unlisted ? (
+                <Box>
+                    <TextField
+                        label={config.label}
+                        value={value || ''}
+                        fullWidth
+                        size="small"
+                        slotProps={{ input: { readOnly: true } }}
+                        sx={sx}
+                    />
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.25, mt: 0.5 }}>
+                        <Typography sx={{ fontSize: 12.5, fontWeight: 600, lineHeight: 1.4 }}>
+                            {UNLISTED_DRIVER_MESSAGE}
+                        </Typography>
+                        {catalog.canAdd && (
+                            <Button
+                                size="small"
+                                disabled={disabled}
+                                startIcon={<AddCircleOutlineOutlinedIcon />}
+                                onClick={() => setAddOpen(true)}
+                                sx={actionSx}
+                            >
+                                Ingresar al sistema
+                            </Button>
+                        )}
+                        <Button
+                            size="small"
+                            disabled={disabled}
+                            onClick={() => {
+                                setRevising(true);
+                                inputValueRef.current = value || '';
+                            }}
+                            sx={actionSx}
+                        >
+                            Corregir el nombre
+                        </Button>
+                    </Box>
+                </Box>
+            ) : (
             <Autocomplete
                 freeSolo
-                autoSelect
+                autoSelect={!otherUnitOnly}
+                autoHighlight={false}
                 openOnFocus
                 forcePopupIcon
                 size="small"
@@ -137,8 +230,9 @@ export default function TourProcessingCatalogField({ kind, value, onChange, onBl
                 filterOptions={filterCatalogEntries}
                 renderOption={renderCatalogOption}
                 slotProps={{ listbox: { sx: { maxHeight: 320 } } }}
-                onChange={(_, next) => onChange(catalogEntryLabel(next))}
-                onBlur={onBlur}
+                onChange={handleChange}
+                onInputChange={handleInputChange}
+                onBlur={handleBlur}
                 renderInput={(params) => (
                     <TextField
                         {...params}
@@ -150,6 +244,7 @@ export default function TourProcessingCatalogField({ kind, value, onChange, onBl
                     />
                 )}
             />
+            )}
 
             {missing && (
                 <Box
@@ -189,7 +284,7 @@ export default function TourProcessingCatalogField({ kind, value, onChange, onBl
             {addOpen && (
                 <FormModal
                     open
-                    initialValues={config.toFormValues(value)}
+                    initialValues={formInitialValues}
                     onClose={() => setAddOpen(false)}
                     onSaved={handleAdded}
                 />

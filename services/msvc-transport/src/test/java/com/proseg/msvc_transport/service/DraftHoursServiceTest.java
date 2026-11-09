@@ -1,6 +1,8 @@
 package com.proseg.msvc_transport.service;
 
 import com.proseg.msvc_transport.dto.response.DriverMonthSurplusCapResponseDto;
+import com.proseg.msvc_transport.entity.DriverUnit;
+import com.proseg.msvc_transport.entity.ResourceType;
 import com.proseg.msvc_transport.entity.TourProcessingDraft;
 import com.proseg.msvc_transport.entity.Driver;
 import com.proseg.msvc_transport.entity.DriverMonthBusinessDays;
@@ -230,6 +232,37 @@ class DraftHoursServiceTest {
         verify(businessDays.repository(), times(1)).save(any(DriverMonthBusinessDays.class));
         verify(businessDays.repository(), never()).delete(any(DriverMonthBusinessDays.class));
         verify(businessDays.repository(), never()).deleteAll();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void syncKeepsABorrowedOtherUnitDriversDaysWithoutAddingThemToAnOwnDriver() {
+        Driver ana = Driver.builder().id(UUID.nameUUIDFromBytes("Ana Mora".getBytes())).name("Ana Mora").build();
+        Driver pedro = Driver.builder().id(UUID.nameUUIDFromBytes("Pedro Otra".getBytes())).name("Pedro Otra")
+                .organizationalUnit(DriverUnit.OTHER_UNIT).build();
+        when(driverRepository.findAll()).thenReturn(List.of(ana, pedro));
+        TourProcessingDraft draft = TourProcessingDraft.builder().year(2026).month(5).businessDays(28).build();
+        TourProcessingDraftAssignment own = row("1", "Ana Mora", 1, "2026-05-05", "07:30", "2026-05-05", "16:30");
+        TourProcessingDraftAssignment borrowed = row("9", "Pedro Otra", 1, "2026-05-09", "08:00", "2026-05-09", "17:00");
+        borrowed.setResourceType(ResourceType.BORROWED_VEHICLE);
+        TourProcessingDraftDay borrowedDay = day(borrowed, "2026-05-09");
+        when(dayRepository.findAllByDraftId(draft.getId())).thenReturn(List.of(borrowedDay));
+
+        service.syncAll(draft, List.of(own, borrowed));
+
+        verify(dayRepository, never()).deleteAllByIdInBatch(anyCollection());
+        ArgumentCaptor<List<TourProcessingDraftDay>> saved = ArgumentCaptor.forClass(List.class);
+        verify(dayRepository).saveAll(saved.capture());
+        assertThat(saved.getValue()).anySatisfy(savedDay ->
+                assertThat(savedDay.getAssignment().getId()).isEqualTo(borrowed.getId()));
+        assertThat(surplusOf(saved.getValue(), ana)).isZero();
+        assertThat(overtimeOf(saved.getValue(), ana)).isZero();
+        assertThat(saved.getValue().stream()
+                .filter(savedDay -> ana.getId().equals(savedDay.getAssignment().getDriverId()))
+                .mapToDouble(TourProcessingDraftDay::getOrdinaryHours).sum()).isEqualTo(9);
+        assertThat(saved.getValue().stream()
+                .filter(savedDay -> pedro.getId().equals(savedDay.getAssignment().getDriverId()))
+                .mapToDouble(TourProcessingDraftDay::getOvertimeHours).sum()).isPositive();
     }
 
     @Test

@@ -51,7 +51,22 @@ public class DriverWorkload {
         Map<UUID, DriverWorkload> workloads = new LinkedHashMap<>();
         for (TourProcessingDraftAssignment assignment : assignments) {
             Driver driver = DriverHoursRules.assignedDriver(assignment, driversById);
-            if (driver != null && assignment.isActive()) {
+            if (assignment.isActive() && DriverHoursRules.countsTowardOwnDriver(assignment, driver)) {
+                workloads.computeIfAbsent(driver.getId(), id -> new DriverWorkload(driver, manualDays)).add(assignment);
+            }
+        }
+        return workloads;
+    }
+
+    public static Map<UUID, DriverWorkload> fromUncountedAssignments(
+            List<TourProcessingDraftAssignment> assignments,
+            Map<UUID, Driver> driversById,
+            ManualDays manualDays
+    ) {
+        Map<UUID, DriverWorkload> workloads = new LinkedHashMap<>();
+        for (TourProcessingDraftAssignment assignment : assignments) {
+            Driver driver = DriverHoursRules.assignedDriver(assignment, driversById);
+            if (driver != null && assignment.isActive() && !DriverHoursRules.countsTowardOwnDriver(assignment, driver)) {
                 workloads.computeIfAbsent(driver.getId(), id -> new DriverWorkload(driver, manualDays)).add(assignment);
             }
         }

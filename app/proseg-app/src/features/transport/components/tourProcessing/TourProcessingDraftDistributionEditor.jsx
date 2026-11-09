@@ -200,7 +200,8 @@ export default function TourProcessingDraftDistributionEditor({
                         ) : (
                             <TourProcessingCatalogField
                                 kind="driver"
-                                generalServicesOnly
+                                generalServicesOnly={assignment.resourceType !== 'BORROWED_VEHICLE'}
+                                otherUnitOnly={assignment.resourceType === 'BORROWED_VEHICLE'}
                                 value={assignment.driver || ''}
                                 onChange={(value) => changeAssignment(index, 'driver', value)}
                                 isEdit={isEdit}
