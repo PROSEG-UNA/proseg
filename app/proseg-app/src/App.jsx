@@ -31,6 +31,7 @@ import DriversPage from './features/transport/pages/drivers/DriversPage.jsx';
 import VehiclesPage from './features/transport/pages/vehicles/VehiclesPage.jsx';
 import TourProcessingPage from './features/transport/pages/tourProcessing/TourProcessingPage.jsx';
 import TourProcessingDraftPage from './features/transport/pages/tourProcessing/TourProcessingDraftPage.jsx';
+import TransportSettingsPage from './features/transport/pages/settings/TransportSettingsPage.jsx';
 
 function migrateTourProcessingStorage() {
     try {
@@ -205,6 +206,18 @@ function App() {
                                             element={
                                                 <DashboardLayout title="Gestión de Choferes" pageTitle="Choferes" description="Registra y consulta los choferes del transporte institucional.">
                                                     <DriversPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/transporte/configuraciones"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Configuraciones de Transporte" pageTitle="Configuraciones" description="Ajustes del módulo de transporte.">
+                                                    <TransportSettingsPage />
                                                 </DashboardLayout>
                                             }
                                         />

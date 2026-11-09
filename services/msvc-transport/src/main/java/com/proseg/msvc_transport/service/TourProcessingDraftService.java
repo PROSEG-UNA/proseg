@@ -22,6 +22,7 @@ import com.proseg.msvc_transport.entity.TourProcessingDraftDay;
 import com.proseg.msvc_transport.entity.TourProcessingDraftStatus;
 import com.proseg.msvc_transport.entity.TourProcessingDraftTour;
 import com.proseg.msvc_transport.entity.Driver;
+import com.proseg.msvc_transport.entity.ObservationKeyword;
 import com.proseg.msvc_transport.entity.ResourceType;
 import com.proseg.msvc_transport.entity.TourApprovalStatus;
 import com.proseg.msvc_transport.entity.Vehicle;
@@ -33,6 +34,7 @@ import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftTourRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
+import com.proseg.msvc_transport.repository.ObservationKeywordRepository;
 import com.proseg.msvc_transport.repository.VehicleRepository;
 import com.proseg.msvc_transport.security.CurrentUserResolver;
 import com.proseg.msvc_transport.service.driverhours.DriverAutoAssigner;
@@ -106,6 +108,7 @@ public class TourProcessingDraftService {
     private final CurrentUserResolver currentUserResolver;
     private final Validator validator;
     private final JdbcTemplate jdbc;
+    private final ObservationKeywordRepository observationKeywordRepository;
 
     public TourProcessingImportSchemaDto getImportSchema() {
         List<TourProcessingImportColumnDto> columns = Arrays.stream(TransportImportField.values())
@@ -334,6 +337,15 @@ public class TourProcessingDraftService {
         tour.setApprovalStatus(approvalStatus);
         tourRepository.save(tour);
         draftHoursService.syncChanged(draft, slotsBefore, assignments);
+        return toRowResponses(draftId, List.of(tour)).get(0);
+    }
+
+    @Transactional
+    public TourProcessingDraftRowResponseDto updateObservationReviewed(UUID draftId, UUID rowId, boolean reviewed) {
+        getEditableDraft(draftId);
+        TourProcessingDraftTour tour = getEditableTour(draftId, rowId, "Marca la observación desde la gira principal");
+        tour.setObservationReviewed(reviewed);
+        tourRepository.save(tour);
         return toRowResponses(draftId, List.of(tour)).get(0);
     }
 
@@ -1229,7 +1241,11 @@ public class TourProcessingDraftService {
         tour.setReturnTime(request.getReturnTime());
         tour.setDepartureDate(request.getDepartureDate());
         tour.setReturnDate(request.getReturnDate());
-        tour.setObservations(trimToNull(request.getObservations()));
+        String observations = trimToNull(request.getObservations());
+        if (!Objects.equals(observations, tour.getObservations())) {
+            tour.setObservationReviewed(false);
+        }
+        tour.setObservations(observations);
         if (request.getApprovalStatus() != null) {
             tour.setApprovalStatus(request.getApprovalStatus());
         }
@@ -1315,8 +1331,19 @@ public class TourProcessingDraftService {
         }
 
         Map<UUID, Vehicle> vehiclesById = DriverHoursRules.vehiclesById(vehicleRepository.findAll());
+        List<String> keywords = observationKeywords(tours);
         return tours.stream()
-                .map(tour -> toRowResponse(tour, tour.isPrimary() ? tour : primaryByNumber.get(numberKey(tour)), daysByAssignmentId, vehiclesById))
+                .map(tour -> toRowResponse(tour, tour.isPrimary() ? tour : primaryByNumber.get(numberKey(tour)), daysByAssignmentId, vehiclesById, keywords))
+                .toList();
+    }
+
+    private List<String> observationKeywords(List<TourProcessingDraftTour> tours) {
+        if (tours.isEmpty()) {
+            return List.of();
+        }
+        return observationKeywordRepository.findAll().stream()
+                .map(ObservationKeyword::getText)
+                .filter(text -> text != null && !text.isBlank())
                 .toList();
     }
 
@@ -1324,7 +1351,8 @@ public class TourProcessingDraftService {
             TourProcessingDraftTour tour,
             TourProcessingDraftTour hoursSource,
             Map<UUID, List<TourProcessingDraftDay>> daysByAssignmentId,
-            Map<UUID, Vehicle> vehiclesById
+            Map<UUID, Vehicle> vehiclesById,
+            List<String> keywords
     ) {
         TourTrips tripSummary = TourTrips.of(tour, vehiclesById);
         List<TourProcessingDraftAssignment> parts = tour.getAssignments();
@@ -1361,6 +1389,8 @@ public class TourProcessingDraftService {
                 .departureDate(tour.getDepartureDate())
                 .returnDate(tour.getReturnDate())
                 .observations(tour.getObservations())
+                .observationReviewed(tour.isObservationReviewed())
+                .matchedObservationKeywords(ObservationKeywordMatcher.matching(tour.getObservations(), keywords))
                 .duplicateGroupSize(tour.getDuplicateGroupSize())
                 .duplicateRank(tour.getDuplicateRank())
                 .conflicting(tour.isConflicting())

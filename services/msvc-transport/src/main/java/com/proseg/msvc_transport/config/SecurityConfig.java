@@ -56,6 +56,22 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, transportRoute + "/borrowed-vehicles/**")
                         .hasAuthority(Privileges.Vehicles.ELIMINAR)
 
+                        .requestMatchers(HttpMethod.GET, transportRoute + "/observation-keywords", transportRoute + "/observation-keywords/**")
+                        .hasAnyAuthority(
+                                Privileges.Tours.LEER,
+                                Privileges.Tours.IMPORTAR,
+                                Privileges.Tours.CREAR,
+                                Privileges.Tours.EDITAR,
+                                Privileges.Tours.ELIMINAR,
+                                Privileges.Tours.EXPORTAR
+                        )
+                        .requestMatchers(HttpMethod.POST, transportRoute + "/observation-keywords")
+                        .hasAuthority(Privileges.Tours.EDITAR)
+                        .requestMatchers(HttpMethod.PUT, transportRoute + "/observation-keywords/**")
+                        .hasAuthority(Privileges.Tours.EDITAR)
+                        .requestMatchers(HttpMethod.DELETE, transportRoute + "/observation-keywords/**")
+                        .hasAuthority(Privileges.Tours.ELIMINAR)
+
                         .requestMatchers(HttpMethod.GET, transportRoute + "/tour-processing/imports/schema")
                         .hasAuthority(Privileges.Tours.IMPORTAR)
                         .requestMatchers(

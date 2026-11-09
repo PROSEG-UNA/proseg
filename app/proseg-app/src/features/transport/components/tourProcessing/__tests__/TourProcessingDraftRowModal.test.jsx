@@ -14,6 +14,7 @@ vi.mock('../../../services/tourProcessing/tourProcessingService.js', () => ({
     deleteTourProcessingDraftRow: vi.fn(),
     updateTourProcessingDraftRow: vi.fn(),
     updateTourProcessingDraftRowDay: vi.fn(),
+    updateTourObservationReviewed: vi.fn(),
 }));
 
 vi.mock('../../../hooks/useTourProcessingCatalogMatch.js', () => ({

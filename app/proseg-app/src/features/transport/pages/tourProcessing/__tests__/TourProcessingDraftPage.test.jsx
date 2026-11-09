@@ -52,6 +52,7 @@ vi.mock('../../../services/tourProcessing/tourProcessingService.js', () => ({
     finishTourProcessingDraft: vi.fn(),
     reopenTourProcessingDraft: vi.fn(),
     updateTourProcessingDraftRowApprovalStatus: vi.fn(),
+    updateTourObservationReviewed: vi.fn(),
 }));
 
 const rows = [

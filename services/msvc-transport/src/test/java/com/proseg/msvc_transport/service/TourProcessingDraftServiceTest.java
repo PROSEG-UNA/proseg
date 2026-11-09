@@ -23,6 +23,7 @@ import com.proseg.msvc_transport.entity.TourProcessingDraftDay;
 import com.proseg.msvc_transport.entity.TourProcessingDraftStatus;
 import com.proseg.msvc_transport.entity.BorrowedVehicle;
 import com.proseg.msvc_transport.entity.Driver;
+import com.proseg.msvc_transport.entity.ObservationKeyword;
 import com.proseg.msvc_transport.entity.ResourceType;
 import com.proseg.msvc_transport.entity.TourApprovalStatus;
 import com.proseg.msvc_transport.entity.UlloaShift;
@@ -33,6 +34,7 @@ import com.proseg.msvc_transport.repository.BorrowedVehicleRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
+import com.proseg.msvc_transport.repository.ObservationKeywordRepository;
 import com.proseg.msvc_transport.repository.VehicleRepository;
 import com.proseg.msvc_transport.security.CurrentUserResolver;
 import jakarta.validation.Validation;
@@ -77,6 +79,7 @@ class TourProcessingDraftServiceTest {
     private DraftHoursService draftHoursService;
     private OvertimeRequestReportService overtimeRequestReportService;
     private InMemoryBusinessDays businessDays;
+    private ObservationKeywordRepository observationKeywordRepository;
     private TourProcessingDraftService service;
 
     @BeforeEach
@@ -92,6 +95,7 @@ class TourProcessingDraftServiceTest {
         draftHoursService = mock(DraftHoursService.class);
         when(draftHoursService.manualDays(any())).thenReturn(ManualDays.NONE);
         overtimeRequestReportService = mock(OvertimeRequestReportService.class);
+        observationKeywordRepository = mock(ObservationKeywordRepository.class);
         CurrentUserResolver currentUserResolver = mock(CurrentUserResolver.class);
         when(currentUserResolver.resolve()).thenReturn("aleja");
         when(draftRepository.save(any(TourProcessingDraft.class))).thenAnswer(invocation -> {
@@ -112,7 +116,8 @@ class TourProcessingDraftServiceTest {
                 overtimeRequestReportService,
                 currentUserResolver,
                 Validation.buildDefaultValidatorFactory().getValidator(),
-                mock(JdbcTemplate.class)
+                mock(JdbcTemplate.class),
+                observationKeywordRepository
         );
     }
 
@@ -573,6 +578,57 @@ class TourProcessingDraftServiceTest {
 
         assertThat(existing.getApprovalStatus()).isEqualTo(TourApprovalStatus.NOT_APPROVED);
         assertThat(response.getApprovalStatus()).isEqualTo(TourApprovalStatus.NOT_APPROVED);
+    }
+
+    @Test
+    void updateRowClearsObservationReviewedWhenTheObservationChanges() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        TourProcessingDraftTour existing = entity(draft, 8, "03625", "Tayutic");
+        existing.setObservationReviewed(true);
+        existing.setObservations("Llevar urgente");
+        stubDraft(draft, existing);
+        TourProcessingDraftRowRequestDto request = row(8, "03625", "Tayutic");
+        request.setObservations("Llevar urgente mañana");
+
+        var response = service.updateRow(draft.getId(), existing.getId(), request);
+
+        assertThat(existing.isObservationReviewed()).isFalse();
+        assertThat(response.isObservationReviewed()).isFalse();
+        assertThat(response.getObservations()).isEqualTo("Llevar urgente mañana");
+    }
+
+    @Test
+    void updateRowKeepsObservationReviewedWhenTheObservationStaysTheSame() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        TourProcessingDraftTour existing = entity(draft, 8, "03625", "Tayutic");
+        existing.setObservationReviewed(true);
+        existing.setObservations("Llevar urgente");
+        stubDraft(draft, existing);
+        TourProcessingDraftRowRequestDto request = row(8, "03625", "Tayutic");
+        request.setObservations("  Llevar urgente  ");
+
+        var response = service.updateRow(draft.getId(), existing.getId(), request);
+
+        assertThat(existing.isObservationReviewed()).isTrue();
+        assertThat(response.isObservationReviewed()).isTrue();
+    }
+
+    @Test
+    void updateRowReportsKeywordsThatMatchTheObservation() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        TourProcessingDraftTour existing = entity(draft, 8, "03625", "Tayutic");
+        existing.setObservations("Revisar URGENTE hoy");
+        stubDraft(draft, existing);
+        ObservationKeyword keyword = new ObservationKeyword();
+        keyword.setText("urgente");
+        when(observationKeywordRepository.findAll()).thenReturn(List.of(keyword));
+        TourProcessingDraftRowRequestDto request = row(8, "03625", "Tayutic");
+        request.setObservations("Revisar URGENTE hoy");
+
+        var response = service.updateRow(draft.getId(), existing.getId(), request);
+
+        assertThat(response.getMatchedObservationKeywords()).containsExactly("urgente");
+        assertThat(existing.isObservationReviewed()).isFalse();
     }
 
     @Test

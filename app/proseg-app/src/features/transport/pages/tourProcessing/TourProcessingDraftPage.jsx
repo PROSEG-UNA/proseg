@@ -85,6 +85,7 @@ import { usePersistedExpansion } from '../../hooks/usePersistedExpansion.js';
 import CatalogValueCell from '../../components/tourProcessing/CatalogValueCell.jsx';
 import TourProcessingAssignmentsCell from '../../components/tourProcessing/TourProcessingAssignmentsCell.jsx';
 import TourProcessingDraftRowModal from '../../components/tourProcessing/TourProcessingDraftRowModal.jsx';
+import TourObservationMatchIndicator from '../../components/tourProcessing/TourObservationMatchIndicator.jsx';
 import TourProcessingDriverAssignmentReport from '../../components/tourProcessing/TourProcessingDriverAssignmentReport.jsx';
 import TourProcessingAutoAssignmentInfoModal from '../../components/tourProcessing/TourProcessingAutoAssignmentInfoModal.jsx';
 import TourProcessingFinalCommissionDialog from '../../components/tourProcessing/TourProcessingFinalCommissionDialog.jsx';
@@ -582,9 +583,39 @@ export default function TourProcessingDraftPage() {
         },
     });
 
+    const handleObservationReviewed = useCallback((updated) => {
+        setRowModal((current) => {
+            if (!current.row || current.row.id !== updated?.id) return current;
+            return {
+                ...current,
+                row: {
+                    ...current.row,
+                    observationReviewed: Boolean(updated.observationReviewed),
+                    matchedObservationKeywords: updated.matchedObservationKeywords ?? [],
+                },
+            };
+        });
+    }, []);
+
     const columns = useMemo(() => [
         { accessorKey: 'rowNumber', header: 'Fila', size: 90, grow: false },
-        { accessorKey: 'number', header: 'Numero', size: 120, grow: false },
+        {
+            accessorKey: 'number',
+            header: 'Numero',
+            size: 150,
+            grow: false,
+            Cell: ({ cell, row }) => (
+                <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, maxWidth: '100%' }}>
+                    {cell.getValue()}
+                    <TourObservationMatchIndicator
+                        draftId={draftId}
+                        row={row.original}
+                        canReview={draft?.status === 'DRAFT' && canEditTours}
+                        onReviewed={handleObservationReviewed}
+                    />
+                </Box>
+            ),
+        },
         {
             id: 'duplicate',
             header: 'Repetición',
@@ -700,7 +731,7 @@ export default function TourProcessingDraftPage() {
                 );
             },
         },
-    ], [isDriverMissing, isVehicleMissing, vehicleCatalog, borrowedVehicles.options]);
+    ], [isDriverMissing, isVehicleMissing, vehicleCatalog, borrowedVehicles.options, draftId, draft?.status, canEditTours, handleObservationReviewed]);
 
     const openRowModal = useCallback((mode, row) => setRowModal({ open: true, mode, row, rowId: row?.id ?? null }), []);
     const openRowModalById = useCallback((mode, rowId) => setRowModal({ open: true, mode, row: null, rowId }), []);
@@ -1109,6 +1140,7 @@ export default function TourProcessingDraftPage() {
                 canDelete={canDeleteRows}
                 onClose={closeRowModal}
                 onEdit={canEditRows ? () => openRowModal('edit', rowModal.row) : undefined}
+                onObservationReviewed={handleObservationReviewed}
                 onDeleted={() => setAlert({ type: 'success', message: 'Gira eliminada correctamente' })}
                 onSaved={() => setAlert({
                     type: 'success',
