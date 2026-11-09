@@ -125,4 +125,15 @@ public interface TourProcessingDraftAssignmentRepository extends JpaRepository<T
             )
             """, nativeQuery = true)
     boolean isBorrowedVehicleInOpenDraft(@Param("borrowedVehicleId") UUID borrowedVehicleId);
+
+    @Query("""
+            select a from TourProcessingDraftAssignment a
+            join fetch a.tour t
+            join fetch t.draft d
+            where a.vehicleId = :vehicleId
+              and d.status = :status
+            """)
+    List<TourProcessingDraftAssignment> findByVehicleIdAndDraftStatus(
+            @Param("vehicleId") UUID vehicleId,
+            @Param("status") TourProcessingDraftStatus status);
 }

@@ -19,6 +19,33 @@ class CompleteTourAssignmentTest {
     }
 
     @Test
+    void skipsUnavailableVehiclesWhenAssigningDriversAndVehicles() {
+        var first = sameDayTour("1", "2026-05-04", "08:00", "12:00");
+        var second = addPart(first, 3);
+        var rows = List.of(first, second);
+        var unavailable = vehicle("9", null, 5);
+        unavailable.setAvailable(false);
+        var engine = assigner(List.of(driver("Ana"), driver("Beto")),
+                List.of(unavailable, vehicle("1", null, 5), vehicle("2", null, 5)), rows);
+
+        assertThat(engine.assign(rows)).hasSize(2);
+        assertThat(engine.vehicleAssignments().values()).extracting(Vehicle::getPlate).containsExactlyInAnyOrder("1", "2");
+    }
+
+    @Test
+    void doesNotAssignATourWhenEveryVehicleIsUnavailable() {
+        var first = sameDayTour("1", "2026-05-04", "08:00", "12:00");
+        var second = addPart(first, 3);
+        var rows = List.of(first, second);
+        var unavailable = vehicle("9", null, 5);
+        unavailable.setAvailable(false);
+        var engine = assigner(List.of(driver("Ana"), driver("Beto")), List.of(unavailable), rows);
+
+        assertThat(engine.assign(rows)).isEmpty();
+        assertThat(engine.vehicleAssignments()).isEmpty();
+    }
+
+    @Test
     void assignsEveryPartWithDifferentDriversAndVehicles() {
         var first = sameDayTour("1", "2026-05-04", "08:00", "12:00");
         var second = addPart(first, 3);

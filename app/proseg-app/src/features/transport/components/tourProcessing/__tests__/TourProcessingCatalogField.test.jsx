@@ -36,7 +36,7 @@ const DRIVER_ENTRIES = [
 
 const VEHICLE_ENTRIES = [
     { label: '301-627', secondary: 'Microbús · 36 pasajeros', searchText: '301-627 Microbús 36 pasajeros' },
-    { label: '301-481', secondary: 'Sedán · 4 pasajeros', badge: { label: 'No disponible', color: 'error' }, searchText: '301-481 Sedán 4 pasajeros No disponible' },
+    { label: '301-481', secondary: 'Sedán · 4 pasajeros', searchText: '301-481 Sedán 4 pasajeros' },
 ];
 
 function buildCatalog({ canAddDriver = true, missingDrivers = ['Juan Chacsn'] } = {}) {
@@ -49,6 +49,7 @@ function buildCatalog({ canAddDriver = true, missingDrivers = ['Juan Chacsn'] } 
         vehicle: {
             options: VEHICLE_ENTRIES,
             isMissing: (value) => ['999-999', 'Todo Terreno'].includes(value),
+            isUnavailable: (value) => value === '301-900',
             canAdd: true,
         },
     };
@@ -164,7 +165,15 @@ describe('TourProcessingCatalogField', () => {
 
         expect(await screen.findByText('Microbús · 36 pasajeros')).toBeInTheDocument();
         expect(screen.getByText('Sedán · 4 pasajeros')).toBeInTheDocument();
+        expect(screen.queryByText('No disponible')).not.toBeInTheDocument();
+    });
+
+    it('muestra No disponible junto a la placa asignada aunque no este en las opciones', () => {
+        renderField({ kind: 'vehicle', value: '301-900', isEdit: false });
+
+        expect(screen.getByDisplayValue('301-900')).toBeInTheDocument();
         expect(screen.getByText('No disponible')).toBeInTheDocument();
+        expect(screen.queryByRole('option', { name: /301-900/ })).not.toBeInTheDocument();
     });
 
     it('busca el vehiculo por pasajeros o tipo', async () => {

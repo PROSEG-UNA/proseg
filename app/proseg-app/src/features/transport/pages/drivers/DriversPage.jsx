@@ -23,6 +23,7 @@ import { usePersistedMonth } from '../../hooks/usePersistedMonth.js';
 import { useTransportDriverMonthsData } from '../../hooks/useTransportDriverMonthsData.js';
 import { useTransportDriverMonthSurplusCap } from '../../hooks/useTransportDriverMonthSurplusCap.js';
 import { exportDriverOvertimeRequest } from '../../services/drivers/driversService';
+import { exportDrivers } from '../../services/transportExportService.js';
 import { exportMonthTourControl } from '../../services/tourProcessing/tourProcessingService';
 import { downloadBlob } from '../../transportUtils.js';
 import { queryKeys } from '../../../../common/query';
@@ -77,8 +78,16 @@ export default function DriversPage() {
             setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo generar el control de giras') });
         },
     });
+    const driversExportMutation = useMutation({
+        mutationFn: () => exportDrivers(monthData.enabled && year && month ? { year, month } : {}),
+        onSuccess: ({ blob, fileName }) => downloadBlob(blob, fileName),
+        onError: (error) => {
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudieron exportar los choferes') });
+        },
+    });
     const exportingOvertimeRequest = overtimeRequestMutation.isPending;
     const exportingTourControl = tourControlMutation.isPending;
+    const exportingDrivers = driversExportMutation.isPending;
 
     const closeOptions = () => setOptionsAnchor(null);
 
@@ -90,6 +99,11 @@ export default function DriversPage() {
     const handleExportOvertimeRequest = () => {
         closeOptions();
         if (!overtimeRequestMutation.isPending) overtimeRequestMutation.mutate();
+    };
+
+    const handleExportDrivers = () => {
+        closeOptions();
+        if (!driversExportMutation.isPending) driversExportMutation.mutate();
     };
 
     const openCreateDriver = () => {
@@ -133,7 +147,7 @@ export default function DriversPage() {
                 <PageHeader
                     title="Choferes"
                     description="Gestión de choferes."
-                    action={canManageDrivers || canExportOvertime || canExportTourControl ? (
+                    action={canManageDrivers || canReadDrivers || canExportTourControl ? (
                         <>
                             <PrimaryButton
                                 onClick={(event) => setOptionsAnchor(event.currentTarget)}
@@ -164,6 +178,12 @@ export default function DriversPage() {
                                         <ListItemText>{`Descargar 'Control de Giras ${periodLabel}'`}</ListItemText>
                                     </MenuItem>
                                 )}
+                                {canReadDrivers && (
+                                    <MenuItem onClick={handleExportDrivers} disabled={exportingDrivers}>
+                                        <ListItemIcon><DownloadOutlinedIcon fontSize="small" /></ListItemIcon>
+                                        <ListItemText>Exportar choferes</ListItemText>
+                                    </MenuItem>
+                                )}
                                 {canExportOvertime && (
                                     <MenuItem onClick={handleExportOvertimeRequest} disabled={exportingOvertimeRequest}>
                                         <ListItemIcon><DownloadOutlinedIcon fontSize="small" /></ListItemIcon>
@@ -175,7 +195,7 @@ export default function DriversPage() {
                     ) : null}
                 />
 
-                {(exportingOvertimeRequest || exportingTourControl) && <LinearProgress sx={{ mt: 2 }} />}
+                {(exportingOvertimeRequest || exportingTourControl || exportingDrivers) && <LinearProgress sx={{ mt: 2 }} />}
 
                 <Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 3 }}>
                     <Tabs

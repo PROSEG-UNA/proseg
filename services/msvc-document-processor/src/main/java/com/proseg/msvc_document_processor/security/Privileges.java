@@ -18,6 +18,10 @@ public final class Privileges {
         public static final String LEER = "LEER_CHOFERES";
     }
 
+    public static final class Vehiculos {
+        public static final String LEER = "LEER_VEHICULOS";
+    }
+
     public static final class SolicitudesMantenimiento {
         public static final String LEER = "LEER_SOLICITUDES_MANTENIMIENTO";
     }

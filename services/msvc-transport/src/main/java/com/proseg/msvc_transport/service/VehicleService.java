@@ -14,6 +14,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -23,6 +25,7 @@ public class VehicleService {
 
     private final VehicleRepository vehicleRepository;
     private final DraftCatalogService draftCatalogService;
+    private final VehicleOpenDraftTourFinder openDraftTourFinder;
 
     @Transactional
     public VehicleResponseDto create(VehicleRequestDto request) {
@@ -42,9 +45,24 @@ public class VehicleService {
 
     @Transactional(readOnly = true)
     public Page<VehicleResponseDto> findAll(String search, Map<String, String> filters, Pageable pageable) {
-        Specification<Vehicle> spec = Specification.where(GenericSpecifications.withSearch(Vehicle.class, search)).and(GenericSpecifications.withColumnFilters(Vehicle.class, filters));
+        Map<String, String> columnFilters = new HashMap<>();
+        if (filters != null) {
+            columnFilters.putAll(filters);
+        }
+        String available = columnFilters.remove("available");
+        Specification<Vehicle> spec = Specification.where(GenericSpecifications.withSearch(Vehicle.class, search))
+                .and(GenericSpecifications.withColumnFilters(Vehicle.class, columnFilters))
+                .and(availableFilter(available));
         Pageable sanitized = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), GenericSpecifications.sanitizeSort(Vehicle.class, pageable.getSort()));
         return vehicleRepository.findAll(spec, sanitized).map(this::toResponse);
+    }
+
+    static Specification<Vehicle> availableFilter(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return (root, query, cb) -> null;
+        }
+        boolean available = Boolean.parseBoolean(raw);
+        return (root, query, cb) -> cb.equal(root.get("available"), available);
     }
 
     @Transactional
@@ -56,7 +74,9 @@ public class VehicleService {
         updateEntity(entity, request);
         Vehicle saved = vehicleRepository.save(entity);
         draftCatalogService.syncVehicle(saved);
-        return toResponse(saved);
+        VehicleResponseDto response = toResponse(saved);
+        response.setOpenDraftTours(saved.isAvailable() ? List.of() : openDraftTourFinder.find(saved.getId()));
+        return response;
     }
 
     @Transactional

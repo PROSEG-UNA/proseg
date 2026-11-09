@@ -45,8 +45,19 @@ public class SecurityConfig {
                         ).hasAuthority(Privileges.Giras.EXPORTAR)
 
                         .requestMatchers(HttpMethod.GET,
+                                "/api/v1/document-processor/exports/drivers",
                                 "/api/v1/document-processor/exports/drivers/**"
                         ).hasAuthority(Privileges.Choferes.LEER)
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/document-processor/exports/vehicles",
+                                "/api/v1/document-processor/exports/vehicles/**"
+                        ).hasAuthority(Privileges.Vehiculos.LEER)
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/document-processor/exports/borrowed-vehicles",
+                                "/api/v1/document-processor/exports/borrowed-vehicles/**"
+                        ).hasAuthority(Privileges.Vehiculos.LEER)
 
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/document-processor/exports/assets/**"
