@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Container, LinearProgress, ListItemIcon, ListItemText, Menu, MenuItem, Stack } from '@mui/material';
+import { Alert, Box, Container, LinearProgress, ListItemIcon, ListItemText, Menu, MenuItem, Stack, Tab, Tabs } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
+import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
+import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
@@ -27,7 +29,14 @@ import { queryKeys } from '../../../../common/query';
 
 const SELECTED_MONTH_STORAGE_KEY = 'transport-drivers-selected-month';
 
+const DRIVER_SUB_TABS = [
+    { key: 'own', label: 'Choferes de la unidad', unit: 'GENERAL_SERVICES', icon: BadgeOutlinedIcon },
+    { key: 'other', label: 'Choferes de otra unidad', unit: 'OTHER_UNIT', icon: PeopleAltOutlinedIcon },
+];
+
 export default function DriversPage() {
+    const [driverSubTab, setDriverSubTab] = useState('own');
+    const activeDriverSubTab = DRIVER_SUB_TABS.find((tab) => tab.key === driverSubTab);
     const [driverFormOpen, setDriverFormOpen] = useState(false);
     const [driverFormId, setDriverFormId] = useState(null);
     const [selectedMonth, setSelectedMonth] = usePersistedMonth(SELECTED_MONTH_STORAGE_KEY);
@@ -158,6 +167,30 @@ export default function DriversPage() {
 
                 {(exportingOvertimeRequest || exportingTourControl) && <LinearProgress sx={{ mt: 2 }} />}
 
+                <Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 3 }}>
+                    <Tabs
+                        value={driverSubTab}
+                        onChange={(_, value) => setDriverSubTab(value)}
+                        variant="scrollable"
+                        scrollButtons="auto"
+                        allowScrollButtonsMobile
+                    >
+                        {DRIVER_SUB_TABS.map((tab) => {
+                            const Icon = tab.icon;
+                            return (
+                                <Tab
+                                    key={tab.key}
+                                    value={tab.key}
+                                    label={tab.label}
+                                    icon={<Icon sx={{ fontSize: 18 }} />}
+                                    iconPosition="start"
+                                    sx={{ textTransform: 'none', fontWeight: 700 }}
+                                />
+                            );
+                        })}
+                    </Tabs>
+                </Box>
+
                 <Stack
                     direction={{ xs: 'column', sm: 'row' }}
                     spacing={3}
@@ -186,7 +219,12 @@ export default function DriversPage() {
                 </Stack>
 
                 <Box sx={{ pt: 3 }}>
-                    <DriversTable onEditDriver={openEditDriver} monthData={monthData} />
+                    <DriversTable
+                        key={driverSubTab}
+                        unit={activeDriverSubTab.unit}
+                        onEditDriver={openEditDriver}
+                        monthData={monthData}
+                    />
                 </Box>
             </Container>
 

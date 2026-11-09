@@ -16,7 +16,7 @@ const COLUMN_TO_BACKEND_KEY = {
     organizationalUnit: 'organizationalUnit',
 };
 
-export default function DriversTable({ onEditDriver, monthData }) {
+export default function DriversTable({ onEditDriver, monthData, unit }) {
     const [pagination, setPagination] = usePersistedPagination('drivers-table-page-size');
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
@@ -31,7 +31,7 @@ export default function DriversTable({ onEditDriver, monthData }) {
     const debouncedColumnFilters = useDebounce(columnFilters, 350);
 
     const backendFilters = useMemo(() => {
-        const out = {};
+        const out = unit ? { organizationalUnit: unit } : {};
         debouncedColumnFilters.forEach(({ id, value }) => {
             const key = COLUMN_TO_BACKEND_KEY[id];
             if (!key) return;
@@ -39,7 +39,7 @@ export default function DriversTable({ onEditDriver, monthData }) {
             out[key] = value;
         });
         return out;
-    }, [debouncedColumnFilters]);
+    }, [debouncedColumnFilters, unit]);
 
     const backendSort = useMemo(
         () => sorting

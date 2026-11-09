@@ -1,21 +1,10 @@
 import Chip from '@mui/material/Chip';
 import TableSelectFilter from '../../../../common/components/TableSelectFilter.jsx';
-import { DRIVER_STATUS_OPTIONS, DRIVER_UNIT_OPTIONS, formatHours, formatPercent, getStatusChipColor } from '../../transportUtils';
+import { DRIVER_STATUS_OPTIONS, formatHours, formatPercent, getStatusChipColor } from '../../transportUtils';
 
 export function getDriverColumns({ showMonthColumns = false } = {}) {
     const baseColumns = [
         { accessorKey: 'name', header: 'Nombre', size: 240, grow: true },
-        {
-            accessorKey: 'organizationalUnit',
-            header: 'Unidad',
-            size: 180,
-            grow: false,
-            filterVariant: 'select',
-            filterSelectOptions: DRIVER_UNIT_OPTIONS,
-            Filter: ({ column }) => (
-                <TableSelectFilter column={column} label="Unidad" options={DRIVER_UNIT_OPTIONS} clearLabel="Todas" />
-            ),
-        },
         {
             accessorKey: 'status',
             header: 'Estado',
@@ -32,6 +21,7 @@ export function getDriverColumns({ showMonthColumns = false } = {}) {
                     size="small"
                     color={getStatusChipColor(row.original.statusRaw)}
                     variant="outlined"
+                    sx={{ width: 84, justifyContent: 'center' }}
                 />
             ),
         },
