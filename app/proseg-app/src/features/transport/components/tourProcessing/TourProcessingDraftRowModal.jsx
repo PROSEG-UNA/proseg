@@ -45,6 +45,7 @@ import {
 } from './tourProcessingDraftLabels.js';
 import TourProcessingCatalogField from './TourProcessingCatalogField.jsx';
 import DuplicateChip from './DuplicateChip.jsx';
+import { describeDraftRowChanges } from './draftRowChanges.js';
 import TourProcessingDraftDistributionEditor from './TourProcessingDraftDistributionEditor.jsx';
 import { minimumTrips } from './tripDistribution.js';
 
@@ -957,10 +958,14 @@ export default function TourProcessingDraftRowModal({ open, mode, row, loadingRo
         mutationFn: (payload) => (isCreate
             ? createTourProcessingDraftRow(draftId, payload)
             : updateTourProcessingDraftRow(draftId, row.id, payload)),
-        onSuccess: (savedRow) => {
+        onSuccess: (savedRow, payload) => {
             replaceCachedDraftRow(queryClient, draftId, savedRow);
             void invalidateTourProcessingDraft(queryClient, draftId);
-            onSaved?.();
+            onSaved?.({
+                created: isCreate,
+                number: payload.number,
+                changes: isCreate ? [] : describeDraftRowChanges(row, payload),
+            });
             onClose();
         },
         onError: (error) => {

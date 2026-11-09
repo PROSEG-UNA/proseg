@@ -223,7 +223,7 @@ const DraftRowsTable = memo(function DraftRowsTable({
         onColumnVisibilityChange: handleColumnVisibilityChange,
         state: { ...tableOptions.state, ...expansionOptions.state, columnVisibility, density: 'compact' },
         rowCount: totalElements,
-        muiPaginationProps: { rowsPerPageOptions: [10, 20, 50, 100] },
+        muiPaginationProps: { rowsPerPageOptions: [10, 20, 50] },
     }), [tableOptions, expansionOptions, handleColumnVisibilityChange, columnVisibility, totalElements]);
 
     return (
@@ -259,6 +259,12 @@ function autoAssignUlloaDriversResultMessage(result) {
     if (result?.unassignedTours) parts.push(`${result.unassignedTours} giras Periféricas quedaron sin chofer.`);
     if (result?.clearedTours) parts.push(`Se vaciaron ${result.clearedTours} giras Periféricas que tenían un chofer fuera del catálogo.`);
     return parts.join('\n');
+}
+
+function savedRowMessage({ created, number, changes }) {
+    if (created) return `Gira ${number} creada correctamente`;
+    if (!changes?.length) return `Gira ${number} guardada. No hubo cambios en sus datos.`;
+    return `Gira ${number} actualizada correctamente.\n\n${changes.join('\n')}`;
 }
 
 function finalCommissionResultMessage(rejectedTours) {
@@ -567,13 +573,14 @@ export default function TourProcessingDraftPage() {
 
     const approvalStatusMutation = useMutation({
         mutationFn: (row) => updateTourProcessingDraftRowApprovalStatus(draftId, row.id, toggledApprovalStatus(row.approvalStatus)),
-        onSuccess: (updatedRow) => {
+        onSuccess: (updatedRow, row) => {
             replaceCachedDraftRow(queryClient, draftId, updatedRow);
+            const number = updatedRow?.number ?? row.number;
             setAlert({
                 type: 'success',
                 message: updatedRow?.approvalStatus === APPROVAL_STATUS.NOT_APPROVED
-                    ? 'Gira marcada como no aprobada'
-                    : 'Gira aprobada correctamente',
+                    ? `Gira ${number} marcada como no aprobada`
+                    : `Gira ${number} aprobada correctamente`,
             });
             void invalidateTourProcessingDraft(queryClient, draftId);
         },
@@ -611,6 +618,7 @@ export default function TourProcessingDraftPage() {
                     color={approvalStatusColor(cell.getValue())}
                     size="small"
                     variant="outlined"
+                    sx={{ width: 104, justifyContent: 'center' }}
                 />
             ),
         },
@@ -1110,10 +1118,7 @@ export default function TourProcessingDraftPage() {
                 onClose={closeRowModal}
                 onEdit={canEditRows ? () => openRowModal('edit', rowModal.row) : undefined}
                 onDeleted={() => setAlert({ type: 'success', message: 'Gira eliminada correctamente' })}
-                onSaved={() => setAlert({
-                    type: 'success',
-                    message: rowModal.mode === 'create' ? 'Gira creada correctamente' : 'Fila actualizada correctamente',
-                })}
+                onSaved={(saved) => setAlert({ type: 'success', message: savedRowMessage(saved) })}
             />
 
             <DialogModal
