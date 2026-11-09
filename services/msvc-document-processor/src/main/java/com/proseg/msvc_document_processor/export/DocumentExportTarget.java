@@ -10,5 +10,9 @@ public interface DocumentExportTarget {
 
     List<ExportColumnDefinition> columns();
 
+    default List<ExportColumnDefinition> columns(MultiValueMap<String, String> queryParams) {
+        return columns();
+    }
+
     ExportPage fetchPage(MultiValueMap<String, String> queryParams);
 }

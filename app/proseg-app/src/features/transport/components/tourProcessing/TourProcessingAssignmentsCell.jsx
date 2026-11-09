@@ -15,12 +15,14 @@ function isCheckedAgainstCatalog(kind, assignment) {
     return kind === 'driver' || assignment.resourceType !== 'BORROWED_VEHICLE';
 }
 
-function describeSlot(kind, assignment, isMissing) {
+function describeSlot(kind, assignment, isMissing, isUnavailable) {
     const value = slotValue(kind, assignment);
+    const checked = Boolean(value) && isCheckedAgainstCatalog(kind, assignment);
     return {
         value,
         unassigned: !value,
-        missing: Boolean(value) && isCheckedAgainstCatalog(kind, assignment) && isMissing(value),
+        missing: checked && isMissing(value),
+        unavailable: checked && !isMissing(value) && Boolean(isUnavailable?.(value)),
     };
 }
 
@@ -36,12 +38,14 @@ function summarizeIssues(kind, slots) {
 
 function slotLabel(slot, unassignedLabel) {
     if (slot.unassigned) return unassignedLabel;
-    return slot.missing ? `${slot.value} (no está en el sistema)` : slot.value;
+    if (slot.missing) return `${slot.value} (no está en el sistema)`;
+    if (slot.unavailable) return `${slot.value} (no disponible)`;
+    return slot.value;
 }
 
-export default function TourProcessingAssignmentsCell({ kind, assignments, isMissing }) {
+export default function TourProcessingAssignmentsCell({ kind, assignments, isMissing, isUnavailable }) {
     const text = KIND_TEXT[kind];
-    const slots = assignments.map((assignment) => describeSlot(kind, assignment, isMissing));
+    const slots = assignments.map((assignment) => describeSlot(kind, assignment, isMissing, isUnavailable));
     const issues = summarizeIssues(kind, slots);
     const [firstSlot] = slots;
 
@@ -66,7 +70,7 @@ export default function TourProcessingAssignmentsCell({ kind, assignments, isMis
     return (
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, maxWidth: '100%' }}>
             <Box sx={{ minWidth: 0 }}>
-                <CatalogValueCell kind={kind} value={firstSlot.value} missing={firstSlot.missing} />
+                <CatalogValueCell kind={kind} value={firstSlot.value} missing={firstSlot.missing} unavailable={firstSlot.unavailable} />
             </Box>
             <Tooltip title={details} placement="top">
                 <Chip

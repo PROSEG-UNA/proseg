@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -51,6 +52,18 @@ public interface TransportClient {
 
     @GetMapping("/v1/transport/tour-processing/drafts/months/{year}/{month}/tour-control")
     ApiResponse<TourControlReportDto> getMonthTourControlReport(@PathVariable("year") int year, @PathVariable("month") int month);
+
+    @GetMapping("/v1/transport/vehicles")
+    ApiResponse<PageResponse<Map<String, Object>>> getVehicles(@RequestParam MultiValueMap<String, String> queryParams);
+
+    @GetMapping("/v1/transport/borrowed-vehicles")
+    ApiResponse<PageResponse<Map<String, Object>>> getBorrowedVehicles(@RequestParam MultiValueMap<String, String> queryParams);
+
+    @GetMapping("/v1/transport/drivers")
+    ApiResponse<PageResponse<Map<String, Object>>> getDrivers(@RequestParam MultiValueMap<String, String> queryParams);
+
+    @GetMapping("/v1/transport/drivers/months")
+    ApiResponse<List<Map<String, Object>>> getDriverMonths(@RequestParam("year") int year, @RequestParam("month") int month);
 
     @GetMapping("/v1/transport/drivers/months/{year}/{month}/overtime-request")
     ApiResponse<OvertimeRequestReportDto> getOvertimeRequestReport(

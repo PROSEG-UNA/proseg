@@ -71,6 +71,7 @@ export default function TourProcessingCatalogField({ kind, value, onChange, onBl
     const [addOpen, setAddOpen] = useState(false);
 
     const missing = catalog.isMissing(value);
+    const unavailable = kind === 'vehicle' && Boolean(catalog.isUnavailable?.(value));
     const options = useMemo(
         () => (generalServicesOnly
             ? catalog.options.filter((option) => (option.unit ?? GENERAL_SERVICES_UNIT) === GENERAL_SERVICES_UNIT)
@@ -81,23 +82,26 @@ export default function TourProcessingCatalogField({ kind, value, onChange, onBl
 
     if (!isEdit) {
         return (
-            <TextField
-                label={config.label}
-                value={value || '—'}
-                fullWidth
-                size="small"
-                slotProps={{
-                    input: {
-                        readOnly: true,
-                        endAdornment: missing ? (
-                            <InputAdornment position="end">
-                                <MissingCatalogIcon kind={kind} value={value} />
-                            </InputAdornment>
-                        ) : undefined,
-                    },
-                }}
-                sx={sx}
-            />
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                <TextField
+                    label={config.label}
+                    value={value || '—'}
+                    fullWidth
+                    size="small"
+                    slotProps={{
+                        input: {
+                            readOnly: true,
+                            endAdornment: missing ? (
+                                <InputAdornment position="end">
+                                    <MissingCatalogIcon kind={kind} value={value} />
+                                </InputAdornment>
+                            ) : undefined,
+                        },
+                    }}
+                    sx={{ ...sx, flex: 1 }}
+                />
+                {unavailable && <Chip label="No disponible" size="small" color="error" variant="outlined" sx={{ mt: 1, flexShrink: 0 }} />}
+            </Box>
         );
     }
 
@@ -123,6 +127,8 @@ export default function TourProcessingCatalogField({ kind, value, onChange, onBl
 
     return (
         <Box>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
             <Autocomplete
                 freeSolo
                 autoSelect
@@ -150,6 +156,9 @@ export default function TourProcessingCatalogField({ kind, value, onChange, onBl
                     />
                 )}
             />
+            </Box>
+            {unavailable && <Chip label="No disponible" size="small" color="error" variant="outlined" sx={{ mt: 1, flexShrink: 0 }} />}
+            </Box>
 
             {missing && (
                 <Box

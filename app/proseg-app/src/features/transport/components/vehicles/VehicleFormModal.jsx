@@ -6,6 +6,7 @@ import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
 import { createVehicle, fetchVehicleById, updateVehicle } from '../../services/vehicles/vehiclesService';
 import { VEHICLE_TYPE_OPTIONS } from '../../transportUtils';
+import { formatVehicleUnavailableWarning } from './vehicleOpenDraftWarning.js';
 
 const INITIAL_VALUES = {
     plate: '',
@@ -22,6 +23,7 @@ export default function VehicleFormModal({ open, onClose, onSaved, vehicleId = n
     const [saving, setSaving] = useState(false);
     const [loadingVehicle, setLoadingVehicle] = useState(false);
     const [alert, setAlert] = useState(null);
+    const [draftWarning, setDraftWarning] = useState(null);
 
     useEffect(() => {
         if (!open || !vehicleId) return undefined;
@@ -114,7 +116,12 @@ export default function VehicleFormModal({ open, onClose, onSaved, vehicleId = n
                 ? await updateVehicle(vehicleId, payload)
                 : await createVehicle(payload);
 
+            const openDraftTours = saved?.openDraftTours ?? [];
             onSaved?.(saved);
+            if (!payload.available && openDraftTours.length > 0) {
+                setDraftWarning(formatVehicleUnavailableWarning(openDraftTours));
+                return;
+            }
             onClose?.();
         } catch (error) {
             setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo guardar el vehículo') });
@@ -196,6 +203,16 @@ export default function VehicleFormModal({ open, onClose, onSaved, vehicleId = n
                 type={alert?.type}
                 message={alert?.message}
                 onClose={() => setAlert(null)}
+            />
+            <DialogModal
+                open={!!draftWarning}
+                type="warning"
+                title="Vehículo no disponible"
+                message={draftWarning}
+                onClose={() => {
+                    setDraftWarning(null);
+                    onClose?.();
+                }}
             />
         </>
     );

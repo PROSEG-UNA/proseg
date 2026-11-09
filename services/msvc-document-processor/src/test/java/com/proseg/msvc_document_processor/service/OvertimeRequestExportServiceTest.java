@@ -102,5 +102,25 @@ class OvertimeRequestExportServiceTest {
             requestedPeriod = List.of(year, month);
             return new ApiResponse<>("ok", report, 200);
         }
+
+        @Override
+        public ApiResponse<PageResponse<Map<String, Object>>> getVehicles(MultiValueMap<String, String> queryParams) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ApiResponse<PageResponse<Map<String, Object>>> getBorrowedVehicles(MultiValueMap<String, String> queryParams) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ApiResponse<PageResponse<Map<String, Object>>> getDrivers(MultiValueMap<String, String> queryParams) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ApiResponse<List<Map<String, Object>>> getDriverMonths(int year, int month) {
+            throw new UnsupportedOperationException();
+        }
     }
 }

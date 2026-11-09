@@ -346,7 +346,7 @@ export default function TourProcessingDraftPage() {
 
     const {
         driver: { isMissing: isDriverMissing },
-        vehicle: { isMissing: isVehicleMissing, catalog: vehicleCatalog },
+        vehicle: { isMissing: isVehicleMissing, isUnavailable: isVehicleUnavailable, catalog: vehicleCatalog },
     } = useTourProcessingCatalogMatch();
     const borrowedVehicles = useBorrowedVehicleOptions(canReadVehicles);
     const { draft, loading: loadingDraft, error: draftError } = useTourProcessingDraft(draftId);
@@ -633,19 +633,28 @@ export default function TourProcessingDraftPage() {
         {
             accessorKey: 'vehicle',
             header: 'Vehículo',
-            size: 130,
+            size: 220,
             grow: false,
             Cell: ({ cell, row }) => {
                 const warning = vehicleDistributionWarning(row.original, vehicleCatalog, borrowedVehicles.options);
+                const ownVehicle = row.original.resourceType !== 'EXTERNAL' && row.original.resourceType !== 'BORROWED_VEHICLE';
                 if (row.original.assignments?.length > 1) {
-                    return <TourProcessingAssignmentsCell kind="vehicle" assignments={row.original.assignments} isMissing={isVehicleMissing} />;
+                    return (
+                        <TourProcessingAssignmentsCell
+                            kind="vehicle"
+                            assignments={row.original.assignments}
+                            isMissing={isVehicleMissing}
+                            isUnavailable={isVehicleUnavailable}
+                        />
+                    );
                 }
                 return (
                     <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, maxWidth: '100%' }}>
                         <CatalogValueCell
                             kind="vehicle"
                             value={row.original.resourceType === 'BORROWED_VEHICLE' ? row.original.borrowedVehiclePlate : cell.getValue()}
-                            missing={row.original.resourceType !== 'EXTERNAL' && row.original.resourceType !== 'BORROWED_VEHICLE' && isVehicleMissing(cell.getValue())}
+                            missing={ownVehicle && isVehicleMissing(cell.getValue())}
+                            unavailable={ownVehicle && isVehicleUnavailable(cell.getValue())}
                         />
                         {warning && (
                             <Tooltip title={warning} placement="top">
@@ -700,7 +709,7 @@ export default function TourProcessingDraftPage() {
                 );
             },
         },
-    ], [isDriverMissing, isVehicleMissing, vehicleCatalog, borrowedVehicles.options]);
+    ], [isDriverMissing, isVehicleMissing, isVehicleUnavailable, vehicleCatalog, borrowedVehicles.options]);
 
     const openRowModal = useCallback((mode, row) => setRowModal({ open: true, mode, row, rowId: row?.id ?? null }), []);
     const openRowModalById = useCallback((mode, rowId) => setRowModal({ open: true, mode, row: null, rowId }), []);

@@ -7,6 +7,7 @@ export const TRANSPORT_ENDPOINTS = {
 };
 
 export const TRANSPORT_DOCUMENT_ENDPOINTS = {
+    exports: '/api/v1/document-processor/exports',
     tourProcessingImport: '/api/v1/document-processor/imports/tours',
     tourProcessingImportTemplate: '/api/v1/document-processor/imports/tours/template',
     tourProcessingDraftExport: '/api/v1/document-processor/exports/tours/drafts',
