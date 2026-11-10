@@ -65,6 +65,7 @@ import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -226,9 +227,52 @@ public class TourProcessingDraftService {
 
     @Transactional(readOnly = true)
     public Page<TourProcessingDraftRowResponseDto> findRows(UUID draftId, String search, Map<String, String> filters, Pageable pageable) {
-        getDraft(draftId);
-        Page<TourProcessingDraftTour> page = tourRepository.findPage(draftId, search, filters, pageable);
+        return findRows(draftId, search, filters, null, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<TourProcessingDraftRowResponseDto> findRows(
+            UUID draftId,
+            String search,
+            Map<String, String> filters,
+            String rule,
+            Pageable pageable
+    ) {
+        TourProcessingDraft draft = getDraft(draftId);
+        Collection<UUID> tourIds = rule == null || rule.isBlank() ? null : tourIdsForRule(draft, rule.trim());
+        Page<TourProcessingDraftTour> page = tourRepository.findPage(draftId, search, filters, tourIds, pageable);
         return new PageImpl<>(toRowResponses(draftId, page.getContent()), page.getPageable(), page.getTotalElements());
+    }
+
+    private Collection<UUID> tourIdsForRule(TourProcessingDraft draft, String rule) {
+        List<TourProcessingDraftTour> tours = tourRepository.findPrimariesByDraftId(draft.getId()).stream()
+                .filter(TourProcessingDraftTour::isPrimary)
+                .toList();
+        List<Vehicle> vehicles = vehicleRepository.findAll();
+        TourAssignmentRules.Snapshot snapshot = rulesSnapshot(draft, tours, null);
+        if ("ANY".equals(rule)) {
+            Set<UUID> ids = new LinkedHashSet<>(assignmentRules.tourIdsViolating(snapshot, null));
+            oversizedToursOf(tours, vehicles).forEach(tour -> ids.add(tour.getId()));
+            ids.addAll(assignmentRules.incompleteTourIds(snapshot));
+            ids.addAll(assignmentRules.partialTourIds(snapshot));
+            return ids;
+        }
+        if ("NEEDS_MULTIPLE_TRIPS".equals(rule)) {
+            Set<UUID> ids = new LinkedHashSet<>();
+            oversizedToursOf(tours, vehicles).forEach(tour -> ids.add(tour.getId()));
+            return ids;
+        }
+        if ("INCOMPLETE".equals(rule)) {
+            return assignmentRules.incompleteTourIds(snapshot);
+        }
+        if ("PARTIAL_DISTRIBUTION".equals(rule)) {
+            return assignmentRules.partialTourIds(snapshot);
+        }
+        try {
+            return assignmentRules.tourIdsViolating(snapshot, TourAssignmentRules.RuleCode.valueOf(rule));
+        } catch (IllegalArgumentException ex) {
+            throw TransportException.badRequest("TOUR_RULE_FILTER_UNKNOWN", "No existe la condición " + rule);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -760,25 +804,51 @@ public class TourProcessingDraftService {
 
     static List<TourProcessingDraftTour> oversizedToursOf(List<TourProcessingDraftTour> tours, List<Vehicle> vehicles) {
         Map<UUID, Vehicle> vehiclesById = DriverHoursRules.vehiclesById(vehicles);
+        Map<String, Vehicle> vehiclesByPlate = DriverHoursRules.vehicleCatalogByPlate(vehicles);
         int fleetMaximum = fleetMaximumCapacity(vehicles);
         return tours.stream()
-                .filter(tour -> !tour.isDistributed())
-                .filter(tour -> tour.primaryAssignment() != null)
-                .filter(tour -> tour.primaryAssignment().getResourceType() != ResourceType.EXTERNAL)
-                .filter(tour -> tour.isPrimary() && tour.isApproved())
-                .filter(tour -> {
-                    int capacity = capacityOf(tour.primaryAssignment(), vehiclesById, fleetMaximum);
-                    return capacity > 0 && tour.getPassengers() > capacity;
-                })
+                .filter(tour -> needsMultipleTrips(tour, vehiclesById, vehiclesByPlate, fleetMaximum))
                 .toList();
     }
 
+    static boolean needsMultipleTrips(
+            TourProcessingDraftTour tour,
+            Map<UUID, Vehicle> vehiclesById,
+            Map<String, Vehicle> vehiclesByPlate,
+            int fleetMaximum
+    ) {
+        TourProcessingDraftAssignment assignment = tour.primaryAssignment();
+        if (tour.isDistributed() || assignment == null || assignment.getResourceType() == ResourceType.EXTERNAL) {
+            return false;
+        }
+        if (!tour.isPrimary() || !tour.isApproved() || tour.getPassengers() == null) {
+            return false;
+        }
+        int capacity = capacityOf(assignment, vehiclesById, vehiclesByPlate, fleetMaximum);
+        return capacity > 0 && tour.getPassengers() > capacity;
+    }
+
     static int capacityOf(TourProcessingDraftAssignment assignment, Map<UUID, Vehicle> vehiclesById, int fleetMaximum) {
+        return capacityOf(assignment, vehiclesById, DriverHoursRules.vehicleCatalogByPlate(List.copyOf(vehiclesById.values())), fleetMaximum);
+    }
+
+    private static int capacityOf(
+            TourProcessingDraftAssignment assignment,
+            Map<UUID, Vehicle> vehiclesById,
+            Map<String, Vehicle> vehiclesByPlate,
+            int fleetMaximum
+    ) {
         if (assignment.getResourceType() == ResourceType.BORROWED_VEHICLE) {
             BorrowedVehicle borrowed = assignment.getBorrowedVehicle();
             return borrowed == null || borrowed.getCapacity() == null ? 0 : borrowed.getCapacity();
         }
         Vehicle selected = DriverHoursRules.assignedVehicle(assignment, vehiclesById);
+        if (selected == null || selected.getCapacity() == null) {
+            Vehicle byPlate = DriverHoursRules.catalogVehicle(assignment.getVehicle(), vehiclesByPlate);
+            if (byPlate != null && byPlate.getCapacity() != null) {
+                selected = byPlate;
+            }
+        }
         return selected == null || selected.getCapacity() == null ? fleetMaximum : selected.getCapacity();
     }
 
@@ -1514,10 +1584,13 @@ public class TourProcessingDraftService {
                     .forEach(day -> daysByAssignmentId.computeIfAbsent(day.getAssignment().getId(), id -> new ArrayList<>()).add(day));
         }
 
-        Map<UUID, Vehicle> vehiclesById = DriverHoursRules.vehiclesById(vehicleRepository.findAll());
+        List<Vehicle> vehicles = vehicleRepository.findAll();
+        Map<UUID, Vehicle> vehiclesById = DriverHoursRules.vehiclesById(vehicles);
+        Map<String, Vehicle> vehiclesByPlate = DriverHoursRules.vehicleCatalogByPlate(vehicles);
+        int fleetMaximum = fleetMaximumCapacity(vehicles);
         List<String> keywords = observationKeywords(tours);
         return tours.stream()
-                .map(tour -> toRowResponse(tour, tour.isPrimary() ? tour : primaryByNumber.get(numberKey(tour)), daysByAssignmentId, vehiclesById, keywords))
+                .map(tour -> toRowResponse(tour, tour.isPrimary() ? tour : primaryByNumber.get(numberKey(tour)), daysByAssignmentId, vehiclesById, vehiclesByPlate, fleetMaximum, keywords))
                 .toList();
     }
 
@@ -1536,6 +1609,8 @@ public class TourProcessingDraftService {
             TourProcessingDraftTour hoursSource,
             Map<UUID, List<TourProcessingDraftDay>> daysByAssignmentId,
             Map<UUID, Vehicle> vehiclesById,
+            Map<String, Vehicle> vehiclesByPlate,
+            int fleetMaximum,
             List<String> keywords
     ) {
         TourTrips tripSummary = TourTrips.of(tour, vehiclesById);
@@ -1578,6 +1653,7 @@ public class TourProcessingDraftService {
                 .duplicateGroupSize(tour.getDuplicateGroupSize())
                 .duplicateRank(tour.getDuplicateRank())
                 .conflicting(tour.isConflicting())
+                .needsMultipleTrips(needsMultipleTrips(tour, vehiclesById, vehiclesByPlate, fleetMaximum))
                 .days(main == null ? List.of() : daysOf(main, hoursSource, daysByAssignmentId))
                 .build();
     }

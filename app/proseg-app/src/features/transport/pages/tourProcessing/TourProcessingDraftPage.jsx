@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     Alert,
     Box,
@@ -16,6 +16,7 @@ import {
     Stack,
     Tab,
     Tabs,
+    TextField,
     Tooltip,
     Typography,
     useTheme,
@@ -73,7 +74,6 @@ import {
 } from '../../services/tourProcessing/tourProcessingService';
 import { exportDriverOvertimeRequest } from '../../services/drivers/driversService';
 import { useTourProcessingCatalogMatch } from '../../hooks/useTourProcessingCatalogMatch.js';
-import { useBorrowedVehicleOptions } from '../../hooks/useTransportOptions.js';
 import {
     invalidateTourProcessingDraft,
     loadTourProcessingDraftRow,
@@ -91,7 +91,7 @@ import TourProcessingDriverAssignmentReport from '../../components/tourProcessin
 import TourProcessingAutoAssignmentInfoModal from '../../components/tourProcessing/TourProcessingAutoAssignmentInfoModal.jsx';
 import TourProcessingFinalCommissionDialog from '../../components/tourProcessing/TourProcessingFinalCommissionDialog.jsx';
 import TourProcessingSplitModeDialog from '../../components/tourProcessing/TourProcessingSplitModeDialog.jsx';
-import { hasFinalCommissionFindings } from '../../components/tourProcessing/finalCommissionIssues.js';
+import { NEEDS_MULTIPLE_TRIPS, TOUR_RULE_FILTERS } from '../../components/tourProcessing/tourRuleFilters.js';
 import TourProcessingDraftDaysDetailPanel from '../../components/tourProcessing/TourProcessingDraftDaysDetailPanel.jsx';
 import TourProcessingDraftDriverScheduleView from '../../components/tourProcessing/TourProcessingDraftDriverScheduleView.jsx';
 import TourProcessingDraftTourControlView from '../../components/tourProcessing/TourProcessingDraftTourControlView.jsx';
@@ -299,8 +299,10 @@ function savedRowMessage({ created, number, changes }) {
     return `Gira ${number} actualizada correctamente.\n\n${changes.join('\n')}`;
 }
 
-function finalCommissionResultMessage(rejectedTours) {
-    return `Se descargó la Comisión Final. ${rejectedTours} giras sin chofer o vehículo cambiaron a estado No aprobada.`;
+function rejectedIncompleteMessage(rejectedTours) {
+    return rejectedTours > 0
+        ? `Se pasaron ${rejectedTours} giras sin chofer o vehículo a estado No aprobada.`
+        : 'No había giras sin chofer o vehículo.';
 }
 
 function autoAssignDriversAndVehiclesResultMessage({ drivers, vehicles }) {
@@ -343,7 +345,9 @@ export default function TourProcessingDraftPage() {
     const [reviewingApproval, setReviewingApproval] = useState(false);
     const [assignmentReport, setAssignmentReport] = useState(null);
     const [assignmentReportOpen, setAssignmentReportOpen] = useState(false);
-    const [finalCommissionCheck, setFinalCommissionCheck] = useState(null);
+    const [errorsOpen, setErrorsOpen] = useState(false);
+    const [rejectIncompleteOpen, setRejectIncompleteOpen] = useState(false);
+    const [rule, setRule] = useState('');
     const requestedTab = searchParams.get('tab');
     const viewTab = ['horas-extra', 'control-giras'].includes(requestedTab) ? requestedTab : 'rows';
 
@@ -379,17 +383,11 @@ export default function TourProcessingDraftPage() {
         PERMISSIONS.TRANSPORT.TOURS.DELETE,
         PERMISSIONS.TRANSPORT.TOURS.EXPORT,
     ]);
-    const canReadVehicles = hasAnyPermission([
-        PERMISSIONS.TRANSPORT.VEHICLES.READ,
-        PERMISSIONS.TRANSPORT.VEHICLES.MANAGE,
-        PERMISSIONS.TRANSPORT.VEHICLES.DELETE,
-    ]);
 
     const {
         driver: { isMissing: isDriverMissing },
-        vehicle: { isMissing: isVehicleMissing, isUnavailable: isVehicleUnavailable, catalog: vehicleCatalog },
+        vehicle: { isMissing: isVehicleMissing, isUnavailable: isVehicleUnavailable },
     } = useTourProcessingCatalogMatch();
-    const borrowedVehicles = useBorrowedVehicleOptions(canReadVehicles);
     const { draft, loading: loadingDraft, error: draftError } = useTourProcessingDraft(draftId);
     const { requestParams, tableOptions } = useServerTableState({
         initialSorting: INITIAL_SORTING,
@@ -404,7 +402,7 @@ export default function TourProcessingDraftPage() {
         fetching: fetchingRows,
         error: rowsError,
         totalElements,
-    } = useTourProcessingDraftRows(draftId, requestParams, { enabled: viewTab === 'rows' });
+    } = useTourProcessingDraftRows(draftId, { ...requestParams, rule }, { enabled: viewTab === 'rows' });
 
     const finishMutation = useMutation({
         mutationFn: () => finishTourProcessingDraft(draftId),
@@ -563,33 +561,29 @@ export default function TourProcessingDraftPage() {
     });
 
     const finalCommissionMutation = useMutation({
-        mutationFn: async ({ rejectIncomplete }) => {
-            const rejectedTours = rejectIncomplete ? await rejectTourProcessingDraftIncompleteTours(draftId) : 0;
-            const file = await exportTourProcessingDraftFinalCommission(draftId);
-            return { ...file, rejectedTours };
-        },
-        onSuccess: ({ blob, fileName, rejectedTours }) => {
-            setFinalCommissionCheck(null);
-            downloadBlob(blob, fileName);
-            if (rejectedTours > 0) {
-                setAlert({ type: 'success', message: finalCommissionResultMessage(rejectedTours) });
-                void invalidateTourProcessingDraft(queryClient, draftId);
-            }
-        },
+        mutationFn: () => exportTourProcessingDraftFinalCommission(draftId),
+        onSuccess: ({ blob, fileName }) => downloadBlob(blob, fileName),
         onError: (error) => {
-            setFinalCommissionCheck(null);
             setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo generar la Comisión Final') });
         },
     });
 
-    const finalCommissionCheckMutation = useMutation({
-        mutationFn: () => checkTourProcessingDraftFinalCommission(draftId),
-        onSuccess: (check) => {
-            if (hasFinalCommissionFindings(check)) setFinalCommissionCheck(check);
-            else finalCommissionMutation.mutate({ rejectIncomplete: false });
+    const errorsQuery = useQuery({
+        queryKey: queryKeys.transport.tourProcessingDraftFinalCommissionCheck(draftId),
+        queryFn: () => checkTourProcessingDraftFinalCommission(draftId),
+        enabled: errorsOpen && Boolean(draftId),
+    });
+
+    const rejectIncompleteMutation = useMutation({
+        mutationFn: () => rejectTourProcessingDraftIncompleteTours(draftId),
+        onSuccess: (rejectedTours) => {
+            setRejectIncompleteOpen(false);
+            setAlert({ type: 'success', message: rejectedIncompleteMessage(rejectedTours) });
+            void invalidateTourProcessingDraft(queryClient, draftId);
         },
         onError: (error) => {
-            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo revisar el borrador para la Comisión Final') });
+            setRejectIncompleteOpen(false);
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudieron pasar las giras a No aprobada') });
         },
     });
 
@@ -709,7 +703,7 @@ export default function TourProcessingDraftPage() {
             size: 220,
             grow: false,
             Cell: ({ cell, row }) => {
-                const warning = vehicleDistributionWarning(row.original, vehicleCatalog, borrowedVehicles.options);
+                const warning = vehicleDistributionWarning(row.original);
                 const ownVehicle = row.original.resourceType !== 'EXTERNAL' && row.original.resourceType !== 'BORROWED_VEHICLE';
                 if (row.original.assignments?.length > 1) {
                     return (
@@ -782,7 +776,7 @@ export default function TourProcessingDraftPage() {
                 );
             },
         },
-    ], [isDriverMissing, isVehicleMissing, isVehicleUnavailable, vehicleCatalog, borrowedVehicles.options, draftId, draft?.status, canEditTours, handleObservationReviewed]);
+    ], [isDriverMissing, isVehicleMissing, isVehicleUnavailable, draftId, draft?.status, canEditTours, handleObservationReviewed]);
 
     const openRowModal = useCallback((mode, row) => setRowModal({ open: true, mode, row, rowId: row?.id ?? null }), []);
     const openRowModalById = useCallback((mode, rowId) => setRowModal({ open: true, mode, row: null, rowId }), []);
@@ -855,7 +849,7 @@ export default function TourProcessingDraftPage() {
     const clearingAssignments = clearAssignmentsMutation.isPending;
     const exportingTourControl = tourControlMutation.isPending;
     const exportingOvertimeRequest = overtimeRequestMutation.isPending;
-    const exportingFinalCommission = finalCommissionCheckMutation.isPending || finalCommissionMutation.isPending;
+    const exportingFinalCommission = finalCommissionMutation.isPending;
     const periodLabel = draft?.year && draft?.month ? shortPeriodLabel(draft.year, draft.month) : null;
     const exportLabel = draft?.year && draft?.month ? `Descargar '${draftPeriodLabel(draft)}'` : 'Descargar borrador';
     const hasAssignmentReport = assignmentReport?.draftId === draftId;
@@ -933,11 +927,17 @@ export default function TourProcessingDraftPage() {
 
     const handleExportFinalCommission = () => {
         closeOptions();
-        if (!exportingFinalCommission) finalCommissionCheckMutation.mutate();
+        if (!exportingFinalCommission) finalCommissionMutation.mutate();
     };
 
-    const confirmFinalCommission = (options) => {
-        if (!finalCommissionMutation.isPending) finalCommissionMutation.mutate(options);
+    const handleShowErrors = () => {
+        closeOptions();
+        setErrorsOpen(true);
+    };
+
+    const applyRule = (next) => {
+        setRule(next);
+        tableOptions.onPaginationChange((current) => (current.pageIndex === 0 ? current : { ...current, pageIndex: 0 }));
     };
 
     const confirmAutoAssignDrivers = () => {
@@ -1064,6 +1064,12 @@ export default function TourProcessingDraftPage() {
                                                 <ListItemText>Devolver a borrador</ListItemText>
                                             </MenuItem>
                                         )}
+                                        {(canExportTours || canEditTours) && periodLabel && (
+                                            <MenuItem onClick={handleShowErrors}>
+                                                <ListItemIcon><WarningAmberOutlinedIcon fontSize="small" /></ListItemIcon>
+                                                <ListItemText>Visualizar errores</ListItemText>
+                                            </MenuItem>
+                                        )}
                                         {(canExportTours || canExportOvertime) && (
                                             <NestedMenuItem label="Descargar" icon={<DownloadOutlinedIcon fontSize="small" />}>
                                                 {canExportTours && (
@@ -1184,6 +1190,30 @@ export default function TourProcessingDraftPage() {
                 </Box>
 
                 {viewTab === 'rows' && (
+                    <Stack spacing={1.25}>
+                        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" alignItems="center">
+                            <TextField
+                                select
+                                size="small"
+                                label="Mostrar giras que no cumplen..."
+                                value={rule}
+                                onChange={(event) => applyRule(event.target.value)}
+                                sx={{ minWidth: 320 }}
+                            >
+                                <MenuItem value="">Todas</MenuItem>
+                                {TOUR_RULE_FILTERS.map((option) => (
+                                    <MenuItem key={option.code} value={option.code}>{option.label}</MenuItem>
+                                ))}
+                            </TextField>
+                            <Chip
+                                label={`Necesitan más de un viaje (${oversizedRows})`}
+                                color={rule === NEEDS_MULTIPLE_TRIPS ? 'warning' : 'default'}
+                                variant={rule === NEEDS_MULTIPLE_TRIPS ? 'filled' : 'outlined'}
+                                clickable
+                                onClick={() => applyRule(rule === NEEDS_MULTIPLE_TRIPS ? '' : NEEDS_MULTIPLE_TRIPS)}
+                                onDelete={rule === NEEDS_MULTIPLE_TRIPS ? () => applyRule('') : undefined}
+                            />
+                        </Stack>
                     <DraftRowsTable
                         columns={columns}
                         rows={rows}
@@ -1199,6 +1229,7 @@ export default function TourProcessingDraftPage() {
                         onDeleteRow={openDeleteRow}
                         onToggleApproval={handleToggleApproval}
                     />
+                    </Stack>
                 )}
 
                 {viewTab === 'horas-extra' && (
@@ -1277,17 +1308,29 @@ export default function TourProcessingDraftPage() {
                 />
             )}
 
-            {finalCommissionCheck && (
-                <TourProcessingFinalCommissionDialog
-                    open
-                    check={finalCommissionCheck}
-                    subtitle={periodLabel ? `Comisión Final ${periodLabel}` : ''}
-                    downloading={finalCommissionMutation.isPending}
-                    canRejectIncomplete={canEditTours}
-                    onClose={() => setFinalCommissionCheck(null)}
-                    onConfirm={confirmFinalCommission}
-                />
-            )}
+            <TourProcessingFinalCommissionDialog
+                open={errorsOpen}
+                check={errorsQuery.data}
+                subtitle={periodLabel ? `Borrador ${periodLabel}` : ''}
+                loading={errorsQuery.isLoading}
+                fetching={errorsQuery.isFetching}
+                error={errorsQuery.error ? getFriendlyApiErrorMessage(errorsQuery.error, 'No se pudieron cargar los errores') : null}
+                rejecting={rejectIncompleteMutation.isPending}
+                canRejectIncomplete={canEditRows}
+                onClose={() => setErrorsOpen(false)}
+                onOpenTour={(rowId) => openRowModalById(canEditRows ? 'edit' : 'view', rowId)}
+                onRejectIncomplete={() => setRejectIncompleteOpen(true)}
+            />
+
+            <DialogModal
+                open={rejectIncompleteOpen}
+                type="warning"
+                title="Pasar a No aprobada"
+                message="Las giras aprobadas que no tienen chofer o vehículo pasarán a estado No aprobada. El cambio se guarda en el borrador."
+                confirmLabel={rejectIncompleteMutation.isPending ? 'Guardando...' : 'Sí, pasar a No aprobada'}
+                onConfirm={() => { if (!rejectIncompleteMutation.isPending) rejectIncompleteMutation.mutate(); }}
+                onClose={rejectIncompleteMutation.isPending ? undefined : () => setRejectIncompleteOpen(false)}
+            />
 
             <DialogModal
                 open={autoAssignDriversOpen}

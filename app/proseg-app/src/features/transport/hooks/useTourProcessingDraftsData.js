@@ -72,8 +72,8 @@ export function useTourProcessingDraft(draftId) {
     };
 }
 
-export function useTourProcessingDraftRows(draftId, { pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [] } = {}, { enabled = true } = {}) {
-    const requestParams = { page: pageIndex, size: pageSize, search, filters, sort };
+export function useTourProcessingDraftRows(draftId, { pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [], rule = '' } = {}, { enabled = true } = {}) {
+    const requestParams = { page: pageIndex, size: pageSize, search, filters, sort, rule };
     const listQueryKey = queryKeys.transport.tourProcessingDraftRows(draftId, requestParams);
 
     const { data, isLoading, isFetching, error } = useQuery({

@@ -56,5 +56,6 @@ public class TourProcessingDraftRowResponseDto {
     private int duplicateGroupSize;
     private int duplicateRank;
     private boolean conflicting;
+    private boolean needsMultipleTrips;
     private List<TourProcessingDraftRowDayResponseDto> days;
 }

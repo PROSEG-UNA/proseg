@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AppTheme from '../../../../../common/theme/AppTheme';
 import TourProcessingDraftPage from '../TourProcessingDraftPage.jsx';
-import { fetchTourProcessingDraftRows, finishTourProcessingDraft, previewTourProcessingDraftApprovalWarnings, reopenTourProcessingDraft, updateTourProcessingDraftRowApprovalStatus } from '../../../services/tourProcessing/tourProcessingService.js';
+import { checkTourProcessingDraftFinalCommission, exportTourProcessingDraftFinalCommission, fetchTourProcessingDraftRow, fetchTourProcessingDraftRows, finishTourProcessingDraft, previewTourProcessingDraftApprovalWarnings, rejectTourProcessingDraftIncompleteTours, reopenTourProcessingDraft, updateTourProcessingDraftRowApprovalStatus } from '../../../services/tourProcessing/tourProcessingService.js';
 import { queryKeys } from '../../../../../common/query';
 
 const granted = vi.hoisted(() => ({ permissions: null }));
@@ -42,13 +42,13 @@ vi.mock('../../../hooks/useTourProcessingCatalogMatch.js', () => ({
     }),
 }));
 
-vi.mock('../../../hooks/useTransportOptions.js', () => ({
-    useBorrowedVehicleOptions: () => ({ options: [] }),
-}));
-
 vi.mock('../../../services/tourProcessing/tourProcessingService.js', () => ({
     fetchTourProcessingDraft: vi.fn(),
     fetchTourProcessingDraftRows: vi.fn(),
+    fetchTourProcessingDraftRow: vi.fn(),
+    checkTourProcessingDraftFinalCommission: vi.fn(),
+    exportTourProcessingDraftFinalCommission: vi.fn(),
+    rejectTourProcessingDraftIncompleteTours: vi.fn(),
     finishTourProcessingDraft: vi.fn(),
     reopenTourProcessingDraft: vi.fn(),
     previewTourProcessingDraftApprovalWarnings: vi.fn(async () => []),
@@ -94,6 +94,11 @@ beforeEach(async () => {
         ...rows.find((row) => row.id === rowId),
         approvalStatus: 'NOT_APPROVED',
     }));
+    checkTourProcessingDraftFinalCommission.mockReset();
+    exportTourProcessingDraftFinalCommission.mockReset();
+    rejectTourProcessingDraftIncompleteTours.mockReset();
+    fetchTourProcessingDraftRow.mockReset();
+    fetchTourProcessingDraftRow.mockResolvedValue({ id: 'row-1', number: '100', approvalStatus: 'APPROVED' });
     finishTourProcessingDraft.mockReset();
     finishTourProcessingDraft.mockResolvedValue({ id: 'draft-1', status: 'CLOSED', year: 2026, month: 5 });
     reopenTourProcessingDraft.mockReset();
@@ -278,5 +283,63 @@ describe('aprobación de filas', () => {
         await userEvent.click(await screen.findByRole('button', { name: 'Guardar de todos modos' }));
 
         await waitFor(() => expect(updateTourProcessingDraftRowApprovalStatus).toHaveBeenCalledWith('draft-1', 'row-3', 'APPROVED'));
+    });
+});
+
+describe('comisión final y errores', () => {
+    it('descarga la comisión final sin diálogo y sin cambiar estados', async () => {
+        granted.permissions = ['EXPORTAR_GIRAS'];
+        exportTourProcessingDraftFinalCommission.mockResolvedValue({ blob: new Blob(['comision']), fileName: 'comision.xlsx' });
+        renderDraftPage();
+
+        await userEvent.click(await screen.findByRole('button', { name: 'Opciones' }));
+        await userEvent.click(screen.getByRole('menuitem', { name: 'Descargar' }));
+        await userEvent.click(await screen.findByRole('menuitem', { name: /Comisión Final/ }));
+
+        await waitFor(() => expect(exportTourProcessingDraftFinalCommission).toHaveBeenCalledWith('draft-1'));
+        expect(checkTourProcessingDraftFinalCommission).not.toHaveBeenCalled();
+        expect(rejectTourProcessingDraftIncompleteTours).not.toHaveBeenCalled();
+        expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('muestra los errores y pasa las giras sin chofer o vehículo a No aprobada si se confirma', async () => {
+        granted.permissions = ['EDITAR_GIRAS', 'EXPORTAR_GIRAS'];
+        checkTourProcessingDraftFinalCommission.mockResolvedValue({
+            blockers: [],
+            errors: [],
+            warnings: [],
+            rejections: {
+                code: 'NOT_APPROVED',
+                title: 'Giras sin chofer o sin vehículo',
+                details: ['Gira 100 (04/05/2026), prioridad 1, 3 pasajeros: sin chofer'],
+                tours: [{ id: 'row-1', number: '100', label: 'Gira 100 (04/05/2026), prioridad 1, 3 pasajeros: sin chofer' }],
+            },
+        });
+        rejectTourProcessingDraftIncompleteTours.mockResolvedValue(1);
+        renderDraftPage();
+
+        await userEvent.click(await screen.findByRole('button', { name: 'Opciones' }));
+        await userEvent.click(screen.getByRole('menuitem', { name: 'Visualizar errores' }));
+
+        expect(await screen.findByText('Giras sin atender (1)')).toBeInTheDocument();
+        await userEvent.click(screen.getByRole('button', { name: 'Gira 100 (04/05/2026), prioridad 1, 3 pasajeros: sin chofer' }));
+        await waitFor(() => expect(fetchTourProcessingDraftRow).toHaveBeenCalledWith('draft-1', 'row-1'));
+
+        await userEvent.click(screen.getByRole('button', { name: 'Pasar las giras sin chofer o vehículo a No aprobada' }));
+        expect(rejectTourProcessingDraftIncompleteTours).not.toHaveBeenCalled();
+        await userEvent.click(screen.getByRole('button', { name: 'Sí, pasar a No aprobada' }));
+        await waitFor(() => expect(rejectTourProcessingDraftIncompleteTours).toHaveBeenCalledWith('draft-1'));
+    });
+
+    it('filtra en el servidor por una condición y por las giras que necesitan más de un viaje', async () => {
+        granted.permissions = ['LEER_GIRAS'];
+        renderDraftPage();
+
+        await userEvent.click(await screen.findByRole('combobox', { name: 'Mostrar giras que no cumplen...' }));
+        await userEvent.click(await screen.findByRole('option', { name: 'Cualquier regla' }));
+        await waitFor(() => expect(fetchTourProcessingDraftRows).toHaveBeenCalledWith('draft-1', expect.objectContaining({ rule: 'ANY' })));
+
+        await userEvent.click(screen.getByRole('button', { name: /Necesitan más de un viaje/ }));
+        await waitFor(() => expect(fetchTourProcessingDraftRows).toHaveBeenCalledWith('draft-1', expect.objectContaining({ rule: 'NEEDS_MULTIPLE_TRIPS' })));
     });
 });

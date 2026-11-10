@@ -76,6 +76,7 @@ export const queryKeys = {
         tourProcessingDraftDetail: (draftId) => [...queryKeys.transport.tourProcessingDraft(draftId), 'detail'],
         tourProcessingDraftRowLists: (draftId) => [...queryKeys.transport.tourProcessingDraft(draftId), 'rows'],
         tourProcessingDraftRows: (draftId, params) => [...queryKeys.transport.tourProcessingDraftRowLists(draftId), params],
+        tourProcessingDraftFinalCommissionCheck: (draftId) => [...queryKeys.transport.tourProcessingDraft(draftId), 'final-commission-check'],
         tourProcessingDraftDriverSummaries: (draftId) => [...queryKeys.transport.tourProcessingDraft(draftId), 'schedule-summary'],
         tourProcessingDraftSchedule: (draftId, date) => [...queryKeys.transport.tourProcessingDraft(draftId), 'schedule', date ?? null],
         tourProcessingDraftDriverSchedule: (draftId, driverId, params) => [...queryKeys.transport.tourProcessingDraft(draftId), 'driver-schedule', driverId, params],
