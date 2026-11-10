@@ -7,11 +7,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AppTheme from '../../../../../common/theme/AppTheme';
 import TourProcessingDraftRowModal from '../TourProcessingDraftRowModal.jsx';
 import { queryKeys } from '../../../../../common/query';
-import { updateTourProcessingDraftRow, updateTourProcessingDraftRowDay } from '../../../services/tourProcessing/tourProcessingService.js';
+import {
+    previewTourProcessingDraftRowDayWarnings,
+    previewTourProcessingDraftRowWarnings,
+    updateTourProcessingDraftRow,
+    updateTourProcessingDraftRowDay,
+} from '../../../services/tourProcessing/tourProcessingService.js';
 
 vi.mock('../../../services/tourProcessing/tourProcessingService.js', () => ({
     createTourProcessingDraftRow: vi.fn(),
     deleteTourProcessingDraftRow: vi.fn(),
+    previewNewTourProcessingDraftRowWarnings: vi.fn(async () => []),
+    previewTourProcessingDraftRowDayWarnings: vi.fn(async () => []),
+    previewTourProcessingDraftRowWarnings: vi.fn(async () => []),
     updateTourProcessingDraftRow: vi.fn(),
     updateTourProcessingDraftRowDay: vi.fn(),
     updateTourObservationReviewed: vi.fn(),
@@ -94,6 +102,10 @@ beforeEach(() => {
     updateTourProcessingDraftRow.mockReset();
     updateTourProcessingDraftRow.mockResolvedValue(ROW);
     updateTourProcessingDraftRowDay.mockReset();
+    previewTourProcessingDraftRowWarnings.mockReset();
+    previewTourProcessingDraftRowWarnings.mockResolvedValue([]);
+    previewTourProcessingDraftRowDayWarnings.mockReset();
+    previewTourProcessingDraftRowDayWarnings.mockResolvedValue([]);
 });
 
 afterEach(cleanup);
@@ -394,6 +406,53 @@ describe('TourProcessingDraftRowModal con pasajeros distribuidos', () => {
                 expect.objectContaining({ driver: 'Ana', vehicle: '301-627', passengers: 7 }),
             ],
         }));
+    });
+});
+
+describe('TourProcessingDraftRowModal cuando la gira rompe una regla', () => {
+    it('muestra el motivo y guarda solo si se confirma', async () => {
+        previewTourProcessingDraftRowWarnings.mockResolvedValue([
+            { code: 'DRIVER_OVERLAP', title: 'Choferes con giras que se cruzan', message: 'Ana: giras 100 y 200 (04/05/2026)' },
+        ]);
+        renderModal('edit', ROW);
+
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+        expect(await screen.findByText('Esta gira rompe algunas reglas')).toBeInTheDocument();
+        expect(screen.getByText(/Ana: giras 100 y 200/)).toBeInTheDocument();
+        expect(updateTourProcessingDraftRow).not.toHaveBeenCalled();
+
+        await userEvent.click(screen.getByRole('button', { name: 'Revisar' }));
+        expect(updateTourProcessingDraftRow).not.toHaveBeenCalled();
+        await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Esta gira rompe algunas reglas' })).not.toBeInTheDocument());
+
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+        await userEvent.click(await screen.findByRole('button', { name: 'Guardar de todos modos' }));
+
+        await waitFor(() => expect(updateTourProcessingDraftRow).toHaveBeenCalledTimes(1));
+    });
+
+    it('avisa al guardar un día y permite confirmar', async () => {
+        previewTourProcessingDraftRowDayWarnings.mockResolvedValue([
+            { code: 'SURPLUS_CAP_EXCEEDED', title: 'Choferes que superan el tope de sobresueldo del mes', message: 'Ana: 40 h de sobresueldo, tope de 37.5 h' },
+        ]);
+        updateTourProcessingDraftRowDay.mockResolvedValue({ ...ROW_WITH_DAYS.days[0], manuallyEdited: true });
+        renderModal('edit', ROW_WITH_DAYS);
+
+        await userEvent.click(screen.getByRole('button', { name: 'Editar día' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar día' }));
+
+        expect(await screen.findByText(/40 h de sobresueldo/)).toBeInTheDocument();
+        expect(updateTourProcessingDraftRowDay).not.toHaveBeenCalled();
+
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar de todos modos' }));
+
+        await waitFor(() => expect(updateTourProcessingDraftRowDay).toHaveBeenCalledWith(
+            'draft-1',
+            'row-1',
+            'day-1',
+            expect.objectContaining({ confirmOvertimeBelowSurplusThreshold: true }),
+        ));
     });
 });
 

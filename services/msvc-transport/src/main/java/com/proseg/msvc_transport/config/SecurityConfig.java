@@ -91,6 +91,8 @@ public class SecurityConfig {
                         .hasAuthority(Privileges.Tours.IMPORTAR)
                         .requestMatchers(HttpMethod.POST, transportRoute + "/tour-processing/drafts/*/rows")
                         .hasAuthority(Privileges.Tours.CREAR)
+                        .requestMatchers(HttpMethod.POST, transportRoute + "/tour-processing/drafts/*/rows/warnings")
+                        .hasAnyAuthority(Privileges.Tours.CREAR, Privileges.Tours.EDITAR)
                         .requestMatchers(HttpMethod.POST, transportRoute + "/tour-processing/**")
                         .hasAuthority(Privileges.Tours.EDITAR)
                         .requestMatchers(HttpMethod.PUT, transportRoute + "/tour-processing/drafts/**")

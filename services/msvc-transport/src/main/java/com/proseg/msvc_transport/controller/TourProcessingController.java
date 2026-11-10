@@ -24,6 +24,7 @@ import com.proseg.msvc_transport.dto.tourprocessing.TourControlReportDto;
 import com.proseg.msvc_transport.dto.response.OvertimeRequestReportDto;
 import com.proseg.msvc_transport.service.TourProcessingDraftService;
 import com.proseg.msvc_transport.service.FinalCommissionService;
+import com.proseg.msvc_transport.service.rules.TourAssignmentRules;
 import com.proseg.msvc_transport.service.TourControlReportService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -100,6 +102,36 @@ public class TourProcessingController {
         return ApiResponseBuilder.ok(tourProcessingDraftService.findRow(id, rowId), "Fila del borrador de depuración");
     }
 
+    @PostMapping("/drafts/{id}/rows/warnings")
+    public ResponseEntity<ApiResponse<List<TourAssignmentRules.RuleViolation>>> newRowWarnings(
+            @PathVariable UUID id,
+            @RequestBody TourProcessingDraftRowRequestDto request
+    ) {
+        return ApiResponseBuilder.ok(tourProcessingDraftService.newRowWarnings(id, request), "Advertencias de la gira");
+    }
+
+    @PostMapping("/drafts/{id}/rows/{rowId}/warnings")
+    public ResponseEntity<ApiResponse<List<TourAssignmentRules.RuleViolation>>> rowWarnings(
+            @PathVariable UUID id,
+            @PathVariable UUID rowId,
+            @RequestBody TourProcessingDraftRowRequestDto request
+    ) {
+        return ApiResponseBuilder.ok(tourProcessingDraftService.rowWarnings(id, rowId, request), "Advertencias de la gira");
+    }
+
+    @PostMapping("/drafts/{id}/rows/{rowId}/days/{dayId}/warnings")
+    public ResponseEntity<ApiResponse<List<TourAssignmentRules.RuleViolation>>> rowDayWarnings(
+            @PathVariable UUID id,
+            @PathVariable UUID rowId,
+            @PathVariable UUID dayId,
+            @RequestBody TourProcessingDraftRowDayRequestDto request
+    ) {
+        return ApiResponseBuilder.ok(
+                tourProcessingDraftService.rowDayWarnings(id, rowId, dayId, request),
+                "Advertencias del día"
+        );
+    }
+
     @PostMapping("/drafts/{id}/rows")
     public ResponseEntity<ApiResponse<TourProcessingDraftRowResponseDto>> createDraftRow(
             @PathVariable UUID id,
@@ -135,6 +167,14 @@ public class TourProcessingController {
                         ? "Observación marcada como revisada"
                         : "Observación marcada como pendiente"
         );
+    }
+
+    @PostMapping("/drafts/{id}/rows/{rowId}/approval-warnings")
+    public ResponseEntity<ApiResponse<List<TourAssignmentRules.RuleViolation>>> approvalWarnings(
+            @PathVariable UUID id,
+            @PathVariable UUID rowId
+    ) {
+        return ApiResponseBuilder.ok(tourProcessingDraftService.approvalWarnings(id, rowId), "Advertencias de la gira");
     }
 
     @PatchMapping("/drafts/{id}/rows/{rowId}/approval-status")

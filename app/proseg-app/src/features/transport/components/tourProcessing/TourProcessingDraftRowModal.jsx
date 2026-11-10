@@ -32,6 +32,9 @@ import { invalidateTourProcessingDraft, replaceCachedDraftRow } from '../../hook
 import {
     createTourProcessingDraftRow,
     deleteTourProcessingDraftRow,
+    previewNewTourProcessingDraftRowWarnings,
+    previewTourProcessingDraftRowDayWarnings,
+    previewTourProcessingDraftRowWarnings,
     updateTourProcessingDraftRow,
     updateTourProcessingDraftRowDay,
 } from '../../services/tourProcessing/tourProcessingService.js';
@@ -178,6 +181,10 @@ function validateDay(values) {
     return errors;
 }
 
+function ruleWarningMessage(warnings) {
+    return warnings.map((warning) => `${warning.title}\n${warning.message}`).join('\n\n');
+}
+
 function dayToPayload(values) {
     return {
         startTime: values.startTime,
@@ -197,6 +204,8 @@ function TourProcessingDraftRowDayCard({ day, draftId, rowId, canEdit, onSaved }
     const [values, setValues] = useState(() => toDayFormValues(day));
     const [submitted, setSubmitted] = useState(false);
     const [needsOvertimeConfirm, setNeedsOvertimeConfirm] = useState(false);
+    const [ruleWarnings, setRuleWarnings] = useState([]);
+    const [previewError, setPreviewError] = useState('');
     const errors = useMemo(() => validateDay(values), [values]);
 
     const mutation = useMutation({
@@ -233,15 +242,33 @@ function TourProcessingDraftRowDayCard({ day, draftId, rowId, canEdit, onSaved }
 
     const handleHoursChange = (key, raw) => setValues((current) => ({ ...current, [key]: raw.replace(/[^0-9.]/g, '') }));
 
-    const handleSave = () => {
+    const handleSave = async () => {
         setSubmitted(true);
         if (Object.keys(errors).length > 0) return;
-        mutation.mutate(dayToPayload(values));
+        const payload = dayToPayload(values);
+        setPreviewError('');
+        try {
+            const warnings = await previewTourProcessingDraftRowDayWarnings(draftId, rowId, day.id, payload);
+            if (warnings.length > 0) {
+                setRuleWarnings(warnings);
+                return;
+            }
+        } catch (error) {
+            setPreviewError(getFriendlyApiErrorMessage(error, 'No se pudo revisar el día'));
+            return;
+        }
+        mutation.mutate(payload);
     };
 
     const confirmOvertimeAnyway = () => {
         setNeedsOvertimeConfirm(false);
         mutation.mutate({ ...dayToPayload(values), confirmOvertimeBelowSurplusThreshold: true });
+    };
+
+    const confirmRuleWarnings = () => {
+        const payload = { ...dayToPayload(values), confirmOvertimeBelowSurplusThreshold: true };
+        setRuleWarnings([]);
+        mutation.mutate(payload);
     };
 
     const visibleError = (key) => (submitted ? errors[key] : undefined);
@@ -315,11 +342,21 @@ function TourProcessingDraftRowDayCard({ day, draftId, rowId, canEdit, onSaved }
                 {editing ? renderHoursField('surplusHours', 'Horas sobresueldo') : renderReadOnlyField('Horas sobresueldo', formatHours(day.surplusHours), fieldSx)}
                 {editing ? renderHoursField('overtimeHours', 'Horas extra') : renderReadOnlyField('Horas extra', formatHours(day.overtimeHours), fieldSx)}
             </Box>
-            {mutation.isError && !needsOvertimeConfirm && (
+            {(previewError || (mutation.isError && !needsOvertimeConfirm)) && (
                 <Typography sx={{ fontSize: 12.5, color: 'error.main', mt: 1 }}>
-                    {getFriendlyApiErrorMessage(mutation.error, 'No se pudo guardar el día')}
+                    {previewError || getFriendlyApiErrorMessage(mutation.error, 'No se pudo guardar el día')}
                 </Typography>
             )}
+            <DialogModal
+                open={ruleWarnings.length > 0}
+                type="warning"
+                title="Esta gira rompe algunas reglas"
+                message={ruleWarningMessage(ruleWarnings)}
+                cancelLabel="Revisar"
+                confirmLabel={saving ? 'Guardando...' : 'Guardar de todos modos'}
+                onConfirm={confirmRuleWarnings}
+                onClose={() => setRuleWarnings([])}
+            />
             <DialogModal
                 open={needsOvertimeConfirm}
                 type="warning"
@@ -980,6 +1017,8 @@ export default function TourProcessingDraftRowModal({ open, mode, row, loadingRo
     const queryClient = useQueryClient();
     const [alert, setAlert] = useState(null);
     const [deleteOpen, setDeleteOpen] = useState(false);
+    const [ruleWarnings, setRuleWarnings] = useState([]);
+    const [pendingSave, setPendingSave] = useState(null);
     const isCreate = mode === 'create';
     const isEdit = mode !== 'view';
     const canChangeExistingRow = mode === 'edit' && Boolean(row);
@@ -1036,6 +1075,30 @@ export default function TourProcessingDraftRowModal({ open, mode, row, loadingRo
 
     const confirmDelete = () => {
         if (!deleting) deleteMutation.mutate();
+    };
+
+    const reviewBeforeSave = async (payload) => {
+        try {
+            const warnings = isCreate
+                ? await previewNewTourProcessingDraftRowWarnings(draftId, payload)
+                : await previewTourProcessingDraftRowWarnings(draftId, row.id, payload);
+            if (warnings.length > 0) {
+                setPendingSave(payload);
+                setRuleWarnings(warnings);
+                return;
+            }
+        } catch (error) {
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo revisar la gira') });
+            return;
+        }
+        saveMutation.mutate(payload);
+    };
+
+    const confirmRuleWarnings = () => {
+        const payload = pendingSave;
+        setRuleWarnings([]);
+        setPendingSave(null);
+        if (payload) saveMutation.mutate(payload);
     };
 
     const contentSx = {
@@ -1095,7 +1158,7 @@ export default function TourProcessingDraftRowModal({ open, mode, row, loadingRo
                         approvalStatus={approvalStatus}
                         onToggleApproval={toggleApproval}
                         onDelete={() => setDeleteOpen(true)}
-                        onSubmit={(payload) => saveMutation.mutate(payload)}
+                        onSubmit={reviewBeforeSave}
                         onInvalid={() => setAlert({ type: 'warning', message: 'Revisa los datos antes de continuar' })}
                         onObservationReviewed={onObservationReviewed}
                     />
@@ -1110,6 +1173,20 @@ export default function TourProcessingDraftRowModal({ open, mode, row, loadingRo
                 confirmLabel={deleting ? 'Eliminando...' : 'Sí, eliminar'}
                 onConfirm={confirmDelete}
                 onClose={() => setDeleteOpen(false)}
+            />
+
+            <DialogModal
+                open={ruleWarnings.length > 0}
+                type="warning"
+                title="Esta gira rompe algunas reglas"
+                message={ruleWarningMessage(ruleWarnings)}
+                cancelLabel="Revisar"
+                confirmLabel={saveMutation.isPending ? 'Guardando...' : 'Guardar de todos modos'}
+                onConfirm={confirmRuleWarnings}
+                onClose={() => {
+                    setRuleWarnings([]);
+                    setPendingSave(null);
+                }}
             />
 
             <DialogModal

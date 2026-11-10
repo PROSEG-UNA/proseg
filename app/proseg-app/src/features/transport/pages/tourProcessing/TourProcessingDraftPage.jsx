@@ -67,6 +67,7 @@ import {
     finishTourProcessingDraft,
     rejectTourProcessingDraftIncompleteTours,
     reopenTourProcessingDraft,
+    previewTourProcessingDraftApprovalWarnings,
     splitTourProcessingDraftOversizedRows,
     updateTourProcessingDraftRowApprovalStatus,
 } from '../../services/tourProcessing/tourProcessingService';
@@ -337,6 +338,9 @@ export default function TourProcessingDraftPage() {
     const [rowToDelete, setRowToDelete] = useState(null);
     const [rowModal, setRowModal] = useState({ open: false, mode: 'view', row: null, rowId: null });
     const [alert, setAlert] = useState(null);
+    const [approvalWarnings, setApprovalWarnings] = useState([]);
+    const [pendingApproval, setPendingApproval] = useState(null);
+    const [reviewingApproval, setReviewingApproval] = useState(false);
     const [assignmentReport, setAssignmentReport] = useState(null);
     const [assignmentReportOpen, setAssignmentReportOpen] = useState(false);
     const [finalCommissionCheck, setFinalCommissionCheck] = useState(null);
@@ -802,9 +806,34 @@ export default function TourProcessingDraftPage() {
     }, [draftId, pendingRowId]);
     const openDeleteRow = useCallback((row) => setRowToDelete(row), []);
     const { isPending: changingApproval, mutate: toggleApproval } = approvalStatusMutation;
-    const handleToggleApproval = useCallback((row) => {
-        if (!changingApproval) toggleApproval(row);
-    }, [changingApproval, toggleApproval]);
+    const handleToggleApproval = useCallback(async (row) => {
+        if (changingApproval || reviewingApproval) return;
+        if (toggledApprovalStatus(row.approvalStatus) !== APPROVAL_STATUS.APPROVED) {
+            toggleApproval(row);
+            return;
+        }
+        setReviewingApproval(true);
+        try {
+            const warnings = await previewTourProcessingDraftApprovalWarnings(draftId, row.id);
+            if (warnings.length > 0) {
+                setPendingApproval(row);
+                setApprovalWarnings(warnings);
+                return;
+            }
+        } catch (error) {
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo revisar la gira') });
+            return;
+        } finally {
+            setReviewingApproval(false);
+        }
+        toggleApproval(row);
+    }, [changingApproval, reviewingApproval, toggleApproval, draftId]);
+    const confirmApprovalWarnings = () => {
+        const row = pendingApproval;
+        setApprovalWarnings([]);
+        setPendingApproval(null);
+        if (row) toggleApproval(row);
+    };
 
     if (!canReadTourProcessing) return <AccessDeniedState />;
 
@@ -1192,6 +1221,20 @@ export default function TourProcessingDraftPage() {
                 onObservationReviewed={handleObservationReviewed}
                 onDeleted={() => setAlert({ type: 'success', message: 'Gira eliminada correctamente' })}
                 onSaved={(saved) => setAlert({ type: 'success', message: savedRowMessage(saved) })}
+            />
+
+            <DialogModal
+                open={approvalWarnings.length > 0}
+                type="warning"
+                title="Esta gira rompe algunas reglas"
+                message={approvalWarnings.map((warning) => `${warning.title}\n${warning.message}`).join('\n\n')}
+                cancelLabel="Revisar"
+                confirmLabel={changingApproval ? 'Guardando...' : 'Guardar de todos modos'}
+                onConfirm={confirmApprovalWarnings}
+                onClose={() => {
+                    setApprovalWarnings([]);
+                    setPendingApproval(null);
+                }}
             />
 
             <DialogModal

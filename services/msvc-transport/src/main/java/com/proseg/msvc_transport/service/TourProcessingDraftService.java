@@ -41,12 +41,11 @@ import com.proseg.msvc_transport.service.driverhours.DriverAutoAssigner;
 import com.proseg.msvc_transport.service.driverhours.MandatoryCoverageSummary;
 import com.proseg.msvc_transport.service.driverhours.DriverHoursRules;
 import com.proseg.msvc_transport.service.driverhours.DriverRejection;
-import com.proseg.msvc_transport.service.driverhours.DriverWorkload;
 import com.proseg.msvc_transport.service.driverhours.ManualDays;
 import com.proseg.msvc_transport.service.driverhours.TourTrips;
 import com.proseg.msvc_transport.service.driverhours.UlloaTours;
 import com.proseg.msvc_transport.service.driverhours.VehicleAutoAssigner;
-import com.proseg.msvc_transport.service.driverhours.VehicleWorkload;
+import com.proseg.msvc_transport.service.rules.TourAssignmentRules;
 import com.proseg.msvc_transport.specification.GenericSpecifications;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -71,6 +70,7 @@ import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -89,7 +89,13 @@ public class TourProcessingDraftService {
     private static final String ROW_RESOURCE = "Fila del borrador";
     private static final String DAY_RESOURCE = "Día de la gira";
     private static final Set<DriverRejection.Reason> REAPPROVAL_BLOCKING_REASONS =
-            EnumSet.of(DriverRejection.Reason.OVERLAP, DriverRejection.Reason.DAY_HOURS_EXCEEDED);
+            EnumSet.of(DriverRejection.Reason.DAY_HOURS_EXCEEDED);
+    private static final Set<DriverRejection.Reason> DURATION_BLOCKING_REASONS = EnumSet.of(
+            DriverRejection.Reason.INVALID_SCHEDULE,
+            DriverRejection.Reason.DAY_HOURS_EXCEEDED,
+            DriverRejection.Reason.WEEKEND_WITHOUT_SURPLUS
+    );
+    private final TourAssignmentRules assignmentRules = new TourAssignmentRules();
     private static final Locale SPANISH = Locale.forLanguageTag("es");
     private static final List<String> FIELD_ORDER = Arrays.stream(TransportImportField.values())
             .map(TransportImportField::getAttribute)
@@ -279,7 +285,6 @@ public class TourProcessingDraftService {
         tourRepository.save(tour);
         tours.add(tour);
         markDuplicates(tours);
-        validateBorrowedVehicles(assignmentsOf(tours));
         summarize(draft, tours);
         draft.setTotalRows(tours.size());
         tourRepository.saveAll(tours);
@@ -317,7 +322,6 @@ public class TourProcessingDraftService {
         if (reapproved) {
             validateReapprovedToursHaveNoConflicts(draft, tour.getAssignments(), assignmentsOf(tours));
         }
-        validateBorrowedVehicles(assignmentsOf(tours));
         summarize(draft, tours);
         tourRepository.saveAll(tours);
         draftHoursService.syncChanged(draft, slotsBefore, assignmentsOf(tours));
@@ -390,6 +394,234 @@ public class TourProcessingDraftService {
         return toDayResponse(saved);
     }
 
+    @Transactional(readOnly = true)
+    public List<TourAssignmentRules.RuleViolation> rowWarnings(UUID draftId, UUID rowId, TourProcessingDraftRowRequestDto request) {
+        rejectInvalidRow(request);
+        TourProcessingDraft draft = readableDraft(draftId);
+        TourProcessingDraftTour current = getEditableTour(draftId, rowId, "Edita la distribución desde la gira principal");
+        List<TourProcessingDraftTour> copies = detachedCopies(tourRepository.findAllByDraftIdOrderByRowNumberAsc(draftId));
+        TourProcessingDraftTour edited = copies.stream()
+                .filter(tour -> current.getId().equals(tour.getId()))
+                .findFirst()
+                .orElseGet(() -> detachedCopy(current));
+        return warningsFor(draft, copies, edited, request);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TourAssignmentRules.RuleViolation> newRowWarnings(UUID draftId, TourProcessingDraftRowRequestDto request) {
+        rejectInvalidRow(request);
+        TourProcessingDraft draft = readableDraft(draftId);
+        List<TourProcessingDraftTour> copies = detachedCopies(tourRepository.findAllByDraftIdOrderByRowNumberAsc(draftId));
+        TourProcessingDraftTour edited = detachedCopy(TourProcessingDraftTour.builder().draft(draft).rowNumber(request.getRowNumber()).build());
+        return warningsFor(draft, copies, edited, request);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TourAssignmentRules.RuleViolation> rowDayWarnings(
+            UUID draftId,
+            UUID rowId,
+            UUID dayId,
+            TourProcessingDraftRowDayRequestDto request
+    ) {
+        TourProcessingDraft draft = readableDraft(draftId);
+        TourProcessingDraftDay day = dayRepository.findByIdAndDraftId(dayId, draftId)
+                .orElseThrow(() -> TransportException.notFound(DAY_RESOURCE, dayId.toString()));
+        TourProcessingDraftAssignment assignment = day.getAssignment();
+        if (!rowId.equals(assignment.getId()) && !rowId.equals(assignment.getTour().getId())) {
+            throw TransportException.notFound(ROW_RESOURCE, rowId.toString());
+        }
+        List<TourProcessingDraftDay> hypothetical = new ArrayList<>();
+        boolean replaced = false;
+        for (TourProcessingDraftDay stored : dayRepository.findAllByDraftId(draftId)) {
+            if (!stored.getId().equals(dayId)) {
+                hypothetical.add(stored);
+                continue;
+            }
+            hypothetical.add(detachedDay(stored, request));
+            replaced = true;
+        }
+        if (!replaced) {
+            hypothetical.add(detachedDay(day, request));
+        }
+        List<TourProcessingDraftTour> tours = tourRepository.findAllByDraftIdOrderByRowNumberAsc(draftId).stream()
+                .filter(TourProcessingDraftTour::isPrimary)
+                .toList();
+        TourAssignmentRules.Snapshot snapshot = rulesSnapshot(draft, tours, ManualDays.of(hypothetical));
+        return assignmentRules.confirmableInvolving(
+                snapshot,
+                assignment.getTour().getId(),
+                driverIdsOf(assignment.getTour()),
+                platesOf(assignment.getTour(), snapshot.vehiclesById())
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<TourAssignmentRules.RuleViolation> approvalWarnings(UUID draftId, UUID rowId) {
+        TourProcessingDraft draft = readableDraft(draftId);
+        TourProcessingDraftTour current = getEditableTour(draftId, rowId, "Edita la distribución desde la gira principal");
+        List<TourProcessingDraftTour> copies = detachedCopies(tourRepository.findAllByDraftIdOrderByRowNumberAsc(draftId));
+        TourProcessingDraftTour edited = copies.stream()
+                .filter(tour -> current.getId().equals(tour.getId()))
+                .findFirst()
+                .orElseGet(() -> detachedCopy(current));
+        edited.setApprovalStatus(TourApprovalStatus.APPROVED);
+        if (!copies.contains(edited)) {
+            copies.add(edited);
+        }
+        DraftCatalogLinker linker = catalogLinker();
+        copies.forEach(tour -> tour.getAssignments().forEach(linker::link));
+        List<TourProcessingDraftTour> primaries = copies.stream().filter(TourProcessingDraftTour::isPrimary).toList();
+        TourAssignmentRules.Snapshot snapshot = rulesSnapshot(draft, primaries, null);
+        return assignmentRules.confirmableInvolving(snapshot, edited.getId(), driverIdsOf(edited), platesOf(edited, snapshot.vehiclesById()));
+    }
+
+    private void rejectInvalidRow(TourProcessingDraftRowRequestDto request) {
+        List<String> reasons = validateRow(request);
+        if (!reasons.isEmpty()) {
+            throw TransportException.unprocessable("TOUR_PROCESSING_DRAFT_ROW_INVALID", String.join(". ", reasons));
+        }
+    }
+
+    private List<TourAssignmentRules.RuleViolation> warningsFor(
+            TourProcessingDraft draft,
+            List<TourProcessingDraftTour> copies,
+            TourProcessingDraftTour edited,
+            TourProcessingDraftRowRequestDto request
+    ) {
+        DraftCatalogLinker linker = catalogLinker();
+        if (!copies.contains(edited)) {
+            copies = new ArrayList<>(copies);
+            copies.add(edited);
+        }
+        applyTourValues(edited, request);
+        applyAssignments(edited, request, linker);
+        for (TourProcessingDraftTour tour : copies) {
+            if (tour != edited) {
+                tour.getAssignments().forEach(linker::link);
+            }
+        }
+        List<TourProcessingDraftTour> primaries = copies.stream().filter(TourProcessingDraftTour::isPrimary).toList();
+        TourAssignmentRules.Snapshot snapshot = rulesSnapshot(draft, primaries, null);
+        return assignmentRules.confirmableInvolving(snapshot, edited.getId(), driverIdsOf(edited), platesOf(edited, snapshot.vehiclesById()));
+    }
+
+    private TourAssignmentRules.Snapshot rulesSnapshot(TourProcessingDraft draft, List<TourProcessingDraftTour> tours, ManualDays manualDays) {
+        boolean periodDefined = draft.getBusinessDays() != null && draft.getYear() != null && draft.getMonth() != null;
+        return new TourAssignmentRules.Snapshot(
+                tours,
+                DriverHoursRules.driversById(driverRepository.findAll()),
+                DriverHoursRules.vehiclesById(vehicleRepository.findAll()),
+                periodDefined ? businessDaysService.forDraft(draft) : null,
+                manualDays != null ? manualDays : draftHoursService.manualDays(draft.getId()),
+                draft.getYear(),
+                draft.getMonth()
+        );
+    }
+
+    private TourProcessingDraft readableDraft(UUID id) {
+        TourProcessingDraft draft = getDraft(id);
+        if (draft.getStatus() != TourProcessingDraftStatus.DRAFT) {
+            throw TransportException.conflict(
+                    draft.getStatus() == TourProcessingDraftStatus.CLOSED
+                            ? "TOUR_PROCESSING_DRAFT_CLOSED" : "TOUR_PROCESSING_DRAFT_ALREADY_REGISTERED",
+                    draft.getStatus() == TourProcessingDraftStatus.CLOSED
+                            ? "No se puede editar una depuración terminada. Devuélvela a borrador"
+                            : "No se puede editar un borrador que ya fue registrado"
+            );
+        }
+        return draft;
+    }
+
+    private List<TourProcessingDraftTour> detachedCopies(List<TourProcessingDraftTour> tours) {
+        return new ArrayList<>(tours.stream().map(this::detachedCopy).toList());
+    }
+
+    private TourProcessingDraftTour detachedCopy(TourProcessingDraftTour source) {
+        TourProcessingDraftTour copy = new TourProcessingDraftTour();
+        copy.setId(source.getId());
+        copy.setDraft(source.getDraft());
+        copy.setRowNumber(source.getRowNumber());
+        copy.setNumber(source.getNumber());
+        copy.setApprovalStatus(source.getApprovalStatus());
+        copy.setPassengers(source.getPassengers());
+        copy.setExecutingUnit(source.getExecutingUnit());
+        copy.setResponsible(source.getResponsible());
+        copy.setDestination(source.getDestination());
+        copy.setDurationDays(source.getDurationDays());
+        copy.setPriority(source.getPriority());
+        copy.setModality(source.getModality());
+        copy.setDepartureTime(source.getDepartureTime());
+        copy.setReturnTime(source.getReturnTime());
+        copy.setDepartureDate(source.getDepartureDate());
+        copy.setReturnDate(source.getReturnDate());
+        copy.setObservations(source.getObservations());
+        copy.setObservationReviewed(source.isObservationReviewed());
+        copy.setDuplicateGroupSize(source.getDuplicateGroupSize());
+        copy.setDuplicateRank(source.getDuplicateRank());
+        copy.setConflicting(source.isConflicting());
+        if (source.getAssignments() != null) {
+            for (TourProcessingDraftAssignment assignment : source.getAssignments()) {
+                TourProcessingDraftAssignment copied = detachedAssignment(assignment);
+                copy.addAssignment(copied);
+                copied.setPart(assignment.getPart());
+            }
+        }
+        return copy;
+    }
+
+    private TourProcessingDraftDay detachedDay(TourProcessingDraftDay stored, TourProcessingDraftRowDayRequestDto request) {
+        return TourProcessingDraftDay.builder()
+                .id(stored.getId())
+                .assignment(stored.getAssignment())
+                .date(stored.getDate())
+                .startTime(request.getStartTime())
+                .endTime(request.getEndTime())
+                .ordinaryHours(request.getOrdinaryHours())
+                .surplusHours(request.getSurplusHours())
+                .overtimeHours(request.getOvertimeHours())
+                .manuallyEdited(true)
+                .build();
+    }
+
+    private TourProcessingDraftAssignment detachedAssignment(TourProcessingDraftAssignment source) {
+        return TourProcessingDraftAssignment.builder()
+                .id(source.getId())
+                .part(source.getPart())
+                .passengers(source.getPassengers())
+                .resourceType(source.getResourceType())
+                .driver(source.getDriver())
+                .driverId(source.getDriverId())
+                .vehicle(source.getVehicle())
+                .vehicleId(source.getVehicleId())
+                .borrowedVehicle(source.getBorrowedVehicle())
+                .build();
+    }
+
+    private Set<UUID> driverIdsOf(TourProcessingDraftTour tour) {
+        Set<UUID> ids = new LinkedHashSet<>();
+        for (TourProcessingDraftAssignment assignment : tour.getAssignments()) {
+            if (assignment.getDriverId() != null) {
+                ids.add(assignment.getDriverId());
+            }
+        }
+        return ids;
+    }
+
+    private Set<String> platesOf(TourProcessingDraftTour tour, Map<UUID, Vehicle> vehiclesById) {
+        Set<String> plates = new LinkedHashSet<>();
+        for (TourProcessingDraftAssignment assignment : tour.getAssignments()) {
+            String plate = assignment.getBorrowedVehicle() != null ? assignment.getBorrowedVehicle().getPlate() : null;
+            if (plate == null || plate.isBlank()) {
+                Vehicle vehicle = DriverHoursRules.assignedVehicle(assignment, vehiclesById);
+                plate = vehicle == null ? assignment.getVehicle() : vehicle.getPlate();
+            }
+            if (plate != null && !plate.isBlank()) {
+                plates.add(plate);
+            }
+        }
+        return plates;
+    }
+
     private void validateDriverMonthlyCaps(
             TourProcessingDraft draft,
             TourProcessingDraftAssignment assignment,
@@ -401,32 +633,16 @@ public class TourProcessingDraftService {
         }
         UUID driverId = assignment.getDriverId();
         double otherSurplus = 0;
-        double otherOvertime = 0;
         if (driverId != null) {
             for (TourProcessingDraftDay other : dayRepository.findAllByDraftId(draft.getId())) {
                 if (other.getId().equals(dayId) || !driverId.equals(other.getAssignment().getDriverId())) continue;
                 if (other.getAssignment().getResourceType() != ResourceType.INTERNAL) continue;
                 otherSurplus += other.getSurplusHours();
-                otherOvertime += other.getOvertimeHours();
             }
         }
 
         double surplusCap = businessDaysService.surplusCap(draft, driverId);
         double newSurplusTotal = otherSurplus + request.getSurplusHours();
-        double newOvertimeTotal = otherOvertime + request.getOvertimeHours();
-
-        if (newSurplusTotal > surplusCap + DriverHoursRules.HOURS_TOLERANCE) {
-            throw TransportException.unprocessable(
-                    "TOUR_PROCESSING_DRAFT_ROW_DAY_SURPLUS_CAP_EXCEEDED",
-                    "Las horas sobresueldo acumuladas del chofer en el mes superarían el tope de " + surplusCap + " horas"
-            );
-        }
-        if (newOvertimeTotal > DriverHoursRules.MONTHLY_OVERTIME_CAP + DriverHoursRules.HOURS_TOLERANCE) {
-            throw TransportException.unprocessable(
-                    "TOUR_PROCESSING_DRAFT_ROW_DAY_OVERTIME_CAP_EXCEEDED",
-                    "Las horas extra acumuladas del chofer en el mes superarían el tope de " + (int) DriverHoursRules.MONTHLY_OVERTIME_CAP + " horas"
-            );
-        }
 
         boolean overtimeBelowSurplusThreshold = request.getOvertimeHours() > DriverHoursRules.HOURS_TOLERANCE
                 && newSurplusTotal < surplusCap * DriverHoursRules.SURPLUS_CUTOFF_RATIO - DriverHoursRules.HOURS_TOLERANCE;
@@ -942,37 +1158,14 @@ public class TourProcessingDraftService {
                 .filter(other -> !reapproved.contains(other))
                 .toList();
         List<Driver> driverCatalog = driverRepository.findAll();
-        Map<UUID, Vehicle> vehiclesById = DriverHoursRules.vehiclesById(vehicleRepository.findAll());
-        Map<UUID, VehicleWorkload> vehicleWorkloads = VehicleWorkload.fromAssignments(others, vehiclesById);
         ManualDays manualDays = draftHoursService.manualDays(draft.getId());
 
         for (TourProcessingDraftAssignment tour : reapproved) {
             if (!tour.getTour().isPrimary()) {
                 continue;
             }
-            validateBorrowedVehicleAvailability(tour, others);
-            validateReapprovedVehicleIsFree(tour, vehiclesById, vehicleWorkloads);
             validateReapprovedDriverCanAttend(draft, tour, driverCatalog, others, manualDays);
         }
-    }
-
-    private void validateReapprovedVehicleIsFree(
-            TourProcessingDraftAssignment tour,
-            Map<UUID, Vehicle> vehiclesById,
-            Map<UUID, VehicleWorkload> vehicleWorkloads
-    ) {
-        Vehicle vehicle = DriverHoursRules.assignedVehicle(tour, vehiclesById);
-        VehicleWorkload workload = vehicle == null ? null : vehicleWorkloads.get(vehicle.getId());
-        if (workload == null) {
-            return;
-        }
-        workload.findOverlap(tour).ifPresent(other -> {
-            throw TransportException.unprocessable(
-                    "TOUR_PROCESSING_DRAFT_ROW_VEHICLE_OVERLAP",
-                    "No se puede aprobar la gira porque el vehículo " + vehicle.getPlate() + " ya está asignado a la gira "
-                            + other.getNumber() + ", que se cruza con las fechas de esta gira."
-            );
-        });
     }
 
     private void validateReapprovedDriverCanAttend(
@@ -1035,7 +1228,7 @@ public class TourProcessingDraftService {
         new DriverAutoAssigner(draft.getYear(), draft.getMonth(), businessDaysService.forDraft(draft), driverRepository.findAll(), List.of(), others,
                 draftHoursService.manualDays(draft.getId()))
                 .rejectionFor(requestedDriver, candidate)
-                .filter(rejection -> rejection.reason() != DriverRejection.Reason.WEEKEND_CAP_EXCEEDED)
+                .filter(rejection -> DURATION_BLOCKING_REASONS.contains(rejection.reason()))
                 .ifPresent(rejection -> {
                     throw TransportException.unprocessable(
                             "TOUR_PROCESSING_DRAFT_ROW_DRIVER_UNAVAILABLE",
@@ -1100,25 +1293,15 @@ public class TourProcessingDraftService {
         if (row.getAssignments() != null) {
             List<TourProcessingDraftAssignmentDto> assignments = row.getAssignments();
             if (assignments.isEmpty()) return List.of("Agrega al menos un vehículo a la distribución");
-            Map<String, Vehicle> catalog = DriverHoursRules.vehicleCatalogByPlate(vehicleRepository.findAll());
             for (TourProcessingDraftAssignmentDto assignment : assignments) {
                 if (assignment == null || assignment.getPassengers() == null || assignment.getPassengers() < 1) {
                     return List.of("Cada vehículo debe tener al menos un pasajero");
                 }
                 ResourceType type = assignment.getResourceType() == null ? ResourceType.INTERNAL : assignment.getResourceType();
-                String plate = DriverHoursRules.plateKey(assignment.getVehicle());
                 if (type == ResourceType.BORROWED_VEHICLE) {
                     if (assignment.getBorrowedVehicleId() == null) return List.of("Selecciona el vehículo prestado de cada asignación");
                     BorrowedVehicle borrowed = borrowedVehicleRepository.findByIdAndIsDeletedFalse(assignment.getBorrowedVehicleId()).orElse(null);
                     if (borrowed == null) return List.of("El vehículo prestado seleccionado no existe");
-                    if (borrowed.getCapacity() != null && borrowed.getCapacity() < assignment.getPassengers()) {
-                        return List.of("El vehículo prestado " + borrowed.getPlate() + " no tiene capacidad para " + assignment.getPassengers() + " pasajeros");
-                    }
-                } else if (type == ResourceType.INTERNAL) {
-                    Vehicle vehicle = catalog.get(plate);
-                    if (vehicle != null && vehicle.getCapacity() != null && vehicle.getCapacity() < assignment.getPassengers()) {
-                        return List.of("El vehículo " + vehicle.getPlate() + " no tiene capacidad para " + assignment.getPassengers() + " pasajeros");
-                    }
                 }
             }
             return List.of();
@@ -1131,9 +1314,6 @@ public class TourProcessingDraftService {
             if (borrowedVehicle == null) {
                 return List.of("El vehículo prestado seleccionado no existe");
             }
-            if (borrowedVehicle.getCapacity() != null && borrowedVehicle.getCapacity() < row.getPassengers()) {
-                return List.of("El vehículo prestado no tiene capacidad para " + row.getPassengers() + " pasajeros");
-            }
         }
         return List.of();
     }
@@ -1144,31 +1324,6 @@ public class TourProcessingDraftService {
         }
         return borrowedVehicleRepository.findByIdAndIsDeletedFalse(borrowedVehicleId)
                 .orElseThrow(() -> TransportException.notFound("Vehículo prestado", borrowedVehicleId.toString()));
-    }
-
-    private void validateBorrowedVehicles(List<TourProcessingDraftAssignment> assignments) {
-        assignments.stream()
-                .filter(TourProcessingDraftAssignment::isActive)
-                .forEach(assignment -> validateBorrowedVehicleAvailability(assignment, assignments));
-    }
-
-    private void validateBorrowedVehicleAvailability(TourProcessingDraftAssignment assignment, List<TourProcessingDraftAssignment> assignments) {
-        if (assignment.getResourceType() != ResourceType.BORROWED_VEHICLE || assignment.getBorrowedVehicle() == null) {
-            return;
-        }
-        UUID borrowedVehicleId = assignment.getBorrowedVehicle().getId();
-        boolean overlaps = assignments.stream()
-                .filter(other -> other != assignment && !DriverWorkload.sameTour(other, assignment))
-                .filter(other -> other.getResourceType() == ResourceType.BORROWED_VEHICLE)
-                .filter(other -> other.getBorrowedVehicle() != null && other.getBorrowedVehicle().getId().equals(borrowedVehicleId))
-                .filter(TourProcessingDraftAssignment::isActive)
-                .anyMatch(other -> DriverHoursRules.toursOverlap(other, assignment));
-        if (overlaps) {
-            throw TransportException.unprocessable(
-                    "TOUR_PROCESSING_DRAFT_ROW_BORROWED_VEHICLE_OVERLAP",
-                    "El vehículo prestado \"" + assignment.getBorrowedVehicle().getPlate() + "\" ya está asignado a otra gira en ese rango de fechas"
-            );
-        }
     }
 
     private int violationOrder(ConstraintViolation<TourProcessingDraftRowRequestDto> violation) {
