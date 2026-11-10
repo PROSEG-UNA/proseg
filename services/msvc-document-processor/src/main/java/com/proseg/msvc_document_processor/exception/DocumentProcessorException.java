@@ -101,7 +101,7 @@ public class DocumentProcessorException extends BaseException {
         return new DocumentProcessorException(
                 HttpStatus.BAD_REQUEST,
                 "UNSUPPORTED_DOCUMENT_TYPE",
-                "Tipo de documento no soportado: " + documentType
+                "No fue posible procesar este documento porque su tipo no está disponible"
         );
     }
 
