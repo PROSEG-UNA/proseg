@@ -8,7 +8,7 @@ import { PrimaryButton } from '../../../../common/components/PrimaryButton.jsx';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { usePermissions } from '../../../../common/hooks/index.js';
 import { queryKeys } from '../../../../common/query';
-import ObservationKeywordsTable from '../../components/settings/ObservationKeywordsTable.jsx';
+import ObservationKeywordsField from '../../components/settings/ObservationKeywordsField.jsx';
 import ObservationKeywordFormModal from '../../components/settings/ObservationKeywordFormModal.jsx';
 
 const TOUR_PERMISSIONS = [
@@ -41,13 +41,13 @@ export default function TransportSettingsPage() {
                     description="Ajustes del módulo de transporte."
                 />
                 <Box sx={{ mt: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2, mb: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, mb: 2 }}>
                         <Box>
                             <Typography component="h2" sx={{ fontWeight: 800, fontSize: '1.15rem', mb: 0.5 }}>
                                 Palabras clave en observaciones
                             </Typography>
                             <Typography sx={{ color: 'text.secondary' }}>
-                                Las giras cuya observación contenga alguna de estas palabras se marcan en la depuración.
+                                Las coincidencias aparecen junto al número de gira. Al pasar el cursor se muestra la palabra clave y puedes marcar la observación como revisada. No se distinguen mayúsculas ni tildes.
                             </Typography>
                         </Box>
                         {hasPermission(PERMISSIONS.TRANSPORT.TOURS.UPDATE) ? (
@@ -56,7 +56,7 @@ export default function TransportSettingsPage() {
                             </PrimaryButton>
                         ) : null}
                     </Box>
-                    <ObservationKeywordsTable onEditKeyword={(keyword) => { setKeywordId(keyword.id); setFormOpen(true); }} />
+                    <ObservationKeywordsField onEditKeyword={(keyword) => { setKeywordId(keyword.id); setFormOpen(true); }} />
                 </Box>
             </Container>
             {formOpen ? (

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Box, TextField } from '@mui/material';
+import { useEffect, useId, useState } from 'react';
+import { Box, Button, TextField } from '@mui/material';
 import LabelOutlinedIcon from '@mui/icons-material/LabelOutlined';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
@@ -13,6 +13,7 @@ import {
 const INITIAL_TEXT = '';
 
 export default function ObservationKeywordFormModal({ open, onClose, onSaved, keywordId = null }) {
+    const formId = useId();
     const isEdit = Boolean(keywordId);
     const [text, setText] = useState(INITIAL_TEXT);
     const [error, setError] = useState('');
@@ -44,7 +45,9 @@ export default function ObservationKeywordFormModal({ open, onClose, onSaved, ke
         };
     }, [keywordId]);
 
-    const handleSave = async () => {
+    const handleSave = async (event) => {
+        event.preventDefault();
+        if (saving || loadingKeyword) return;
         const trimmed = text.trim();
         if (!trimmed) {
             setError('Este campo es requerido');
@@ -73,19 +76,27 @@ export default function ObservationKeywordFormModal({ open, onClose, onSaved, ke
                 title={isEdit ? 'Editar palabra clave' : 'Agregar palabra clave'}
                 subtitle="El texto se compara sin distinguir mayúsculas ni tildes."
                 loading={loadingKeyword}
+                footerLeft={
+                    <Button
+                        type="button"
+                        variant="outlined"
+                        size="small"
+                        onClick={onClose}
+                        disabled={saving}
+                        sx={{ borderColor: 'divider', color: 'text.secondary', textTransform: 'none', fontWeight: 600, fontSize: 12.5, borderRadius: '8px' }}
+                    >
+                        Cancelar
+                    </Button>
+                }
                 primaryButton={{
                     label: isEdit ? 'Guardar cambios' : 'Agregar',
-                    onClick: handleSave,
+                    type: 'submit',
+                    form: formId,
                     loading: saving,
                     disabled: saving || loadingKeyword,
                 }}
-                secondaryButton={{
-                    label: 'Cancelar',
-                    onClick: onClose,
-                    disabled: saving,
-                }}
             >
-                <Box sx={{ p: 3 }}>
+                <Box component="form" id={formId} onSubmit={handleSave} sx={{ p: 3 }}>
                     <TextField
                         label="Palabra clave"
                         value={text}

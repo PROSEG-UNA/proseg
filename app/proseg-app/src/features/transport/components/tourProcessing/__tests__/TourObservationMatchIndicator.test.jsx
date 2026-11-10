@@ -71,8 +71,10 @@ describe('ícono de palabras clave', () => {
         expect(screen.getByRole('tooltip')).toHaveTextContent('Revisar URGENTE hoy');
         expect(screen.getByRole('tooltip').querySelector('mark')).toHaveTextContent('URGENTE');
 
-        await userEvent.click(icon);
-        await userEvent.click(screen.getByRole('button', { name: 'Marcar como revisada' }));
+        const reviewButton = screen.getByRole('button', { name: 'Marcar como revisada' });
+        expect(reviewButton).toHaveClass('MuiButton-outlined');
+        await userEvent.hover(reviewButton);
+        await userEvent.click(reviewButton);
 
         expect(updateTourObservationReviewed).toHaveBeenCalledWith('draft-1', 'row-1', true);
         expect(onReviewed).toHaveBeenCalledWith(expect.objectContaining({ observationReviewed: true }));

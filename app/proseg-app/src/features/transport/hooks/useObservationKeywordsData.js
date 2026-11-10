@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchObservationKeywords } from '../services/observationKeywords/observationKeywordsService';
 import { getFriendlyApiErrorMessage } from '../../../common/utils';
-import { keepPreviousPage, queryKeys } from '../../../common/query';
+import { queryKeys } from '../../../common/query';
 
 function mapKeywordToRow(keyword) {
     return {
@@ -10,27 +10,30 @@ function mapKeywordToRow(keyword) {
     };
 }
 
-export function useObservationKeywordsData({ pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [] } = {}) {
-    const requestParams = { page: pageIndex, size: pageSize, search, filters, sort };
-    const listQueryKey = queryKeys.transport.observationKeywordList(requestParams);
-
-    const { data, isLoading, isFetching, error } = useQuery({
-        queryKey: listQueryKey,
-        placeholderData: keepPreviousPage(listQueryKey),
+export function useObservationKeywordsData() {
+    const { data, isLoading, isFetching, error, refetch } = useQuery({
+        queryKey: queryKeys.transport.observationKeywordList({ all: true }),
         queryFn: async () => {
-            const response = await fetchObservationKeywords(requestParams);
-            return {
-                rows: (response.content ?? []).map(mapKeywordToRow),
-                totalElements: response.totalElements ?? 0,
-            };
+            const rows = [];
+            let page = 0;
+            let totalPages;
+
+            do {
+                const response = await fetchObservationKeywords({ page, size: 100, sort: ['text,asc'] });
+                rows.push(...(response.content ?? []).map(mapKeywordToRow));
+                totalPages = response.totalPages ?? 0;
+                page += 1;
+            } while (page < totalPages);
+
+            return rows;
         },
     });
 
     return {
-        rows: data?.rows ?? [],
+        rows: data ?? [],
         loading: isLoading,
         fetching: isFetching,
         error: error ? getFriendlyApiErrorMessage(error, 'No se pudieron cargar las palabras clave') : null,
-        totalElements: data?.totalElements ?? 0,
+        refetch,
     };
 }
