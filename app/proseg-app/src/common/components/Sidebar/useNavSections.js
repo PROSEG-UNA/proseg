@@ -197,9 +197,9 @@ export function useNavSections() {
                 label: 'Transporte',
                 items: [
                     canViewTourProcessingSubmodule ? { key: 'tourProcessing', icon: FactCheckOutlinedIcon, label: 'Depuración', path: '/transporte/depuracion' } : null,
-                    canViewTourProcessingSubmodule ? { key: 'transportSettings', icon: SettingsOutlinedIcon, label: 'Configuraciones', path: '/transporte/configuraciones' } : null,
                     canViewDriversSubmodule ? { key: 'drivers', icon: BadgeOutlinedIcon, label: 'Choferes', path: '/transporte/choferes' } : null,
                     canViewVehiclesSubmodule ? { key: 'vehicles', icon: DirectionsCarFilledOutlinedIcon, label: 'Vehículos', path: '/transporte/vehiculos' } : null,
+                    canViewTourProcessingSubmodule ? { key: 'transportSettings', icon: SettingsOutlinedIcon, label: 'Configuraciones', path: '/transporte/configuraciones' } : null,
                 ].filter(Boolean),
             });
         }
