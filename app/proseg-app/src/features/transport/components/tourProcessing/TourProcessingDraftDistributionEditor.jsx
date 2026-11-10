@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Autocomplete, Box, Button, Chip, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { Box, Button, Chip, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import TourProcessingCatalogField from './TourProcessingCatalogField.jsx';
+import BorrowedVehicleCatalogField from './BorrowedVehicleCatalogField.jsx';
 import {
     EDITOR_TRIP_MODES, TRIP_MODES, TRIP_MODE_HINTS, TRIP_MODE_LABELS, buildTrips, detectTripMode, minimumTrips,
 } from './tripDistribution.js';
@@ -292,16 +293,14 @@ export default function TourProcessingDraftDistributionEditor({
                             />
                         )}
                         {assignment.resourceType === 'BORROWED_VEHICLE' ? (isEdit ? (
-                            <Autocomplete
+                            <BorrowedVehicleCatalogField
                                 options={borrowedVehicles.options}
                                 loading={borrowedVehicles.loading}
-                                value={borrowedVehicles.options.find((option) => option.id === assignment.borrowedVehicleId) ?? null}
-                                onChange={(_, option) => changeAssignment(index, 'borrowedVehicleId', option?.id ?? '')}
-                                getOptionLabel={(option) => option.label ?? ''}
-                                isOptionEqualToValue={(option, value) => option.id === value.id}
+                                value={assignment.borrowedVehicleId}
+                                plate={assignment.borrowedVehiclePlate ?? ''}
+                                onChange={(id) => changeAssignment(index, 'borrowedVehicleId', id)}
                                 disabled={saving}
-                                size="small"
-                                renderInput={(params) => <TextField {...params} label="Vehículo prestado" sx={fieldSx} />}
+                                sx={fieldSx}
                             />
                         ) : (
                             <TextField label="Vehículo prestado" value={assignment.borrowedVehiclePlate || ''} size="small" fullWidth slotProps={{ input: { readOnly: true } }} sx={fieldSx} />

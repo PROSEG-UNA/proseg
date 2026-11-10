@@ -93,12 +93,12 @@ describe('TourProcessingCatalogField', () => {
         expect(screen.queryByRole('button', { name: 'Seleccionar otro chofer' })).not.toBeInTheDocument();
     });
 
-    it('avisa y ofrece agregar o seleccionar otro cuando el chofer no esta en el sistema', () => {
+    it('avisa y ofrece agregar cuando el chofer no esta en el sistema', () => {
         renderField();
 
         expect(screen.getByText(/Este chofer no se encuentra en el sistema, agrégalo antes de continuar/)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Agregar chofer al sistema' })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Seleccionar otro chofer' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Seleccionar otro chofer' })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Dejar vacío' })).not.toBeInTheDocument();
     });
 
@@ -146,10 +146,10 @@ describe('TourProcessingCatalogField', () => {
         expect(screen.queryByText(/Este chofer no se encuentra en el sistema/)).not.toBeInTheDocument();
     });
 
-    it('abre la lista del sistema para seleccionar otro chofer', async () => {
+    it('abre la lista del sistema desde el campo para seleccionar otro chofer', async () => {
         const { onChange } = renderField();
 
-        await userEvent.click(screen.getByRole('button', { name: 'Seleccionar otro chofer' }));
+        await userEvent.click(screen.getByRole('combobox', { name: 'Chofer' }));
 
         expect(screen.getByRole('combobox', { name: 'Chofer' })).toHaveFocus();
         expect(await screen.findByRole('option', { name: /Jorge Francisco Mena/ })).toBeInTheDocument();
@@ -196,6 +196,26 @@ describe('TourProcessingCatalogField', () => {
         expect(screen.queryByRole('option', { name: /Pedro Otra Unidad/ })).not.toBeInTheDocument();
     });
 
+    it('en interno avisa que no existe un chofer que es de otra unidad y no ofrece agregarlo', () => {
+        renderField({ value: 'Pedro Otra Unidad', generalServicesOnly: true });
+
+        expect(screen.getByText(/Este chofer no se encuentra en el sistema, agrégalo antes de continuar/)).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Agregar chofer al sistema' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Seleccionar otro chofer' })).not.toBeInTheDocument();
+    });
+
+    it('en interno no avisa de un chofer de Servicios Generales', () => {
+        renderField({ value: 'Jorge Francisco Mena', generalServicesOnly: true });
+
+        expect(screen.queryByText(/Este chofer no se encuentra en el sistema/)).not.toBeInTheDocument();
+    });
+
+    it('en prestamo no avisa de un chofer de otra unidad', () => {
+        renderField({ value: 'Pedro Otra Unidad', unitTabs: true });
+
+        expect(screen.queryByText(/Este chofer no se encuentra en el sistema/)).not.toBeInTheDocument();
+    });
+
     it('sin filtro lista choferes de todas las unidades', async () => {
         renderField({ value: '' });
 
@@ -209,7 +229,7 @@ describe('TourProcessingCatalogField', () => {
         renderField();
 
         expect(screen.queryByRole('button', { name: 'Agregar chofer al sistema' })).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Seleccionar otro chofer' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Seleccionar otro chofer' })).not.toBeInTheDocument();
     });
 
     it('usa la placa en las opciones del vehiculo', async () => {
@@ -227,7 +247,7 @@ describe('TourProcessingCatalogField', () => {
 
         expect(screen.getByText(/Este valor no es una placa/)).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Agregar vehículo al sistema' })).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Seleccionar otro vehículo' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Seleccionar otro vehículo' })).not.toBeInTheDocument();
     });
 
     it('en interno no muestra pestañas de unidad', async () => {

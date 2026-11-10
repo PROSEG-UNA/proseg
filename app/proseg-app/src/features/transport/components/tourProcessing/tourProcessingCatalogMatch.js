@@ -11,7 +11,7 @@ export const GENERAL_SERVICES_UNIT = 'GENERAL_SERVICES';
 export const OTHER_UNIT = 'OTHER_UNIT';
 
 export function checksDriverCatalog(resourceType) {
-    return resourceType !== 'EXTERNAL' && resourceType !== 'BORROWED_VEHICLE';
+    return resourceType !== 'EXTERNAL';
 }
 
 const WHITESPACE = /\s+/g;

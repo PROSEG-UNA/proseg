@@ -273,7 +273,9 @@ public class TourProcessingDraftService {
         }
         ensureAssignmentLimit(tours, requestedParts(request));
 
-        TourProcessingDraftTour tour = toTour(request, draft, catalogLinker());
+        DraftCatalogLinker linker = catalogLinker();
+        validateBorrowedVehicleDrivers(request, linker);
+        TourProcessingDraftTour tour = toTour(request, draft, linker);
         tourRepository.save(tour);
         tours.add(tour);
         markDuplicates(tours);
@@ -303,6 +305,7 @@ public class TourProcessingDraftService {
         List<TourProcessingDraftAssignment> assignments = assignmentsOf(tours);
         Map<UUID, Set<DraftHoursService.WorkloadSlot>> slotsBefore = DraftHoursService.workloadSlots(assignments);
         DraftCatalogLinker linker = catalogLinker();
+        validateBorrowedVehicleDrivers(request, linker);
         validateAssignedDriverCanAttend(draft, tour, request, assignments, linker);
         ensureAssignmentLimit(tours, requestedParts(request) - tour.getAssignments().size());
 
@@ -1040,6 +1043,27 @@ public class TourProcessingDraftService {
                                     + rejection.message()
                     );
                 });
+    }
+
+    private void validateBorrowedVehicleDrivers(TourProcessingDraftRowRequestDto request, DraftCatalogLinker linker) {
+        List<String> drivers = new ArrayList<>();
+        if (request.getAssignments() == null) {
+            if (request.getResourceType() == ResourceType.BORROWED_VEHICLE) {
+                drivers.add(request.getDriver());
+            }
+        } else {
+            request.getAssignments().stream()
+                    .filter(assignment -> assignment != null && assignment.getResourceType() == ResourceType.BORROWED_VEHICLE)
+                    .forEach(assignment -> drivers.add(assignment.getDriver()));
+        }
+        for (String driver : drivers) {
+            if (driver != null && !driver.isBlank() && linker.driverOf(driver) == null) {
+                throw TransportException.unprocessable(
+                        "TOUR_PROCESSING_DRAFT_ROW_BORROWED_DRIVER_NOT_FOUND",
+                        "El chofer \"" + driver.trim() + "\" no existe en el sistema. Ingrésalo como chofer de otra unidad antes de guardar la gira de préstamo de vehículo"
+                );
+            }
+        }
     }
 
     private String requestedDriverText(TourProcessingDraftRowRequestDto request) {

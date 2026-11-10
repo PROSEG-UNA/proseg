@@ -9,8 +9,8 @@ import {
 } from '../tourProcessingCatalogMatch.js';
 
 describe('checksDriverCatalog', () => {
-    it('no advierte el chofer de un prestamo ni de una contratada', () => {
-        expect(checksDriverCatalog('BORROWED_VEHICLE')).toBe(false);
+    it('advierte el chofer de un prestamo pero no el de una contratada', () => {
+        expect(checksDriverCatalog('BORROWED_VEHICLE')).toBe(true);
         expect(checksDriverCatalog('EXTERNAL')).toBe(false);
         expect(checksDriverCatalog('INTERNAL')).toBe(true);
         expect(checksDriverCatalog(undefined)).toBe(true);

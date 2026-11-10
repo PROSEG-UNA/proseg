@@ -89,7 +89,7 @@ describe('TourProcessingAssignmentsCell', () => {
         expect(screen.getByRole('img', { name: '2 viajes. 1 chofer no está en el sistema' })).toHaveClass('MuiChip-colorWarning');
     });
 
-    it('no marca como faltante el chofer de un prestamo', () => {
+    it('marca como faltante el chofer de un prestamo que no esta en el catalogo', () => {
         renderCell({
             kind: 'driver',
             isMissing: () => true,
@@ -99,7 +99,7 @@ describe('TourProcessingAssignmentsCell', () => {
             ],
         });
 
-        expect(screen.getByRole('img', { name: '2 viajes. 1 chofer no está en el sistema' })).toBeInTheDocument();
+        expect(screen.getByRole('img', { name: '2 viajes. 2 choferes no están en el sistema' })).toBeInTheDocument();
     });
 
     it('no cuenta como faltante un chofer externo ni un vehiculo prestado', () => {

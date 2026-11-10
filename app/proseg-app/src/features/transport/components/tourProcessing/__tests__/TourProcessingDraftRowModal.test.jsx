@@ -154,6 +154,25 @@ describe('TourProcessingDraftRowModal y recargas pendientes', () => {
     });
 });
 
+describe('TourProcessingDraftRowModal con prestamo de vehiculo', () => {
+    it('no deja guardar si el chofer del prestamo no esta en el sistema', async () => {
+        renderModal('edit', { ...ROW, resourceType: 'BORROWED_VEHICLE', borrowedVehicleId: 'b1', vehicle: null });
+
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+        expect(await screen.findByText(/Agrégalo como chofer de otra unidad/)).toBeInTheDocument();
+        expect(updateTourProcessingDraftRow).not.toHaveBeenCalled();
+    });
+
+    it('guarda el prestamo cuando el chofer esta en el sistema', async () => {
+        renderModal('edit', { ...ROW, driver: 'Jorge Francisco Mena', resourceType: 'BORROWED_VEHICLE', borrowedVehicleId: 'b1', vehicle: null });
+
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+        await waitFor(() => expect(updateTourProcessingDraftRow).toHaveBeenCalledTimes(1));
+    });
+});
+
 describe('TourProcessingDraftRowModal con chofer y vehiculo fuera del sistema', () => {
     it('guarda la fila con el chofer vacio y el vehiculo elegido del sistema', async () => {
         renderModal('edit');
@@ -166,7 +185,7 @@ describe('TourProcessingDraftRowModal con chofer y vehiculo fuera del sistema', 
         expect(screen.getByRole('combobox', { name: 'Chofer' })).toHaveValue('');
         expect(screen.queryByText(/Este chofer no se encuentra en el sistema/)).not.toBeInTheDocument();
 
-        await userEvent.click(screen.getByRole('button', { name: 'Seleccionar otro vehículo' }));
+        await userEvent.click(screen.getByRole('combobox', { name: 'Vehículo' }));
         await userEvent.click(await screen.findByRole('option', { name: '301-627' }));
         expect(screen.queryByText(/Este vehículo no se encuentra en el sistema/)).not.toBeInTheDocument();
 

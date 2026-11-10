@@ -1,9 +1,8 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Autocomplete, Box, Button, Chip, InputAdornment, Paper, Tab, Tabs, TextField, Typography, createFilterOptions, useTheme } from '@mui/material';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
-import SwapHorizOutlinedIcon from '@mui/icons-material/SwapHorizOutlined';
 import { queryKeys } from '../../../../common/query';
 import { useTourProcessingCatalogMatch } from '../../hooks/useTourProcessingCatalogMatch.js';
 import { toDriverOption, toVehicleOption } from '../../hooks/useTransportOptions.js';
@@ -15,6 +14,7 @@ import {
     canAddToCatalog,
     catalogEntryLabel,
     catalogEntryText,
+    driverMatchKey,
     missingCatalogMessage,
 } from './tourProcessingCatalogMatch.js';
 import MissingCatalogIcon from './MissingCatalogIcon.jsx';
@@ -45,6 +45,11 @@ const KIND_CONFIG = {
 const OTHER_UNIT_TAB = 'OTHER';
 
 const filterCatalogEntries = createFilterOptions({ stringify: catalogEntryText });
+
+function hasCatalogMatch(value, entries) {
+    const key = driverMatchKey(value);
+    return key !== '' && entries.some((entry) => driverMatchKey(entry.label) === key);
+}
 
 function isSameEntry(option, value) {
     return catalogEntryLabel(option) === catalogEntryLabel(value);
@@ -109,10 +114,8 @@ export default function TourProcessingCatalogField({ kind, value, onChange, onBl
     const queryClient = useQueryClient();
     const catalog = useTourProcessingCatalogMatch()[kind];
     const config = KIND_CONFIG[kind];
-    const inputRef = useRef(null);
     const [addOpen, setAddOpen] = useState(false);
 
-    const missing = catalog.isMissing(value);
     const unavailable = kind === 'vehicle' && Boolean(catalog.isUnavailable?.(value));
     const [unitTab, setUnitTab] = useState(OTHER_UNIT_TAB);
     const [popupOpen, setPopupOpen] = useState(false);
@@ -124,6 +127,9 @@ export default function TourProcessingCatalogField({ kind, value, onChange, onBl
         }
         return catalog.options;
     }, [catalog.options, generalServicesOnly, unitTabs, unitTab]);
+    const outsideGeneralServices = generalServicesOnly && kind === 'driver'
+        && hasCatalogMatch(value, catalog.options) && !hasCatalogMatch(value, options);
+    const missing = catalog.isMissing(value) || outsideGeneralServices;
     const FormModal = config.FormModal;
 
     if (!isEdit) {
@@ -176,13 +182,6 @@ export default function TourProcessingCatalogField({ kind, value, onChange, onBl
         color: '#fff',
         '&:hover': { bgcolor: accentColor, filter: 'brightness(0.92)', boxShadow: 'none' },
     };
-    const secondaryActionSx = {
-        ...actionSx,
-        color: accentColor,
-        borderColor: `color-mix(in srgb, ${accentColor} 45%, transparent)`,
-        '&:hover': { borderColor: accentColor, bgcolor: `color-mix(in srgb, ${accentColor} 8%, transparent)` },
-    };
-
     const addingOtherUnitDriver = kind === 'driver' && unitTabs && unitTab === OTHER_UNIT_TAB;
     const formInitialValues = addingOtherUnitDriver
         ? { ...config.toFormValues(value), organizationalUnit: OTHER_UNIT }
@@ -222,7 +221,6 @@ export default function TourProcessingCatalogField({ kind, value, onChange, onBl
                     <TextField
                         {...params}
                         label={config.label}
-                        inputRef={inputRef}
                         error={missing || Boolean(errorText)}
                         helperText={errorText || ' '}
                         sx={sx}
@@ -245,8 +243,8 @@ export default function TourProcessingCatalogField({ kind, value, onChange, onBl
                             {missingCatalogMessage(kind, value)}
                         </Typography>
                     </Box>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                        {catalog.canAdd && canAddToCatalog(kind, value) && (
+                    {catalog.canAdd && canAddToCatalog(kind, value) && !outsideGeneralServices && (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                             <Button
                                 size="small"
                                 variant="contained"
@@ -258,18 +256,8 @@ export default function TourProcessingCatalogField({ kind, value, onChange, onBl
                             >
                                 {`Agregar ${config.entity} al sistema`}
                             </Button>
-                        )}
-                        <Button
-                            size="small"
-                            variant="outlined"
-                            disabled={disabled}
-                            startIcon={<SwapHorizOutlinedIcon />}
-                            onClick={() => inputRef.current?.focus()}
-                            sx={secondaryActionSx}
-                        >
-                            {`Seleccionar otro ${config.entity}`}
-                        </Button>
-                    </Box>
+                        </Box>
+                    )}
                 </Box>
             )}
 

@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-    Autocomplete,
     Box,
     Button,
     Chip,
@@ -44,8 +43,10 @@ import {
     toggledApprovalStatus,
 } from './tourProcessingDraftLabels.js';
 import TourProcessingCatalogField from './TourProcessingCatalogField.jsx';
+import BorrowedVehicleCatalogField from './BorrowedVehicleCatalogField.jsx';
 import DuplicateChip from './DuplicateChip.jsx';
 import { describeDraftRowChanges } from './draftRowChanges.js';
+import { useTourProcessingCatalogMatch } from '../../hooks/useTourProcessingCatalogMatch.js';
 import TourProcessingDraftDistributionEditor from './TourProcessingDraftDistributionEditor.jsx';
 import TourProcessingTripSplitDialog from './TourProcessingTripSplitDialog.jsx';
 import TourObservationMatchIndicator from './TourObservationMatchIndicator.jsx';
@@ -362,7 +363,9 @@ function toFormValues(row) {
     };
 }
 
-function validate(values, vehicleOptions, borrowedVehicleOptions) {
+const BORROWED_DRIVER_MISSING_MESSAGE = 'El chofer no existe en el sistema. Agrégalo como chofer de otra unidad para poder guardar la gira de préstamo de vehículo';
+
+function validate(values, vehicleOptions, borrowedVehicleOptions, isDriverMissing) {
     const errors = {};
 
     REQUIRED_TEXT_KEYS.forEach((key) => {
@@ -381,6 +384,9 @@ function validate(values, vehicleOptions, borrowedVehicleOptions) {
     if (values.resourceType === 'BORROWED_VEHICLE' && !values.borrowedVehicleId) {
         if (!values.assignments) errors.borrowedVehicleId = 'Selecciona el vehículo prestado';
     }
+    if (values.resourceType === 'BORROWED_VEHICLE' && !values.assignments && isDriverMissing(values.driver)) {
+        errors.driver = BORROWED_DRIVER_MISSING_MESSAGE;
+    }
 
     if (values.assignments) {
         values.assignments.forEach((assignment) => {
@@ -389,6 +395,7 @@ function validate(values, vehicleOptions, borrowedVehicleOptions) {
             const type = assignment.resourceType || 'INTERNAL';
             const vehicle = type === 'BORROWED_VEHICLE' ? assignment.borrowedVehicleId : assignment.vehicle?.trim().toUpperCase();
             if (type === 'BORROWED_VEHICLE' && !assignment.borrowedVehicleId) errors.assignments = 'Selecciona cada vehículo prestado';
+            if (type === 'BORROWED_VEHICLE' && isDriverMissing(assignment.driver)) errors.assignments = BORROWED_DRIVER_MISSING_MESSAGE;
             const capacity = type === 'BORROWED_VEHICLE'
                 ? borrowedVehicleOptions.find((option) => option.id === assignment.borrowedVehicleId)?.capacity
                 : type === 'INTERNAL'
@@ -483,9 +490,10 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
         values.resourceType === 'BORROWED_VEHICLE'
         || values.assignments?.some((assignment) => assignment.resourceType === 'BORROWED_VEHICLE')
     ));
+    const isDriverMissing = useTourProcessingCatalogMatch().driver.isMissing;
     const errors = useMemo(
-        () => validate(values, vehicleOptions.options, borrowedVehicles.options),
-        [values, vehicleOptions.options, borrowedVehicles.options],
+        () => validate(values, vehicleOptions.options, borrowedVehicles.options, isDriverMissing),
+        [values, vehicleOptions.options, borrowedVehicles.options, isDriverMissing],
     );
     const returnRangeErrors = useMemo(() => validateReturnRange(values), [values]);
 
@@ -658,6 +666,7 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
             isEdit={isEdit}
             disabled={saving}
             errorText={isEdit ? visibleError(key) : undefined}
+            generalServicesOnly={key === 'driver' && (!values.resourceType || values.resourceType === 'INTERNAL')}
             unitTabs={key === 'driver' && values.resourceType === 'BORROWED_VEHICLE'}
             sx={fieldSx}
         />
@@ -756,26 +765,17 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
                         : renderCatalogField('driver')}
                     {values.resourceType === 'EXTERNAL' && renderField('vehicle', 'Placa (contratación externa)')}
                     {values.resourceType === 'BORROWED_VEHICLE' && (isEdit ? (
-                        <Autocomplete
+                        <BorrowedVehicleCatalogField
                             options={borrowedVehicles.options}
                             loading={borrowedVehicles.loading}
-                            value={borrowedVehicles.options.find((option) => option.id === values.borrowedVehicleId) ?? null}
-                            onChange={(_, next) => handleChange('borrowedVehicleId', next?.id ?? '')}
-                            getOptionLabel={(option) => option.label ?? ''}
-                            isOptionEqualToValue={(option, value) => option.id === value.id}
+                            value={values.borrowedVehicleId}
+                            plate={row.borrowedVehiclePlate ?? ''}
+                            onChange={(id) => handleChange('borrowedVehicleId', id)}
+                            onBlur={() => handleBlur('borrowedVehicleId')}
                             disabled={saving}
-                            size="small"
-                            renderInput={(params) => (
-                                <TextField
-                                    {...params}
-                                    label="Vehículo prestado"
-                                    required
-                                    error={Boolean(visibleError('borrowedVehicleId'))}
-                                    helperText={visibleError('borrowedVehicleId') || ' '}
-                                    onBlur={() => handleBlur('borrowedVehicleId')}
-                                    sx={fieldSx}
-                                />
-                            )}
+                            errorText={visibleError('borrowedVehicleId')}
+                            required
+                            sx={fieldSx}
                         />
                     ) : renderReadOnly('Vehículo prestado', row.borrowedVehiclePlate))}
                     {values.resourceType === 'INTERNAL' && renderCatalogField('vehicle')}

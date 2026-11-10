@@ -401,6 +401,45 @@ class TourProcessingDraftServiceTest {
         verify(rowRepository, never()).save(any());
     }
 
+    private TourProcessingDraftRowRequestDto borrowedVehicleRequest(String driver) {
+        UUID borrowedId = UUID.randomUUID();
+        BorrowedVehicle borrowed = mock(BorrowedVehicle.class);
+        when(borrowed.getPlate()).thenReturn("PRE-123");
+        when(borrowed.getCapacity()).thenReturn(30);
+        when(borrowedVehicleRepository.findByIdAndIsDeletedFalse(borrowedId)).thenReturn(Optional.of(borrowed));
+        TourProcessingDraftRowRequestDto request = row(1, "04504", "Merced");
+        request.setResourceType(ResourceType.BORROWED_VEHICLE);
+        request.setBorrowedVehicleId(borrowedId);
+        request.setVehicle(null);
+        request.setDriver(driver);
+        return request;
+    }
+
+    @Test
+    void rejectsBorrowedVehicleRowWhenTheDriverIsNotInTheSystem() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        stubDraft(draft, entity(draft, 8, "03625", "Tayutic"));
+        when(driverRepository.findAll()).thenReturn(List.of(catalogDriver()));
+        TourProcessingDraftRowRequestDto request = borrowedVehicleRequest("Pedro Otra Unidad");
+
+        assertThatThrownBy(() -> service.createRow(draft.getId(), request))
+                .isInstanceOf(TransportException.class)
+                .hasMessageContaining("\"Pedro Otra Unidad\" no existe en el sistema");
+        verify(rowRepository, never()).save(any());
+    }
+
+    @Test
+    void acceptsBorrowedVehicleRowWhenTheDriverIsInTheSystemOrBlank() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        stubDraft(draft, entity(draft, 8, "03625", "Tayutic"));
+        when(driverRepository.findAll()).thenReturn(List.of(catalogDriver()));
+
+        service.createRow(draft.getId(), borrowedVehicleRequest("Daniel Zuniga"));
+        service.createRow(draft.getId(), borrowedVehicleRequest(null));
+
+        verify(rowRepository, org.mockito.Mockito.times(2)).save(any());
+    }
+
     @Test
     void rejectsRowCreationOnRegisteredDraft() {
         TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.REGISTERED);
