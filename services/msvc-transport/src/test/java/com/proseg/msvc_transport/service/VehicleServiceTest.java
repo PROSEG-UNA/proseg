@@ -1,5 +1,6 @@
 package com.proseg.msvc_transport.service;
 
+import com.proseg.msvc_transport.dto.request.OpenDraftToursAction;
 import com.proseg.msvc_transport.dto.request.VehicleRequestDto;
 import com.proseg.msvc_transport.dto.response.VehicleOpenDraftTourResponseDto;
 import com.proseg.msvc_transport.dto.response.VehicleResponseDto;
@@ -112,6 +113,65 @@ class VehicleServiceTest {
         assertThat(response.getOpenDraftTours()).containsExactly(tour);
         verify(draftCatalogService).syncVehicle(entity);
         verify(draftCatalogService, never()).removeVehicle(any());
+    }
+
+    @Test
+    void removesTheVehicleFromOpenDraftsWhenAskedToRemove() {
+        UUID id = UUID.randomUUID();
+        Vehicle entity = Vehicle.builder().id(id).plate("301-295").available(true).build();
+        when(vehicleRepository.findById(id)).thenReturn(Optional.of(entity));
+
+        VehicleResponseDto response = service.update(id, VehicleRequestDto.builder().plate("301-295").available(false)
+                .openDraftToursAction(OpenDraftToursAction.REMOVE).build());
+
+        assertThat(response.isAvailable()).isFalse();
+        assertThat(response.getOpenDraftTours()).isEmpty();
+        verify(draftCatalogService).clearVehicleFromOpenDrafts(id);
+        verify(openDraftTourFinder, never()).find(any());
+    }
+
+    @Test
+    void keepsTheVehicleInOpenDraftsWhenAskedToKeep() {
+        UUID id = UUID.randomUUID();
+        Vehicle entity = Vehicle.builder().id(id).plate("301-295").available(true).build();
+        when(vehicleRepository.findById(id)).thenReturn(Optional.of(entity));
+        VehicleOpenDraftTourResponseDto tour = VehicleOpenDraftTourResponseDto.builder().number("05100").build();
+        when(openDraftTourFinder.find(id)).thenReturn(List.of(tour));
+
+        VehicleResponseDto response = service.update(id, VehicleRequestDto.builder().plate("301-295").available(false)
+                .openDraftToursAction(OpenDraftToursAction.KEEP).build());
+
+        assertThat(response.getOpenDraftTours()).containsExactly(tour);
+        verify(draftCatalogService, never()).clearVehicleFromOpenDrafts(any());
+    }
+
+    @Test
+    void doesNotRemoveTheVehicleWhenItStaysAvailable() {
+        UUID id = UUID.randomUUID();
+        Vehicle entity = Vehicle.builder().id(id).plate("301-295").available(false).build();
+        when(vehicleRepository.findById(id)).thenReturn(Optional.of(entity));
+
+        service.update(id, VehicleRequestDto.builder().plate("301-295").available(true)
+                .openDraftToursAction(OpenDraftToursAction.REMOVE).build());
+
+        verify(draftCatalogService, never()).clearVehicleFromOpenDrafts(any());
+    }
+
+    @Test
+    void listsTheOpenDraftToursOfAnExistingVehicle() {
+        UUID id = UUID.randomUUID();
+        when(vehicleRepository.existsById(id)).thenReturn(true);
+        VehicleOpenDraftTourResponseDto tour = VehicleOpenDraftTourResponseDto.builder().number("05100").build();
+        when(openDraftTourFinder.find(id)).thenReturn(List.of(tour));
+
+        assertThat(service.findOpenDraftTours(id)).containsExactly(tour);
+    }
+
+    @Test
+    void rejectsListingOpenDraftToursOfAnUnknownVehicle() {
+        UUID id = UUID.randomUUID();
+
+        assertThatThrownBy(() -> service.findOpenDraftTours(id)).isInstanceOf(TransportException.class);
     }
 
     @Test

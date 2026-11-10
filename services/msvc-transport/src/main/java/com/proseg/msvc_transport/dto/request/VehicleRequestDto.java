@@ -28,4 +28,6 @@ public class VehicleRequestDto {
 
     @Builder.Default
     private boolean available = true;
+
+    private OpenDraftToursAction openDraftToursAction;
 }

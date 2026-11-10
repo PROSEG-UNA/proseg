@@ -1,6 +1,8 @@
 package com.proseg.msvc_transport.service;
 
+import com.proseg.msvc_transport.dto.request.OpenDraftToursAction;
 import com.proseg.msvc_transport.dto.request.VehicleRequestDto;
+import com.proseg.msvc_transport.dto.response.VehicleOpenDraftTourResponseDto;
 import com.proseg.msvc_transport.dto.response.VehicleResponseDto;
 import com.proseg.msvc_transport.entity.Vehicle;
 import com.proseg.msvc_transport.exception.TransportException;
@@ -75,8 +77,27 @@ public class VehicleService {
         Vehicle saved = vehicleRepository.save(entity);
         draftCatalogService.syncVehicle(saved);
         VehicleResponseDto response = toResponse(saved);
-        response.setOpenDraftTours(saved.isAvailable() ? List.of() : openDraftTourFinder.find(saved.getId()));
+        response.setOpenDraftTours(openDraftToursAfterUpdate(saved, request.getOpenDraftToursAction()));
         return response;
+    }
+
+    @Transactional(readOnly = true)
+    public List<VehicleOpenDraftTourResponseDto> findOpenDraftTours(UUID id) {
+        if (!vehicleRepository.existsById(id)) {
+            throw TransportException.notFound("Vehículo", id.toString());
+        }
+        return openDraftTourFinder.find(id);
+    }
+
+    private List<VehicleOpenDraftTourResponseDto> openDraftToursAfterUpdate(Vehicle saved, OpenDraftToursAction action) {
+        if (saved.isAvailable()) {
+            return List.of();
+        }
+        if (action == OpenDraftToursAction.REMOVE) {
+            draftCatalogService.clearVehicleFromOpenDrafts(saved.getId());
+            return List.of();
+        }
+        return openDraftTourFinder.find(saved.getId());
     }
 
     @Transactional

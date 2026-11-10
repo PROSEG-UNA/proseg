@@ -90,6 +90,7 @@ export default function DialogModal({
     onConfirm,
     confirmLabel = 'Sí, continuar',
     cancelLabel,
+    extraActions = [],
 }) {
     const titleId = useId();
     const [shown, setShown] = useState({ type, title, message });
@@ -172,6 +173,11 @@ export default function DialogModal({
                 <Button disableElevation onClick={onClose} sx={cancelBtnSx}>
                     {resolvedCancelLabel}
                 </Button>
+                {extraActions.map((action) => (
+                    <Button key={action.label} disableElevation onClick={action.onClick} sx={cancelBtnSx}>
+                        {action.label}
+                    </Button>
+                ))}
                 {onConfirm && (
                     <Button
                         variant="contained"

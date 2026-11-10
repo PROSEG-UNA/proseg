@@ -13,7 +13,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -56,6 +59,28 @@ public class DraftCatalogService {
     public void syncVehicle(Vehicle vehicle) {
         assignmentRepository.linkVehicle(vehicle.getId(), vehicle.getPlate(), DriverHoursRules.plateKey(vehicle.getPlate()));
         assignmentRepository.renameVehicle(vehicle.getId(), vehicle.getPlate(), TourProcessingDraftStatus.DRAFT);
+    }
+
+    @Transactional
+    public int clearVehicleFromOpenDrafts(UUID id) {
+        Map<UUID, TourProcessingDraft> drafts = new LinkedHashMap<>();
+        Map<UUID, Set<UUID>> driverIdsByDraft = new LinkedHashMap<>();
+        int cleared = 0;
+        for (TourProcessingDraftAssignment assignment : assignmentRepository.findByVehicleIdAndDraftStatus(id, TourProcessingDraftStatus.DRAFT)) {
+            TourProcessingDraft draft = assignment.getTour().getDraft();
+            assignment.setVehicle(null);
+            assignment.setVehicleId(null);
+            drafts.put(draft.getId(), draft);
+            Set<UUID> driverIds = driverIdsByDraft.computeIfAbsent(draft.getId(), draftId -> new LinkedHashSet<>());
+            if (assignment.getDriverId() != null) driverIds.add(assignment.getDriverId());
+            cleared++;
+        }
+        drafts.forEach((draftId, draft) -> {
+            List<TourProcessingDraftAssignment> assignments = tourRepository.findAllByDraftIdOrderByRowNumberAsc(draftId).stream()
+                    .flatMap(tour -> tour.getAssignments().stream()).toList();
+            driverIdsByDraft.get(draftId).forEach(driverId -> hoursService.syncDriver(draft, assignments, driverId));
+        });
+        return cleared;
     }
 
     @Transactional

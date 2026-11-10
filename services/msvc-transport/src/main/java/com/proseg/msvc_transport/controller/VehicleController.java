@@ -6,6 +6,7 @@ import com.proseg.common.api.util.ApiResponseBuilder;
 import com.proseg.common.api.util.PageMapper;
 import com.proseg.common.specification.FilterConstants;
 import com.proseg.msvc_transport.dto.request.VehicleRequestDto;
+import com.proseg.msvc_transport.dto.response.VehicleOpenDraftTourResponseDto;
 import com.proseg.msvc_transport.dto.response.VehicleResponseDto;
 import com.proseg.msvc_transport.service.VehicleService;
 import jakarta.validation.Valid;
@@ -16,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -34,6 +36,11 @@ public class VehicleController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<VehicleResponseDto>> findById(@PathVariable UUID id) {
         return ApiResponseBuilder.ok(service.findById(id), "Vehículo obtenido correctamente");
+    }
+
+    @GetMapping("/{id}/open-draft-tours")
+    public ResponseEntity<ApiResponse<List<VehicleOpenDraftTourResponseDto>>> findOpenDraftTours(@PathVariable UUID id) {
+        return ApiResponseBuilder.ok(service.findOpenDraftTours(id), "Giras en borradores abiertos");
     }
 
     @GetMapping

@@ -4,9 +4,10 @@ import DirectionsCarFilledOutlinedIcon from '@mui/icons-material/DirectionsCarFi
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
-import { createVehicle, fetchVehicleById, updateVehicle } from '../../services/vehicles/vehiclesService';
+import { createVehicle, fetchVehicleById, fetchVehicleOpenDraftTours, updateVehicle } from '../../services/vehicles/vehiclesService';
 import { VEHICLE_TYPE_OPTIONS } from '../../transportUtils';
-import { formatVehicleUnavailableWarning } from './vehicleOpenDraftWarning.js';
+import { describeVehicleChanges, vehicleSavedMessage } from './vehicleChanges.js';
+import { OPEN_DRAFT_TOURS_ACTION, formatVehicleOpenDraftResult, formatVehicleUnavailablePrompt } from './vehicleOpenDraftWarning.js';
 
 const INITIAL_VALUES = {
     plate: '',
@@ -18,12 +19,13 @@ const INITIAL_VALUES = {
 export default function VehicleFormModal({ open, onClose, onSaved, vehicleId = null, initialValues = null }) {
     const isEdit = !!vehicleId;
     const [formValues, setFormValues] = useState(() => ({ ...INITIAL_VALUES, ...initialValues }));
+    const [originalValues, setOriginalValues] = useState(() => ({ ...INITIAL_VALUES, ...initialValues }));
     const [errors, setErrors] = useState({});
     const [touched, setTouched] = useState({});
     const [saving, setSaving] = useState(false);
     const [loadingVehicle, setLoadingVehicle] = useState(false);
     const [alert, setAlert] = useState(null);
-    const [draftWarning, setDraftWarning] = useState(null);
+    const [unavailableDecision, setUnavailableDecision] = useState(null);
 
     useEffect(() => {
         if (!open || !vehicleId) return undefined;
@@ -34,12 +36,14 @@ export default function VehicleFormModal({ open, onClose, onSaved, vehicleId = n
             try {
                 const vehicle = await fetchVehicleById(vehicleId);
                 if (cancelled || !vehicle) return;
-                setFormValues({
+                const loadedValues = {
                     plate: vehicle.plate ?? '',
                     type: vehicle.type ?? '',
                     capacity: vehicle.capacity ?? '',
                     available: vehicle.available ?? true,
-                });
+                };
+                setOriginalValues(loadedValues);
+                setFormValues(loadedValues);
             } catch (error) {
                 if (!cancelled) {
                     setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo cargar el vehículo') });
@@ -103,31 +107,64 @@ export default function VehicleFormModal({ open, onClose, onSaved, vehicleId = n
             return;
         }
 
+        const payload = {
+            plate: formValues.plate.trim(),
+            type: formValues.type || null,
+            capacity: formValues.capacity ? Number(formValues.capacity) : null,
+            available: formValues.available,
+        };
+
         setSaving(true);
         try {
-            const payload = {
-                plate: formValues.plate.trim(),
-                type: formValues.type || null,
-                capacity: formValues.capacity ? Number(formValues.capacity) : null,
-                available: formValues.available,
-            };
-
-            const saved = isEdit
-                ? await updateVehicle(vehicleId, payload)
-                : await createVehicle(payload);
-
-            const openDraftTours = saved?.openDraftTours ?? [];
-            onSaved?.(saved);
-            if (!payload.available && openDraftTours.length > 0) {
-                setDraftWarning(formatVehicleUnavailableWarning(openDraftTours));
-                return;
+            const becomesUnavailable = isEdit && originalValues.available && !payload.available;
+            if (becomesUnavailable) {
+                const openDraftTours = await fetchVehicleOpenDraftTours(vehicleId);
+                if (openDraftTours.length > 0) {
+                    setUnavailableDecision({ payload, tours: openDraftTours });
+                    return;
+                }
             }
-            onClose?.();
+            await saveVehicle(payload);
         } catch (error) {
             setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo guardar el vehículo') });
         } finally {
             setSaving(false);
         }
+    };
+
+    const saveVehicle = async (payload, decision = null) => {
+        const saved = isEdit
+            ? await updateVehicle(vehicleId, decision ? { ...payload, openDraftToursAction: decision.action } : payload)
+            : await createVehicle(payload);
+
+        const savedMessage = vehicleSavedMessage({
+            plate: payload.plate,
+            created: !isEdit,
+            changes: isEdit ? describeVehicleChanges(originalValues, payload) : [],
+        });
+        const message = decision
+            ? `${savedMessage}\n\n${formatVehicleOpenDraftResult(decision.action, decision.count)}`
+            : savedMessage;
+        onSaved?.(saved, message);
+        onClose?.();
+    };
+
+    const resolveUnavailableDecision = async (action) => {
+        const { payload, tours } = unavailableDecision;
+        setUnavailableDecision(null);
+        setSaving(true);
+        try {
+            await saveVehicle(payload, { action, count: tours.length });
+        } catch (error) {
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo guardar el vehículo') });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const cancelUnavailableDecision = () => {
+        setUnavailableDecision(null);
+        setFormValues((previousValue) => ({ ...previousValue, available: originalValues.available }));
     };
 
     return (
@@ -205,14 +242,15 @@ export default function VehicleFormModal({ open, onClose, onSaved, vehicleId = n
                 onClose={() => setAlert(null)}
             />
             <DialogModal
-                open={!!draftWarning}
+                open={!!unavailableDecision}
                 type="warning"
                 title="Vehículo no disponible"
-                message={draftWarning}
-                onClose={() => {
-                    setDraftWarning(null);
-                    onClose?.();
-                }}
+                message={unavailableDecision ? formatVehicleUnavailablePrompt(unavailableDecision.payload.plate, unavailableDecision.tours) : ''}
+                cancelLabel="Cancelar"
+                onClose={cancelUnavailableDecision}
+                extraActions={[{ label: 'Mantener', onClick: () => resolveUnavailableDecision(OPEN_DRAFT_TOURS_ACTION.keep) }]}
+                confirmLabel="Eliminar apariciones"
+                onConfirm={() => resolveUnavailableDecision(OPEN_DRAFT_TOURS_ACTION.remove)}
             />
         </>
     );
