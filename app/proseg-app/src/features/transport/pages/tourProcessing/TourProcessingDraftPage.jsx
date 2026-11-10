@@ -108,6 +108,35 @@ import { vehicleDistributionWarning } from '../../components/tourProcessing/vehi
 import { checksDriverCatalog } from '../../components/tourProcessing/tourProcessingCatalogMatch.js';
 
 const HUB_PATH = '/transporte/depuracion';
+const alertActionButtonSx = (theme) => ({
+    textTransform: 'none',
+    fontWeight: 700,
+    fontSize: 12.5,
+    whiteSpace: 'nowrap',
+    color: 'text.primary',
+    backgroundColor: 'hsl(45, 92%, 86%)',
+    boxShadow: '0 3px 8px rgba(98, 73, 12, 0.18)',
+    transition: 'transform 160ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 160ms cubic-bezier(0.23, 1, 0.32, 1)',
+    '&:hover': { backgroundColor: 'hsl(45, 92%, 86%)' },
+    '@media (hover: hover) and (pointer: fine)': {
+        '&:hover': {
+            boxShadow: '0 4px 10px rgba(98, 73, 12, 0.21)',
+            transform: 'translateY(-2px)',
+        },
+    },
+    '&:active': { transform: 'translateY(0)' },
+    '@media (prefers-reduced-motion: reduce)': {
+        transition: 'box-shadow 160ms ease',
+        '@media (hover: hover) and (pointer: fine)': {
+            '&:hover': { transform: 'none' },
+        },
+    },
+    ...theme.applyStyles('dark', {
+        color: 'hsl(45, 92%, 90%)',
+        backgroundColor: 'hsl(45, 45%, 18%)',
+        '&:hover': { backgroundColor: 'hsl(45, 45%, 18%)' },
+    }),
+});
 const INITIAL_SORTING = [{ id: 'rowNumber', desc: false }];
 const INITIAL_PAGE_SIZE = 50;
 const TABLE_STORAGE_KEY = 'tour-processing-draft-rows-table-state-v3';
@@ -1068,12 +1097,13 @@ export default function TourProcessingDraftPage() {
                                 variant="outlined"
                                 action={(
                                     <Button
+                                        variant="contained"
                                         color="inherit"
                                         size="small"
                                         onClick={() => setDeleteDuplicatesOpen(true)}
                                         disabled={busy}
                                         startIcon={<DeleteOutlineOutlinedIcon />}
-                                        sx={{ textTransform: 'none', fontWeight: 700, fontSize: 12.5, whiteSpace: 'nowrap' }}
+                                        sx={alertActionButtonSx}
                                     >
                                         Eliminar todos los duplicados
                                     </Button>
@@ -1089,12 +1119,13 @@ export default function TourProcessingDraftPage() {
                                 action={(
                                     <Stack direction="row" alignItems="center" spacing={0.5}>
                                         <Button
+                                            variant="contained"
                                             color="inherit"
                                             size="small"
                                             onClick={() => setSplitOversizedOpen(true)}
                                             disabled={busy}
                                             startIcon={<CallSplitOutlinedIcon />}
-                                            sx={{ textTransform: 'none', fontWeight: 700, fontSize: 12.5, whiteSpace: 'nowrap' }}
+                                            sx={alertActionButtonSx}
                                         >
                                             Dividir giras automáticamente
                                         </Button>
