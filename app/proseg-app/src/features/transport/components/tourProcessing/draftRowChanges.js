@@ -1,7 +1,6 @@
+import { fieldChangeText } from '../../fieldChangeText.js';
 import { formatDate } from '../../transportUtils.js';
 import { APPROVAL_STATUS, approvalStatusLabel } from './tourProcessingDraftLabels.js';
-
-const MAX_TEXT_LENGTH = 40;
 
 const RESOURCE_TYPE_LABELS = {
     INTERNAL: 'Interno',
@@ -15,10 +14,6 @@ function textOf(value) {
 
 function timeOf(value) {
     return textOf(value).slice(0, 5);
-}
-
-function shorten(text) {
-    return text.length > MAX_TEXT_LENGTH ? `${text.slice(0, MAX_TEXT_LENGTH)}...` : text;
 }
 
 const FIELDS = [
@@ -53,17 +48,8 @@ function assignmentSignature(assignment) {
     ].join('|');
 }
 
-function describeValue(field, value) {
-    return shorten(field.display ? field.display(value) : value);
-}
-
 function compareField(field, row, payload) {
-    const before = field.read(row[field.key]);
-    const after = field.read(payload[field.key]);
-    if (before === after) return null;
-    if (!before) return `${field.label}: se agregó ${describeValue(field, after)}`;
-    if (!after) return `${field.label}: se quitó (antes era ${describeValue(field, before)})`;
-    return `${field.label}: de ${describeValue(field, before)} a ${describeValue(field, after)}`;
+    return fieldChangeText(field.label, field.read(row[field.key]), field.read(payload[field.key]), field.display);
 }
 
 function tripLine(assignment, index) {
