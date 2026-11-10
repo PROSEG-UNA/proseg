@@ -95,6 +95,32 @@ class FinalCommissionWorkbookGeneratorTest {
         assertThat(hasNumber(16 * 37.5)).isFalse();
     }
 
+    @Test
+    void addsOtherUnitDriverSurplusAndOvertimeFromBorrowedVehicleTours() throws IOException {
+        FinalCommissionReportDto custom = report();
+        FinalCommissionReportDto.Tour weekday = tour("4012", 1, "BORROWED_VEHICLE", 1,
+                LocalDate.of(2026, 5, 29), LocalTime.of(6, 0), LocalDate.of(2026, 5, 29), LocalTime.of(18, 0),
+                List.of(day(LocalDate.of(2026, 5, 29), 6, 18)));
+        FinalCommissionReportDto.Tour weekend = tour("4013", 1, "BORROWED_VEHICLE", 1,
+                LocalDate.of(2026, 5, 30), LocalTime.of(8, 0), LocalDate.of(2026, 5, 30), LocalTime.of(12, 0),
+                List.of(day(LocalDate.of(2026, 5, 30), 8, 12)));
+        weekday.setOrdinaryStart(12);
+        weekday.setOrdinaryEnd(21);
+        weekend.setOrdinaryStart(12);
+        weekend.setOrdinaryEnd(21);
+        custom.setTours(List.of(weekday, weekend));
+        workbook = new XSSFWorkbook(new ByteArrayInputStream(new FinalCommissionWorkbookGenerator().generate(custom)));
+        evaluator = workbook.getCreationHelper().createFormulaEvaluator();
+        evaluator.evaluateAll();
+
+        assertThat(number("P.VEHICULO", "R4")).isCloseTo(6, within(0.001));
+        assertThat(number("P.VEHICULO", "S5")).isCloseTo(4, within(0.001));
+        assertThat(number("TOTALES", "R4")).isCloseTo(6, within(0.001));
+        assertThat(number("TOTALES", "S5")).isCloseTo(4, within(0.001));
+        assertThat(number("RESUMEN", "O6")).isCloseTo(6, within(0.001));
+        assertThat(number("RESUMEN", "P6")).isCloseTo(4, within(0.001));
+    }
+
     private boolean hasNumber(double expected) {
         for (Sheet sheet : workbook) {
             for (Row row : sheet) {

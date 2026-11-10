@@ -2,11 +2,13 @@ package com.proseg.msvc_transport.service;
 
 import com.proseg.msvc_transport.dto.tourprocessing.FinalCommissionCheckDto;
 import com.proseg.msvc_transport.dto.tourprocessing.FinalCommissionReportDto;
+import com.proseg.msvc_transport.entity.BorrowedVehicle;
 import com.proseg.msvc_transport.entity.TourProcessingDraft;
 import com.proseg.msvc_transport.entity.TourProcessingDraftAssignment;
 import com.proseg.msvc_transport.entity.TourProcessingDraftStatus;
 import com.proseg.msvc_transport.entity.TourProcessingDraftTour;
 import com.proseg.msvc_transport.entity.Driver;
+import com.proseg.msvc_transport.entity.DriverUnit;
 import com.proseg.msvc_transport.entity.ResourceType;
 import com.proseg.msvc_transport.entity.TourApprovalStatus;
 import com.proseg.msvc_transport.entity.Vehicle;
@@ -187,6 +189,43 @@ class FinalCommissionServiceTest {
         assertThat(first.getVehicles()).isEqualTo(1);
         assertThat(first.getDays()).extracting(FinalCommissionReportDto.Day::getEnd).containsExactly(20.5, 14.0);
         assertThat(report.getTours().get(1).getCategory()).isEqualTo("NOT_APPROVED");
+    }
+
+    @Test
+    void includesOtherUnitDriversHoursInTheFinalCommissionReport() {
+        ana.setOrganizationalUnit(DriverUnit.OTHER_UNIT);
+        ana.setOrdinaryStart(LocalTime.parse("12:00"));
+        ana.setOrdinaryEnd(LocalTime.parse("21:00"));
+        BorrowedVehicle borrowedVehicle = BorrowedVehicle.builder().id(UUID.randomUUID()).plate("P-123").build();
+        TourProcessingDraftTour weekday = tour("4012", 1, 10, "2026-05-29");
+        weekday.setDepartureTime(LocalTime.parse("06:00"));
+        assign(weekday.addAssignment(part(10)), ana, null);
+        weekday.primaryAssignment().setResourceType(ResourceType.BORROWED_VEHICLE);
+        weekday.primaryAssignment().setBorrowedVehicle(borrowedVehicle);
+        TourProcessingDraftTour weekend = tour("4013", 1, 10, "2026-05-30");
+        weekend.setDepartureTime(LocalTime.parse("08:00"));
+        weekend.setReturnTime(LocalTime.parse("12:00"));
+        assign(weekend.addAssignment(part(10)), ana, null);
+        weekend.primaryAssignment().setResourceType(ResourceType.BORROWED_VEHICLE);
+        weekend.primaryAssignment().setBorrowedVehicle(borrowedVehicle);
+        when(tourStore.findPrimariesByDraftId(draftId)).thenReturn(List.of(weekday, weekend));
+
+        FinalCommissionReportDto report = service.report(draftId);
+
+        assertThat(report.getActiveDrivers()).isZero();
+        assertThat(report.getActiveDriversSurplusCap()).isZero();
+        assertThat(report.getTours()).extracting(FinalCommissionReportDto.Tour::getCategory)
+                .containsExactly("BORROWED_VEHICLE", "BORROWED_VEHICLE");
+        assertThat(report.getTours().get(0).getOrdinaryStart()).isEqualTo(12);
+        assertThat(report.getTours().get(0).getOrdinaryEnd()).isEqualTo(21);
+        assertThat(report.getTours().get(0).getDays()).singleElement().satisfies(day -> {
+            assertThat(day.getStart()).isEqualTo(6);
+            assertThat(day.getEnd()).isEqualTo(18);
+        });
+        assertThat(report.getTours().get(1).getDays()).singleElement().satisfies(day -> {
+            assertThat(day.getStart()).isEqualTo(8);
+            assertThat(day.getEnd()).isEqualTo(12);
+        });
     }
 
     private TourProcessingDraftTour tour(String number, int priority, int passengers, String date) {
