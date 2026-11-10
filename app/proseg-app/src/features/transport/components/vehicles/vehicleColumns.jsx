@@ -2,12 +2,12 @@ import Chip from '@mui/material/Chip';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RowActionsMenu from '../../../../common/components/RowActionsMenu.jsx';
-import TableSelectFilter from '../../../../common/components/TableSelectFilter.jsx';
 import { VEHICLE_TYPE_OPTIONS, vehicleTypeLabel } from '../../transportUtils';
 
-const AVAILABILITY_OPTIONS = [
-    { value: 'true', label: 'Disponible' },
-    { value: 'false', label: 'No disponible' },
+export const VEHICLE_AVAILABILITY_FILTER_OPTIONS = [
+    { value: 'all', label: 'Todos' },
+    { value: 'true', label: 'Disponibles' },
+    { value: 'false', label: 'No disponibles' },
 ];
 
 export function getVehicleColumns() {
@@ -28,17 +28,14 @@ export function getVehicleColumns() {
             header: 'Estado',
             size: 170,
             grow: false,
-            filterVariant: 'select',
-            filterSelectOptions: AVAILABILITY_OPTIONS,
-            Filter: ({ column }) => (
-                <TableSelectFilter column={column} label="Estado" options={AVAILABILITY_OPTIONS} clearLabel="Todos" />
-            ),
+            enableColumnFilter: false,
             Cell: ({ cell }) => (
                 <Chip
                     label={cell.getValue() ? 'Disponible' : 'No disponible'}
                     size="small"
                     color={cell.getValue() ? 'success' : 'error'}
                     variant="outlined"
+                    sx={{ width: 104, justifyContent: 'center' }}
                 />
             ),
         },
