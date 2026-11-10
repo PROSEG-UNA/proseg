@@ -301,7 +301,10 @@ export default function DriverFormModal({
                         label="Unidad a la que pertenece"
                         value={formValues.organizationalUnit}
                         disabled={!canEdit}
-                        onChange={(event) => handleChange('organizationalUnit', event.target.value)}
+                        onChange={(event) => applyChanges({
+                            organizationalUnit: event.target.value,
+                            ...(event.target.value === 'OTHER_UNIT' ? { ulloaEnabled: false } : {}),
+                        })}
                         sx={{ gridColumn: { md: '1 / -1' } }}
                         fullWidth
                     >
@@ -357,7 +360,7 @@ export default function DriverFormModal({
                         control={(
                             <Switch
                                 checked={formValues.ulloaEnabled}
-                                disabled={!canEdit}
+                                disabled={!canEdit || formValues.organizationalUnit === 'OTHER_UNIT'}
                                 onChange={(event) => handleChange('ulloaEnabled', event.target.checked)}
                             />
                         )}

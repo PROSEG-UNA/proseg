@@ -109,6 +109,26 @@ describe('DriverFormModal con horario ordinario y giras Periféricas', () => {
         })));
     });
 
+    it('desmarca y bloquea las giras Periféricas al seleccionar Otra Unidad', async () => {
+        renderModal();
+
+        await userEvent.type(screen.getByRole('textbox', { name: /Nombre/ }), 'Jorge Mena');
+        const peripheralSwitch = screen.getByRole('switch', { name: PERIPHERAL_SWITCH_LABEL });
+        await userEvent.click(peripheralSwitch);
+        expect(peripheralSwitch).toBeChecked();
+
+        await userEvent.click(screen.getByRole('combobox', { name: 'Unidad a la que pertenece' }));
+        await userEvent.click(await screen.findByRole('option', { name: 'Otra Unidad' }));
+        expect(peripheralSwitch).not.toBeChecked();
+        expect(peripheralSwitch).toBeDisabled();
+
+        await userEvent.click(screen.getByRole('button', { name: 'Crear' }));
+        await waitFor(() => expect(createDriver).toHaveBeenCalledWith(expect.objectContaining({
+            organizationalUnit: 'OTHER_UNIT',
+            ulloaShifts: [],
+        })));
+    });
+
     it('no pide turnos al marcar al chofer como conductor de giras Periféricas', async () => {
         renderModal();
 
