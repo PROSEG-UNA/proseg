@@ -142,6 +142,34 @@ class TourControlReportServiceTest {
         assertThat(report.getDrivers().get(1).getSurplusHours()).isZero();
     }
 
+    @Test
+    void aPersistedBorrowedDayDoesNotAddHoursToTheOwnDriver() {
+        TourProcessingDraftTour own = tour("3625", "2026-05-04", "08:00", "2026-05-04", "12:00");
+        TourProcessingDraftAssignment driven = own.addAssignment(part(ana, bus));
+        TourProcessingDraftTour lent = tour("4040", "2026-05-04", "08:00", "2026-05-04", "18:00");
+        TourProcessingDraftAssignment borrowed = lent.addAssignment(part(ana, bus));
+        borrowed.setResourceType(ResourceType.BORROWED_VEHICLE);
+        borrowed.setVehicle(null);
+        borrowed.setVehicleId(null);
+        when(tourStore.findPrimariesByDraftId(draftId)).thenReturn(List.of(own, lent));
+        when(dayRepository.findByAssignmentIdIn(any())).thenReturn(List.of(
+                day(driven, "2026-05-04", "08:00", "12:00", 2.0),
+                day(borrowed, "2026-05-04", "08:00", "18:00", 9.0)
+        ));
+
+        TourControlReportDto report = service.report(draftId);
+
+        assertThat(report.getDrivers()).filteredOn(driver -> driver.getName().equals("Ana Pérez"))
+                .extracting(TourControlReportDto.Driver::getSurplusHours)
+                .containsExactly(2.0);
+        assertThat(report.getEntries()).filteredOn(entry -> "4040".equals(entry.getNumber()))
+                .extracting(TourControlReportDto.Entry::getSection)
+                .containsExactly("OTHER_UNIT");
+        assertThat(report.getEntries()).filteredOn(entry -> "3625".equals(entry.getNumber()))
+                .extracting(TourControlReportDto.Entry::getSection)
+                .containsExactly("DRIVER");
+    }
+
     private TourProcessingDraftTour tour(String number, String departureDate, String departureTime, String returnDate, String returnTime) {
         return TourProcessingDraftTour.builder()
                 .id(UUID.randomUUID())

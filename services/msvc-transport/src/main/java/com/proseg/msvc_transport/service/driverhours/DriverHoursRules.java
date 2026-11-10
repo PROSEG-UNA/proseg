@@ -2,6 +2,8 @@ package com.proseg.msvc_transport.service.driverhours;
 
 import com.proseg.msvc_transport.entity.TourProcessingDraftAssignment;
 import com.proseg.msvc_transport.entity.Driver;
+import com.proseg.msvc_transport.entity.DriverUnit;
+import com.proseg.msvc_transport.entity.ResourceType;
 import com.proseg.msvc_transport.entity.Vehicle;
 
 import java.time.DayOfWeek;
@@ -92,6 +94,12 @@ public final class DriverHoursRules {
 
     public static Driver assignedDriver(TourProcessingDraftAssignment assignment, Map<UUID, Driver> driversById) {
         return assignment.getDriverId() == null ? null : driversById.get(assignment.getDriverId());
+    }
+
+    public static boolean countsTowardOwnDriver(TourProcessingDraftAssignment assignment, Driver driver) {
+        return assignment.getResourceType() == ResourceType.INTERNAL
+                && driver != null
+                && driver.getOrganizationalUnit() == DriverUnit.GENERAL_SERVICES;
     }
 
     public static Vehicle assignedVehicle(TourProcessingDraftAssignment assignment, Map<UUID, Vehicle> vehiclesById) {

@@ -11,6 +11,7 @@ import DriverFormModal from '../drivers/DriverFormModal.jsx';
 import VehicleFormModal from '../vehicles/VehicleFormModal.jsx';
 import {
     GENERAL_SERVICES_UNIT,
+    OTHER_UNIT,
     canAddToCatalog,
     catalogEntryLabel,
     catalogEntryText,
@@ -113,7 +114,7 @@ export default function TourProcessingCatalogField({ kind, value, onChange, onBl
 
     const missing = catalog.isMissing(value);
     const unavailable = kind === 'vehicle' && Boolean(catalog.isUnavailable?.(value));
-    const [unitTab, setUnitTab] = useState(GENERAL_SERVICES_UNIT);
+    const [unitTab, setUnitTab] = useState(OTHER_UNIT_TAB);
     const [popupOpen, setPopupOpen] = useState(false);
     const options = useMemo(() => {
         const isGeneralServices = (option) => (option.unit ?? GENERAL_SERVICES_UNIT) === GENERAL_SERVICES_UNIT;
@@ -181,6 +182,11 @@ export default function TourProcessingCatalogField({ kind, value, onChange, onBl
         borderColor: `color-mix(in srgb, ${accentColor} 45%, transparent)`,
         '&:hover': { borderColor: accentColor, bgcolor: `color-mix(in srgb, ${accentColor} 8%, transparent)` },
     };
+
+    const addingOtherUnitDriver = kind === 'driver' && unitTabs && unitTab === OTHER_UNIT_TAB;
+    const formInitialValues = addingOtherUnitDriver
+        ? { ...config.toFormValues(value), organizationalUnit: OTHER_UNIT }
+        : config.toFormValues(value);
 
     return (
         <Box>
@@ -270,7 +276,7 @@ export default function TourProcessingCatalogField({ kind, value, onChange, onBl
             {addOpen && (
                 <FormModal
                     open
-                    initialValues={config.toFormValues(value)}
+                    initialValues={formInitialValues}
                     onClose={() => setAddOpen(false)}
                     onSaved={handleAdded}
                 />

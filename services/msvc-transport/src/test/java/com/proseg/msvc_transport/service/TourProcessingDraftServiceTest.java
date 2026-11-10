@@ -1181,6 +1181,28 @@ class TourProcessingDraftServiceTest {
     }
 
     @Test
+    void autoAssignKeepsABorrowedDriverThatIsNotInTheCatalog() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        draft.setYear(2026);
+        draft.setMonth(5);
+        draft.setBusinessDays(28);
+        TourProcessingDraftTour borrowed = shortRow(draft, 1, "100", "2026-05-06", "08:00", "12:00", "Pedro Externo");
+        borrowed.primaryAssignment().setResourceType(ResourceType.BORROWED_VEHICLE);
+        TourProcessingDraftTour pending = shortRow(draft, 2, "200", "2026-05-06", "13:00", "15:00", null);
+        stubDraft(draft, borrowed, pending);
+        when(driverRepository.findAll()).thenReturn(List.of(
+                Driver.builder().id(UUID.randomUUID()).name("Laura Mora").status("ACTIVE").build()
+        ));
+
+        TourProcessingDriverAutoAssignResponseDto result = service.autoAssignDrivers(draft.getId());
+
+        assertThat(borrowed.primaryAssignment().getDriver()).isEqualTo("Pedro Externo");
+        assertThat(borrowed.primaryAssignment().getDriverId()).isNull();
+        assertThat(pending.primaryAssignment().getDriver()).isEqualTo("Laura Mora");
+        assertThat(result.getClearedTours()).isZero();
+    }
+
+    @Test
     void autoAssignLeavesToursEmptyWhenNoDriverQualifies() {
         TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
         draft.setYear(2026);

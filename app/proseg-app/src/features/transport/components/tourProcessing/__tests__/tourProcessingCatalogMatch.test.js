@@ -1,11 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import {
     canAddToCatalog,
+    checksDriverCatalog,
     driverMatchKey,
     looksLikePlate,
     missingCatalogMessage,
     plateMatchKey,
 } from '../tourProcessingCatalogMatch.js';
+
+describe('checksDriverCatalog', () => {
+    it('no advierte el chofer de un prestamo ni de una contratada', () => {
+        expect(checksDriverCatalog('BORROWED_VEHICLE')).toBe(false);
+        expect(checksDriverCatalog('EXTERNAL')).toBe(false);
+        expect(checksDriverCatalog('INTERNAL')).toBe(true);
+        expect(checksDriverCatalog(undefined)).toBe(true);
+    });
+});
 
 describe('driverMatchKey', () => {
     it('ignora mayusculas, espacios sobrantes y valores vacios', () => {

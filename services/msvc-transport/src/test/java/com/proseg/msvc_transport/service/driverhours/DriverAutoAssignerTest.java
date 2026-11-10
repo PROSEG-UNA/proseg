@@ -176,6 +176,33 @@ class DriverAutoAssignerTest {
     }
 
     @Test
+    void doesNotTreatAManuallyAssignedBorrowedTourAsOccupyingTheDriver() {
+        Driver ana = driver("Ana");
+        TourProcessingDraftAssignment borrowed = assigned(sameDayTour("1", "2026-05-06", "08:00", "12:00"), ana);
+        borrowed.setResourceType(ResourceType.BORROWED_VEHICLE);
+        TourProcessingDraftAssignment pending = sameDayTour("2", "2026-05-06", "09:00", "11:00");
+
+        Map<TourProcessingDraftAssignment, Driver> result = run(List.of(ana), List.of(borrowed, pending));
+
+        assertThat(result).containsEntry(pending, ana);
+        assertThat(borrowed.getDriver()).isEqualTo("Ana");
+    }
+
+    @Test
+    void leavesAFreeTextBorrowedDriverUntouched() {
+        Driver ana = driver("Ana");
+        TourProcessingDraftAssignment borrowed = sameDayTour("1", "2026-05-06", "08:00", "10:00");
+        borrowed.setResourceType(ResourceType.BORROWED_VEHICLE);
+        borrowed.setDriver("Pedro Externo");
+        TourProcessingDraftAssignment pending = sameDayTour("2", "2026-05-06", "13:00", "15:00");
+
+        run(List.of(ana), List.of(borrowed, pending));
+
+        assertThat(borrowed.getDriver()).isEqualTo("Pedro Externo");
+        assertThat(borrowed.getDriverId()).isNull();
+    }
+
+    @Test
     void protectsLastFreeWeekendWhenAnotherQualifiedDriverCanCoverIt() {
         Driver ana = driver("Ana");
         Driver beto = driver("Beto");

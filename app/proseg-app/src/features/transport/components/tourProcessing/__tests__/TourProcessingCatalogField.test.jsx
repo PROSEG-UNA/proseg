@@ -17,6 +17,7 @@ vi.mock('../../drivers/DriverFormModal.jsx', () => ({
     default: ({ initialValues, onSaved, onClose }) => (
         <div>
             <span>{`formulario-chofer:${initialValues.name}`}</span>
+            <span>{`unidad:${initialValues.organizationalUnit ?? ''}`}</span>
             <button type="button" onClick={() => { onSaved({ id: 'driver-3', name: 'Juan Chacón' }); onClose(); }}>
                 guardar-chofer
             </button>
@@ -32,6 +33,7 @@ const DRIVER_ENTRIES = [
     { label: 'Jorge Francisco Mena', unit: 'GENERAL_SERVICES', secondary: 'Servicios Generales · 07:30 a 16:30', searchText: 'Jorge Francisco Mena Servicios Generales 07:30 a 16:30' },
     { label: 'Miguel Fernandez', unit: 'GENERAL_SERVICES', secondary: 'Servicios Generales · 07:30 a 16:30', searchText: 'Miguel Fernandez Servicios Generales 07:30 a 16:30' },
     { label: 'Pedro Otra Unidad', unit: 'OTHER_UNIT', secondary: 'Otra Unidad · 07:30 a 16:30', searchText: 'Pedro Otra Unidad' },
+    { label: 'Juan Pérez', unit: 'OTHER_UNIT', secondary: 'Otra Unidad · 07:30 a 16:30', searchText: 'Juan Pérez' },
 ];
 
 const VEHICLE_ENTRIES = [
@@ -226,6 +228,35 @@ describe('TourProcessingCatalogField', () => {
         expect(screen.getByText(/Este valor no es una placa/)).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Agregar vehículo al sistema' })).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Seleccionar otro vehículo' })).toBeInTheDocument();
+    });
+
+    it('en interno no muestra pestañas de unidad', async () => {
+        renderField({ value: '', generalServicesOnly: true });
+
+        await userEvent.click(screen.getByRole('combobox', { name: 'Chofer' }));
+
+        expect(await screen.findByRole('option', { name: /Jorge Francisco Mena/ })).toBeInTheDocument();
+        expect(screen.queryByRole('tab', { name: 'Otra Unidad' })).not.toBeInTheDocument();
+    });
+
+    it('en prestamo abre en la pestaña Otra Unidad y solo lista choferes de otra unidad', async () => {
+        renderField({ value: '', unitTabs: true });
+
+        await userEvent.click(screen.getByRole('combobox', { name: 'Chofer' }));
+
+        expect(await screen.findByRole('tab', { name: 'Otra Unidad', selected: true })).toBeInTheDocument();
+        expect(screen.getByRole('option', { name: /Pedro Otra Unidad/ })).toBeInTheDocument();
+        expect(screen.queryByRole('option', { name: /Jorge Francisco Mena/ })).not.toBeInTheDocument();
+    });
+
+    it('en prestamo la pestaña Servicios Generales lista los choferes de la unidad', async () => {
+        renderField({ value: '', unitTabs: true });
+
+        await userEvent.click(screen.getByRole('combobox', { name: 'Chofer' }));
+        await userEvent.click(await screen.findByRole('tab', { name: 'Servicios Generales' }));
+
+        expect(await screen.findByRole('option', { name: /Jorge Francisco Mena/ })).toBeInTheDocument();
+        expect(screen.queryByRole('option', { name: /Pedro Otra Unidad/ })).not.toBeInTheDocument();
     });
 
     it('muestra el icono de advertencia en modo lectura', () => {

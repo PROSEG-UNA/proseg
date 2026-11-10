@@ -2,6 +2,8 @@ package com.proseg.msvc_transport.service.driverhours;
 
 import com.proseg.msvc_transport.entity.TourProcessingDraftAssignment;
 import com.proseg.msvc_transport.entity.Driver;
+import com.proseg.msvc_transport.entity.DriverUnit;
+import com.proseg.msvc_transport.entity.ResourceType;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
@@ -70,6 +72,29 @@ class DriverWorkloadTest {
         );
 
         assertThat(workloads.get(ana.getId()).tours()).containsExactly(approved);
+    }
+
+    @Test
+    void ignoresBorrowedExternalAndOtherUnitWhenBuildingWorkloads() {
+        Driver ana = driver("Ana");
+        Driver guest = driver("Pedro");
+        guest.setOrganizationalUnit(DriverUnit.OTHER_UNIT);
+        TourProcessingDraftAssignment internal = assigned(sameDayTour("1", "2026-05-05", "08:00", "12:00"), ana);
+        TourProcessingDraftAssignment borrowed = assigned(sameDayTour("2", "2026-05-06", "08:00", "18:00"), ana);
+        borrowed.setResourceType(ResourceType.BORROWED_VEHICLE);
+        TourProcessingDraftAssignment external = assigned(sameDayTour("3", "2026-05-07", "08:00", "18:00"), ana);
+        external.setResourceType(ResourceType.EXTERNAL);
+        TourProcessingDraftAssignment otherUnit = assigned(sameDayTour("4", "2026-05-08", "08:00", "18:00"), guest);
+
+        Map<UUID, DriverWorkload> workloads = DriverWorkload.fromAssignments(
+                List.of(internal, borrowed, external, otherUnit),
+                DriverHoursRules.driversById(List.of(ana, guest)),
+                ManualDays.NONE
+        );
+
+        assertThat(workloads).containsOnlyKeys(ana.getId());
+        assertThat(workloads.get(ana.getId()).tours()).containsExactly(internal);
+        assertThat(workloads.get(ana.getId()).totals(MAY_SURPLUS_CAP, MAY_WEEKENDS).surplusHours()).isZero();
     }
 
     @Test

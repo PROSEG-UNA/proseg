@@ -8,6 +8,11 @@ import {
 } from '../../transportUtils';
 
 export const GENERAL_SERVICES_UNIT = 'GENERAL_SERVICES';
+export const OTHER_UNIT = 'OTHER_UNIT';
+
+export function checksDriverCatalog(resourceType) {
+    return resourceType !== 'EXTERNAL' && resourceType !== 'BORROWED_VEHICLE';
+}
 
 const WHITESPACE = /\s+/g;
 

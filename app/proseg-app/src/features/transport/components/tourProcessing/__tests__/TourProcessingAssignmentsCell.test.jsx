@@ -89,6 +89,19 @@ describe('TourProcessingAssignmentsCell', () => {
         expect(screen.getByRole('img', { name: '2 viajes. 1 chofer no está en el sistema' })).toHaveClass('MuiChip-colorWarning');
     });
 
+    it('no marca como faltante el chofer de un prestamo', () => {
+        renderCell({
+            kind: 'driver',
+            isMissing: () => true,
+            assignments: [
+                { driver: 'Pedro Externo', resourceType: 'BORROWED_VEHICLE' },
+                { driver: 'Ana Mora', resourceType: 'INTERNAL' },
+            ],
+        });
+
+        expect(screen.getByRole('img', { name: '2 viajes. 1 chofer no está en el sistema' })).toBeInTheDocument();
+    });
+
     it('no cuenta como faltante un chofer externo ni un vehiculo prestado', () => {
         renderCell({
             kind: 'vehicle',

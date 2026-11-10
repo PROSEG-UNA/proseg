@@ -19,11 +19,13 @@ public interface TourProcessingDraftAssignmentRepository extends JpaRepository<T
     @Query(value = """
             select a from TourProcessingDraftAssignment a join fetch a.tour t left join fetch a.borrowedVehicle
             where t.draft.id = :draftId and t.duplicateRank = 1 and t.approvalStatus = 'APPROVED'
+              and a.resourceType = com.proseg.msvc_transport.entity.ResourceType.INTERNAL
               and a.driverId = :driverId and exists (select d.id from TourProcessingDraftDay d where d.assignment = a)
             order by t.departureDate, t.number, a.part, a.id
             """, countQuery = """
             select count(a) from TourProcessingDraftAssignment a join a.tour t
             where t.draft.id = :draftId and t.duplicateRank = 1 and t.approvalStatus = 'APPROVED'
+              and a.resourceType = com.proseg.msvc_transport.entity.ResourceType.INTERNAL
               and a.driverId = :driverId and exists (select d.id from TourProcessingDraftDay d where d.assignment = a)
             """)
     org.springframework.data.domain.Page<TourProcessingDraftAssignment> findDriverPage(

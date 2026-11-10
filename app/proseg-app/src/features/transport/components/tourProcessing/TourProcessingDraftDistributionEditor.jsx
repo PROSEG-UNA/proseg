@@ -282,7 +282,8 @@ export default function TourProcessingDraftDistributionEditor({
                             <TourProcessingCatalogField
                                 key={`driver-${index}-${driverFieldResets}`}
                                 kind="driver"
-                                unitTabs
+                                generalServicesOnly={assignment.resourceType !== 'BORROWED_VEHICLE'}
+                                unitTabs={assignment.resourceType === 'BORROWED_VEHICLE'}
                                 value={assignment.driver || ''}
                                 onChange={(value) => changeDriver(index, value)}
                                 isEdit={isEdit}

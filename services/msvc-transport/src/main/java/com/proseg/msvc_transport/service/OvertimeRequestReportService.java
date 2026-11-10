@@ -6,6 +6,7 @@ import com.proseg.msvc_transport.entity.TourProcessingDraftAssignment;
 import com.proseg.msvc_transport.entity.TourProcessingDraftDay;
 import com.proseg.msvc_transport.entity.TourProcessingDraftTour;
 import com.proseg.msvc_transport.entity.Driver;
+import com.proseg.msvc_transport.entity.DriverUnit;
 import com.proseg.msvc_transport.entity.ResourceType;
 import com.proseg.msvc_transport.exception.TransportException;
 import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
@@ -29,7 +30,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -90,6 +90,7 @@ public class OvertimeRequestReportService {
                 .collect(Collectors.toMap(TourProcessingDraftDayRepository.DriverTotals::getDriverId, value -> value));
         Collator collator = Collator.getInstance(SPANISH);
         List<OvertimeRequestReportDto.DriverBlock> drivers = driverRepository.findAll().stream()
+                .filter(driver -> driver.getOrganizationalUnit() == DriverUnit.GENERAL_SERVICES)
                 .sorted(Comparator.comparing(Driver::getName, collator))
                 .map(driver -> {
                     var total = totals.get(driver.getId());
@@ -123,13 +124,17 @@ public class OvertimeRequestReportService {
     public OvertimeRequestReportDto buildDailySchedule(TourProcessingDraft draft, java.time.LocalDate date) {
         requireBusinessDays(draft);
         DriverBusinessDays businessDays = businessDaysService.forDraft(draft);
-        List<TourProcessingDraftDay> days = dayRepository.findByDraftIdAndDate(draft.getId(), date);
+        Map<UUID, Driver> driversById = DriverHoursRules.driversById(driverRepository.findAll());
+        List<TourProcessingDraftDay> days = dayRepository.findByDraftIdAndDate(draft.getId(), date).stream()
+                .filter(day -> DriverHoursRules.countsTowardOwnDriver(day.getAssignment(), driversById.get(day.getAssignment().getDriverId())))
+                .toList();
         Map<UUID, List<TourProcessingDraftDay>> byAssignment = days.stream()
                 .collect(Collectors.groupingBy(day -> day.getAssignment().getId()));
         Map<UUID, List<TourProcessingDraftAssignment>> byDriver = days.stream().map(TourProcessingDraftDay::getAssignment).distinct()
                 .collect(Collectors.groupingBy(TourProcessingDraftAssignment::getDriverId));
         Collator collator = Collator.getInstance(SPANISH);
-        List<OvertimeRequestReportDto.DriverBlock> drivers = driverRepository.findAll().stream()
+        List<OvertimeRequestReportDto.DriverBlock> drivers = driversById.values().stream()
+                .filter(driver -> driver.getOrganizationalUnit() == DriverUnit.GENERAL_SERVICES)
                 .filter(driver -> ACTIVE_STATUS.equalsIgnoreCase(driver.getStatus()) || byDriver.containsKey(driver.getId()))
                 .sorted(Comparator.comparing(Driver::getName, collator))
                 .map(driver -> toDriverBlock(driver, byDriver.getOrDefault(driver.getId(), List.of()), byAssignment, false, businessDays)).toList();
@@ -148,12 +153,13 @@ public class OvertimeRequestReportService {
     private OvertimeRequestReportDto buildReport(TourProcessingDraft draft, boolean onlyExtraHours, UUID onlyDriverId) {
         DriverBusinessDays businessDays = businessDaysService.forDraft(draft);
         List<Driver> catalog = driverRepository.findAll().stream()
+                .filter(driver -> driver.getOrganizationalUnit() == DriverUnit.GENERAL_SERVICES)
                 .filter(driver -> onlyDriverId == null || onlyDriverId.equals(driver.getId()))
                 .toList();
-        Set<UUID> catalogIds = catalog.stream().map(Driver::getId).collect(Collectors.toSet());
+        Map<UUID, Driver> driversById = DriverHoursRules.driversById(catalog);
         List<TourProcessingDraftAssignment> rows = assignmentRepository.findActiveByDraftId(draft.getId()).stream()
                 .filter(TourProcessingDraftAssignment::isActive)
-                .filter(row -> row.getDriverId() != null && catalogIds.contains(row.getDriverId()))
+                .filter(row -> DriverHoursRules.countsTowardOwnDriver(row, driversById.get(row.getDriverId())))
                 .toList();
         Map<UUID, List<TourProcessingDraftDay>> daysByRowId = rows.isEmpty()
                 ? Map.of()

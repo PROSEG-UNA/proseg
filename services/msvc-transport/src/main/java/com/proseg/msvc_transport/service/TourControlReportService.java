@@ -173,7 +173,7 @@ public class TourControlReportService {
             return List.of(new Placement(tourEntry(EXTERNAL_SECTION, tour, part, plate), null));
         }
         Driver driver = DriverHoursRules.assignedDriver(part, driversById);
-        if (driver != null && driver.getOrganizationalUnit() == DriverUnit.GENERAL_SERVICES) {
+        if (DriverHoursRules.countsTowardOwnDriver(part, driver)) {
             scheduledDrivers.computeIfAbsent(driver, ignored -> new HoursTotals()).add(storedDays(part, daysByAssignment));
             return dayEntries(DRIVER_SECTION, tour, part, driver.getName(), plate, daysByAssignment).stream()
                     .map(entry -> new Placement(entry, driver))

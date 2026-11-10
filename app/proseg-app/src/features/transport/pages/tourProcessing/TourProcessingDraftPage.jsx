@@ -105,6 +105,7 @@ import {
 } from '../../components/tourProcessing/tourProcessingDraftLabels.js';
 import DuplicateChip from '../../components/tourProcessing/DuplicateChip.jsx';
 import { vehicleDistributionWarning } from '../../components/tourProcessing/vehicleDistributionWarning.js';
+import { checksDriverCatalog } from '../../components/tourProcessing/tourProcessingCatalogMatch.js';
 
 const HUB_PATH = '/transporte/depuracion';
 const INITIAL_SORTING = [{ id: 'rowNumber', desc: false }];
@@ -116,9 +117,9 @@ const FILTERABLE_COLUMNS = new Set([
     'destination', 'durationDays', 'priority', 'modality', 'observations',
 ]);
 
-const AUTO_ASSIGN_DRIVERS_MESSAGE = 'Las giras con varios viajes se completan en conjunto, asignando choferes y vehículos compatibles. Si no se puede completar una gira, se conservan sus asignaciones existentes y no se agregan partes sueltas.\n\nSi hay choferes asignados que no existen en el catálogo del sistema (marcados con el ícono de advertencia), esas filas quedarán sin chofer y la autoasignación intentará completarlas.\n\nLas giras que ya tienen un chofer del catálogo se respetan y no se reasignan.';
-const AUTO_ASSIGN_ULLOA_DRIVERS_MESSAGE = 'Solo se asignan las giras Periféricas de Programa De Servicios Generales que no tienen chofer, usando los choferes marcados como conductores de giras Periféricas según su horario ordinario.\n\nSi alguna gira Periférica tiene un chofer que no existe en el catálogo del sistema (marcado con el ícono de advertencia), esa fila quedará sin chofer y se intentará completar. Las demás giras no se tocan.';
-const AUTO_ASSIGN_DRIVERS_AND_VEHICLES_MESSAGE = 'Primero se autoasignan los choferes y después los vehículos.\n\nSi hay choferes o vehículos asignados que no existen en el catálogo del sistema (marcados con el ícono de advertencia), esas filas quedarán vacías y la autoasignación intentará completarlas.\n\nLas giras que ya tienen chofer o vehículo del catálogo se respetan y no se reasignan.';
+const AUTO_ASSIGN_DRIVERS_MESSAGE = 'Las giras con varios viajes se completan en conjunto, asignando choferes y vehículos compatibles. Si no se puede completar una gira, se conservan sus asignaciones existentes y no se agregan partes sueltas.\n\nSi una gira interna tiene un chofer que no existe en el catálogo del sistema (marcado con el ícono de advertencia), esa fila quedará sin chofer y la autoasignación intentará completarla.\n\nLas giras que ya tienen un chofer del catálogo se respetan y no se reasignan. Los préstamos de vehículo no se modifican: el chofer se deja como está. Un chofer de Servicios Generales puesto a mano en un préstamo no se considera ocupado en ese horario.';
+const AUTO_ASSIGN_ULLOA_DRIVERS_MESSAGE = 'Solo se asignan las giras Periféricas de Programa De Servicios Generales que no tienen chofer, usando los choferes marcados como conductores de giras Periféricas según su horario ordinario.\n\nSi alguna gira Periférica interna tiene un chofer que no existe en el catálogo del sistema (marcado con el ícono de advertencia), esa fila quedará sin chofer y se intentará completar. Los préstamos de vehículo y las demás giras no se tocan.';
+const AUTO_ASSIGN_DRIVERS_AND_VEHICLES_MESSAGE = 'Primero se autoasignan los choferes y después los vehículos.\n\nSi una gira interna tiene un chofer o un vehículo que no existe en el catálogo del sistema (marcado con el ícono de advertencia), esa fila quedará vacía y la autoasignación intentará completarla. El chofer de un préstamo de vehículo no se vacía ni se reasigna.\n\nLas giras que ya tienen chofer o vehículo del catálogo se respetan y no se reasignan.';
 const AUTO_ASSIGN_VEHICLES_MESSAGE = 'Las giras que ya tienen chofer del catálogo reciben prioridad para asignarles vehículo. En giras con varios viajes también se buscan los choferes faltantes para completar la gira en conjunto. Las asignaciones existentes se conservan.\n\nSi hay vehículos asignados que no existen en el catálogo del sistema o que no son una placa (marcados con el ícono de advertencia), esas filas quedarán sin vehículo y la autoasignación intentará completarlas.\n\nLas giras que ya tienen un vehículo del catálogo se respetan y no se reasignan.';
 
 const NO_DUPLICATES_HEADER = (
@@ -665,7 +666,7 @@ export default function TourProcessingDraftPage() {
                 return <CatalogValueCell
                     kind="driver"
                     value={cell.getValue()}
-                    missing={row.original.resourceType !== 'EXTERNAL' && isDriverMissing(cell.getValue())}
+                    missing={checksDriverCatalog(row.original.resourceType) && isDriverMissing(cell.getValue())}
                 />;
             },
         },

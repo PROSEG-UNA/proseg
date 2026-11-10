@@ -1,5 +1,6 @@
 import { Box, Chip, Tooltip, Typography } from '@mui/material';
 import CatalogValueCell from './CatalogValueCell.jsx';
+import { checksDriverCatalog } from './tourProcessingCatalogMatch.js';
 
 const KIND_TEXT = {
     driver: { singular: 'chofer', plural: 'choferes', unassigned: 'Sin chofer' },
@@ -11,8 +12,8 @@ function slotValue(kind, assignment) {
 }
 
 function isCheckedAgainstCatalog(kind, assignment) {
-    if (assignment.resourceType === 'EXTERNAL') return false;
-    return kind === 'driver' || assignment.resourceType !== 'BORROWED_VEHICLE';
+    if (kind === 'driver') return checksDriverCatalog(assignment.resourceType);
+    return assignment.resourceType !== 'EXTERNAL' && assignment.resourceType !== 'BORROWED_VEHICLE';
 }
 
 function describeSlot(kind, assignment, isMissing, isUnavailable) {

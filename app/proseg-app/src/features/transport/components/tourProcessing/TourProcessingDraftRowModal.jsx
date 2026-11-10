@@ -658,6 +658,7 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
             isEdit={isEdit}
             disabled={saving}
             errorText={isEdit ? visibleError(key) : undefined}
+            unitTabs={key === 'driver' && values.resourceType === 'BORROWED_VEHICLE'}
             sx={fieldSx}
         />
     );
