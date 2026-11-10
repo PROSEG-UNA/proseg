@@ -11,8 +11,14 @@ import com.proseg.msvc_transport.repository.DriverRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -98,6 +104,34 @@ class DriverServiceTest {
 
         assertThat(response.getAllowedVehicleTypes()).containsExactly(VehicleType.MICROBUS);
         assertThat(driver.getAllowedVehicleTypes()).containsExactly(VehicleType.MICROBUS);
+    }
+
+    @Test
+    void listsDriversRestrictedToTheRequestedIds() {
+        when(driverRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
+        String ids = UUID.randomUUID() + "," + UUID.randomUUID();
+
+        Page<DriverResponseDto> page = service.findAll(null, Map.of("ids", ids), PageRequest.of(0, 10));
+
+        assertThat(page.getContent()).isEmpty();
+        verify(driverRepository).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    void listsNoDriversWhenTheRequestedIdsAreEmpty() {
+        when(driverRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
+
+        Page<DriverResponseDto> page = service.findAll(null, Map.of("ids", " "), PageRequest.of(0, 10));
+
+        assertThat(page.getContent()).isEmpty();
+    }
+
+    @Test
+    void rejectsListingWhenAnIdIsNotValid() {
+        assertThatThrownBy(() -> service.findAll(null, Map.of("ids", "no-es-un-uuid"), PageRequest.of(0, 10)))
+                .isInstanceOf(TransportException.class)
+                .hasMessage("La lista de choferes no es válida");
+        verify(driverRepository, never()).findAll(any(Specification.class), any(Pageable.class));
     }
 
     @Test

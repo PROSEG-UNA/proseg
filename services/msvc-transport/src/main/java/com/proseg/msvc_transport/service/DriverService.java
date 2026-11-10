@@ -19,12 +19,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalTime;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -55,14 +58,31 @@ public class DriverService {
     public Page<DriverResponseDto> findAll(String search, Map<String, String> filters, Pageable pageable) {
         Map<String, String> columnFilters = new HashMap<>(filters);
         String status = columnFilters.remove("status");
+        String ids = columnFilters.remove("ids");
         Specification<Driver> spec = Specification
                 .where(GenericSpecifications.withSearch(Driver.class, search))
                 .and(GenericSpecifications.withColumnFilters(Driver.class, columnFilters));
         if (status != null && !status.isBlank()) {
             spec = spec.and((root, query, cb) -> cb.equal(cb.upper(root.get("status")), status.toUpperCase(Locale.ROOT)));
         }
+        if (ids != null) {
+            Set<UUID> driverIds = parseIds(ids);
+            spec = spec.and((root, query, cb) -> driverIds.isEmpty() ? cb.disjunction() : root.get("id").in(driverIds));
+        }
         Pageable sanitized = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), GenericSpecifications.sanitizeSort(Driver.class, pageable.getSort()));
         return driverRepository.findAll(spec, sanitized).map(this::toResponse);
+    }
+
+    private Set<UUID> parseIds(String ids) {
+        try {
+            return Arrays.stream(ids.split(","))
+                    .map(String::trim)
+                    .filter(value -> !value.isEmpty())
+                    .map(UUID::fromString)
+                    .collect(Collectors.toSet());
+        } catch (IllegalArgumentException exception) {
+            throw TransportException.badRequest("INVALID_DRIVER_IDS", "La lista de choferes no es válida");
+        }
     }
 
     @Transactional

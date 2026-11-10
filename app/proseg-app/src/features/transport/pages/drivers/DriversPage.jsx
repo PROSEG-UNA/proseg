@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Container, LinearProgress, ListItemIcon, ListItemText, Menu, MenuItem, Stack, Tab, Tabs } from '@mui/material';
+import { Alert, Box, Container, LinearProgress, ListItemIcon, ListItemText, Menu, MenuItem, Stack, Tab, Tabs, TextField } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
@@ -18,8 +19,14 @@ import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
 import DriversTable from '../../components/drivers/DriversTable.jsx';
 import DriverFormModal from '../../components/drivers/DriverFormModal.jsx';
 import DriverSurplusSummary from '../../components/drivers/DriverSurplusSummary.jsx';
+import {
+    PARTICIPATION_FILTER_OPTIONS,
+    PARTICIPATION_FILTER_VALUES,
+    participatingDriverIds,
+} from '../../components/drivers/driverParticipation.js';
 import { shortPeriodLabel } from '../../components/tourProcessing/tourProcessingDraftLabels.js';
 import { usePersistedMonth } from '../../hooks/usePersistedMonth.js';
+import { usePersistedOption } from '../../hooks/usePersistedOption.js';
 import { useTransportDriverMonthsData } from '../../hooks/useTransportDriverMonthsData.js';
 import { useTransportDriverMonthSurplusCap } from '../../hooks/useTransportDriverMonthSurplusCap.js';
 import { exportDriverOvertimeRequest } from '../../services/drivers/driversService';
@@ -29,15 +36,43 @@ import { downloadBlob } from '../../transportUtils.js';
 import { queryKeys } from '../../../../common/query';
 
 const SELECTED_MONTH_STORAGE_KEY = 'transport-drivers-selected-month';
+const PARTICIPATION_FILTER_STORAGE_KEY = 'transport-drivers-participation-filter';
 
 const DRIVER_SUB_TABS = [
-    { key: 'own', label: 'Choferes de la unidad', unit: 'GENERAL_SERVICES', icon: BadgeOutlinedIcon },
-    { key: 'other', label: 'Choferes de otra unidad', unit: 'OTHER_UNIT', icon: PeopleAltOutlinedIcon },
+    { key: 'servicios-generales', label: 'Choferes de la unidad', unit: 'GENERAL_SERVICES', icon: BadgeOutlinedIcon },
+    { key: 'otra-unidad', label: 'Choferes de otra unidad', unit: 'OTHER_UNIT', icon: PeopleAltOutlinedIcon },
 ];
 
+const DEFAULT_DRIVER_SUB_TAB = DRIVER_SUB_TABS[0].key;
+const OTHER_UNIT_SUB_TAB = 'otra-unidad';
+
 export default function DriversPage() {
-    const [driverSubTab, setDriverSubTab] = useState('own');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const requestedSubTab = searchParams.get('tab');
+    const driverSubTab = DRIVER_SUB_TABS.some((tab) => tab.key === requestedSubTab) ? requestedSubTab : DEFAULT_DRIVER_SUB_TAB;
     const activeDriverSubTab = DRIVER_SUB_TABS.find((tab) => tab.key === driverSubTab);
+    const [participationFilter, setParticipationFilter] = usePersistedOption(
+        PARTICIPATION_FILTER_STORAGE_KEY,
+        PARTICIPATION_FILTER_VALUES,
+        PARTICIPATION_FILTER_VALUES[0],
+    );
+
+    useEffect(() => {
+        if (requestedSubTab === driverSubTab) return;
+        setSearchParams((current) => {
+            const next = new URLSearchParams(current);
+            next.set('tab', driverSubTab);
+            return next;
+        }, { replace: true });
+    }, [requestedSubTab, driverSubTab, setSearchParams]);
+
+    const handleSubTabChange = (_, value) => {
+        setSearchParams((current) => {
+            const next = new URLSearchParams(current);
+            next.set('tab', value);
+            return next;
+        });
+    };
     const [driverFormOpen, setDriverFormOpen] = useState(false);
     const [driverFormId, setDriverFormId] = useState(null);
     const [selectedMonth, setSelectedMonth] = usePersistedMonth(SELECTED_MONTH_STORAGE_KEY);
@@ -57,6 +92,12 @@ export default function DriversPage() {
     const monthData = useTransportDriverMonthsData(year, month);
     const { businessDays: defaultBusinessDays, surplusHoursPerDriver } = useTransportDriverMonthSurplusCap(year, month);
     const showEmptyMonthNotice = monthData.enabled && !monthData.loading && !monthData.hasAnyRecord;
+    const showParticipationFilter = monthData.enabled && driverSubTab === OTHER_UNIT_SUB_TAB;
+    const restrictToParticipants = showParticipationFilter && participationFilter === 'participated';
+    const participantIds = useMemo(
+        () => (restrictToParticipants ? participatingDriverIds(monthData.byDriverId) : null),
+        [restrictToParticipants, monthData.byDriverId],
+    );
     const canReadDrivers = hasPermission(PERMISSIONS.TRANSPORT.DRIVERS.READ);
     const canManageDrivers = hasPermission(PERMISSIONS.TRANSPORT.DRIVERS.MANAGE);
     const canDeleteDrivers = hasPermission(PERMISSIONS.TRANSPORT.DRIVERS.DELETE);
@@ -200,7 +241,7 @@ export default function DriversPage() {
                 <Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 3 }}>
                     <Tabs
                         value={driverSubTab}
-                        onChange={(_, value) => setDriverSubTab(value)}
+                        onChange={handleSubTabChange}
                         variant="scrollable"
                         scrollButtons="auto"
                         allowScrollButtonsMobile
@@ -238,6 +279,20 @@ export default function DriversPage() {
                             clearable
                         />
                     </Box>
+                    {showParticipationFilter && (
+                        <TextField
+                            select
+                            size="small"
+                            label="Mostrar"
+                            value={participationFilter}
+                            onChange={(event) => setParticipationFilter(event.target.value)}
+                            sx={{ width: { xs: '100%', sm: 320 }, flexShrink: 0 }}
+                        >
+                            {PARTICIPATION_FILTER_OPTIONS.map((option) => (
+                                <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+                            ))}
+                        </TextField>
+                    )}
                     {monthData.enabled && surplusHoursPerDriver !== null && (
                         <DriverSurplusSummary surplusCapPerDriver={surplusHoursPerDriver} />
                     )}
@@ -254,6 +309,7 @@ export default function DriversPage() {
                         unit={activeDriverSubTab.unit}
                         onEditDriver={openEditDriver}
                         monthData={monthData}
+                        participantIds={participantIds}
                     />
                 </Box>
             </Container>
