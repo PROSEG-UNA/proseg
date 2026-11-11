@@ -55,6 +55,7 @@ class SecurityConfigTest {
             "POST,/tour-processing/drafts/1/rows,CREAR_GIRAS,200",
             "POST,/tour-processing/drafts/1/rows,IMPORTAR_GIRAS,403",
             "POST,/tour-processing/drafts/1/rows,EDITAR_GIRAS,403",
+            "POST,/tour-processing/drafts/1/rows/warnings,CREAR_GIRAS,200",
             "POST,/tour-processing/drafts/1/finish,EDITAR_GIRAS,200",
             "POST,/tour-processing/drafts/1/reopen,EDITAR_GIRAS,200",
             "POST,/tour-processing/drafts/1/split-oversized,EDITAR_GIRAS,200",

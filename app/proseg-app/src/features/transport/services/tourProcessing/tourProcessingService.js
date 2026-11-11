@@ -112,6 +112,21 @@ export async function updateTourProcessingDraftRow(draftId, rowId, payload) {
     return data?.data ?? null;
 }
 
+export async function previewNewTourProcessingDraftRowWarnings(draftId, payload) {
+    const { data } = await axios.post(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/rows/warnings`, payload, transportConfig);
+    return data?.data ?? [];
+}
+
+export async function previewTourProcessingDraftRowWarnings(draftId, rowId, payload) {
+    const { data } = await axios.post(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/rows/${rowId}/warnings`, payload, transportConfig);
+    return data?.data ?? [];
+}
+
+export async function previewTourProcessingDraftApprovalWarnings(draftId, rowId) {
+    const { data } = await axios.post(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/rows/${rowId}/approval-warnings`, null, transportConfig);
+    return data?.data ?? [];
+}
+
 export async function updateTourObservationReviewed(draftId, rowId, reviewed) {
     const { data } = await axios.patch(
         `${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/rows/${rowId}/observation-reviewed`,
@@ -129,6 +144,11 @@ export async function updateTourProcessingDraftRowApprovalStatus(draftId, rowId,
 export async function updateTourProcessingDraftRowDay(draftId, rowId, dayId, payload) {
     const { data } = await axios.put(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/rows/${rowId}/days/${dayId}`, payload, transportConfig);
     return data?.data ?? null;
+}
+
+export async function previewTourProcessingDraftRowDayWarnings(draftId, rowId, dayId, payload) {
+    const { data } = await axios.post(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/rows/${rowId}/days/${dayId}/warnings`, payload, transportConfig);
+    return data?.data ?? [];
 }
 
 export async function deleteTourProcessingDraftRow(draftId, rowId) {

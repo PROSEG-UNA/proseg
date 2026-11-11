@@ -506,7 +506,7 @@ class TourProcessingDraftServiceTest {
     }
 
     @Test
-    void rejectsIncreasingTheDurationWhenTheAssignedDriverAlreadyHasAnotherTourTheNextDay() {
+    void warnsWithoutPersistingWhenTheEditedTourOverlapsAnotherDriver() {
         TourProcessingDraft draft = draftWithPeriod();
         TourProcessingDraftTour oneDayTour = oneDayTour(draft);
         TourProcessingDraftTour nextDayTour = entity(draft, 9, "200", "Heredia");
@@ -515,17 +515,23 @@ class TourProcessingDraftServiceTest {
         nextDayTour.setReturnDate(LocalDate.of(2026, 5, 5));
         nextDayTour.setReturnTime(LocalTime.of(17, 0));
         nextDayTour.setDurationDays(1);
-        stubDraft(draft, oneDayTour, nextDayTour);
+        when(draftRepository.findById(draft.getId())).thenReturn(Optional.of(draft));
+        when(rowRepository.findByIdAndDraftId(oneDayTour.getId(), draft.getId())).thenReturn(Optional.of(oneDayTour));
+        when(rowRepository.findAllByDraftIdOrderByRowNumberAsc(draft.getId())).thenReturn(List.of(oneDayTour, nextDayTour));
         when(driverRepository.findAll()).thenReturn(List.of(catalogDriver()));
+        when(vehicleRepository.findAll()).thenReturn(List.of(
+                Vehicle.builder().id(UUID.randomUUID()).plate("301-295").capacity(30).available(true).build()));
 
-        assertThatThrownBy(() -> service.updateRow(draft.getId(), oneDayTour.getId(), twoDayWeekdayRequest()))
-                .isInstanceOfSatisfying(TransportException.class, exception -> {
-                    assertThat(exception.getErrorCode()).isEqualTo("TOUR_PROCESSING_DRAFT_ROW_DRIVER_UNAVAILABLE");
-                    assertThat(exception.getHttpStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
-                    assertThat(exception.getMessage()).contains("Daniel Zuniga", "200");
-                });
+        var warnings = service.rowWarnings(draft.getId(), oneDayTour.getId(), twoDayWeekdayRequest());
+
+        assertThat(warnings).extracting(com.proseg.msvc_transport.service.rules.TourAssignmentRules.RuleViolation::code)
+                .contains(com.proseg.msvc_transport.service.rules.TourAssignmentRules.RuleCode.DRIVER_OVERLAP);
         assertThat(oneDayTour.getDurationDays()).isEqualTo(1);
         assertThat(oneDayTour.getReturnDate()).isEqualTo(LocalDate.of(2026, 5, 4));
+        assertThat(oneDayTour.getDestination()).isEqualTo("Cartago");
+        verify(rowRepository, never()).save(any());
+        verify(rowRepository, never()).saveAll(anyList());
+        verify(rowRepository, never()).flush();
         verify(draftHoursService, never()).syncChanged(any(), anyMap(), anyList());
     }
 
@@ -721,7 +727,7 @@ class TourProcessingDraftServiceTest {
     }
 
     @Test
-    void rejectsApprovingATourWhoseDriverGotAnOverlappingTourWhileItWasNotApproved() {
+    void approvesATourWhoseDriverOverlapsAnotherTour() {
         TourProcessingDraft draft = draftWithPeriod();
         TourProcessingDraftTour notApproved = entity(draft, 8, "100", "Cartago");
         notApproved.setApprovalStatus(TourApprovalStatus.NOT_APPROVED);
@@ -730,18 +736,14 @@ class TourProcessingDraftServiceTest {
         stubDraft(draft, notApproved, overlapping);
         when(driverRepository.findAll()).thenReturn(List.of(catalogDriver()));
 
-        assertThatThrownBy(() -> service.updateRowApprovalStatus(draft.getId(), notApproved.getId(), TourApprovalStatus.APPROVED))
-                .isInstanceOfSatisfying(TransportException.class, exception -> {
-                    assertThat(exception.getErrorCode()).isEqualTo("TOUR_PROCESSING_DRAFT_ROW_DRIVER_UNAVAILABLE");
-                    assertThat(exception.getHttpStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
-                    assertThat(exception.getMessage()).contains("Daniel Zuniga", "200");
-                });
-        assertThat(notApproved.getApprovalStatus()).isEqualTo(TourApprovalStatus.NOT_APPROVED);
-        verify(draftHoursService, never()).syncChanged(any(), anyMap(), anyList());
+        service.updateRowApprovalStatus(draft.getId(), notApproved.getId(), TourApprovalStatus.APPROVED);
+
+        assertThat(notApproved.getApprovalStatus()).isEqualTo(TourApprovalStatus.APPROVED);
+        verify(draftHoursService).syncChanged(any(), anyMap(), anyList());
     }
 
     @Test
-    void rejectsApprovingATourWhoseVehicleGotAnOverlappingTourWhileItWasNotApproved() {
+    void approvesATourWhoseVehicleOverlapsAnotherTour() {
         TourProcessingDraft draft = draftWithPeriod();
         TourProcessingDraftTour notApproved = entity(draft, 8, "100", "Cartago");
         notApproved.setApprovalStatus(TourApprovalStatus.NOT_APPROVED);
@@ -753,14 +755,10 @@ class TourProcessingDraftServiceTest {
                 Vehicle.builder().id(UUID.randomUUID()).plate("301-295").type(VehicleType.SEDAN).capacity(30).build()
         ));
 
-        assertThatThrownBy(() -> service.updateRowApprovalStatus(draft.getId(), notApproved.getId(), TourApprovalStatus.APPROVED))
-                .isInstanceOfSatisfying(TransportException.class, exception -> {
-                    assertThat(exception.getErrorCode()).isEqualTo("TOUR_PROCESSING_DRAFT_ROW_VEHICLE_OVERLAP");
-                    assertThat(exception.getHttpStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
-                    assertThat(exception.getMessage()).contains("301-295", "200");
-                });
-        assertThat(notApproved.getApprovalStatus()).isEqualTo(TourApprovalStatus.NOT_APPROVED);
-        verify(draftHoursService, never()).syncChanged(any(), anyMap(), anyList());
+        service.updateRowApprovalStatus(draft.getId(), notApproved.getId(), TourApprovalStatus.APPROVED);
+
+        assertThat(notApproved.getApprovalStatus()).isEqualTo(TourApprovalStatus.APPROVED);
+        verify(draftHoursService).syncChanged(any(), anyMap(), anyList());
     }
 
     @Test
@@ -815,7 +813,7 @@ class TourProcessingDraftServiceTest {
     }
 
     @Test
-    void rejectsApprovingATourFromTheRowModalWhenItsDriverIsBusy() {
+    void savesATourFromTheRowModalWhenItsDriverIsBusy() {
         TourProcessingDraft draft = draftWithPeriod();
         TourProcessingDraftTour notApproved = entity(draft, 8, "100", "Cartago");
         notApproved.setApprovalStatus(TourApprovalStatus.NOT_APPROVED);
@@ -825,12 +823,10 @@ class TourProcessingDraftServiceTest {
         TourProcessingDraftRowRequestDto request = row(8, "100", "Cartago");
         request.setApprovalStatus(TourApprovalStatus.APPROVED);
 
-        assertThatThrownBy(() -> service.updateRow(draft.getId(), notApproved.getId(), request))
-                .isInstanceOfSatisfying(TransportException.class, exception -> {
-                    assertThat(exception.getErrorCode()).isEqualTo("TOUR_PROCESSING_DRAFT_ROW_DRIVER_UNAVAILABLE");
-                    assertThat(exception.getMessage()).contains("Daniel Zuniga", "200");
-                });
-        verify(draftHoursService, never()).syncChanged(any(), anyMap(), anyList());
+        service.updateRow(draft.getId(), notApproved.getId(), request);
+
+        assertThat(notApproved.getApprovalStatus()).isEqualTo(TourApprovalStatus.APPROVED);
+        verify(draftHoursService).syncChanged(any(), anyMap(), anyList());
     }
 
     @Test
@@ -1091,7 +1087,7 @@ class TourProcessingDraftServiceTest {
     }
 
     @Test
-    void stillRejectsATripWithMorePassengersThanItsVehicleCapacity() {
+    void acceptsATripWithMorePassengersThanItsVehicleCapacity() {
         TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
         stubDraft(draft);
         when(vehicleRepository.findAll()).thenReturn(List.of(
@@ -1104,9 +1100,10 @@ class TourProcessingDraftServiceTest {
                 TourProcessingDraftAssignmentDto.builder().driver("Daniel Zuniga").vehicle("301-295").resourceType(ResourceType.INTERNAL).passengers(29).build()
         ));
 
-        assertThatThrownBy(() -> service.createRow(draft.getId(), request))
-                .isInstanceOf(TransportException.class)
-                .hasMessage("El vehículo 301-295 no tiene capacidad para 31 pasajeros");
+        var response = service.createRow(draft.getId(), request);
+
+        assertThat(response.getAssignments()).extracting(TourProcessingDraftAssignmentDto::getPassengers)
+                .containsExactly(31, 29);
     }
 
     @Test
@@ -1715,49 +1712,73 @@ class TourProcessingDraftServiceTest {
     }
 
     @Test
-    void rejectsManualDayEditWhenSurplusCapForTheMonthIsExceeded() {
+    void warnsWithoutPersistingWhenAManualDayExceedsTheSurplusCap() {
         TourProcessingDraft draft = draftWithBusinessDays(21);
-        TourProcessingDraftTour otherRow = entity(draft, 1, "100", "Cartago");
-        TourProcessingDraftTour row = entity(draft, 2, "200", "Heredia");
-        stubDraft(draft, otherRow, row);
+        draft.setYear(2026);
+        draft.setMonth(5);
+        TourProcessingDraftTour otherRow = oneDayOn(entity(draft, 1, "100", "Cartago"), LocalDate.of(2026, 5, 4));
+        TourProcessingDraftTour row = oneDayOn(entity(draft, 2, "200", "Heredia"), LocalDate.of(2026, 5, 11));
+        UUID driverId = UUID.nameUUIDFromBytes("Daniel Zuniga".getBytes());
+        Vehicle vehicle = Vehicle.builder().id(UUID.randomUUID()).plate("301-295").capacity(30).available(true).build();
+        row.primaryAssignment().setDriverId(driverId);
+        row.primaryAssignment().setVehicleId(vehicle.getId());
+        otherRow.primaryAssignment().setDriverId(driverId);
+        otherRow.primaryAssignment().setVehicleId(vehicle.getId());
+        when(draftRepository.findById(draft.getId())).thenReturn(Optional.of(draft));
+        when(rowRepository.findAllByDraftIdOrderByRowNumberAsc(draft.getId())).thenReturn(List.of(otherRow, row));
+        when(driverRepository.findAll()).thenReturn(List.of(Driver.builder().id(driverId).name("Daniel Zuniga").status("ACTIVE").build()));
+        when(vehicleRepository.findAll()).thenReturn(List.of(vehicle));
         TourProcessingDraftDay otherDay = dayEntity(otherRow, LocalDate.of(2026, 5, 4), LocalTime.of(7, 30), LocalTime.of(16, 30), 9.0, 27.0, 0.0);
+        otherDay.setManuallyEdited(true);
         TourProcessingDraftDay day = dayEntity(row, LocalDate.of(2026, 5, 11), LocalTime.of(7, 30), LocalTime.of(16, 30), 9.0, 0.0, 0.0);
         when(dayRepository.findByIdAndDraftId(day.getId(), draft.getId())).thenReturn(Optional.of(day));
-        row.primaryAssignment().setDriverId(UUID.nameUUIDFromBytes("Daniel Zuniga".getBytes()));
-        otherRow.primaryAssignment().setDriverId(row.primaryAssignment().getDriverId());
         when(dayRepository.findAllByDraftId(draft.getId())).thenReturn(List.of(otherDay, day));
 
         TourProcessingDraftRowDayRequestDto request = dayRequest(LocalTime.of(7, 30), LocalTime.of(16, 30), 9.0, 2.0, 0.0, false);
 
-        assertThatThrownBy(() -> service.updateRowDay(draft.getId(), row.getId(), day.getId(), request))
-                .isInstanceOfSatisfying(TransportException.class, exception -> {
-                    assertThat(exception.getErrorCode()).isEqualTo("TOUR_PROCESSING_DRAFT_ROW_DAY_SURPLUS_CAP_EXCEEDED");
-                    assertThat(exception.getHttpStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
-                });
+        var warnings = service.rowDayWarnings(draft.getId(), row.getId(), day.getId(), request);
+
+        assertThat(warnings).extracting(com.proseg.msvc_transport.service.rules.TourAssignmentRules.RuleViolation::code)
+                .contains(com.proseg.msvc_transport.service.rules.TourAssignmentRules.RuleCode.SURPLUS_CAP_EXCEEDED);
+        assertThat(day.getSurplusHours()).isZero();
         verify(dayRepository, never()).save(any());
+        verify(rowRepository, never()).save(any());
+        verify(rowRepository, never()).flush();
     }
 
     @Test
-    void rejectsManualDayEditWhenOvertimeCapForTheMonthIsExceeded() {
+    void warnsWithoutPersistingWhenAManualDayExceedsTheOvertimeCap() {
         TourProcessingDraft draft = draftWithBusinessDays(21);
-        TourProcessingDraftTour otherRow = entity(draft, 1, "100", "Cartago");
-        TourProcessingDraftTour row = entity(draft, 2, "200", "Heredia");
-        stubDraft(draft, otherRow, row);
+        draft.setYear(2026);
+        draft.setMonth(5);
+        TourProcessingDraftTour otherRow = oneDayOn(entity(draft, 1, "100", "Cartago"), LocalDate.of(2026, 5, 4));
+        TourProcessingDraftTour row = oneDayOn(entity(draft, 2, "200", "Heredia"), LocalDate.of(2026, 5, 11));
+        UUID driverId = UUID.nameUUIDFromBytes("Daniel Zuniga".getBytes());
+        Vehicle vehicle = Vehicle.builder().id(UUID.randomUUID()).plate("301-295").capacity(30).available(true).build();
+        row.primaryAssignment().setDriverId(driverId);
+        row.primaryAssignment().setVehicleId(vehicle.getId());
+        otherRow.primaryAssignment().setDriverId(driverId);
+        otherRow.primaryAssignment().setVehicleId(vehicle.getId());
+        when(draftRepository.findById(draft.getId())).thenReturn(Optional.of(draft));
+        when(rowRepository.findAllByDraftIdOrderByRowNumberAsc(draft.getId())).thenReturn(List.of(otherRow, row));
+        when(driverRepository.findAll()).thenReturn(List.of(Driver.builder().id(driverId).name("Daniel Zuniga").status("ACTIVE").build()));
+        when(vehicleRepository.findAll()).thenReturn(List.of(vehicle));
         TourProcessingDraftDay otherDay = dayEntity(otherRow, LocalDate.of(2026, 5, 4), LocalTime.of(7, 30), LocalTime.of(20, 30), 9.0, 4.0, 59.0);
+        otherDay.setManuallyEdited(true);
         TourProcessingDraftDay day = dayEntity(row, LocalDate.of(2026, 5, 11), LocalTime.of(7, 30), LocalTime.of(16, 30), 9.0, 0.0, 0.0);
         when(dayRepository.findByIdAndDraftId(day.getId(), draft.getId())).thenReturn(Optional.of(day));
-        row.primaryAssignment().setDriverId(UUID.nameUUIDFromBytes("Daniel Zuniga".getBytes()));
-        otherRow.primaryAssignment().setDriverId(row.primaryAssignment().getDriverId());
         when(dayRepository.findAllByDraftId(draft.getId())).thenReturn(List.of(otherDay, day));
 
         TourProcessingDraftRowDayRequestDto request = dayRequest(LocalTime.of(7, 30), LocalTime.of(16, 30), 9.0, 0.0, 2.0, false);
 
-        assertThatThrownBy(() -> service.updateRowDay(draft.getId(), row.getId(), day.getId(), request))
-                .isInstanceOfSatisfying(TransportException.class, exception -> {
-                    assertThat(exception.getErrorCode()).isEqualTo("TOUR_PROCESSING_DRAFT_ROW_DAY_OVERTIME_CAP_EXCEEDED");
-                    assertThat(exception.getHttpStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
-                });
+        var warnings = service.rowDayWarnings(draft.getId(), row.getId(), day.getId(), request);
+
+        assertThat(warnings).extracting(com.proseg.msvc_transport.service.rules.TourAssignmentRules.RuleViolation::code)
+                .contains(com.proseg.msvc_transport.service.rules.TourAssignmentRules.RuleCode.OVERTIME_CAP_EXCEEDED);
+        assertThat(day.getOvertimeHours()).isZero();
         verify(dayRepository, never()).save(any());
+        verify(rowRepository, never()).save(any());
+        verify(rowRepository, never()).flush();
     }
 
     @Test
@@ -1917,6 +1938,15 @@ class TourProcessingDraftServiceTest {
         draft.setMonth(5);
         draft.setBusinessDays(21);
         return draft;
+    }
+
+    private TourProcessingDraftTour oneDayOn(TourProcessingDraftTour tour, LocalDate date) {
+        tour.setDurationDays(1);
+        tour.setDepartureDate(date);
+        tour.setReturnDate(date);
+        tour.setDepartureTime(LocalTime.of(7, 30));
+        tour.setReturnTime(LocalTime.of(16, 30));
+        return tour;
     }
 
     private TourProcessingDraftTour oneDayTour(TourProcessingDraft draft) {

@@ -2,7 +2,6 @@ package com.proseg.msvc_transport.service;
 
 import com.proseg.msvc_transport.dto.tourprocessing.FinalCommissionCheckDto;
 import com.proseg.msvc_transport.dto.tourprocessing.FinalCommissionReportDto;
-import com.proseg.msvc_transport.entity.BorrowedVehicle;
 import com.proseg.msvc_transport.entity.TourProcessingDraft;
 import com.proseg.msvc_transport.entity.TourProcessingDraftAssignment;
 import com.proseg.msvc_transport.entity.TourProcessingDraftDay;
@@ -20,17 +19,14 @@ import com.proseg.msvc_transport.repository.DriverRepository;
 import com.proseg.msvc_transport.repository.VehicleRepository;
 import com.proseg.msvc_transport.service.driverhours.DriverBusinessDays;
 import com.proseg.msvc_transport.service.driverhours.DriverHoursRules;
-import com.proseg.msvc_transport.service.driverhours.DriverMonthTotals;
-import com.proseg.msvc_transport.service.driverhours.DriverWorkload;
+import com.proseg.msvc_transport.service.driverhours.ManualDays;
 import com.proseg.msvc_transport.service.driverhours.OrdinaryWindow;
-import com.proseg.msvc_transport.service.driverhours.TourDaySpan;
+import com.proseg.msvc_transport.service.rules.TourAssignmentRules;
 import com.proseg.msvc_transport.service.driverhours.TourTrips;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -40,7 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -53,10 +48,8 @@ public class FinalCommissionService {
 
     private static final String DRAFT_RESOURCE = "Borrador de depuración";
     private static final String ACTIVE_STATUS = "ACTIVE";
-    private static final int MIN_EXTERNAL_PASSENGERS = 5;
-    private static final int PRIORITY_ONE = 1;
-    private static final double TOLERANCE = 0.005;
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private final TourAssignmentRules assignmentRules = new TourAssignmentRules();
     private static final Comparator<TourProcessingDraftTour> REPORT_ORDER = Comparator
             .comparing(TourProcessingDraftTour::getPriority, Comparator.nullsLast(Comparator.naturalOrder()))
             .thenComparing(TourProcessingDraftTour::getDepartureDate)
@@ -285,192 +278,43 @@ public class FinalCommissionService {
     }
 
     private List<FinalCommissionCheckDto.Issue> warnings(TourProcessingDraft draft, Snapshot snapshot) {
+        DriverBusinessDays businessDays = draft.getBusinessDays() != null && draft.getYear() != null && draft.getMonth() != null
+                ? businessDaysService.forDraft(draft) : null;
+        List<TourAssignmentRules.RuleViolation> violations = assignmentRules.evaluate(new TourAssignmentRules.Snapshot(
+                snapshot.tours(),
+                snapshot.driversById(),
+                snapshot.vehiclesById(),
+                businessDays,
+                draft.getId() == null ? ManualDays.NONE : draftHoursService.manualDays(draft.getId()),
+                draft.getYear(),
+                draft.getMonth()
+        ));
+        Set<UUID> beyondFleet = toursBeyondFleet(snapshot);
         List<FinalCommissionCheckDto.Issue> warnings = new ArrayList<>();
-        List<TourProcessingDraftAssignment> attendedParts = snapshot.attended().stream()
-                .flatMap(tour -> tour.getAssignments().stream())
-                .toList();
-        if (draft.getBusinessDays() != null && draft.getYear() != null && draft.getMonth() != null) {
-            addDriverWarnings(warnings, draft, snapshot, attendedParts);
+        Map<TourAssignmentRules.RuleCode, String> titles = new LinkedHashMap<>();
+        Map<TourAssignmentRules.RuleCode, List<String>> details = new LinkedHashMap<>();
+        for (TourAssignmentRules.RuleViolation violation : violations) {
+            if (violation.code() == TourAssignmentRules.RuleCode.VEHICLE_OVER_CAPACITY
+                    && violation.tourId() != null
+                    && beyondFleet.contains(violation.tourId())) {
+                continue;
+            }
+            titles.putIfAbsent(violation.code(), violation.title());
+            List<String> lines = details.computeIfAbsent(violation.code(), code -> new ArrayList<>());
+            if (!lines.contains(violation.message())) {
+                lines.add(violation.message());
+            }
         }
-        addVehicleWarnings(warnings, snapshot, attendedParts);
-
-        List<String> externalUnderMinimum = snapshot.attended().stream()
-                .filter(tour -> tour.getAssignments().stream().anyMatch(part -> part.getResourceType() == ResourceType.EXTERNAL))
-                .filter(tour -> tour.getPassengers() != null && tour.getPassengers() < MIN_EXTERNAL_PASSENGERS)
-                .sorted(REPORT_ORDER)
-                .map(tour -> tourLabel(tour) + ": " + tour.getPassengers() + " pasajeros")
-                .toList();
-        add(warnings, "EXTERNAL_UNDER_MINIMUM", "Contratación externa con menos de 5 pasajeros", externalUnderMinimum);
-
-        Set<TourProcessingDraftTour> incomplete = Set.copyOf(snapshot.incomplete());
-        List<String> priorityOneUnattended = snapshot.tours().stream()
-                .filter(tour -> Objects.equals(tour.getPriority(), PRIORITY_ONE))
-                .filter(tour -> tour.getPassengers() != null && tour.getPassengers() < MIN_EXTERNAL_PASSENGERS)
-                .filter(tour -> !tour.isApproved() || incomplete.contains(tour))
-                .sorted(REPORT_ORDER)
-                .map(tour -> tourLabel(tour) + ": " + tour.getPassengers() + " pasajeros")
-                .toList();
-        add(warnings, "PRIORITY_ONE_UNATTENDED", "Giras de prioridad 1 con menos de 5 pasajeros que quedan como No aprobada", priorityOneUnattended);
+        details.forEach((code, lines) -> warnings.add(issue(code.name(), titles.get(code), lines)));
         return warnings;
     }
 
-    private void addDriverWarnings(
-            List<FinalCommissionCheckDto.Issue> warnings,
-            TourProcessingDraft draft,
-            Snapshot snapshot,
-            List<TourProcessingDraftAssignment> attendedParts
-    ) {
-        DriverBusinessDays businessDays = businessDaysService.forDraft(draft);
-        Set<LocalDate> monthWeekends = DriverHoursRules.monthWeekends(draft.getYear(), draft.getMonth());
-        Map<UUID, DriverWorkload> workloads = DriverWorkload.fromAssignments(
-                attendedParts, snapshot.driversById(), draftHoursService.manualDays(draft.getId()));
-
-        List<String> overlaps = new ArrayList<>();
-        List<String> stackedDays = new ArrayList<>();
-        List<String> surplusExceeded = new ArrayList<>();
-        List<String> overtimeExceeded = new ArrayList<>();
-        List<String> overtimeWithoutSurplus = new ArrayList<>();
-        List<String> withoutFreeWeekend = new ArrayList<>();
-        List<String> inactiveDrivers = new ArrayList<>();
-
-        workloads.entrySet().stream()
-                .map(entry -> Map.entry(snapshot.driversById().get(entry.getKey()), entry.getValue()))
-                .sorted(Comparator.comparing(entry -> entry.getKey().getName(), String.CASE_INSENSITIVE_ORDER))
-                .forEach(entry -> {
-                    Driver driver = entry.getKey();
-                    DriverWorkload workload = entry.getValue();
-                    double surplusCap = businessDays.surplusCapOf(driver);
-                    DriverMonthTotals totals = workload.totals(surplusCap, monthWeekends);
-                    String name = driver.getName();
-                    if (!ACTIVE_STATUS.equalsIgnoreCase(driver.getStatus())) {
-                        inactiveDrivers.add(name + " no está activo y tiene " + workload.tours().size() + " giras asignadas");
-                    }
-                    if (totals.surplusHours() > surplusCap + TOLERANCE) {
-                        surplusExceeded.add(name + ": " + hours(totals.surplusHours()) + " h de sobresueldo, tope de " + hours(surplusCap) + " h");
-                    }
-                    if (totals.overtimeHours() > DriverHoursRules.MONTHLY_OVERTIME_CAP + TOLERANCE) {
-                        overtimeExceeded.add(name + ": " + hours(totals.overtimeHours()) + " h extra, tope de "
-                                + hours(DriverHoursRules.MONTHLY_OVERTIME_CAP) + " h");
-                    }
-                    if (totals.overtimeHours() > TOLERANCE && totals.surplusHours() < surplusCap * DriverHoursRules.SURPLUS_CUTOFF_RATIO - TOLERANCE) {
-                        overtimeWithoutSurplus.add(name + ": " + hours(totals.overtimeHours()) + " h extra con "
-                                + percent(surplusCap == 0 ? 0 : totals.surplusHours() / surplusCap) + " de sobresueldo");
-                    }
-                    if (!monthWeekends.isEmpty() && totals.weekendsWorked() >= monthWeekends.size()) {
-                        withoutFreeWeekend.add(name + ": trabaja los " + monthWeekends.size() + " fines de semana del mes");
-                    }
-                    overlaps.addAll(overlapsOf(name, workload.tours()));
-                    stackedDays.addAll(stackedDaysOf(name, workload));
-                });
-
-        add(warnings, "DRIVER_OVERLAP", "Choferes con giras que se cruzan", overlaps);
-        add(warnings, "DAY_HOURS_EXCEEDED", "Choferes con más de 12 horas en un día al sumar giras", stackedDays);
-        add(warnings, "SURPLUS_CAP_EXCEEDED", "Choferes que superan el tope de sobresueldo del mes", surplusExceeded);
-        add(warnings, "OVERTIME_CAP_EXCEEDED", "Choferes que superan las 60 horas extra del mes", overtimeExceeded);
-        add(warnings, "OVERTIME_WITHOUT_SURPLUS", "Choferes con horas extra sin llegar al 95% de sobresueldo", overtimeWithoutSurplus);
-        add(warnings, "NO_FREE_WEEKEND", "Choferes sin un fin de semana libre en el mes", withoutFreeWeekend);
-        add(warnings, "INACTIVE_DRIVER", "Choferes inactivos con giras asignadas", inactiveDrivers);
-    }
-
-    private List<String> overlapsOf(String name, List<TourProcessingDraftAssignment> tours) {
-        List<TourProcessingDraftAssignment> ordered = tours.stream()
-                .sorted(Comparator.comparing(TourProcessingDraftAssignment::getDepartureDate).thenComparing(TourProcessingDraftAssignment::getDepartureTime))
-                .toList();
-        List<String> details = new ArrayList<>();
-        for (int i = 0; i < ordered.size(); i++) {
-            for (int j = i + 1; j < ordered.size(); j++) {
-                TourProcessingDraftAssignment left = ordered.get(i);
-                TourProcessingDraftAssignment right = ordered.get(j);
-                if (left.getTour() != right.getTour() && DriverHoursRules.toursOverlap(left, right)) {
-                    details.add(name + ": giras " + left.getNumber() + " y " + right.getNumber() + " (" + left.getDepartureDate().format(DATE) + ")");
-                }
-            }
-        }
-        return details;
-    }
-
-    private List<String> stackedDaysOf(String name, DriverWorkload workload) {
-        Map<LocalDate, List<String>> numbersByDate = new TreeMap<>();
-        for (TourProcessingDraftAssignment tour : workload.tours()) {
-            for (TourDaySpan span : DriverHoursRules.daySpans(tour)) {
-                numbersByDate.computeIfAbsent(span.date(), date -> new ArrayList<>()).add(tour.getNumber());
-            }
-        }
-        Map<LocalDate, Double> hoursByDate = workload.hoursByDate();
-        List<String> details = new ArrayList<>();
-        numbersByDate.forEach((date, numbers) -> {
-            double dayHours = hoursByDate.getOrDefault(date, 0.0);
-            if (numbers.size() > 1 && dayHours > DriverHoursRules.MAX_STACKED_DAY_HOURS + TOLERANCE) {
-                details.add(name + ": " + hours(dayHours) + " h el " + date.format(DATE) + " (giras " + String.join(", ", numbers) + ")");
-            }
-        });
-        return details;
-    }
-
-    private void addVehicleWarnings(List<FinalCommissionCheckDto.Issue> warnings, Snapshot snapshot, List<TourProcessingDraftAssignment> attendedParts) {
-        Map<String, List<TourProcessingDraftAssignment>> partsByPlate = new LinkedHashMap<>();
-        List<String> overCapacity = new ArrayList<>();
-        List<String> incompatible = new ArrayList<>();
-        List<String> unavailable = new ArrayList<>();
-        for (TourProcessingDraftAssignment part : attendedParts) {
-            String plate = plateOf(part, snapshot);
-            if (plate != null) {
-                partsByPlate.computeIfAbsent(plate, key -> new ArrayList<>()).add(part);
-            }
-            Integer capacity = capacityOf(part, snapshot);
-            if (part.getTour().isDistributed() && capacity != null && part.getPassengers() != null && part.getPassengers() > capacity) {
-                overCapacity.add(tourLabel(part.getTour()) + ": vehículo " + plate + " lleva " + part.getPassengers()
-                        + " pasajeros y su capacidad es " + capacity);
-            }
-            Vehicle vehicle = part.getResourceType() == ResourceType.INTERNAL ? DriverHoursRules.assignedVehicle(part, snapshot.vehiclesById()) : null;
-            Driver driver = part.getResourceType() == ResourceType.EXTERNAL ? null : DriverHoursRules.assignedDriver(part, snapshot.driversById());
-            if (vehicle != null && driver != null && !DriverHoursRules.canDrive(driver, vehicle)) {
-                incompatible.add(tourLabel(part.getTour()) + ": " + driver.getName() + " no está habilitado para el vehículo " + vehicle.getPlate());
-            }
-            if (vehicle != null && !vehicle.isAvailable()) {
-                unavailable.add(tourLabel(part.getTour()) + ": vehículo " + vehicle.getPlate() + " no está disponible");
-            }
-        }
-        List<String> sharedVehicles = new ArrayList<>();
-        partsByPlate.forEach((plate, parts) -> {
-            for (int i = 0; i < parts.size(); i++) {
-                for (int j = i + 1; j < parts.size(); j++) {
-                    TourProcessingDraftAssignment left = parts.get(i);
-                    TourProcessingDraftAssignment right = parts.get(j);
-                    if (!DriverWorkload.sameTour(left, right) && DriverHoursRules.toursOverlap(left, right)) {
-                        String detail = "Placa " + plate + ": giras " + left.getNumber() + " y " + right.getNumber()
-                                + " (" + left.getDepartureDate().format(DATE) + ")";
-                        if (!sharedVehicles.contains(detail)) {
-                            sharedVehicles.add(detail);
-                        }
-                    }
-                }
-            }
-        });
-        add(warnings, "VEHICLE_OVERLAP", "Vehículos asignados a giras que se cruzan", sharedVehicles);
-        add(warnings, "VEHICLE_OVER_CAPACITY", "Viajes con más pasajeros que la capacidad del vehículo", overCapacity);
-        add(warnings, "INCOMPATIBLE_VEHICLE", "Choferes asignados a un tipo de vehículo que no pueden manejar", incompatible);
-        add(warnings, "VEHICLE_UNAVAILABLE", "Vehículos no disponibles asignados a giras", unavailable);
-    }
-
-    private String plateOf(TourProcessingDraftAssignment part, Snapshot snapshot) {
-        if (part.getResourceType() == ResourceType.BORROWED_VEHICLE) {
-            BorrowedVehicle borrowed = part.getBorrowedVehicle();
-            return borrowed == null ? null : borrowed.getPlate();
-        }
-        if (part.getResourceType() == ResourceType.INTERNAL) {
-            Vehicle vehicle = DriverHoursRules.assignedVehicle(part, snapshot.vehiclesById());
-            return vehicle == null ? null : vehicle.getPlate();
-        }
-        return null;
-    }
-
-    private Integer capacityOf(TourProcessingDraftAssignment part, Snapshot snapshot) {
-        if (part.getResourceType() == ResourceType.BORROWED_VEHICLE) {
-            return part.getBorrowedVehicle() == null ? null : part.getBorrowedVehicle().getCapacity();
-        }
-        Vehicle vehicle = part.getResourceType() == ResourceType.INTERNAL ? DriverHoursRules.assignedVehicle(part, snapshot.vehiclesById()) : null;
-        return vehicle == null ? null : vehicle.getCapacity();
+    private Set<UUID> toursBeyondFleet(Snapshot snapshot) {
+        int fleetMaximum = TourProcessingDraftService.fleetMaximumCapacity(snapshot.vehicles());
+        return TourProcessingDraftService.oversizedToursOf(snapshot.tours(), snapshot.vehicles()).stream()
+                .filter(tour -> tour.getPassengers() != null && tour.getPassengers() > fleetMaximum)
+                .map(TourProcessingDraftTour::getId)
+                .collect(Collectors.toSet());
     }
 
     private void ensureNoPartialDistributions(Snapshot snapshot) {
@@ -513,14 +357,6 @@ public class FinalCommissionService {
 
     private static String tourLabel(TourProcessingDraftTour tour) {
         return "Gira " + tour.getNumber() + " (" + tour.getDepartureDate().format(DATE) + ")";
-    }
-
-    private static String hours(double value) {
-        return BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString();
-    }
-
-    private static String percent(double ratio) {
-        return BigDecimal.valueOf(ratio * 100).setScale(1, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + "%";
     }
 
     private record Snapshot(

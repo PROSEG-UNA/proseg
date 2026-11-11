@@ -11,7 +11,9 @@ import com.proseg.msvc_transport.entity.Driver;
 import com.proseg.msvc_transport.entity.DriverUnit;
 import com.proseg.msvc_transport.entity.ResourceType;
 import com.proseg.msvc_transport.entity.TourApprovalStatus;
+import com.proseg.msvc_transport.entity.TourProcessingDraftDay;
 import com.proseg.msvc_transport.entity.Vehicle;
+import com.proseg.msvc_transport.entity.VehicleType;
 import com.proseg.msvc_transport.exception.TransportException;
 import com.proseg.msvc_transport.repository.DriverMonthBusinessDaysRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
@@ -24,6 +26,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -43,6 +46,8 @@ class FinalCommissionServiceTest {
     private final Vehicle sedan = Vehicle.builder().id(UUID.randomUUID()).plate("301-414").capacity(30).available(true).build();
 
     private DraftTourStore tourStore;
+    private DriverRepository driverRepository;
+    private VehicleRepository vehicleRepository;
     private DraftHoursService draftHoursService;
     private FinalCommissionService service;
 
@@ -58,9 +63,9 @@ class FinalCommissionServiceTest {
         tourStore = mock(DraftTourStore.class);
         TourProcessingDraftDayRepository dayRepository = mock(TourProcessingDraftDayRepository.class);
         when(dayRepository.findByAssignmentIdIn(any())).thenReturn(List.of());
-        DriverRepository driverRepository = mock(DriverRepository.class);
+        driverRepository = mock(DriverRepository.class);
         when(driverRepository.findAll()).thenReturn(List.of(ana));
-        VehicleRepository vehicleRepository = mock(VehicleRepository.class);
+        vehicleRepository = mock(VehicleRepository.class);
         when(vehicleRepository.findAll()).thenReturn(List.of(microbus, sedan));
         draftHoursService = mock(DraftHoursService.class);
         when(draftHoursService.manualDays(any())).thenReturn(ManualDays.NONE);
@@ -226,6 +231,131 @@ class FinalCommissionServiceTest {
             assertThat(day.getStart()).isEqualTo(8);
             assertThat(day.getEnd()).isEqualTo(12);
         });
+    }
+
+    @Test
+    void keepsThePreviousFinalCommissionWarningsExceptWeekendCapAndRepeatedPlates() {
+        Driver beto = named("Beto");
+        Driver carlos = named("Carlos");
+        Driver diana = named("Diana");
+        Driver elena = named("Elena");
+        elena.setStatus("INACTIVE");
+        Driver fabio = named("Fabio");
+        fabio.setAllowedVehicleTypes(EnumSet.of(VehicleType.SEDAN));
+        Driver gabi = named("Gabi");
+        Driver hugo = named("Hugo");
+        Driver ivan = named("Ivan");
+        Vehicle anaBus = fleet("ANA-1", 30, true, VehicleType.MICROBUS);
+        Vehicle anaVan = fleet("ANA-2", 30, true, VehicleType.SEDAN);
+        Vehicle plain = fleet("PLAIN", 30, true, VehicleType.SEDAN);
+        Vehicle micro = fleet("FAB-1", 12, true, VehicleType.MICROBUS);
+        Vehicle closed = fleet("GAB-1", 12, false, VehicleType.SEDAN);
+        Vehicle huge = fleet("HUG-01", 30, true, VehicleType.MICROBUS);
+        Vehicle ownPlate = fleet("ABC-123", 12, true, VehicleType.SEDAN);
+        when(driverRepository.findAll()).thenReturn(List.of(ana, beto, carlos, diana, elena, fabio, gabi, hugo, ivan));
+        when(vehicleRepository.findAll()).thenReturn(List.of(microbus, sedan, anaBus, anaVan, plain, micro, closed, huge, ownPlate));
+
+        TourProcessingDraftTour anaFirst = scheduled("100", 2, 10, "2026-05-06", "13:00", "18:00", ana, anaBus);
+        TourProcessingDraftTour anaSecond = scheduled("101", 2, 10, "2026-05-06", "13:00", "18:00", ana, anaVan);
+        TourProcessingDraftTour betoTour = scheduled("110", 2, 8, "2026-05-07", "08:00", "12:00", beto, plain);
+        TourProcessingDraftTour carlosTour = scheduled("120", 2, 8, "2026-05-08", "08:00", "12:00", carlos, plain);
+        TourProcessingDraftTour dianaWeekday = scheduled("130", 2, 8, "2026-05-04", "08:00", "12:00", diana, plain);
+        TourProcessingDraftTour weekendA = scheduled("131", 2, 4, "2026-05-02", "08:00", "09:00", diana, plain);
+        TourProcessingDraftTour weekendB = scheduled("132", 2, 4, "2026-05-09", "08:00", "09:00", diana, plain);
+        TourProcessingDraftTour weekendC = scheduled("133", 2, 4, "2026-05-16", "08:00", "09:00", diana, plain);
+        TourProcessingDraftTour weekendD = scheduled("134", 2, 4, "2026-05-23", "08:00", "09:00", diana, plain);
+        TourProcessingDraftTour elenaTour = scheduled("140", 2, 6, "2026-05-11", "08:00", "12:00", elena, plain);
+        TourProcessingDraftTour fabioTour = scheduled("150", 2, 6, "2026-05-12", "08:00", "12:00", fabio, micro);
+        TourProcessingDraftTour gabiTour = scheduled("160", 2, 6, "2026-05-13", "08:00", "12:00", gabi, closed);
+        TourProcessingDraftTour hugoTour = scheduled("170", 2, 41, "2026-05-14", "08:00", "12:00", hugo, huge);
+        assign(hugoTour.addAssignment(part(10)), hugo, huge);
+        hugoTour.primaryAssignment().setPassengers(31);
+        TourProcessingDraftTour beyondFleet = scheduled("175", 2, 40, "2026-05-19", "08:00", "12:00", ivan, huge);
+        TourProcessingDraftTour fitsAnotherVehicle = scheduled("176", 2, 20, "2026-05-20", "08:00", "12:00", ivan, micro);
+        TourProcessingDraftTour ivanTour = scheduled("180", 2, 6, "2026-05-15", "08:00", "10:00", ivan, ownPlate);
+        TourProcessingDraftTour external = tour("181", 2, 3, "2026-05-15");
+        external.setDepartureTime(LocalTime.parse("12:00"));
+        external.setReturnTime(LocalTime.parse("14:00"));
+        external.addAssignment(TourProcessingDraftAssignment.builder().id(UUID.randomUUID()).passengers(3)
+                .resourceType(ResourceType.EXTERNAL).driver("Contratado").vehicle("abc 123").build());
+        TourProcessingDraftTour priority = tour("190", 1, 3, "2026-05-18");
+        priority.setApprovalStatus(TourApprovalStatus.NOT_APPROVED);
+        assign(priority.addAssignment(part(3)), ivan, plain);
+
+        when(draftHoursService.manualDays(draftId)).thenReturn(ManualDays.of(List.of(
+                manualDay(betoTour, "2026-05-07", 40, 0),
+                manualDay(carlosTour, "2026-05-08", 36, 61),
+                manualDay(dianaWeekday, "2026-05-04", 36, 0)
+        )));
+        when(tourStore.findPrimariesByDraftId(draftId)).thenReturn(List.of(
+                anaFirst, anaSecond, betoTour, carlosTour, dianaWeekday, weekendA, weekendB, weekendC, weekendD,
+                elenaTour, fabioTour, gabiTour, hugoTour, ivanTour, external, priority, beyondFleet, fitsAnotherVehicle));
+
+        FinalCommissionCheckDto check = service.check(draftId);
+
+        assertThat(check.getBlockers()).isEmpty();
+        assertThat(check.getErrors()).extracting(FinalCommissionCheckDto.Issue::getCode).containsExactly("OVERSIZED");
+        assertThat(check.getErrors().get(0).getDetails()).containsExactly(
+                "Gira 175 (19/05/2026): 40 pasajeros para una capacidad de 30",
+                "Gira 176 (20/05/2026): 20 pasajeros para una capacidad de 12");
+        assertThat(check.getRejections()).isNull();
+        assertThat(check.getWarnings()).extracting(FinalCommissionCheckDto.Issue::getCode)
+                .containsExactly(
+                        "DRIVER_OVERLAP",
+                        "SURPLUS_CAP_EXCEEDED",
+                        "OVERTIME_CAP_EXCEEDED",
+                        "WEEKEND_CAP_EXCEEDED",
+                        "INACTIVE_DRIVER",
+                        "PLATE_REPEATED_SAME_DAY",
+                        "VEHICLE_OVER_CAPACITY",
+                        "INCOMPATIBLE_VEHICLE",
+                        "VEHICLE_UNAVAILABLE",
+                        "EXTERNAL_UNDER_MINIMUM",
+                        "PRIORITY_ONE_UNATTENDED");
+        assertThat(check.getWarnings()).extracting(FinalCommissionCheckDto.Issue::getCode).doesNotContain("NO_FREE_WEEKEND");
+        assertThat(check.getWarnings()).filteredOn(issue -> issue.getCode().equals("PLATE_REPEATED_SAME_DAY"))
+                .singleElement()
+                .satisfies(issue -> assertThat(issue.getDetails()).contains("Placa ABC123: giras 180 y 181 (15/05/2026)"));
+        assertThat(check.getWarnings()).filteredOn(issue -> issue.getCode().equals("WEEKEND_CAP_EXCEEDED"))
+                .singleElement()
+                .satisfies(issue -> assertThat(issue.getDetails()).contains("Diana: trabaja 4 fines de semana, tope de 3"));
+        assertThat(check.getWarnings()).filteredOn(issue -> issue.getCode().equals("VEHICLE_OVER_CAPACITY"))
+                .singleElement()
+                .satisfies(issue -> {
+                    assertThat(issue.getDetails()).contains(
+                            "Gira 170 (14/05/2026): vehículo HUG-01 lleva 31 pasajeros y su capacidad es 30",
+                            "Gira 176 (20/05/2026): vehículo FAB-1 lleva 20 pasajeros y su capacidad es 12");
+                    assertThat(issue.getDetails()).noneMatch(detail -> detail.contains("175"));
+                });
+    }
+
+    private Driver named(String name) {
+        return Driver.builder().id(UUID.randomUUID()).name(name).status("ACTIVE").build();
+    }
+
+    private Vehicle fleet(String plate, int capacity, boolean available, VehicleType type) {
+        return Vehicle.builder().id(UUID.randomUUID()).plate(plate).capacity(capacity).available(available).type(type).build();
+    }
+
+    private TourProcessingDraftTour scheduled(String number, int priority, int passengers, String date, String start, String end, Driver driver, Vehicle vehicle) {
+        TourProcessingDraftTour scheduled = tour(number, priority, passengers, date);
+        scheduled.setDepartureTime(LocalTime.parse(start));
+        scheduled.setReturnTime(LocalTime.parse(end));
+        assign(scheduled.addAssignment(part(passengers)), driver, vehicle);
+        return scheduled;
+    }
+
+    private TourProcessingDraftDay manualDay(TourProcessingDraftTour scheduled, String date, double surplus, double overtime) {
+        return TourProcessingDraftDay.builder()
+                .assignment(scheduled.primaryAssignment())
+                .date(LocalDate.parse(date))
+                .startTime(scheduled.getDepartureTime())
+                .endTime(scheduled.getReturnTime())
+                .ordinaryHours(4.0)
+                .surplusHours(surplus)
+                .overtimeHours(overtime)
+                .manuallyEdited(true)
+                .build();
     }
 
     private TourProcessingDraftTour tour(String number, int priority, int passengers, String date) {

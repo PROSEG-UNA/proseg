@@ -66,6 +66,10 @@ public final class DriverHoursRules {
         return plate.length() <= PLATE_MAX_LENGTH ? plate : plate.substring(0, PLATE_MAX_LENGTH);
     }
 
+    public static String comparablePlate(String value) {
+        return value == null ? "" : value.toUpperCase(Locale.ROOT).replaceAll("[\\s-]", "");
+    }
+
     public static boolean looksLikePlate(String value) {
         return value != null && value.chars().anyMatch(Character::isDigit);
     }

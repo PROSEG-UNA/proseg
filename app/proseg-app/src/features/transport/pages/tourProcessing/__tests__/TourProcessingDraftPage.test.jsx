@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AppTheme from '../../../../../common/theme/AppTheme';
 import TourProcessingDraftPage from '../TourProcessingDraftPage.jsx';
-import { fetchTourProcessingDraftRows, finishTourProcessingDraft, reopenTourProcessingDraft, updateTourProcessingDraftRowApprovalStatus } from '../../../services/tourProcessing/tourProcessingService.js';
+import { fetchTourProcessingDraftRows, finishTourProcessingDraft, previewTourProcessingDraftApprovalWarnings, reopenTourProcessingDraft, updateTourProcessingDraftRowApprovalStatus } from '../../../services/tourProcessing/tourProcessingService.js';
 import { queryKeys } from '../../../../../common/query';
 
 const granted = vi.hoisted(() => ({ permissions: null }));
@@ -51,6 +51,7 @@ vi.mock('../../../services/tourProcessing/tourProcessingService.js', () => ({
     fetchTourProcessingDraftRows: vi.fn(),
     finishTourProcessingDraft: vi.fn(),
     reopenTourProcessingDraft: vi.fn(),
+    previewTourProcessingDraftApprovalWarnings: vi.fn(async () => []),
     updateTourProcessingDraftRowApprovalStatus: vi.fn(),
     updateTourObservationReviewed: vi.fn(),
 }));
@@ -86,6 +87,8 @@ beforeEach(async () => {
     fetchTourProcessingDraftRows.mockReset();
     fetchTourProcessingDraftRows.mockResolvedValueOnce({ content: rows, totalElements: 2 });
     fetchTourProcessingDraftRows.mockImplementation(() => new Promise(() => {}));
+    previewTourProcessingDraftApprovalWarnings.mockReset();
+    previewTourProcessingDraftApprovalWarnings.mockResolvedValue([]);
     updateTourProcessingDraftRowApprovalStatus.mockReset();
     updateTourProcessingDraftRowApprovalStatus.mockImplementation((draftId, rowId) => Promise.resolve({
         ...rows.find((row) => row.id === rowId),
@@ -246,5 +249,34 @@ describe('aprobación de filas', () => {
 
         await waitFor(() => expect(updateTourProcessingDraftRowApprovalStatus).toHaveBeenCalledTimes(2));
         expect(within(screen.getByTestId('row-row-2')).getByText('NOT_APPROVED')).toBeInTheDocument();
+        expect(previewTourProcessingDraftApprovalWarnings).not.toHaveBeenCalled();
+    });
+
+    it('avisa al aprobar y guarda solo si se confirma', async () => {
+        previewTourProcessingDraftApprovalWarnings.mockResolvedValue([
+            { code: 'DRIVER_OVERLAP', title: 'Choferes con giras que se cruzan', message: 'Ana: giras 100 y 200 (04/05/2026)' },
+        ]);
+        fetchTourProcessingDraftRows.mockReset();
+        fetchTourProcessingDraftRows.mockResolvedValueOnce({
+            content: [{ id: 'row-3', number: '300', approvalStatus: 'NOT_APPROVED' }],
+            totalElements: 1,
+        });
+        fetchTourProcessingDraftRows.mockImplementation(() => new Promise(() => {}));
+        renderDraftPage();
+
+        await userEvent.click(await screen.findByRole('button', { name: 'Aprobar' }));
+
+        expect(await screen.findByText('Esta gira rompe algunas reglas')).toBeInTheDocument();
+        expect(screen.getByText(/Ana: giras 100 y 200/)).toBeInTheDocument();
+        expect(updateTourProcessingDraftRowApprovalStatus).not.toHaveBeenCalled();
+
+        await userEvent.click(screen.getByRole('button', { name: 'Revisar' }));
+        expect(updateTourProcessingDraftRowApprovalStatus).not.toHaveBeenCalled();
+        await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Esta gira rompe algunas reglas' })).not.toBeInTheDocument());
+
+        await userEvent.click(screen.getByRole('button', { name: 'Aprobar' }));
+        await userEvent.click(await screen.findByRole('button', { name: 'Guardar de todos modos' }));
+
+        await waitFor(() => expect(updateTourProcessingDraftRowApprovalStatus).toHaveBeenCalledWith('draft-1', 'row-3', 'APPROVED'));
     });
 });
