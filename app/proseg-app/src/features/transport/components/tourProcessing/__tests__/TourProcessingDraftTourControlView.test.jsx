@@ -3,11 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AppTheme from '../../../../../common/theme/AppTheme.jsx';
 import TourProcessingDraftTourControlView from '../TourProcessingDraftTourControlView.jsx';
-import { useTourProcessingDraftDriverSummaries, useTourProcessingDraftSchedule } from '../../../hooks/useTourProcessingDraftsData.js';
+import { useTourProcessingDraftDriverSummaries, useTourProcessingDraftSchedule, useTourProcessingDraftTourControl } from '../../../hooks/useTourProcessingDraftsData.js';
 
 vi.mock('../../../hooks/useTourProcessingDraftsData.js', () => ({
     useTourProcessingDraftSchedule: vi.fn(),
     useTourProcessingDraftDriverSummaries: vi.fn(),
+    useTourProcessingDraftTourControl: vi.fn(),
 }));
 
 const DRIVERS = [
@@ -34,6 +35,29 @@ const DRIVERS = [
     { id: 'mario', name: 'Mario Soto', surplusHours: 0, overtimeHours: 0, tours: [] },
 ];
 
+const OTHER_RESOURCE_ENTRIES = [
+    {
+        section: 'OTHER_UNIT', date: '2026-05-01', number: '4040', driver: 'Jorge Mena', plate: '301-414', destination: 'Santa Ana',
+        responsible: 'Erick Ovares', passengers: 15, priority: 1, departureDate: '2026-05-01', returnDate: '2026-05-01',
+    },
+    {
+        section: 'EXTERNAL', date: '2026-05-01', number: '8958', driver: 'GLODA', plate: 'HB4939', destination: 'San Pedro',
+        responsible: 'Gabriela Cordero', passengers: 46, priority: 2, departureDate: '2026-05-01', returnDate: '2026-05-02',
+    },
+    {
+        section: 'EXTERNAL', date: '2026-05-02', number: '8958', driver: 'GLODA', plate: 'HB4939', destination: 'San Pedro',
+        responsible: 'Gabriela Cordero', passengers: 46, priority: 2, departureDate: '2026-05-01', returnDate: '2026-05-02',
+    },
+    {
+        section: 'EXTERNAL', date: '2026-05-02', number: '3989', driver: null, plate: null, destination: 'Cartago',
+        responsible: 'Ana Chaves', passengers: 20, priority: 3, departureDate: '2026-05-02', returnDate: '2026-05-02',
+    },
+    {
+        section: 'UNATTENDED', date: '2026-05-01', number: '3531', driver: null, plate: null, destination: 'Heredia',
+        responsible: 'Luis Rojas', passengers: 22, priority: 1, departureDate: '2026-05-01', returnDate: '2026-05-01',
+    },
+];
+
 const SUMMARIES = [
     { id: 'ana', organizationalUnit: 'GENERAL_SERVICES', status: 'ACTIVE' },
     { id: 'luis', organizationalUnit: 'GENERAL_SERVICES', status: 'ACTIVE' },
@@ -52,6 +76,7 @@ function renderView(props = {}) {
 beforeEach(() => {
     useTourProcessingDraftDriverSummaries.mockReturnValue({ surplusCapPerDriver: 40, drivers: SUMMARIES, loading: false, fetching: false, error: null });
     useTourProcessingDraftSchedule.mockReturnValue({ drivers: DRIVERS, loading: false, fetching: false, error: null });
+    useTourProcessingDraftTourControl.mockReturnValue({ entries: [], loading: false, fetching: false, error: null });
 });
 
 afterEach(cleanup);
@@ -161,6 +186,39 @@ describe('Control de giras', () => {
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
         expect(screen.getAllByText('15/05/2026')).toHaveLength(2);
         expect(within(screen.getByRole('row', { name: /Ana Mora/ })).getByRole('button', { name: /Expandir/ })).toBeDisabled();
+    });
+
+    it('muestra las giras de préstamo y contratadas del día en cada día que duran', async () => {
+        useTourProcessingDraftTourControl.mockReturnValue({ entries: OTHER_RESOURCE_ENTRIES, loading: false, fetching: false, error: null });
+        renderView();
+
+        const firstDay = screen.getByRole('region', { name: 'Giras con otros recursos' });
+        const loans = within(firstDay).getByRole('list', { name: 'Giras de préstamo de vehículo' });
+        expect(within(loans).getAllByRole('listitem')).toHaveLength(1);
+        expect(within(loans).getByText('Jorge Mena')).toBeInTheDocument();
+        expect(within(loans).getByText('301-414')).toBeInTheDocument();
+        const hired = within(firstDay).getByRole('list', { name: 'Giras de contratación externa' });
+        expect(within(hired).getAllByRole('listitem')).toHaveLength(1);
+        expect(within(hired).getByText('8958')).toBeInTheDocument();
+        expect(within(hired).getByText('GLODA')).toBeInTheDocument();
+        expect(within(firstDay).queryByText('3531')).not.toBeInTheDocument();
+
+        await userEvent.click(screen.getByRole('button', { name: 'Día siguiente' }));
+
+        const secondDay = screen.getByRole('region', { name: 'Giras con otros recursos' });
+        expect(within(secondDay).queryByRole('list', { name: 'Giras de préstamo de vehículo' })).not.toBeInTheDocument();
+        const nextHired = within(secondDay).getByRole('list', { name: 'Giras de contratación externa' });
+        expect(within(nextHired).getAllByRole('listitem')).toHaveLength(2);
+        expect(within(nextHired).getByText('8958')).toBeInTheDocument();
+        expect(within(nextHired).getByText('3989')).toBeInTheDocument();
+        expect(within(nextHired).getByText('Por contratar')).toBeInTheDocument();
+    });
+
+    it('no muestra la sección de otros recursos si el día no tiene giras de préstamo ni contratadas', () => {
+        useTourProcessingDraftTourControl.mockReturnValue({ entries: OTHER_RESOURCE_ENTRIES, loading: false, fetching: false, error: null });
+        renderView({ month: 6 });
+
+        expect(screen.queryByRole('region', { name: 'Giras con otros recursos' })).not.toBeInTheDocument();
     });
 
     it('muestra los errores de carga', () => {

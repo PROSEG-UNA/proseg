@@ -93,6 +93,11 @@ export async function fetchTourProcessingDraftSchedule(draftId, date) {
     return data?.data ?? null;
 }
 
+export async function fetchTourProcessingDraftTourControl(draftId) {
+    const { data } = await axios.get(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/tour-control`, transportConfig);
+    return data?.data ?? null;
+}
+
 export async function fetchTourProcessingDraftDriverSchedule(draftId, driverId, options = {}) {
     return fetchPage(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/drivers/${driverId}/schedule`, options);
 }

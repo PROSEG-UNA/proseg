@@ -6,6 +6,7 @@ import {
     fetchTourProcessingDraftRow,
     fetchTourProcessingDraftRows,
     fetchTourProcessingDraftSchedule,
+    fetchTourProcessingDraftTourControl,
     fetchTourProcessingDrafts,
 } from '../services/tourProcessing/tourProcessingService';
 import { getFriendlyApiErrorMessage } from '../../../common/utils';
@@ -148,6 +149,21 @@ export function useTourProcessingDraftSchedule(draftId, date) {
         loading: isLoading,
         fetching: isFetching,
         error: error ? getFriendlyApiErrorMessage(error, 'No se pudo cargar el control de giras') : null,
+    };
+}
+
+export function useTourProcessingDraftTourControl(draftId) {
+    const { data, isLoading, isFetching, error } = useQuery({
+        queryKey: queryKeys.transport.tourProcessingDraftTourControl(draftId),
+        queryFn: () => fetchTourProcessingDraftTourControl(draftId),
+        enabled: Boolean(draftId),
+    });
+
+    return {
+        entries: data?.entries ?? [],
+        loading: isLoading,
+        fetching: isFetching,
+        error: error ? getFriendlyApiErrorMessage(error, 'No se pudieron cargar las giras con otros recursos') : null,
     };
 }
 
