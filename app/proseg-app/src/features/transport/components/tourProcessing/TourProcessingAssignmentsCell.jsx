@@ -71,7 +71,7 @@ export default function TourProcessingAssignmentsCell({ kind, assignments, isMis
     return (
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, maxWidth: '100%' }}>
             <Box sx={{ minWidth: 0 }}>
-                <CatalogValueCell kind={kind} value={firstSlot.value} missing={firstSlot.missing} unavailable={firstSlot.unavailable} />
+                <CatalogValueCell kind={kind} value={firstSlot.value} missing={firstSlot.missing} />
             </Box>
             <Tooltip title={details} placement="top">
                 <Chip
