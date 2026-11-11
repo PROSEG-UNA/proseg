@@ -83,6 +83,11 @@ export async function fetchTourProcessingDraftRow(draftId, rowId) {
     return data?.data ?? null;
 }
 
+export async function fetchTourProcessingDraftRowProblems(draftId) {
+    const { data } = await axios.get(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/row-problems`, transportConfig);
+    return data?.data ?? {};
+}
+
 export async function fetchTourProcessingDraftDriverSummaries(draftId) {
     const { data } = await axios.get(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/drivers/schedule-summary`, transportConfig);
     return data?.data ?? null;

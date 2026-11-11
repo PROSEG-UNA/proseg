@@ -79,6 +79,7 @@ import {
     loadTourProcessingDraftRow,
     replaceCachedDraftRow,
     useTourProcessingDraft,
+    useTourProcessingDraftRowProblems,
     useTourProcessingDraftRows,
 } from '../../hooks/useTourProcessingDraftsData.js';
 import { useServerTableState } from '../../hooks/useServerTableState.js';
@@ -87,11 +88,12 @@ import CatalogValueCell from '../../components/tourProcessing/CatalogValueCell.j
 import TourProcessingAssignmentsCell from '../../components/tourProcessing/TourProcessingAssignmentsCell.jsx';
 import TourProcessingDraftRowModal from '../../components/tourProcessing/TourProcessingDraftRowModal.jsx';
 import TourObservationMatchIndicator from '../../components/tourProcessing/TourObservationMatchIndicator.jsx';
+import TourProblemsIndicator from '../../components/tourProcessing/TourProblemsIndicator.jsx';
 import TourProcessingDriverAssignmentReport from '../../components/tourProcessing/TourProcessingDriverAssignmentReport.jsx';
 import TourProcessingAutoAssignmentInfoModal from '../../components/tourProcessing/TourProcessingAutoAssignmentInfoModal.jsx';
 import TourProcessingFinalCommissionDialog from '../../components/tourProcessing/TourProcessingFinalCommissionDialog.jsx';
 import TourProcessingSplitModeDialog from '../../components/tourProcessing/TourProcessingSplitModeDialog.jsx';
-import { NEEDS_MULTIPLE_TRIPS, TOUR_RULE_FILTERS } from '../../components/tourProcessing/tourRuleFilters.js';
+import { TOUR_RULE_FILTERS } from '../../components/tourProcessing/tourRuleFilters.js';
 import TourProcessingDraftDaysDetailPanel from '../../components/tourProcessing/TourProcessingDraftDaysDetailPanel.jsx';
 import TourProcessingDraftDriverScheduleView from '../../components/tourProcessing/TourProcessingDraftDriverScheduleView.jsx';
 import TourProcessingDraftTourControlView from '../../components/tourProcessing/TourProcessingDraftTourControlView.jsx';
@@ -141,7 +143,26 @@ const alertActionButtonSx = (theme) => ({
 const INITIAL_SORTING = [{ id: 'rowNumber', desc: false }];
 const INITIAL_PAGE_SIZE = 50;
 const TABLE_STORAGE_KEY = 'tour-processing-draft-rows-table-state-v3';
+const RULE_STORAGE_KEY = 'tour-processing-draft-rows-rule';
 const INITIAL_COLUMN_VISIBILITY = { rowNumber: false };
+
+function readStoredRule() {
+    try {
+        const stored = localStorage.getItem(RULE_STORAGE_KEY);
+        return TOUR_RULE_FILTERS.some((option) => option.code === stored) ? stored : '';
+    } catch {
+        return '';
+    }
+}
+
+function writeStoredRule(rule) {
+    try {
+        if (rule) localStorage.setItem(RULE_STORAGE_KEY, rule);
+        else localStorage.removeItem(RULE_STORAGE_KEY);
+    } catch {
+        return;
+    }
+}
 const FILTERABLE_COLUMNS = new Set([
     'rowNumber', 'number', 'approvalStatus', 'driver', 'vehicle', 'passengers', 'executingUnit', 'responsible',
     'destination', 'durationDays', 'priority', 'modality', 'observations',
@@ -347,7 +368,7 @@ export default function TourProcessingDraftPage() {
     const [assignmentReportOpen, setAssignmentReportOpen] = useState(false);
     const [errorsOpen, setErrorsOpen] = useState(false);
     const [rejectIncompleteOpen, setRejectIncompleteOpen] = useState(false);
-    const [rule, setRule] = useState('');
+    const [rule, setRule] = useState(readStoredRule);
     const requestedTab = searchParams.get('tab');
     const viewTab = ['horas-extra', 'control-giras'].includes(requestedTab) ? requestedTab : 'rows';
 
@@ -403,6 +424,7 @@ export default function TourProcessingDraftPage() {
         error: rowsError,
         totalElements,
     } = useTourProcessingDraftRows(draftId, { ...requestParams, rule }, { enabled: viewTab === 'rows' });
+    const { problemsByRowId } = useTourProcessingDraftRowProblems(draftId, { enabled: viewTab === 'rows' });
 
     const finishMutation = useMutation({
         mutationFn: () => finishTourProcessingDraft(draftId),
@@ -641,13 +663,8 @@ export default function TourProcessingDraftPage() {
             grow: false,
             Cell: ({ cell, row }) => (
                 <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, maxWidth: '100%' }}>
+                    <TourProblemsIndicator problems={problemsByRowId[row.original.id]} />
                     {cell.getValue()}
-                    <TourObservationMatchIndicator
-                        draftId={draftId}
-                        row={row.original}
-                        canReview={draft?.status === 'DRAFT' && canEditTours}
-                        onReviewed={handleObservationReviewed}
-                    />
                 </Box>
             ),
         },
@@ -721,7 +738,6 @@ export default function TourProcessingDraftPage() {
                             kind="vehicle"
                             value={row.original.resourceType === 'BORROWED_VEHICLE' ? row.original.borrowedVehiclePlate : cell.getValue()}
                             missing={ownVehicle && isVehicleMissing(cell.getValue())}
-                            unavailable={ownVehicle && isVehicleUnavailable(cell.getValue())}
                         />
                         {warning && (
                             <Tooltip title={warning} placement="top">
@@ -766,17 +782,25 @@ export default function TourProcessingDraftPage() {
             header: 'Observaciones',
             size: 320,
             grow: false,
-            Cell: ({ cell }) => {
+            Cell: ({ cell, row }) => {
                 const value = cell.getValue();
                 if (!value) return '—';
                 return (
-                    <Tooltip title={value} placement="top-start">
-                        <Typography noWrap sx={{ fontSize: 'inherit', maxWidth: 300 }}>{value}</Typography>
-                    </Tooltip>
+                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, maxWidth: '100%' }}>
+                        <TourObservationMatchIndicator
+                            draftId={draftId}
+                            row={row.original}
+                            canReview={draft?.status === 'DRAFT' && canEditTours}
+                            onReviewed={handleObservationReviewed}
+                        />
+                        <Tooltip title={value} placement="top-start">
+                            <Typography noWrap sx={{ fontSize: 'inherit', maxWidth: 300 }}>{value}</Typography>
+                        </Tooltip>
+                    </Box>
                 );
             },
         },
-    ], [isDriverMissing, isVehicleMissing, isVehicleUnavailable, draftId, draft?.status, canEditTours, handleObservationReviewed]);
+    ], [isDriverMissing, isVehicleMissing, isVehicleUnavailable, draftId, draft?.status, canEditTours, handleObservationReviewed, problemsByRowId]);
 
     const openRowModal = useCallback((mode, row) => setRowModal({ open: true, mode, row, rowId: row?.id ?? null }), []);
     const openRowModalById = useCallback((mode, rowId) => setRowModal({ open: true, mode, row: null, rowId }), []);
@@ -937,6 +961,7 @@ export default function TourProcessingDraftPage() {
 
     const applyRule = (next) => {
         setRule(next);
+        writeStoredRule(next);
         tableOptions.onPaginationChange((current) => (current.pageIndex === 0 ? current : { ...current, pageIndex: 0 }));
     };
 
@@ -1195,24 +1220,17 @@ export default function TourProcessingDraftPage() {
                             <TextField
                                 select
                                 size="small"
-                                label="Mostrar giras que no cumplen..."
+                                label="Filtros al mostrar giras"
                                 value={rule}
                                 onChange={(event) => applyRule(event.target.value)}
+                                slotProps={{ inputLabel: { shrink: true }, select: { displayEmpty: true } }}
                                 sx={{ minWidth: 320 }}
                             >
-                                <MenuItem value="">Todas</MenuItem>
+                                <MenuItem value="">Mostrar todas</MenuItem>
                                 {TOUR_RULE_FILTERS.map((option) => (
                                     <MenuItem key={option.code} value={option.code}>{option.label}</MenuItem>
                                 ))}
                             </TextField>
-                            <Chip
-                                label={`Necesitan más de un viaje (${oversizedRows})`}
-                                color={rule === NEEDS_MULTIPLE_TRIPS ? 'warning' : 'default'}
-                                variant={rule === NEEDS_MULTIPLE_TRIPS ? 'filled' : 'outlined'}
-                                clickable
-                                onClick={() => applyRule(rule === NEEDS_MULTIPLE_TRIPS ? '' : NEEDS_MULTIPLE_TRIPS)}
-                                onDelete={rule === NEEDS_MULTIPLE_TRIPS ? () => applyRule('') : undefined}
-                            />
                         </Stack>
                     <DraftRowsTable
                         columns={columns}
@@ -1259,7 +1277,8 @@ export default function TourProcessingDraftPage() {
                 type="warning"
                 title="Esta gira rompe algunas reglas"
                 message={approvalWarnings.map((warning) => `${warning.title}\n${warning.message}`).join('\n\n')}
-                cancelLabel="Revisar"
+                cancelLabel="Cancelar"
+                cancelAtStart
                 confirmLabel={changingApproval ? 'Guardando...' : 'Guardar de todos modos'}
                 onConfirm={confirmApprovalWarnings}
                 onClose={() => {

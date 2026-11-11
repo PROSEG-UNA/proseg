@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AppTheme from '../../../../../common/theme/AppTheme';
 import TourProcessingDraftPage from '../TourProcessingDraftPage.jsx';
-import { checkTourProcessingDraftFinalCommission, exportTourProcessingDraftFinalCommission, fetchTourProcessingDraftRow, fetchTourProcessingDraftRows, finishTourProcessingDraft, previewTourProcessingDraftApprovalWarnings, rejectTourProcessingDraftIncompleteTours, reopenTourProcessingDraft, updateTourProcessingDraftRowApprovalStatus } from '../../../services/tourProcessing/tourProcessingService.js';
+import { checkTourProcessingDraftFinalCommission, exportTourProcessingDraftFinalCommission, fetchTourProcessingDraftRow, fetchTourProcessingDraftRowProblems, fetchTourProcessingDraftRows, finishTourProcessingDraft, previewTourProcessingDraftApprovalWarnings, rejectTourProcessingDraftIncompleteTours, reopenTourProcessingDraft, updateTourProcessingDraftRowApprovalStatus } from '../../../services/tourProcessing/tourProcessingService.js';
 import { queryKeys } from '../../../../../common/query';
 
 const granted = vi.hoisted(() => ({ permissions: null }));
@@ -18,9 +18,14 @@ vi.mock('../../../../../common/hooks/index.js', () => ({
 }));
 
 vi.mock('../../../../../common/components/TablaBase.jsx', () => ({
-    default: ({ data, renderRowActions }) => <div>{data.map((item) => (
+    default: ({ data, columns, renderRowActions }) => <div>{data.map((item) => (
         <section key={item.id} data-testid={`row-${item.id}`}>
             <span>{item.approvalStatus}</span>
+            {columns.filter((column) => column.accessorKey === 'number' || column.accessorKey === 'observations').map((column) => (
+                <div key={column.id ?? column.accessorKey} data-testid={`cell-${column.id ?? column.accessorKey}-${item.id}`}>
+                    {column.Cell({ cell: { getValue: () => item[column.accessorKey] }, row: { original: item } })}
+                </div>
+            ))}
             {renderRowActions({ row: { original: item } })}
         </section>
     ))}</div>,
@@ -46,6 +51,7 @@ vi.mock('../../../services/tourProcessing/tourProcessingService.js', () => ({
     fetchTourProcessingDraft: vi.fn(),
     fetchTourProcessingDraftRows: vi.fn(),
     fetchTourProcessingDraftRow: vi.fn(),
+    fetchTourProcessingDraftRowProblems: vi.fn(async () => ({})),
     checkTourProcessingDraftFinalCommission: vi.fn(),
     exportTourProcessingDraftFinalCommission: vi.fn(),
     rejectTourProcessingDraftIncompleteTours: vi.fn(),
@@ -257,6 +263,32 @@ describe('aprobación de filas', () => {
         expect(previewTourProcessingDraftApprovalWarnings).not.toHaveBeenCalled();
     });
 
+    it('muestra el ícono de problemas solo en las giras con problemas y las coincidencias junto a la observación', async () => {
+        fetchTourProcessingDraftRowProblems.mockResolvedValueOnce({
+            'row-1': [{ title: 'Vehículos no disponibles asignados a giras', detail: 'Gira 100: vehículo 301-295 no está disponible' }],
+        });
+        fetchTourProcessingDraftRows.mockReset();
+        fetchTourProcessingDraftRows.mockResolvedValueOnce({
+            content: [
+                { id: 'row-1', number: '100', approvalStatus: 'APPROVED', observations: 'SE REQUIERE chofer', matchedObservationKeywords: ['requiere'], vehicle: '301-295' },
+                { id: 'row-2', number: '200', approvalStatus: 'APPROVED', observations: 'Sin novedad', matchedObservationKeywords: [] },
+            ],
+            totalElements: 2,
+        });
+        fetchTourProcessingDraftRows.mockImplementation(() => new Promise(() => {}));
+        renderDraftPage();
+
+        const firstNumber = await screen.findByTestId('cell-number-row-1');
+        expect(firstNumber).toHaveTextContent('100');
+        expect(await within(firstNumber).findByRole('button', { name: /Problemas de la gira: Vehículos no disponibles asignados a giras/ })).toBeInTheDocument();
+        expect(within(screen.getByTestId('cell-number-row-2')).queryByRole('button')).toBeNull();
+        expect(screen.queryByText('No disponible')).toBeNull();
+
+        const firstObservation = screen.getByTestId('cell-observations-row-1');
+        expect(within(firstObservation).getByRole('button', { name: 'Coincidencias en la observación: requiere' })).toBeInTheDocument();
+        expect(within(screen.getByTestId('cell-observations-row-2')).queryByRole('button')).toBeNull();
+    });
+
     it('avisa al aprobar y guarda solo si se confirma', async () => {
         previewTourProcessingDraftApprovalWarnings.mockResolvedValue([
             { code: 'DRIVER_OVERLAP', title: 'Choferes con giras que se cruzan', message: 'Ana: giras 100 y 200 (04/05/2026)' },
@@ -275,7 +307,7 @@ describe('aprobación de filas', () => {
         expect(screen.getByText(/Ana: giras 100 y 200/)).toBeInTheDocument();
         expect(updateTourProcessingDraftRowApprovalStatus).not.toHaveBeenCalled();
 
-        await userEvent.click(screen.getByRole('button', { name: 'Revisar' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
         expect(updateTourProcessingDraftRowApprovalStatus).not.toHaveBeenCalled();
         await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Esta gira rompe algunas reglas' })).not.toBeInTheDocument());
 
@@ -331,15 +363,38 @@ describe('comisión final y errores', () => {
         await waitFor(() => expect(rejectTourProcessingDraftIncompleteTours).toHaveBeenCalledWith('draft-1'));
     });
 
+    it('guarda el filtro elegido y lo recupera al recargar la página, y descarta valores que ya no existen', async () => {
+        granted.permissions = ['LEER_GIRAS'];
+        const { unmount } = renderDraftPage();
+
+        await userEvent.click(await screen.findByRole('combobox', { name: /Filtros al mostrar giras/ }));
+        await userEvent.click(await screen.findByRole('option', { name: 'Presentan algún problema' }));
+        expect(localStorage.getItem('tour-processing-draft-rows-rule')).toBe('ANY');
+        unmount();
+
+        fetchTourProcessingDraftRows.mockClear();
+        renderDraftPage();
+        await waitFor(() => expect(fetchTourProcessingDraftRows).toHaveBeenCalledWith('draft-1', expect.objectContaining({ rule: 'ANY' })));
+        expect(await screen.findByRole('combobox', { name: /Filtros al mostrar giras/ })).toHaveTextContent('Presentan algún problema');
+        cleanup();
+
+        localStorage.setItem('tour-processing-draft-rows-rule', 'PLATE_REPEATED_SAME_DAY');
+        fetchTourProcessingDraftRows.mockClear();
+        renderDraftPage();
+        await waitFor(() => expect(fetchTourProcessingDraftRows).toHaveBeenCalledWith('draft-1', expect.objectContaining({ rule: '' })));
+        expect(await screen.findByRole('combobox', { name: /Filtros al mostrar giras/ })).toHaveTextContent('Mostrar todas');
+    });
+
     it('filtra en el servidor por una condición y por las giras que necesitan más de un viaje', async () => {
         granted.permissions = ['LEER_GIRAS'];
         renderDraftPage();
 
-        await userEvent.click(await screen.findByRole('combobox', { name: 'Mostrar giras que no cumplen...' }));
-        await userEvent.click(await screen.findByRole('option', { name: 'Cualquier regla' }));
+        await userEvent.click(await screen.findByRole('combobox', { name: /Filtros al mostrar giras/ }));
+        await userEvent.click(await screen.findByRole('option', { name: 'Presentan algún problema' }));
         await waitFor(() => expect(fetchTourProcessingDraftRows).toHaveBeenCalledWith('draft-1', expect.objectContaining({ rule: 'ANY' })));
 
-        await userEvent.click(screen.getByRole('button', { name: /Necesitan más de un viaje/ }));
+        await userEvent.click(screen.getByRole('combobox', { name: /Filtros al mostrar giras/ }));
+        await userEvent.click(await screen.findByRole('option', { name: 'Más de un viaje y sin atender' }));
         await waitFor(() => expect(fetchTourProcessingDraftRows).toHaveBeenCalledWith('draft-1', expect.objectContaining({ rule: 'NEEDS_MULTIPLE_TRIPS' })));
     });
 });

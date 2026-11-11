@@ -4,6 +4,7 @@ import {
     fetchTourProcessingDraftDriverSchedule,
     fetchTourProcessingDraftDriverSummaries,
     fetchTourProcessingDraftRow,
+    fetchTourProcessingDraftRowProblems,
     fetchTourProcessingDraftRows,
     fetchTourProcessingDraftSchedule,
     fetchTourProcessingDraftTourControl,
@@ -11,6 +12,8 @@ import {
 } from '../services/tourProcessing/tourProcessingService';
 import { getFriendlyApiErrorMessage } from '../../../common/utils';
 import { keepPreviousPage, queryKeys } from '../../../common/query';
+
+const EMPTY_PROBLEMS = Object.freeze({});
 
 function mapDraftToRow(draft) {
     return {
@@ -97,6 +100,16 @@ export function useTourProcessingDraftRows(draftId, { pageIndex = 0, pageSize = 
         error: error ? getFriendlyApiErrorMessage(error, 'No se pudieron cargar las filas del borrador') : null,
         totalElements: data?.totalElements ?? 0,
     };
+}
+
+export function useTourProcessingDraftRowProblems(draftId, { enabled = true } = {}) {
+    const { data } = useQuery({
+        queryKey: queryKeys.transport.tourProcessingDraftRowProblems(draftId),
+        queryFn: () => fetchTourProcessingDraftRowProblems(draftId),
+        enabled: Boolean(draftId) && enabled,
+    });
+
+    return { problemsByRowId: data ?? EMPTY_PROBLEMS };
 }
 
 export async function loadTourProcessingDraftRow(draftId, rowId) {
