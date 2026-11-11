@@ -72,6 +72,22 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, transportRoute + "/observation-keywords/**")
                         .hasAuthority(Privileges.Tours.ELIMINAR)
 
+                        .requestMatchers(HttpMethod.GET, transportRoute + "/tour-split/**")
+                        .hasAnyAuthority(
+                                Privileges.Tours.LEER,
+                                Privileges.Tours.IMPORTAR,
+                                Privileges.Tours.CREAR,
+                                Privileges.Tours.EDITAR,
+                                Privileges.Tours.ELIMINAR,
+                                Privileges.Tours.EXPORTAR
+                        )
+                        .requestMatchers(HttpMethod.POST, transportRoute + "/tour-split/**")
+                        .hasAuthority(Privileges.Tours.EDITAR)
+                        .requestMatchers(HttpMethod.PUT, transportRoute + "/tour-split/**")
+                        .hasAuthority(Privileges.Tours.EDITAR)
+                        .requestMatchers(HttpMethod.DELETE, transportRoute + "/tour-split/**")
+                        .hasAuthority(Privileges.Tours.ELIMINAR)
+
                         .requestMatchers(HttpMethod.GET, transportRoute + "/tour-processing/imports/schema")
                         .hasAuthority(Privileges.Tours.IMPORTAR)
                         .requestMatchers(
