@@ -352,7 +352,8 @@ function TourProcessingDraftRowDayCard({ day, draftId, rowId, canEdit, onSaved }
                 type="warning"
                 title="Esta gira rompe algunas reglas"
                 message={ruleWarningMessage(ruleWarnings)}
-                cancelLabel="Revisar"
+                cancelLabel="Cancelar"
+                cancelAtStart
                 confirmLabel={saving ? 'Guardando...' : 'Guardar de todos modos'}
                 onConfirm={confirmRuleWarnings}
                 onClose={() => setRuleWarnings([])}
@@ -1180,7 +1181,8 @@ export default function TourProcessingDraftRowModal({ open, mode, row, loadingRo
                 type="warning"
                 title="Esta gira rompe algunas reglas"
                 message={ruleWarningMessage(ruleWarnings)}
-                cancelLabel="Revisar"
+                cancelLabel="Cancelar"
+                cancelAtStart
                 confirmLabel={saveMutation.isPending ? 'Guardando...' : 'Guardar de todos modos'}
                 onConfirm={confirmRuleWarnings}
                 onClose={() => {

@@ -90,6 +90,7 @@ export default function DialogModal({
     onConfirm,
     confirmLabel = 'Sí, continuar',
     cancelLabel,
+    cancelAtStart = false,
     extraActions = [],
 }) {
     const titleId = useId();
@@ -170,7 +171,11 @@ export default function DialogModal({
                 bgcolor: 'background.paper',
                 ...t.applyStyles('dark', { bgcolor: 'background.paper' }),
             })}>
-                <Button disableElevation onClick={onClose} sx={cancelBtnSx}>
+                <Button
+                    disableElevation
+                    onClick={onClose}
+                    sx={[cancelBtnSx, cancelAtStart && { mr: { sm: 'auto' } }]}
+                >
                     {resolvedCancelLabel}
                 </Button>
                 {extraActions.map((action) => (

@@ -422,7 +422,7 @@ describe('TourProcessingDraftRowModal cuando la gira rompe una regla', () => {
         expect(screen.getByText(/Ana: giras 100 y 200/)).toBeInTheDocument();
         expect(updateTourProcessingDraftRow).not.toHaveBeenCalled();
 
-        await userEvent.click(screen.getByRole('button', { name: 'Revisar' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
         expect(updateTourProcessingDraftRow).not.toHaveBeenCalled();
         await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Esta gira rompe algunas reglas' })).not.toBeInTheDocument());
 
