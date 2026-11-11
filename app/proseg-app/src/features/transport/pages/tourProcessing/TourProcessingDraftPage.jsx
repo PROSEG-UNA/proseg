@@ -468,7 +468,7 @@ export default function TourProcessingDraftPage() {
     });
 
     const splitOversizedMutation = useMutation({
-        mutationFn: (mode) => splitTourProcessingDraftOversizedRows(draftId, mode),
+        mutationFn: () => splitTourProcessingDraftOversizedRows(draftId),
         onSuccess: (splitRows) => {
             setSplitOversizedOpen(false);
             setAlert({ type: 'success', message: `Se dividieron ${splitRows} giras por la capacidad de sus vehículos. Revisa los viajes de cada gira y completa los choferes y vehículos que falten.` });
@@ -993,8 +993,8 @@ export default function TourProcessingDraftPage() {
         if (!deleteDuplicatesMutation.isPending) deleteDuplicatesMutation.mutate();
     };
 
-    const confirmSplitOversized = (mode) => {
-        if (!splitOversizedMutation.isPending) splitOversizedMutation.mutate(mode);
+    const confirmSplitOversized = () => {
+        if (!splitOversizedMutation.isPending) splitOversizedMutation.mutate();
     };
 
     const closeRowModal = () => setRowModal((current) => ({ ...current, open: false }));
@@ -1209,8 +1209,8 @@ export default function TourProcessingDraftPage() {
                 <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
                     <Tabs value={viewTab} onChange={handleViewTabChange} variant="scrollable" scrollButtons="auto">
                         <Tab value="rows" label="Filas" sx={{ textTransform: 'none', fontWeight: 700 }} />
-                        <Tab value="horas-extra" label="Solicitud de horas extra" sx={{ textTransform: 'none', fontWeight: 700 }} />
                         <Tab value="control-giras" label="Control de giras" sx={{ textTransform: 'none', fontWeight: 700 }} />
+                        <Tab value="horas-extra" label="Solicitud de horas extra" sx={{ textTransform: 'none', fontWeight: 700 }} />
                     </Tabs>
                 </Box>
 
