@@ -5,6 +5,7 @@ import com.proseg.common.api.response.PageResponse;
 import com.proseg.common.api.util.ApiResponseBuilder;
 import com.proseg.common.api.util.PageMapper;
 import com.proseg.common.specification.FilterConstants;
+import com.proseg.msvc_transport.dto.tourprocessing.TourProblemDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftCreateRequestDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftImportResponseDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftResponseDto;
@@ -96,6 +97,11 @@ public class TourProcessingController {
                 PageMapper.from(tourProcessingDraftService.findRows(id, search, columnFilters(allParams), rule, pageable)),
                 "Filas del borrador de depuración"
         );
+    }
+
+    @GetMapping("/drafts/{id}/row-problems")
+    public ResponseEntity<ApiResponse<Map<UUID, List<TourProblemDto>>>> findDraftRowProblems(@PathVariable UUID id) {
+        return ApiResponseBuilder.ok(tourProcessingDraftService.findRowProblems(id), "Problemas de las giras del borrador");
     }
 
     @GetMapping("/drafts/{id}/rows/{rowId}")

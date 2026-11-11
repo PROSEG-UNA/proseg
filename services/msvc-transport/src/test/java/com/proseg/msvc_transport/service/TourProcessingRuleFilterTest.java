@@ -52,6 +52,8 @@ class TourProcessingRuleFilterTest {
     private DraftTourStore tours;
     private TourProcessingDraftService service;
     private List<TourProcessingDraftTour> rows;
+    private List<Driver> roster;
+    private Vehicle bus;
     private TourProcessingDraftTour oversized;
     private TourProcessingDraftTour notApproved;
     private TourProcessingDraftTour incomplete;
@@ -73,12 +75,12 @@ class TourProcessingRuleFilterTest {
         CurrentUserResolver currentUser = mock(CurrentUserResolver.class);
         when(currentUser.resolve()).thenReturn("test");
 
-        List<Driver> roster = new ArrayList<>();
+        roster = new ArrayList<>();
         for (int index = 0; index < 16; index++) {
             roster.add(Driver.builder().id(UUID.randomUUID()).name("Chofer " + index).status("ACTIVE")
                     .organizationalUnit(DriverUnit.GENERAL_SERVICES).build());
         }
-        Vehicle bus = Vehicle.builder().id(UUID.randomUUID()).plate("301-481").capacity(30).available(true).build();
+        bus = Vehicle.builder().id(UUID.randomUUID()).plate("301-481").capacity(30).available(true).build();
         Vehicle small = Vehicle.builder().id(UUID.randomUUID()).plate("301-100").capacity(12).available(true).build();
         when(drivers.findAll()).thenReturn(roster);
         when(vehicles.findAll()).thenReturn(List.of(bus, small));
@@ -164,6 +166,46 @@ class TourProcessingRuleFilterTest {
         assertThat(ids.getAllValues()).filteredOn(matched -> matched != null)
                 .anySatisfy(matched -> assertThat(matched).contains(repeatedLeft.getId(), repeatedRight.getId()))
                 .anySatisfy(matched -> assertThat(matched).contains(incomplete.getId()).doesNotContain(oversized.getId()));
+    }
+
+    @Test
+    void multipleTripsRuleIncludesDividedToursAndNeedsMultipleTripsRuleIncludesHalfDividedOnes() {
+        TourProcessingDraftTour divided = tour(roster.get(0), bus, 10, TourApprovalStatus.APPROVED, LocalDate.of(2026, 10, 6), "9010");
+        divided.addAssignment(TourProcessingDraftAssignment.builder().id(UUID.randomUUID()).passengers(10)
+                .driver(roster.get(1).getName()).driverId(roster.get(1).getId()).vehicle(bus.getPlate()).vehicleId(bus.getId()).build());
+        TourProcessingDraftTour halfDivided = tour(roster.get(2), bus, 10, TourApprovalStatus.APPROVED, LocalDate.of(2026, 10, 7), "9011");
+        halfDivided.addAssignment(TourProcessingDraftAssignment.builder().id(UUID.randomUUID()).passengers(10).build());
+        rows.add(divided);
+        rows.add(halfDivided);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Collection<UUID>> ids = ArgumentCaptor.forClass(Collection.class);
+        service.findRows(draftId, null, Map.of(), "MULTIPLE_TRIPS", PageRequest.of(0, 20));
+        service.findRows(draftId, null, Map.of(), "NEEDS_MULTIPLE_TRIPS", PageRequest.of(0, 20));
+        verify(tours, org.mockito.Mockito.atLeastOnce()).findPage(eq(draftId), isNull(), eq(Map.of()), ids.capture(), any());
+        Collection<UUID> multiple = ids.getAllValues().get(0);
+        Collection<UUID> needing = ids.getAllValues().get(1);
+
+        assertThat(multiple).contains(divided.getId(), halfDivided.getId(), oversized.getId()).doesNotContain(notApproved.getId());
+        assertThat(needing).contains(halfDivided.getId(), oversized.getId()).doesNotContain(divided.getId());
+    }
+
+    @Test
+    void rowProblemsDescribeEveryProblemTourAndMatchTheAnyRuleFilter() {
+        var problems = service.findRowProblems(draftId);
+
+        assertThat(problems.get(oversized.getId())).extracting(problem -> problem.title()).contains("Necesita más de un viaje");
+        assertThat(problems.get(incomplete.getId())).extracting(problem -> problem.title()).contains("Sin chofer o sin vehículo");
+        assertThat(problems).doesNotContainKey(notApproved.getId());
+        assertThat(problems.values().stream().flatMap(List::stream).map(problem -> problem.title()))
+                .noneMatch(title -> title.contains("Placas repetidas"));
+
+        service.findRows(draftId, null, Map.of(), "ANY", PageRequest.of(0, 20));
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Collection<UUID>> ids = ArgumentCaptor.forClass(Collection.class);
+        verify(tours, org.mockito.Mockito.atLeastOnce()).findPage(eq(draftId), isNull(), eq(Map.of()), ids.capture(), any());
+        assertThat(ids.getAllValues()).filteredOn(matched -> matched != null)
+                .anySatisfy(matched -> assertThat(matched).containsExactlyInAnyOrderElementsOf(problems.keySet()));
     }
 
     @Test

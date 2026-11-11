@@ -1,5 +1,6 @@
 package com.proseg.msvc_transport.service;
 
+import com.proseg.msvc_transport.dto.tourprocessing.TourProblemDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftAssignmentDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftCreateRequestDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftImportResponseDto;
@@ -95,6 +96,10 @@ public class TourProcessingDraftService {
             DriverRejection.Reason.INVALID_SCHEDULE,
             DriverRejection.Reason.DAY_HOURS_EXCEEDED,
             DriverRejection.Reason.WEEKEND_WITHOUT_SURPLUS
+    );
+    private static final Set<TourAssignmentRules.RuleCode> FILTER_IGNORED_RULES = EnumSet.of(
+            TourAssignmentRules.RuleCode.PLATE_REPEATED_SAME_DAY,
+            TourAssignmentRules.RuleCode.PRIORITY_ONE_UNATTENDED
     );
     private final TourAssignmentRules assignmentRules = new TourAssignmentRules();
     private static final Locale SPANISH = Locale.forLanguageTag("es");
@@ -251,27 +256,79 @@ public class TourProcessingDraftService {
         List<Vehicle> vehicles = vehicleRepository.findAll();
         TourAssignmentRules.Snapshot snapshot = rulesSnapshot(draft, tours, null);
         if ("ANY".equals(rule)) {
-            Set<UUID> ids = new LinkedHashSet<>(assignmentRules.tourIdsViolating(snapshot, null));
+            return tourProblems(tours, vehicles, snapshot).keySet();
+        }
+        if ("MULTIPLE_TRIPS".equals(rule)) {
+            Set<UUID> ids = new LinkedHashSet<>();
             oversizedToursOf(tours, vehicles).forEach(tour -> ids.add(tour.getId()));
-            ids.addAll(assignmentRules.incompleteTourIds(snapshot));
-            ids.addAll(assignmentRules.partialTourIds(snapshot));
+            tours.stream().filter(TourProcessingDraftTour::isDistributed).forEach(tour -> ids.add(tour.getId()));
             return ids;
         }
         if ("NEEDS_MULTIPLE_TRIPS".equals(rule)) {
             Set<UUID> ids = new LinkedHashSet<>();
             oversizedToursOf(tours, vehicles).forEach(tour -> ids.add(tour.getId()));
+            ids.addAll(assignmentRules.partialTourIds(snapshot));
             return ids;
+        }
+        if ("PRIORITY_ONE_UNDER_MINIMUM".equals(rule)) {
+            return assignmentRules.priorityOneUnderMinimumTourIds(snapshot);
+        }
+        if ("PRIORITY_ONE_UNATTENDED".equals(rule)) {
+            return assignmentRules.priorityOneUnattendedTourIds(snapshot);
         }
         if ("INCOMPLETE".equals(rule)) {
             return assignmentRules.incompleteTourIds(snapshot);
-        }
-        if ("PARTIAL_DISTRIBUTION".equals(rule)) {
-            return assignmentRules.partialTourIds(snapshot);
         }
         try {
             return assignmentRules.tourIdsViolating(snapshot, TourAssignmentRules.RuleCode.valueOf(rule));
         } catch (IllegalArgumentException ex) {
             throw TransportException.badRequest("TOUR_RULE_FILTER_UNKNOWN", "No existe la condición " + rule);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public Map<UUID, List<TourProblemDto>> findRowProblems(UUID draftId) {
+        TourProcessingDraft draft = getDraft(draftId);
+        List<TourProcessingDraftTour> tours = tourRepository.findPrimariesByDraftId(draft.getId()).stream()
+                .filter(TourProcessingDraftTour::isPrimary)
+                .toList();
+        return tourProblems(tours, vehicleRepository.findAll(), rulesSnapshot(draft, tours, null));
+    }
+
+    private Map<UUID, List<TourProblemDto>> tourProblems(
+            List<TourProcessingDraftTour> tours,
+            List<Vehicle> vehicles,
+            TourAssignmentRules.Snapshot snapshot
+    ) {
+        Map<UUID, Set<TourProblemDto>> problems = new LinkedHashMap<>();
+        oversizedToursOf(tours, vehicles).forEach(tour -> addProblem(problems, tour.getId(), new TourProblemDto(
+                "Necesita más de un viaje",
+                "La gira lleva " + tour.getPassengers() + " pasajeros, más de los que caben en su vehículo, y no está dividida")));
+        Set<UUID> incompleteIds = assignmentRules.incompleteTourIds(snapshot);
+        tours.stream()
+                .filter(tour -> incompleteIds.contains(tour.getId()))
+                .forEach(tour -> addProblem(problems, tour.getId(), new TourProblemDto(
+                        "Sin chofer o sin vehículo",
+                        "La gira está aprobada pero ninguno de sus viajes tiene chofer y vehículo")));
+        Set<UUID> partialIds = assignmentRules.partialTourIds(snapshot);
+        tours.stream()
+                .filter(tour -> partialIds.contains(tour.getId()))
+                .forEach(tour -> addProblem(problems, tour.getId(), new TourProblemDto(
+                        "Viajes a medias",
+                        "Algunos viajes de la gira no tienen chofer o vehículo")));
+        for (TourAssignmentRules.RuleViolation violation : assignmentRules.evaluate(snapshot)) {
+            if (violation.tourId() != null && !FILTER_IGNORED_RULES.contains(violation.code())) {
+                addProblem(problems, violation.tourId(), new TourProblemDto(violation.title(), violation.message()));
+            }
+        }
+        Map<UUID, List<TourProblemDto>> result = new LinkedHashMap<>();
+        problems.forEach((tourId, found) -> result.put(tourId, List.copyOf(found)));
+        return result;
+    }
+
+    private static void addProblem(Map<UUID, Set<TourProblemDto>> problems, UUID tourId, TourProblemDto problem) {
+        if (tourId != null) {
+            problems.computeIfAbsent(tourId, id -> new LinkedHashSet<>()).add(problem);
         }
     }
 

@@ -122,6 +122,22 @@ public final class TourAssignmentRules {
         return idsOf(partial(snapshot));
     }
 
+    public Set<UUID> priorityOneUnderMinimumTourIds(Snapshot snapshot) {
+        return idsOf(snapshot.tours().stream()
+                .filter(tour -> Integer.valueOf(PRIORITY_ONE).equals(tour.getPriority()))
+                .filter(tour -> tour.getPassengers() != null && tour.getPassengers() < MIN_EXTERNAL_PASSENGERS)
+                .toList());
+    }
+
+    public Set<UUID> priorityOneUnattendedTourIds(Snapshot snapshot) {
+        Set<UUID> incomplete = incompleteTourIds(snapshot);
+        return idsOf(snapshot.tours().stream()
+                .filter(tour -> Integer.valueOf(PRIORITY_ONE).equals(tour.getPriority()))
+                .filter(tour -> tour.getPassengers() != null && tour.getPassengers() < MIN_EXTERNAL_PASSENGERS)
+                .filter(tour -> incomplete.contains(tour.getId()))
+                .toList());
+    }
+
     public Set<UUID> tourIdsViolating(Snapshot snapshot, RuleCode code) {
         Set<UUID> ids = new LinkedHashSet<>();
         for (RuleViolation violation : evaluate(snapshot)) {

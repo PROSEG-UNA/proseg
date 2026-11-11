@@ -2,6 +2,7 @@ package com.proseg.msvc_transport.service.rules;
 
 import com.proseg.msvc_transport.entity.Driver;
 import com.proseg.msvc_transport.entity.ResourceType;
+import com.proseg.msvc_transport.entity.TourApprovalStatus;
 import com.proseg.msvc_transport.entity.TourProcessingDraftAssignment;
 import com.proseg.msvc_transport.entity.TourProcessingDraftDay;
 import com.proseg.msvc_transport.entity.TourProcessingDraftTour;
@@ -124,6 +125,36 @@ class TourAssignmentRulesTest {
 
         assertThat(rules.tourIdsViolating(snapshot, RuleCode.DRIVER_OVERLAP)).containsExactlyInAnyOrder(left.getId(), right.getId());
         assertThat(rules.tourIdsViolating(snapshot, null)).contains(left.getId(), right.getId());
+    }
+
+    @Test
+    void priorityOneUnderMinimumReturnsEveryPriorityOneTourWithFewPassengers() {
+        TourProcessingDraftTour attended = tour(1, "100", "2026-05-06", "08:00", "12:00", ana, bus, 3);
+        attended.setPriority(1);
+        TourProcessingDraftTour large = tour(2, "200", "2026-05-07", "08:00", "12:00", ana, bus, 10);
+        large.setPriority(1);
+        TourProcessingDraftTour otherPriority = tour(3, "300", "2026-05-08", "08:00", "12:00", ana, bus, 3);
+
+        assertThat(rules.priorityOneUnderMinimumTourIds(snapshot(List.of(attended, large, otherPriority), ManualDays.NONE)))
+                .containsExactly(attended.getId());
+    }
+
+    @Test
+    void priorityOneUnattendedIgnoresNotApprovedToursAndOnlyCountsApprovedOnesWithoutDriverOrVehicle() {
+        TourProcessingDraftTour attended = tour(1, "100", "2026-05-06", "08:00", "12:00", ana, bus, 3);
+        attended.setPriority(1);
+        TourProcessingDraftTour withoutDriver = tour(2, "200", "2026-05-07", "08:00", "12:00", ana, bus, 3);
+        withoutDriver.setPriority(1);
+        withoutDriver.primaryAssignment().setDriver(null);
+        withoutDriver.primaryAssignment().setDriverId(null);
+        TourProcessingDraftTour notApproved = tour(3, "300", "2026-05-08", "08:00", "12:00", ana, bus, 3);
+        notApproved.setPriority(1);
+        notApproved.setApprovalStatus(TourApprovalStatus.NOT_APPROVED);
+        notApproved.primaryAssignment().setDriver(null);
+        notApproved.primaryAssignment().setDriverId(null);
+
+        assertThat(rules.priorityOneUnattendedTourIds(snapshot(List.of(attended, withoutDriver, notApproved), ManualDays.NONE)))
+                .containsExactly(withoutDriver.getId());
     }
 
     private TourAssignmentRules.Snapshot snapshot(List<TourProcessingDraftTour> tours, ManualDays manualDays) {
