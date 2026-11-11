@@ -33,6 +33,8 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
+import static org.mockito.Mockito.never;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -86,7 +88,10 @@ class FinalCommissionServiceTest {
             assertThat(issue.getCode()).isEqualTo("PARTIAL_DISTRIBUTION");
             assertThat(issue.getDetails()).containsExactly("Gira 4001 (04/05/2026): viajes sin chofer o vehículo: 2 de 2");
         });
-        assertThatThrownBy(() -> service.report(draftId)).isInstanceOf(TransportException.class);
+        assertThat(service.report(draftId).getTours()).singleElement()
+                .extracting(FinalCommissionReportDto.Tour::getCategory)
+                .isEqualTo(FinalCommissionService.NOT_APPROVED_CATEGORY);
+        assertThat(split.getApprovalStatus()).isEqualTo(TourApprovalStatus.APPROVED);
         assertThatThrownBy(() -> service.rejectIncompleteTours(draftId)).isInstanceOf(TransportException.class);
     }
 
@@ -135,13 +140,31 @@ class FinalCommissionServiceTest {
         assertThat(check.getBlockers()).isEmpty();
         assertThat(check.getErrors()).isEmpty();
         assertThat(check.getRejections().getDetails()).containsExactly("Gira 4003 (05/05/2026), prioridad 2, 3 pasajeros: sin vehículo");
-        assertThatThrownBy(() -> service.report(draftId)).isInstanceOf(TransportException.class);
+        assertThat(service.report(draftId).getTours())
+                .extracting(FinalCommissionReportDto.Tour::getNumber, FinalCommissionReportDto.Tour::getCategory)
+                .containsExactly(tuple("4002", "INTERNAL"), tuple("4003", FinalCommissionService.NOT_APPROVED_CATEGORY));
+        assertThat(withoutVehicle.getApprovalStatus()).isEqualTo(TourApprovalStatus.APPROVED);
 
         assertThat(service.rejectIncompleteTours(draftId)).isEqualTo(1);
         assertThat(withoutVehicle.getApprovalStatus()).isEqualTo(TourApprovalStatus.NOT_APPROVED);
         assertThat(complete.getApprovalStatus()).isEqualTo(TourApprovalStatus.APPROVED);
         verify(tourStore).saveAll(List.of(withoutVehicle));
         verify(draftHoursService).syncChanged(any(), any(), any());
+    }
+
+    @Test
+    void reportsAnIncompleteTourAsNotApprovedWithoutSavingThatStatus() {
+        TourProcessingDraftTour incomplete = tour("4014", 1, 4, "2026-05-06");
+        incomplete.addAssignment(part(4));
+        when(tourStore.findPrimariesByDraftId(draftId)).thenReturn(List.of(incomplete));
+
+        FinalCommissionReportDto report = service.report(draftId);
+
+        assertThat(report.getTours()).singleElement()
+                .extracting(FinalCommissionReportDto.Tour::getNumber, FinalCommissionReportDto.Tour::getCategory)
+                .containsExactly("4014", FinalCommissionService.NOT_APPROVED_CATEGORY);
+        assertThat(incomplete.getApprovalStatus()).isEqualTo(TourApprovalStatus.APPROVED);
+        verify(tourStore, never()).saveAll(any());
     }
 
     @Test

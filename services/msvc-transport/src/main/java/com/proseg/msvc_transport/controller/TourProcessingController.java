@@ -88,11 +88,12 @@ public class TourProcessingController {
     public ResponseEntity<ApiResponse<PageResponse<TourProcessingDraftRowResponseDto>>> findDraftRows(
             @PathVariable UUID id,
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String rule,
             @RequestParam Map<String, String> allParams,
             @PageableDefault(size = 10, page = 0) Pageable pageable
     ) {
         return ApiResponseBuilder.ok(
-                PageMapper.from(tourProcessingDraftService.findRows(id, search, columnFilters(allParams), pageable)),
+                PageMapper.from(tourProcessingDraftService.findRows(id, search, columnFilters(allParams), rule, pageable)),
                 "Filas del borrador de depuración"
         );
     }
@@ -313,6 +314,7 @@ public class TourProcessingController {
     private Map<String, String> columnFilters(Map<String, String> allParams) {
         Map<String, String> filters = new HashMap<>(allParams);
         FilterConstants.RESERVED_PARAMS.forEach(filters::remove);
+        filters.remove("rule");
         return filters;
     }
 }

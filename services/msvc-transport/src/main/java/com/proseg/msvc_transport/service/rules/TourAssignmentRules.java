@@ -114,6 +114,14 @@ public final class TourAssignmentRules {
         return evaluate(snapshot).stream().filter(violation -> violation.code() == code).toList();
     }
 
+    public Set<UUID> incompleteTourIds(Snapshot snapshot) {
+        return idsOf(incomplete(snapshot));
+    }
+
+    public Set<UUID> partialTourIds(Snapshot snapshot) {
+        return idsOf(partial(snapshot));
+    }
+
     public Set<UUID> tourIdsViolating(Snapshot snapshot, RuleCode code) {
         Set<UUID> ids = new LinkedHashSet<>();
         for (RuleViolation violation : evaluate(snapshot)) {
@@ -395,6 +403,24 @@ public final class TourAssignmentRules {
                 .filter(TourProcessingDraftTour::isApproved)
                 .filter(tour -> tour.getAssignments().stream().noneMatch(part -> isComplete(part, snapshot)))
                 .toList();
+    }
+
+    private List<TourProcessingDraftTour> partial(Snapshot snapshot) {
+        return snapshot.tours().stream()
+                .filter(TourProcessingDraftTour::isApproved)
+                .filter(tour -> tour.getAssignments().stream().anyMatch(part -> isComplete(part, snapshot))
+                        && tour.getAssignments().stream().anyMatch(part -> !isComplete(part, snapshot)))
+                .toList();
+    }
+
+    private static Set<UUID> idsOf(List<TourProcessingDraftTour> tours) {
+        Set<UUID> ids = new LinkedHashSet<>();
+        for (TourProcessingDraftTour tour : tours) {
+            if (tour.getId() != null) {
+                ids.add(tour.getId());
+            }
+        }
+        return ids;
     }
 
     private boolean isComplete(TourProcessingDraftAssignment part, Snapshot snapshot) {
