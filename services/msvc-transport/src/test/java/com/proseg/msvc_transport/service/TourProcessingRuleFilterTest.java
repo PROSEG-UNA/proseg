@@ -12,6 +12,8 @@ import com.proseg.msvc_transport.entity.Vehicle;
 import com.proseg.msvc_transport.repository.BorrowedVehicleRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
 import com.proseg.msvc_transport.repository.ObservationKeywordRepository;
+import com.proseg.msvc_transport.repository.TourSplitKeywordRepository;
+import com.proseg.msvc_transport.repository.TourSplitSettingRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftAssignmentRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftRepository;
@@ -129,7 +131,8 @@ class TourProcessingRuleFilterTest {
                 currentUser,
                 Validation.buildDefaultValidatorFactory().getValidator(),
                 mock(JdbcTemplate.class),
-                keywords
+                keywords,
+                new TourSplitModeResolver(mock(TourSplitKeywordRepository.class), mock(TourSplitSettingRepository.class))
         );
     }
 

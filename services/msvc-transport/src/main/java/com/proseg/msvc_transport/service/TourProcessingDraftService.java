@@ -80,6 +80,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 @Service
@@ -121,6 +122,7 @@ public class TourProcessingDraftService {
     private final Validator validator;
     private final JdbcTemplate jdbc;
     private final ObservationKeywordRepository observationKeywordRepository;
+    private final TourSplitModeResolver splitModeResolver;
 
     public TourProcessingImportSchemaDto getImportSchema() {
         List<TourProcessingImportColumnDto> columns = Arrays.stream(TransportImportField.values())
@@ -801,11 +803,6 @@ public class TourProcessingDraftService {
 
     @Transactional
     public int splitOversizedRows(UUID draftId) {
-        return splitOversizedRows(draftId, TourSplitMode.DISTINCT_VEHICLES);
-    }
-
-    @Transactional
-    public int splitOversizedRows(UUID draftId, TourSplitMode mode) {
         TourProcessingDraft draft = getEditableDraft(draftId);
         List<TourProcessingDraftTour> tours = tourRepository.findAllByDraftIdOrderByRowNumberAsc(draftId);
         Map<UUID, Set<DraftHoursService.WorkloadSlot>> slotsBefore = DraftHoursService.workloadSlots(assignmentsOf(tours));
@@ -822,7 +819,8 @@ public class TourProcessingDraftService {
                 partsNeeded(tour.getPassengers(), capacityOf(tour.primaryAssignment(), vehiclesById, fleetMaximum))));
         ensureAssignmentLimit(tours, partsByTour.values().stream().mapToInt(parts -> parts - 1).sum());
 
-        partsByTour.forEach((tour, parts) -> splitIntoParts(tour, parts, mode));
+        Function<String, TourSplitMode> modeByDestination = splitModeResolver.byDestination();
+        partsByTour.forEach((tour, parts) -> splitIntoParts(tour, parts, modeByDestination.apply(tour.getDestination())));
         tourRepository.flush();
         markDuplicates(tours);
         summarize(draft, tours);

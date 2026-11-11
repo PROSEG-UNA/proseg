@@ -26,6 +26,10 @@ import com.proseg.msvc_transport.entity.Driver;
 import com.proseg.msvc_transport.entity.ObservationKeyword;
 import com.proseg.msvc_transport.entity.ResourceType;
 import com.proseg.msvc_transport.entity.TourApprovalStatus;
+import com.proseg.msvc_transport.entity.TourSplitKeyword;
+import com.proseg.msvc_transport.entity.TourSplitSetting;
+import com.proseg.msvc_transport.repository.TourSplitKeywordRepository;
+import com.proseg.msvc_transport.repository.TourSplitSettingRepository;
 import com.proseg.msvc_transport.entity.UlloaShift;
 import com.proseg.msvc_transport.entity.Vehicle;
 import com.proseg.msvc_transport.entity.VehicleType;
@@ -80,6 +84,8 @@ class TourProcessingDraftServiceTest {
     private OvertimeRequestReportService overtimeRequestReportService;
     private InMemoryBusinessDays businessDays;
     private ObservationKeywordRepository observationKeywordRepository;
+    private TourSplitKeywordRepository splitKeywordRepository;
+    private TourSplitSettingRepository splitSettingRepository;
     private TourProcessingDraftService service;
 
     @BeforeEach
@@ -96,6 +102,8 @@ class TourProcessingDraftServiceTest {
         when(draftHoursService.manualDays(any())).thenReturn(ManualDays.NONE);
         overtimeRequestReportService = mock(OvertimeRequestReportService.class);
         observationKeywordRepository = mock(ObservationKeywordRepository.class);
+        splitKeywordRepository = mock(TourSplitKeywordRepository.class);
+        splitSettingRepository = mock(TourSplitSettingRepository.class);
         CurrentUserResolver currentUserResolver = mock(CurrentUserResolver.class);
         when(currentUserResolver.resolve()).thenReturn("aleja");
         when(draftRepository.save(any(TourProcessingDraft.class))).thenAnswer(invocation -> {
@@ -117,8 +125,22 @@ class TourProcessingDraftServiceTest {
                 currentUserResolver,
                 Validation.buildDefaultValidatorFactory().getValidator(),
                 mock(JdbcTemplate.class),
-                observationKeywordRepository
+                observationKeywordRepository,
+                new TourSplitModeResolver(splitKeywordRepository, splitSettingRepository)
         );
+    }
+
+    private void configureSplit(TourSplitMode defaultMode, TourSplitKeyword... keywords) {
+        when(splitSettingRepository.findAll()).thenReturn(List.of(TourSplitSetting.builder().defaultMode(defaultMode).build()));
+        when(splitKeywordRepository.findAll()).thenReturn(List.of(keywords));
+    }
+
+    private TourSplitKeyword splitKeyword(String text, TourSplitMode mode) {
+        return TourSplitKeyword.builder()
+                .text(text)
+                .normalizedText(ObservationKeywordMatcher.normalize(text))
+                .mode(mode)
+                .build();
     }
 
     @Test
@@ -1040,7 +1062,9 @@ class TourProcessingDraftServiceTest {
                 Vehicle.builder().id(UUID.randomUUID()).plate("301-295").type(VehicleType.SEDAN).capacity(30).build()
         ));
 
-        int split = service.splitOversizedRows(draft.getId(), TourSplitMode.SAME_DRIVER_AND_VEHICLE);
+        configureSplit(TourSplitMode.DISTINCT_VEHICLES, splitKeyword("San José", TourSplitMode.SAME_DRIVER_AND_VEHICLE));
+
+        int split = service.splitOversizedRows(draft.getId());
 
         assertThat(split).isEqualTo(1);
         assertThat(congress.getAssignments()).extracting(TourProcessingDraftAssignment::getPassengers).containsExactly(30, 30, 30, 30, 30);
@@ -1061,9 +1085,37 @@ class TourProcessingDraftServiceTest {
                 Vehicle.builder().id(UUID.randomUUID()).plate("301-295").type(VehicleType.SEDAN).capacity(30).build()
         ));
 
-        service.splitOversizedRows(draft.getId(), TourSplitMode.SAME_DRIVER_AND_VEHICLE);
+        configureSplit(TourSplitMode.SAME_DRIVER_AND_VEHICLE);
+
+        service.splitOversizedRows(draft.getId());
 
         assertThat(fifty.getAssignments()).extracting(TourProcessingDraftAssignment::getPassengers).containsExactly(25, 25);
+    }
+
+    @Test
+    void splitsEachTourWithTheModeOfItsDestinationAndTheDefaultModeWhenNoBankMatches() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        TourProcessingDraftTour repeating = entity(draft, 1, "100", "Congreso en San José");
+        repeating.setPassengers(60);
+        TourProcessingDraftTour distinct = entity(draft, 2, "200", "Cartago");
+        distinct.setPassengers(60);
+        TourProcessingDraftTour unlisted = entity(draft, 3, "300", "Limón");
+        unlisted.setPassengers(60);
+        stubDraft(draft, repeating, distinct, unlisted);
+        when(vehicleRepository.findAll()).thenReturn(List.of(
+                Vehicle.builder().id(UUID.randomUUID()).plate("301-295").type(VehicleType.SEDAN).capacity(30).build()
+        ));
+        configureSplit(
+                TourSplitMode.SAME_DRIVER_AND_VEHICLE,
+                splitKeyword("san jose", TourSplitMode.SAME_DRIVER_AND_VEHICLE),
+                splitKeyword("cartago", TourSplitMode.DISTINCT_VEHICLES)
+        );
+
+        service.splitOversizedRows(draft.getId());
+
+        assertThat(repeating.getAssignments()).extracting(TourProcessingDraftAssignment::getDriver).containsOnly("Daniel Zuniga");
+        assertThat(distinct.getAssignments()).extracting(TourProcessingDraftAssignment::getDriver).containsExactly("Daniel Zuniga", null);
+        assertThat(unlisted.getAssignments()).extracting(TourProcessingDraftAssignment::getDriver).containsOnly("Daniel Zuniga");
     }
 
     @Test
