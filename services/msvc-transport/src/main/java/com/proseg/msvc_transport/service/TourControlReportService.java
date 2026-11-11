@@ -170,7 +170,7 @@ public class TourControlReportService {
     ) {
         String plate = plateOf(part, vehiclesById);
         if (part.getResourceType() == ResourceType.EXTERNAL) {
-            return List.of(new Placement(tourEntry(EXTERNAL_SECTION, tour, part, plate), null));
+            return externalEntries(tour, part, plate);
         }
         Driver driver = DriverHoursRules.assignedDriver(part, driversById);
         if (DriverHoursRules.countsTowardOwnDriver(part, driver)) {
@@ -186,6 +186,19 @@ public class TourControlReportService {
                     .toList();
         }
         return List.of(new Placement(tourEntry(UNATTENDED_SECTION, tour, part, plate), null));
+    }
+
+    private List<Placement> externalEntries(TourProcessingDraftTour tour, TourProcessingDraftAssignment part, String plate) {
+        LocalDate lastDate = tour.getReturnDate() == null || tour.getReturnDate().isBefore(tour.getDepartureDate())
+                ? tour.getDepartureDate()
+                : tour.getReturnDate();
+        List<Placement> placements = new ArrayList<>();
+        for (LocalDate date = tour.getDepartureDate(); !date.isAfter(lastDate); date = date.plusDays(1)) {
+            TourControlReportDto.Entry entry = tourEntry(EXTERNAL_SECTION, tour, part, plate);
+            entry.setDate(date);
+            placements.add(new Placement(entry, null));
+        }
+        return placements;
     }
 
     private List<TourControlReportDto.Entry> dayEntries(
