@@ -84,5 +84,8 @@ export const queryKeys = {
         tourProcessingDraftDriverSchedule: (draftId, driverId, params) => [...queryKeys.transport.tourProcessingDraft(draftId), 'driver-schedule', driverId, params],
         observationKeywords: () => [...queryKeys.transport.root, 'observationKeywords'],
         observationKeywordList: (params) => [...queryKeys.transport.observationKeywords(), 'list', params],
+        tourSplit: () => [...queryKeys.transport.root, 'tourSplit'],
+        tourSplitKeywordList: (mode) => [...queryKeys.transport.tourSplit(), 'keywords', mode],
+        tourSplitSettings: () => [...queryKeys.transport.tourSplit(), 'settings'],
     },
 };

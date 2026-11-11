@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, Chip, CircularProgress, Typography } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
+import { Box, Typography } from '@mui/material';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { queryKeys } from '../../../../common/query';
 import { deleteObservationKeyword } from '../../services/observationKeywords/observationKeywordsService';
 import { useObservationKeywordsData } from '../../hooks/useObservationKeywordsData';
+import KeywordChipWell from './KeywordChipWell.jsx';
+import SettingsSectionHeader from './SettingsSectionHeader.jsx';
 
-export default function ObservationKeywordsField({ onEditKeyword }) {
+export default function ObservationKeywordsField({ onAddKeyword, onEditKeyword }) {
     const [alert, setAlert] = useState(null);
     const [keywordToDelete, setKeywordToDelete] = useState(null);
     const queryClient = useQueryClient();
@@ -32,61 +33,40 @@ export default function ObservationKeywordsField({ onEditKeyword }) {
     });
 
     return (
-        <>
-            <Box
-                role="group"
-                aria-label="Palabras clave en observaciones"
-                sx={{
-                    minHeight: 104,
-                    maxHeight: 240,
-                    overflowY: 'auto',
-                    p: 2,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    borderRadius: 2,
-                    bgcolor: 'background.paper',
-                    display: 'flex',
-                    alignContent: 'flex-start',
-                    alignItems: 'flex-start',
-                    flexWrap: 'wrap',
-                    gap: 1,
-                }}
+        <Box
+            component="section"
+            aria-labelledby="observation-keywords-title"
+            sx={{ p: { xs: 2, sm: 3 }, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'background.paperWarm' }}
+        >
+            <SettingsSectionHeader
+                titleId="observation-keywords-title"
+                title="Palabras clave en observaciones"
+                count={loading || error ? undefined : rows.length}
+                description="Las coincidencias aparecen junto al número de gira. Al pasar el cursor se muestra la palabra clave y puedes marcar la observación como revisada. No se distinguen mayúsculas ni tildes."
+                onAdd={canEdit ? onAddKeyword : undefined}
+                sx={{ mb: 2.5 }}
+            />
+            <KeywordChipWell
+                ariaLabel="Palabras clave en observaciones"
+                rows={rows}
+                loading={loading}
+                error={error}
+                onRetry={() => void refetch()}
+                canEdit={canEdit}
+                canDelete={canDelete}
+                onEdit={onEditKeyword}
+                onDelete={setKeywordToDelete}
+                loadingLabel="Cargando palabras clave"
+                emptyTitle="Todavía no hay palabras clave"
+                emptyHint={canEdit ? 'Usa Agregar para crear la primera.' : 'Aún no se ha creado ninguna.'}
+            />
+            <Typography
+                variant="caption"
+                role="status"
+                sx={{ display: 'block', mt: 0.75, minHeight: 18, color: 'text.secondary', visibility: fetching && !loading ? 'visible' : 'hidden' }}
             >
-                {loading ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CircularProgress size={18} />
-                        <Typography color="text.secondary">Cargando palabras clave...</Typography>
-                    </Box>
-                ) : error ? (
-                    <Alert severity="error" action={<Button color="inherit" size="small" onClick={() => void refetch()}>Reintentar</Button>}>
-                        {error}
-                    </Alert>
-                ) : rows.length === 0 ? (
-                    <Typography color="text.secondary">Todavía no hay palabras clave. Usa Agregar para crear la primera.</Typography>
-                ) : rows.map((keyword) => (
-                    <Chip
-                        key={keyword.id}
-                        label={keyword.text}
-                        onClick={canEdit ? () => onEditKeyword(keyword) : undefined}
-                        onDelete={canDelete ? () => setKeywordToDelete(keyword) : undefined}
-                        deleteIcon={canDelete ? <CloseIcon aria-label={`Eliminar ${keyword.text}`} /> : undefined}
-                        sx={(theme) => ({
-                            maxWidth: '100%',
-                            bgcolor: '#d1d5db',
-                            borderColor: '#9ca3af',
-                            '& .MuiChip-label, & .MuiChip-deleteIcon': { color: '#374151' },
-                            '&:hover': { bgcolor: '#c0c4cb' },
-                            ...theme.applyStyles('dark', {
-                                bgcolor: '#374151',
-                                borderColor: '#6b7280',
-                                '& .MuiChip-label, & .MuiChip-deleteIcon': { color: '#f3f4f6' },
-                                '&:hover': { bgcolor: '#4b5563' },
-                            }),
-                        })}
-                    />
-                ))}
-            </Box>
-            {fetching && !loading ? <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>Actualizando palabras clave...</Typography> : null}
+                Actualizando palabras clave...
+            </Typography>
             <DialogModal
                 type="delete"
                 open={Boolean(keywordToDelete)}
@@ -102,6 +82,6 @@ export default function ObservationKeywordsField({ onEditKeyword }) {
                 message={alert?.message}
                 onClose={() => setAlert(null)}
             />
-        </>
+        </Box>
     );
 }

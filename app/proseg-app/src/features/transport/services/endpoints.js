@@ -5,6 +5,7 @@ export const TRANSPORT_ENDPOINTS = {
     tourProcessing: '/api/v1/transport/tour-processing',
     tourProcessingDrafts: '/api/v1/transport/tour-processing/drafts',
     observationKeywords: '/api/v1/transport/observation-keywords',
+    tourSplit: '/api/v1/transport/tour-split',
 };
 
 export const TRANSPORT_DOCUMENT_ENDPOINTS = {
