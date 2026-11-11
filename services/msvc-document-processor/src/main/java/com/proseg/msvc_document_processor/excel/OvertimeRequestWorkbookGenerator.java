@@ -130,6 +130,7 @@ public class OvertimeRequestWorkbookGenerator {
             Styles styles = new Styles(workbook);
             List<DriverRows> driverRows = writeProjection(workbook.createSheet(PROJECTION_SHEET), report, styles);
             writeSummary(workbook.createSheet(SUMMARY_SHEET), driverRows, styles);
+            workbook.getCreationHelper().createFormulaEvaluator().evaluateAll();
             workbook.write(out);
             return out.toByteArray();
         } catch (IOException e) {

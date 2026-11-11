@@ -93,6 +93,11 @@ public class FinalCommissionWorkbookGenerator {
     private static final String SUMMARY_HOURS_TITLE = "GIRAS SOLICITADAS POR PRIORIDAD (HORAS REQUERIDAS DE SOBRESUELDO Y EXTRAS)";
     private static final String SUMMARY_NOTE = "Son la cantidad de horas extras requeridas.";
     private static final int SUMMARY_PRIORITIES = 10;
+    private static final int LEGEND_FIRST_ROW = 26;
+    private static final String LEGEND_TITLE = "COLOR DE LAS GIRAS POR PRIORIDAD";
+    private static final String LEGEND_PRIORITY_HEADER = "PRIORIDAD";
+    private static final String LEGEND_COLOR_HEADER = "COLOR";
+    private static final String LEGEND_OTHER_PRIORITIES = "8 o más";
 
     private static final String FONT = "Tenorite";
     private static final short FONT_SIZE = 11;
@@ -195,6 +200,7 @@ public class FinalCommissionWorkbookGenerator {
             workbook.setFirstVisibleTab(totalsIndex);
             workbook.getSheet(DRAFT_SHEET).setSelected(false);
             workbook.getSheet(TOTALS_SHEET).setSelected(true);
+            workbook.getCreationHelper().createFormulaEvaluator().evaluateAll();
             workbook.write(out);
             return out.toByteArray();
         } catch (IOException e) {
@@ -572,6 +578,26 @@ public class FinalCommissionWorkbookGenerator {
         writeFormula(sheet, totalRow, 19, "SUM(" + range(19, firstRow, totalRow - 1) + ")", styles.summaryKeyDecimalPercent(true));
 
         writeSummaryFooter(sheet, totalRow + 1, styles);
+        writePriorityLegend(sheet, styles);
+    }
+
+    private void writePriorityLegend(Sheet sheet, Styles styles) {
+        int titleRow = LEGEND_FIRST_ROW;
+        writeMerged(sheet, titleRow, titleRow, 1, 3, LEGEND_TITLE, styles.summaryTitle);
+        cell(sheet, titleRow + 1, 1, styles.summaryHeader).setCellValue(LEGEND_PRIORITY_HEADER);
+        writeMerged(sheet, titleRow + 1, titleRow + 1, 2, 3, LEGEND_COLOR_HEADER, styles.summaryHeader);
+        int otherPriority = PRIORITY_FILLS.size() + 1;
+        for (int priority = 1; priority <= otherPriority; priority++) {
+            int rowIndex = titleRow + 1 + priority;
+            boolean last = priority == otherPriority;
+            Cell key = cell(sheet, rowIndex, 1, styles.summaryKey(last));
+            if (last) {
+                key.setCellValue(LEGEND_OTHER_PRIORITIES);
+            } else {
+                key.setCellValue(priority);
+            }
+            writeMerged(sheet, rowIndex, rowIndex, 2, 3, null, styles.legendSwatch(styles.fillOf(last ? null : priority), last));
+        }
     }
 
     private void writeSummaryFooter(Sheet sheet, int totalExcelRow, Styles styles) {
@@ -905,6 +931,10 @@ public class FinalCommissionWorkbookGenerator {
 
         private CellStyle summaryHours(boolean doubleBottom) {
             return summaryStyle("hours", plain, null, TOTAL_HOURS_FORMAT, doubleBottom);
+        }
+
+        private CellStyle legendSwatch(byte[] fill, boolean doubleBottom) {
+            return summaryStyle("legend|" + HexFormat.of().formatHex(fill), plain, fill, null, doubleBottom);
         }
 
         private CellStyle summaryStyle(String name, XSSFFont font, byte[] fill, String format, boolean doubleBottom) {

@@ -74,6 +74,23 @@ class OvertimeRequestWorkbookGeneratorTest {
     }
 
     @Test
+    void savesTheFormulaResultsSoTheFileShowsThemWithoutEnablingEditing() throws IOException {
+        XSSFWorkbook untouched = new XSSFWorkbook(new ByteArrayInputStream(new OvertimeRequestWorkbookGenerator().generate(report())));
+        Sheet untouchedProjection = untouched.getSheet(OvertimeRequestWorkbookGenerator.PROJECTION_SHEET);
+        int firstTotal = rowWithText(untouchedProjection, "Nota: Cantidad de horas de sobresueldo correspondiente a los 28 días de mayo del 2026");
+
+        Cell cap = untouchedProjection.getRow(firstTotal + 1).getCell(8);
+        assertThat(cap.getCellType()).isEqualTo(CellType.FORMULA);
+        assertThat(cap.getCachedFormulaResultType()).isEqualTo(CellType.NUMERIC);
+        assertThat(cap.getNumericCellValue()).isEqualTo(37.5);
+
+        Cell weekday = untouchedProjection.getRow(rowWithText(untouchedProjection, "1. ÁLVARO PARADA") + 4).getCell(5);
+        assertThat(weekday.getCellType()).isEqualTo(CellType.FORMULA);
+        assertThat(weekday.getCachedFormulaResultType()).isEqualTo(CellType.STRING);
+        assertThat(weekday.getStringCellValue()).isNotBlank();
+    }
+
+    @Test
     void createsProjectionAndSummarySheets() {
         assertThat(workbook.getNumberOfSheets()).isEqualTo(2);
         assertThat(workbook.getSheetName(0)).isEqualTo("PROYECCION");

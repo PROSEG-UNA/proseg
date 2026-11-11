@@ -184,6 +184,7 @@ public class TourControlWorkbookGenerator {
             writeWeekendSheet(workbook.createSheet(WEEKEND_SHEET), period, drivers, entries, styles);
 
             workbook.setActiveSheet(0);
+            workbook.getCreationHelper().createFormulaEvaluator().evaluateAll();
             workbook.write(out);
             return out.toByteArray();
         } catch (IOException e) {
@@ -441,6 +442,7 @@ public class TourControlWorkbookGenerator {
                 for (int column = DESTINATION_COLUMN; column <= NUMBER_COLUMN; column++) {
                     cell(sheet, row, column, styles.thin(kindOf(column), fill));
                 }
+                cell(sheet, row, PRIORITY_COLUMN, styles.thin(kindOf(PRIORITY_COLUMN), fill));
                 writeTourValues(sheet, row, entry, null, null);
                 continue;
             }
@@ -580,6 +582,7 @@ public class TourControlWorkbookGenerator {
         List<TourControlReportDto.Entry> externals = entries.stream()
                 .filter(entry -> EXTERNAL_SECTION.equals(entry.getSection()))
                 .filter(entry -> entry.getDepartureDate() != null && YearMonth.from(entry.getDepartureDate()).equals(period))
+                .filter(entry -> entry.getDate() == null || entry.getDate().equals(entry.getDepartureDate()))
                 .sorted(Comparator.comparing(TourControlReportDto.Entry::getDepartureDate)
                         .thenComparing(TourControlReportDto.Entry::getStart, Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
