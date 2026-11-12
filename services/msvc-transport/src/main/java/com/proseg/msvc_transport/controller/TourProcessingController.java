@@ -5,6 +5,7 @@ import com.proseg.common.api.response.PageResponse;
 import com.proseg.common.api.util.ApiResponseBuilder;
 import com.proseg.common.api.util.PageMapper;
 import com.proseg.common.specification.FilterConstants;
+import com.proseg.msvc_transport.dto.tourprocessing.TourProblemDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftCreateRequestDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftImportResponseDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftResponseDto;
@@ -12,6 +13,7 @@ import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowApprov
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowDayRequestDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowDayResponseDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowRequestDto;
+import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingObservationReviewedRequestDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowResponseDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDriverAutoAssignResponseDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingImportSchemaDto;
@@ -22,6 +24,7 @@ import com.proseg.msvc_transport.dto.tourprocessing.TourControlReportDto;
 import com.proseg.msvc_transport.dto.response.OvertimeRequestReportDto;
 import com.proseg.msvc_transport.service.TourProcessingDraftService;
 import com.proseg.msvc_transport.service.FinalCommissionService;
+import com.proseg.msvc_transport.service.rules.TourAssignmentRules;
 import com.proseg.msvc_transport.service.TourControlReportService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +34,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -84,18 +88,54 @@ public class TourProcessingController {
     public ResponseEntity<ApiResponse<PageResponse<TourProcessingDraftRowResponseDto>>> findDraftRows(
             @PathVariable UUID id,
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String rule,
             @RequestParam Map<String, String> allParams,
             @PageableDefault(size = 10, page = 0) Pageable pageable
     ) {
         return ApiResponseBuilder.ok(
-                PageMapper.from(tourProcessingDraftService.findRows(id, search, columnFilters(allParams), pageable)),
+                PageMapper.from(tourProcessingDraftService.findRows(id, search, columnFilters(allParams), rule, pageable)),
                 "Filas del borrador de depuración"
         );
+    }
+
+    @GetMapping("/drafts/{id}/row-problems")
+    public ResponseEntity<ApiResponse<Map<UUID, List<TourProblemDto>>>> findDraftRowProblems(@PathVariable UUID id) {
+        return ApiResponseBuilder.ok(tourProcessingDraftService.findRowProblems(id), "Problemas de las giras del borrador");
     }
 
     @GetMapping("/drafts/{id}/rows/{rowId}")
     public ResponseEntity<ApiResponse<TourProcessingDraftRowResponseDto>> findDraftRow(@PathVariable UUID id, @PathVariable UUID rowId) {
         return ApiResponseBuilder.ok(tourProcessingDraftService.findRow(id, rowId), "Fila del borrador de depuración");
+    }
+
+    @PostMapping("/drafts/{id}/rows/warnings")
+    public ResponseEntity<ApiResponse<List<TourAssignmentRules.RuleViolation>>> newRowWarnings(
+            @PathVariable UUID id,
+            @RequestBody TourProcessingDraftRowRequestDto request
+    ) {
+        return ApiResponseBuilder.ok(tourProcessingDraftService.newRowWarnings(id, request), "Advertencias de la gira");
+    }
+
+    @PostMapping("/drafts/{id}/rows/{rowId}/warnings")
+    public ResponseEntity<ApiResponse<List<TourAssignmentRules.RuleViolation>>> rowWarnings(
+            @PathVariable UUID id,
+            @PathVariable UUID rowId,
+            @RequestBody TourProcessingDraftRowRequestDto request
+    ) {
+        return ApiResponseBuilder.ok(tourProcessingDraftService.rowWarnings(id, rowId, request), "Advertencias de la gira");
+    }
+
+    @PostMapping("/drafts/{id}/rows/{rowId}/days/{dayId}/warnings")
+    public ResponseEntity<ApiResponse<List<TourAssignmentRules.RuleViolation>>> rowDayWarnings(
+            @PathVariable UUID id,
+            @PathVariable UUID rowId,
+            @PathVariable UUID dayId,
+            @RequestBody TourProcessingDraftRowDayRequestDto request
+    ) {
+        return ApiResponseBuilder.ok(
+                tourProcessingDraftService.rowDayWarnings(id, rowId, dayId, request),
+                "Advertencias del día"
+        );
     }
 
     @PostMapping("/drafts/{id}/rows")
@@ -119,6 +159,28 @@ public class TourProcessingController {
                 tourProcessingDraftService.updateRow(id, rowId, request),
                 "Fila del borrador de depuración actualizada"
         );
+    }
+
+    @PatchMapping("/drafts/{id}/rows/{rowId}/observation-reviewed")
+    public ResponseEntity<ApiResponse<TourProcessingDraftRowResponseDto>> updateObservationReviewed(
+            @PathVariable UUID id,
+            @PathVariable UUID rowId,
+            @Valid @RequestBody TourProcessingObservationReviewedRequestDto request
+    ) {
+        return ApiResponseBuilder.ok(
+                tourProcessingDraftService.updateObservationReviewed(id, rowId, request.getReviewed()),
+                Boolean.TRUE.equals(request.getReviewed())
+                        ? "Observación marcada como revisada"
+                        : "Observación marcada como pendiente"
+        );
+    }
+
+    @PostMapping("/drafts/{id}/rows/{rowId}/approval-warnings")
+    public ResponseEntity<ApiResponse<List<TourAssignmentRules.RuleViolation>>> approvalWarnings(
+            @PathVariable UUID id,
+            @PathVariable UUID rowId
+    ) {
+        return ApiResponseBuilder.ok(tourProcessingDraftService.approvalWarnings(id, rowId), "Advertencias de la gira");
     }
 
     @PatchMapping("/drafts/{id}/rows/{rowId}/approval-status")
@@ -214,7 +276,7 @@ public class TourProcessingController {
     public ResponseEntity<ApiResponse<TourProcessingDriverAutoAssignResponseDto>> autoAssignDraftUlloaDrivers(@PathVariable UUID id) {
         return ApiResponseBuilder.ok(
                 tourProcessingDraftService.autoAssignUlloaDrivers(id),
-                "Choferes de Ulloa autoasignados"
+                "Choferes de Periféricas autoasignados"
         );
     }
 
@@ -254,6 +316,7 @@ public class TourProcessingController {
     private Map<String, String> columnFilters(Map<String, String> allParams) {
         Map<String, String> filters = new HashMap<>(allParams);
         FilterConstants.RESERVED_PARAMS.forEach(filters::remove);
+        filters.remove("rule");
         return filters;
     }
 }

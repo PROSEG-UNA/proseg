@@ -4,6 +4,12 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import RowActionsMenu from '../../../../common/components/RowActionsMenu.jsx';
 import { VEHICLE_TYPE_OPTIONS, vehicleTypeLabel } from '../../transportUtils';
 
+export const VEHICLE_AVAILABILITY_FILTER_OPTIONS = [
+    { value: 'all', label: 'Todos' },
+    { value: 'true', label: 'Disponibles' },
+    { value: 'false', label: 'No disponibles' },
+];
+
 export function getVehicleColumns() {
     return [
         { accessorKey: 'plate', header: 'Placa', size: 150, grow: false },
@@ -20,7 +26,7 @@ export function getVehicleColumns() {
         {
             accessorKey: 'available',
             header: 'Estado',
-            size: 150,
+            size: 170,
             grow: false,
             enableColumnFilter: false,
             Cell: ({ cell }) => (
@@ -29,6 +35,7 @@ export function getVehicleColumns() {
                     size="small"
                     color={cell.getValue() ? 'success' : 'error'}
                     variant="outlined"
+                    sx={{ width: 104, justifyContent: 'center' }}
                 />
             ),
         },

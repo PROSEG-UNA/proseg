@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import TableBase from '../../../../common/components/TablaBase.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
@@ -14,6 +14,8 @@ import { queryKeys } from '../../../../common/query';
 
 const COLUMN_VISIBILITY_STORAGE_KEY = 'vehicles-table-column-visibility';
 
+const DEFAULT_COLUMN_VISIBILITY = { available: false };
+
 const COLUMN_TO_BACKEND_KEY = {
     plate: 'plate',
     type: 'type',
@@ -21,12 +23,12 @@ const COLUMN_TO_BACKEND_KEY = {
     available: 'available',
 };
 
-export default function VehiclesTable({ onEditVehicle }) {
+export default function VehiclesTable({ onEditVehicle, availabilityFilter = 'all' }) {
     const [pagination, setPagination] = usePersistedPagination('vehicles-table-page-size');
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
     const [sorting, setSorting] = useState([]);
-    const [columnVisibility, setColumnVisibility] = usePersistedColumnVisibility(COLUMN_VISIBILITY_STORAGE_KEY);
+    const [columnVisibility, setColumnVisibility] = usePersistedColumnVisibility(COLUMN_VISIBILITY_STORAGE_KEY, DEFAULT_COLUMN_VISIBILITY);
     const [alert, setAlert] = useState(null);
     const [vehicleToDelete, setVehicleToDelete] = useState(null);
     const queryClient = useQueryClient();
@@ -46,8 +48,13 @@ export default function VehiclesTable({ onEditVehicle }) {
             if (value === null || value === undefined || value === '') return;
             out[key] = value;
         });
+        if (availabilityFilter !== 'all') out.available = availabilityFilter;
         return out;
-    }, [debouncedColumnFilters]);
+    }, [debouncedColumnFilters, availabilityFilter]);
+
+    useEffect(() => {
+        setPagination((previousValue) => (previousValue.pageIndex === 0 ? previousValue : { ...previousValue, pageIndex: 0 }));
+    }, [availabilityFilter, setPagination]);
 
     const backendSort = useMemo(
         () => sorting

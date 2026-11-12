@@ -8,6 +8,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.SimpleTransactionStatus;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.inOrder;
@@ -84,5 +85,34 @@ class TransportSchemaMigrationTest {
         migration.afterSingletonsInstantiated();
 
         verify(jdbc, never()).execute(startsWith("drop table"));
+    }
+
+    @Test
+    void appliesTheDriverOrdinarySchedulesMigrationOnceAndRecordsItsVersion() {
+        when(jdbc.queryForObject(startsWith("select exists(select 1 from transport_schema_migration"), eq(Boolean.class), eq(6)))
+                .thenReturn(false);
+
+        migration.afterSingletonsInstantiated();
+
+        verify(jdbc).execute(contains("UPDATE driver_table"));
+        verify(jdbc).update("insert into transport_schema_migration(version) values (?)", 6);
+    }
+
+    @Test
+    void appliesTheAfternoonOrdinaryEndMigrationOnceAndRecordsItsVersion() {
+        when(jdbc.queryForObject(startsWith("select exists(select 1 from transport_schema_migration"), eq(Boolean.class), eq(7)))
+                .thenReturn(false);
+
+        migration.afterSingletonsInstantiated();
+
+        verify(jdbc).execute(contains("time '20:00'"));
+        verify(jdbc).update("insert into transport_schema_migration(version) values (?)", 7);
+    }
+
+    @Test
+    void skipsTheDriverOrdinarySchedulesMigrationWhenItWasAlreadyApplied() {
+        migration.afterSingletonsInstantiated();
+
+        verify(jdbc, never()).execute(contains("UPDATE driver_table"));
     }
 }

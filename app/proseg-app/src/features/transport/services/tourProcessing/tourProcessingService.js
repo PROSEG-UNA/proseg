@@ -83,6 +83,11 @@ export async function fetchTourProcessingDraftRow(draftId, rowId) {
     return data?.data ?? null;
 }
 
+export async function fetchTourProcessingDraftRowProblems(draftId) {
+    const { data } = await axios.get(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/row-problems`, transportConfig);
+    return data?.data ?? {};
+}
+
 export async function fetchTourProcessingDraftDriverSummaries(draftId) {
     const { data } = await axios.get(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/drivers/schedule-summary`, transportConfig);
     return data?.data ?? null;
@@ -90,6 +95,11 @@ export async function fetchTourProcessingDraftDriverSummaries(draftId) {
 
 export async function fetchTourProcessingDraftSchedule(draftId, date) {
     const { data } = await axios.get(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/drivers/schedule`, { ...transportConfig, params: { date } });
+    return data?.data ?? null;
+}
+
+export async function fetchTourProcessingDraftTourControl(draftId) {
+    const { data } = await axios.get(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/tour-control`, transportConfig);
     return data?.data ?? null;
 }
 
@@ -107,6 +117,30 @@ export async function updateTourProcessingDraftRow(draftId, rowId, payload) {
     return data?.data ?? null;
 }
 
+export async function previewNewTourProcessingDraftRowWarnings(draftId, payload) {
+    const { data } = await axios.post(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/rows/warnings`, payload, transportConfig);
+    return data?.data ?? [];
+}
+
+export async function previewTourProcessingDraftRowWarnings(draftId, rowId, payload) {
+    const { data } = await axios.post(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/rows/${rowId}/warnings`, payload, transportConfig);
+    return data?.data ?? [];
+}
+
+export async function previewTourProcessingDraftApprovalWarnings(draftId, rowId) {
+    const { data } = await axios.post(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/rows/${rowId}/approval-warnings`, null, transportConfig);
+    return data?.data ?? [];
+}
+
+export async function updateTourObservationReviewed(draftId, rowId, reviewed) {
+    const { data } = await axios.patch(
+        `${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/rows/${rowId}/observation-reviewed`,
+        { reviewed },
+        transportConfig,
+    );
+    return data?.data ?? null;
+}
+
 export async function updateTourProcessingDraftRowApprovalStatus(draftId, rowId, approvalStatus) {
     const { data } = await axios.patch(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/rows/${rowId}/approval-status`, { approvalStatus }, transportConfig);
     return data?.data ?? null;
@@ -115,6 +149,11 @@ export async function updateTourProcessingDraftRowApprovalStatus(draftId, rowId,
 export async function updateTourProcessingDraftRowDay(draftId, rowId, dayId, payload) {
     const { data } = await axios.put(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/rows/${rowId}/days/${dayId}`, payload, transportConfig);
     return data?.data ?? null;
+}
+
+export async function previewTourProcessingDraftRowDayWarnings(draftId, rowId, dayId, payload) {
+    const { data } = await axios.post(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/rows/${rowId}/days/${dayId}/warnings`, payload, transportConfig);
+    return data?.data ?? [];
 }
 
 export async function deleteTourProcessingDraftRow(draftId, rowId) {
@@ -137,11 +176,6 @@ export async function deleteTourProcessingDraft(draftId) {
 
 export async function autoAssignTourProcessingDraftDrivers(draftId) {
     const { data } = await axios.post(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/drivers/auto-assign`, null, transportConfig);
-    return data?.data ?? null;
-}
-
-export async function autoAssignTourProcessingDraftUlloaDrivers(draftId) {
-    const { data } = await axios.post(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/drivers/auto-assign-ulloa`, null, transportConfig);
     return data?.data ?? null;
 }
 

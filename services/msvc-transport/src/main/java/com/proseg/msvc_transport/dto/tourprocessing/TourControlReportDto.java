@@ -30,6 +30,7 @@ public class TourControlReportDto {
     @Builder
     public static class Driver {
         private String name;
+        private Integer businessDays;
         private double ordinaryStart;
         private double ordinaryEnd;
         private Double surplusHours;

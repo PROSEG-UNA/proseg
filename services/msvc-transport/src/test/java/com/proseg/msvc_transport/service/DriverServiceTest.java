@@ -11,7 +11,14 @@ import com.proseg.msvc_transport.repository.DriverRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+
 import java.time.LocalTime;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -100,6 +107,34 @@ class DriverServiceTest {
     }
 
     @Test
+    void listsDriversRestrictedToTheRequestedIds() {
+        when(driverRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
+        String ids = UUID.randomUUID() + "," + UUID.randomUUID();
+
+        Page<DriverResponseDto> page = service.findAll(null, Map.of("ids", ids), PageRequest.of(0, 10));
+
+        assertThat(page.getContent()).isEmpty();
+        verify(driverRepository).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    void listsNoDriversWhenTheRequestedIdsAreEmpty() {
+        when(driverRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
+
+        Page<DriverResponseDto> page = service.findAll(null, Map.of("ids", " "), PageRequest.of(0, 10));
+
+        assertThat(page.getContent()).isEmpty();
+    }
+
+    @Test
+    void rejectsListingWhenAnIdIsNotValid() {
+        assertThatThrownBy(() -> service.findAll(null, Map.of("ids", "no-es-un-uuid"), PageRequest.of(0, 10)))
+                .isInstanceOf(TransportException.class)
+                .hasMessage("La lista de choferes no es válida");
+        verify(driverRepository, never()).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
     void rejectsCreateWhenNameAlreadyExists() {
         when(driverRepository.existsByNameIgnoreCase("Daniel Zuniga")).thenReturn(true);
 
@@ -131,65 +166,106 @@ class DriverServiceTest {
     }
 
     @Test
-    void createsDriverWithItsOwnOrdinaryScheduleAndUlloaShifts() {
+    void createsDriverWithTheAfternoonScheduleAndTheShiftThatScheduleCovers() {
         DriverRequestDto request = DriverRequestDto.builder()
                 .name("Ricardo Jovane")
-                .ordinaryStart(LocalTime.of(11, 0))
-                .ordinaryEnd(LocalTime.of(20, 0))
-                .ulloaShifts(Set.of(UlloaShift.AFTERNOON, UlloaShift.SHORT_MORNING))
-                .build();
-
-        DriverResponseDto response = service.create(request);
-
-        assertThat(response.getOrdinaryStart()).isEqualTo(LocalTime.of(11, 0));
-        assertThat(response.getOrdinaryEnd()).isEqualTo(LocalTime.of(20, 0));
-        assertThat(response.getUlloaShifts()).containsExactly(UlloaShift.SHORT_MORNING, UlloaShift.AFTERNOON);
-    }
-
-    @Test
-    void rejectsAnOrdinaryScheduleThatEndsBeforeItStarts() {
-        DriverRequestDto request = DriverRequestDto.builder()
-                .name("Ricardo Jovane")
-                .ordinaryStart(LocalTime.of(16, 0))
-                .ordinaryEnd(LocalTime.of(8, 0))
-                .build();
-
-        assertThatThrownBy(() -> service.create(request))
-                .isInstanceOf(TransportException.class)
-                .hasMessage("El horario ordinario debe terminar después de la hora de inicio");
-        verify(driverRepository, never()).save(any(Driver.class));
-    }
-
-    @Test
-    void rejectsAnOrdinaryScheduleLongerThanNineHours() {
-        DriverRequestDto request = DriverRequestDto.builder()
-                .name("Ricardo Jovane")
-                .ordinaryStart(LocalTime.of(7, 0))
-                .ordinaryEnd(LocalTime.of(17, 0))
-                .build();
-
-        assertThatThrownBy(() -> service.create(request))
-                .isInstanceOf(TransportException.class)
-                .hasMessage("El horario ordinario no puede superar las 9 horas por día");
-        verify(driverRepository, never()).save(any(Driver.class));
-    }
-
-    @Test
-    void updatesOrdinaryScheduleAndUlloaShiftsOfExistingDriver() {
-        UUID id = UUID.randomUUID();
-        Driver driver = Driver.builder().id(id).name("Daniel Zuniga").build();
-        when(driverRepository.findById(id)).thenReturn(java.util.Optional.of(driver));
-        DriverRequestDto request = DriverRequestDto.builder()
-                .name("Daniel Zuniga")
-                .ordinaryStart(LocalTime.of(11, 0))
+                .ordinaryStart(LocalTime.of(12, 0))
                 .ordinaryEnd(LocalTime.of(20, 0))
                 .ulloaShifts(Set.of(UlloaShift.AFTERNOON))
                 .build();
 
-        service.update(id, request);
+        DriverResponseDto response = service.create(request);
 
-        assertThat(driver.getOrdinaryStart()).isEqualTo(LocalTime.of(11, 0));
+        assertThat(response.getOrdinaryStart()).isEqualTo(LocalTime.of(12, 0));
+        assertThat(response.getOrdinaryEnd()).isEqualTo(LocalTime.of(20, 0));
+        assertThat(response.getUlloaShifts()).containsExactly(UlloaShift.AFTERNOON);
+    }
+
+    @Test
+    void aPeripheralDriverOnTheStandardScheduleCoversTheTwoMorningShifts() {
+        DriverRequestDto request = DriverRequestDto.builder()
+                .name("Ricardo Jovane")
+                .ulloaShifts(Set.of(UlloaShift.AFTERNOON))
+                .build();
+
+        DriverResponseDto response = service.create(request);
+
+        assertThat(response.getOrdinaryStart()).isEqualTo(LocalTime.of(7, 30));
+        assertThat(response.getOrdinaryEnd()).isEqualTo(LocalTime.of(16, 30));
+        assertThat(response.getUlloaShifts()).containsExactly(UlloaShift.SHORT_MORNING, UlloaShift.MORNING);
+    }
+
+    @Test
+    void aDriverNotMarkedAsPeripheralKeepsNoShiftsWhateverItsSchedule() {
+        DriverRequestDto request = DriverRequestDto.builder()
+                .name("Ricardo Jovane")
+                .ordinaryStart(LocalTime.of(12, 0))
+                .ordinaryEnd(LocalTime.of(20, 0))
+                .build();
+
+        assertThat(service.create(request).getUlloaShifts()).isEmpty();
+    }
+
+    @Test
+    void rejectsEveryOrdinaryScheduleOtherThanTheTwoValidOnes() {
+        List<LocalTime[]> invalidSchedules = List.of(
+                new LocalTime[]{LocalTime.of(16, 0), LocalTime.of(8, 0)},
+                new LocalTime[]{LocalTime.of(7, 0), LocalTime.of(17, 0)},
+                new LocalTime[]{LocalTime.of(11, 0), LocalTime.of(20, 0)},
+                new LocalTime[]{LocalTime.of(12, 0), LocalTime.of(21, 0)},
+                new LocalTime[]{LocalTime.of(6, 30), LocalTime.of(17, 30)},
+                new LocalTime[]{LocalTime.of(7, 30), LocalTime.of(20, 0)},
+                new LocalTime[]{LocalTime.of(12, 0), LocalTime.of(16, 30)}
+        );
+
+        for (LocalTime[] schedule : invalidSchedules) {
+            DriverRequestDto request = DriverRequestDto.builder()
+                    .name("Ricardo Jovane")
+                    .ordinaryStart(schedule[0])
+                    .ordinaryEnd(schedule[1])
+                    .build();
+
+            assertThatThrownBy(() -> service.create(request))
+                    .isInstanceOf(TransportException.class)
+                    .hasMessage("El horario ordinario debe ser de 07:30 a 16:30 o 12:00 a 20:00");
+        }
+        verify(driverRepository, never()).save(any(Driver.class));
+    }
+
+    @Test
+    void rejectsASingleOrdinaryScheduleBoundaryThatDoesNotFormAValidSchedule() {
+        DriverRequestDto onlyStart = DriverRequestDto.builder().name("Ricardo Jovane").ordinaryStart(LocalTime.of(12, 0)).build();
+        DriverRequestDto onlyEnd = DriverRequestDto.builder().name("Ricardo Jovane").ordinaryEnd(LocalTime.of(20, 0)).build();
+
+        assertThatThrownBy(() -> service.create(onlyStart)).isInstanceOf(TransportException.class);
+        assertThatThrownBy(() -> service.create(onlyEnd)).isInstanceOf(TransportException.class);
+        verify(driverRepository, never()).save(any(Driver.class));
+    }
+
+    @Test
+    void updatesTheOrdinaryScheduleOfAnExistingDriverAndRecalculatesItsShifts() {
+        UUID id = UUID.randomUUID();
+        Driver driver = Driver.builder().id(id).name("Daniel Zuniga").build();
+        when(driverRepository.findById(id)).thenReturn(java.util.Optional.of(driver));
+        DriverRequestDto afternoon = DriverRequestDto.builder()
+                .name("Daniel Zuniga")
+                .ordinaryStart(LocalTime.of(12, 0))
+                .ordinaryEnd(LocalTime.of(20, 0))
+                .ulloaShifts(Set.of(UlloaShift.AFTERNOON))
+                .build();
+
+        service.update(id, afternoon);
+
+        assertThat(driver.getOrdinaryStart()).isEqualTo(LocalTime.of(12, 0));
         assertThat(driver.getOrdinaryEnd()).isEqualTo(LocalTime.of(20, 0));
         assertThat(driver.getUlloaShifts()).containsExactly(UlloaShift.AFTERNOON);
+
+        service.update(id, DriverRequestDto.builder()
+                .name("Daniel Zuniga")
+                .ulloaShifts(Set.of(UlloaShift.AFTERNOON))
+                .build());
+
+        assertThat(driver.getOrdinaryStart()).isEqualTo(LocalTime.of(7, 30));
+        assertThat(driver.getUlloaShifts()).containsExactlyInAnyOrder(UlloaShift.SHORT_MORNING, UlloaShift.MORNING);
     }
 }

@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AppTheme from '../../../../../common/theme/AppTheme';
 import TourProcessingDraftPage from '../TourProcessingDraftPage.jsx';
-import { fetchTourProcessingDraftRows, finishTourProcessingDraft, reopenTourProcessingDraft, updateTourProcessingDraftRowApprovalStatus } from '../../../services/tourProcessing/tourProcessingService.js';
+import { checkTourProcessingDraftFinalCommission, exportTourProcessingDraftFinalCommission, fetchTourProcessingDraftRow, fetchTourProcessingDraftRowProblems, fetchTourProcessingDraftRows, finishTourProcessingDraft, rejectTourProcessingDraftIncompleteTours, reopenTourProcessingDraft } from '../../../services/tourProcessing/tourProcessingService.js';
 import { queryKeys } from '../../../../../common/query';
 
 const granted = vi.hoisted(() => ({ permissions: null }));
@@ -18,21 +18,25 @@ vi.mock('../../../../../common/hooks/index.js', () => ({
 }));
 
 vi.mock('../../../../../common/components/TablaBase.jsx', () => ({
-    default: ({ data, renderRowActions }) => <div>{data.map((item) => (
-        <section key={item.id} data-testid={`row-${item.id}`}>
+    default: ({ data, columns, onRowClick }) => <div>{data.map((item) => (
+        <section key={item.id} data-testid={`row-${item.id}`} onClick={() => onRowClick?.({ original: item })}>
             <span>{item.approvalStatus}</span>
-            {renderRowActions({ row: { original: item } })}
+            {columns.filter((column) => column.accessorKey === 'number' || column.accessorKey === 'observations').map((column) => (
+                <div key={column.id ?? column.accessorKey} data-testid={`cell-${column.id ?? column.accessorKey}-${item.id}`}>
+                    {column.Cell({
+                        cell: { getValue: () => item[column.accessorKey] },
+                        row: { original: item },
+                        table: { getState: () => ({ isFullScreen: false }) },
+                    })}
+                </div>
+            ))}
         </section>
     ))}</div>,
 }));
 
-vi.mock('../../../../../common/components/RowActionsMenu.jsx', () => ({
-    default: ({ actions }) => <div>{actions.map((action) => (
-        <button key={action.key} type="button" disabled={action.disabled} onClick={action.onClick}>{action.label}</button>
-    ))}</div>,
+vi.mock('../../../components/tourProcessing/TourProcessingDraftRowModal.jsx', () => ({
+    default: ({ open, mode, row }) => (open ? <div data-testid="row-modal">{`${mode}:${row?.id ?? ''}`}</div> : null),
 }));
-
-vi.mock('../../../components/tourProcessing/TourProcessingDraftRowModal.jsx', () => ({ default: () => null }));
 vi.mock('../../../components/tourProcessing/TourProcessingDriverAssignmentReport.jsx', () => ({ default: () => null }));
 
 vi.mock('../../../hooks/useTourProcessingCatalogMatch.js', () => ({
@@ -42,16 +46,17 @@ vi.mock('../../../hooks/useTourProcessingCatalogMatch.js', () => ({
     }),
 }));
 
-vi.mock('../../../hooks/useTransportOptions.js', () => ({
-    useBorrowedVehicleOptions: () => ({ options: [] }),
-}));
-
 vi.mock('../../../services/tourProcessing/tourProcessingService.js', () => ({
     fetchTourProcessingDraft: vi.fn(),
     fetchTourProcessingDraftRows: vi.fn(),
+    fetchTourProcessingDraftRow: vi.fn(),
+    fetchTourProcessingDraftRowProblems: vi.fn(async () => ({})),
+    checkTourProcessingDraftFinalCommission: vi.fn(),
+    exportTourProcessingDraftFinalCommission: vi.fn(),
+    rejectTourProcessingDraftIncompleteTours: vi.fn(),
     finishTourProcessingDraft: vi.fn(),
     reopenTourProcessingDraft: vi.fn(),
-    updateTourProcessingDraftRowApprovalStatus: vi.fn(),
+    updateTourObservationReviewed: vi.fn(),
 }));
 
 const rows = [
@@ -85,11 +90,11 @@ beforeEach(async () => {
     fetchTourProcessingDraftRows.mockReset();
     fetchTourProcessingDraftRows.mockResolvedValueOnce({ content: rows, totalElements: 2 });
     fetchTourProcessingDraftRows.mockImplementation(() => new Promise(() => {}));
-    updateTourProcessingDraftRowApprovalStatus.mockReset();
-    updateTourProcessingDraftRowApprovalStatus.mockImplementation((draftId, rowId) => Promise.resolve({
-        ...rows.find((row) => row.id === rowId),
-        approvalStatus: 'NOT_APPROVED',
-    }));
+    checkTourProcessingDraftFinalCommission.mockReset();
+    exportTourProcessingDraftFinalCommission.mockReset();
+    rejectTourProcessingDraftIncompleteTours.mockReset();
+    fetchTourProcessingDraftRow.mockReset();
+    fetchTourProcessingDraftRow.mockResolvedValue({ id: 'row-1', number: '100', approvalStatus: 'APPROVED' });
     finishTourProcessingDraft.mockReset();
     finishTourProcessingDraft.mockResolvedValue({ id: 'draft-1', status: 'CLOSED', year: 2026, month: 5 });
     reopenTourProcessingDraft.mockReset();
@@ -141,14 +146,18 @@ describe('estado de depuración', () => {
 
         await screen.findByRole('button', { name: 'Opciones' });
         const closedRow = await screen.findByTestId('row-row-1');
-        expect(within(closedRow).getByRole('button', { name: 'Editar', hidden: true })).toBeDisabled();
+        await userEvent.click(closedRow);
+        expect(await screen.findByTestId('row-modal')).toHaveTextContent('view:row-1');
         await userEvent.click(screen.getByRole('button', { name: 'Opciones' }));
         await userEvent.click(screen.getByRole('menuitem', { name: 'Devolver a borrador' }));
         await userEvent.click(screen.getByRole('button', { name: 'Devolver a borrador' }));
 
         await waitFor(() => expect(reopenTourProcessingDraft).toHaveBeenCalledWith('draft-1'));
         await waitFor(() => expect(queryClient.getQueryData(queryKeys.transport.tourProcessingDraftDetail('draft-1')).status).toBe('DRAFT'));
-        await waitFor(() => expect(within(closedRow).getByRole('button', { name: 'Editar', hidden: true })).toBeEnabled());
+        await waitFor(async () => {
+            await userEvent.click(closedRow);
+            expect(screen.getByTestId('row-modal')).toHaveTextContent('edit:row-1');
+        });
     });
 });
 
@@ -163,39 +172,31 @@ describe('permisos del borrador', () => {
         renderDraftPage();
 
         const row = await screen.findByTestId('row-row-1');
-        expect(within(row).getByRole('button', { name: 'Editar' })).toBeDisabled();
-        expect(within(row).getByRole('button', { name: 'Eliminar' })).toBeDisabled();
+        await userEvent.click(row);
+        expect(await screen.findByTestId('row-modal')).toHaveTextContent('view:row-1');
         expect(screen.queryByRole('button', { name: 'Opciones' })).toBeNull();
     });
 
-    it('con CREAR_GIRAS permite crear pero no editar', async () => {
+    it('con CREAR_GIRAS permite crear pero abre la fila solo para ver', async () => {
         granted.permissions = ['CREAR_GIRAS'];
         renderDraftPage();
 
         const row = await screen.findByTestId('row-row-1');
-        expect(within(row).getByRole('button', { name: 'Editar' })).toBeDisabled();
+        await userEvent.click(row);
+        expect(await screen.findByTestId('row-modal')).toHaveTextContent('view:row-1');
         expect(await openOptions()).toEqual(['Crear gira']);
     });
 
-    it('con EDITAR_GIRAS permite editar sin eliminar', async () => {
+    it('con EDITAR_GIRAS abre la fila para editar al hacer clic', async () => {
         granted.permissions = ['EDITAR_GIRAS'];
         renderDraftPage();
 
         const row = await screen.findByTestId('row-row-1');
-        expect(within(row).getByRole('button', { name: 'Editar' })).toBeEnabled();
-        expect(within(row).getByRole('button', { name: 'Eliminar' })).toBeDisabled();
+        await userEvent.click(row);
+        expect(await screen.findByTestId('row-modal')).toHaveTextContent('edit:row-1');
         const options = await openOptions();
         expect(options).toContain('Terminar depuración');
         expect(options).not.toContain('Crear gira');
-    });
-
-    it('con ELIMINAR_GIRAS permite eliminar sin editar', async () => {
-        granted.permissions = ['ELIMINAR_GIRAS'];
-        renderDraftPage();
-
-        const row = await screen.findByTestId('row-row-1');
-        expect(within(row).getByRole('button', { name: 'Eliminar' })).toBeEnabled();
-        expect(within(row).getByRole('button', { name: 'Editar' })).toBeDisabled();
     });
 
     it('separa las descargas de giras de la solicitud de horas extra', async () => {
@@ -218,32 +219,111 @@ describe('permisos del borrador', () => {
     });
 });
 
-describe('aprobación de filas', () => {
-    it('permite aprobar otra fila mientras el GET de recarga sigue pendiente', async () => {
-        const queryClient = new QueryClient();
-        render(
-            <AppTheme defaultColorScheme="light">
-                <QueryClientProvider client={queryClient}>
-                    <MemoryRouter initialEntries={['/transporte/depuracion/borradores/draft-1']}>
-                        <Routes>
-                            <Route path="/transporte/depuracion/borradores/:draftId" element={<TourProcessingDraftPage />} />
-                        </Routes>
-                    </MemoryRouter>
-                </QueryClientProvider>
-            </AppTheme>,
-        );
+describe('columnas de la tabla', () => {
+    it('muestra el ícono de problemas solo en las giras con problemas y las coincidencias junto a la observación', async () => {
+        fetchTourProcessingDraftRowProblems.mockResolvedValueOnce({
+            'row-1': [{ title: 'Vehículos no disponibles asignados a giras', detail: 'Gira 100: vehículo 301-295 no está disponible' }],
+        });
+        fetchTourProcessingDraftRows.mockReset();
+        fetchTourProcessingDraftRows.mockResolvedValueOnce({
+            content: [
+                { id: 'row-1', number: '100', approvalStatus: 'APPROVED', observations: 'SE REQUIERE chofer', matchedObservationKeywords: ['requiere'], vehicle: '301-295' },
+                { id: 'row-2', number: '200', approvalStatus: 'APPROVED', observations: 'Sin novedad', matchedObservationKeywords: [] },
+            ],
+            totalElements: 2,
+        });
+        fetchTourProcessingDraftRows.mockImplementation(() => new Promise(() => {}));
+        renderDraftPage();
 
-        const first = await screen.findByTestId('row-row-1');
-        await waitFor(() => expect(within(first).getByRole('button', { name: 'No aprobar', hidden: true })).toBeEnabled());
-        await userEvent.click(within(first).getByRole('button', { name: 'No aprobar', hidden: true }));
+        const firstNumber = await screen.findByTestId('cell-number-row-1');
+        expect(firstNumber).toHaveTextContent('100');
+        expect(await within(firstNumber).findByRole('button', { name: /Problemas de la gira: Vehículos no disponibles asignados a giras/ })).toBeInTheDocument();
+        expect(within(screen.getByTestId('cell-number-row-2')).queryByRole('button')).toBeNull();
+        expect(screen.queryByText('No disponible')).toBeNull();
 
-        await waitFor(() => expect(within(first).getByText('NOT_APPROVED')).toBeInTheDocument());
-        expect(fetchTourProcessingDraftRows).toHaveBeenCalledTimes(2);
-        expect(within(screen.getByTestId('row-row-2')).getByRole('button', { name: 'No aprobar', hidden: true })).toBeEnabled();
+        const firstObservation = screen.getByTestId('cell-observations-row-1');
+        expect(within(firstObservation).getByRole('button', { name: 'Coincidencias en la observación: requiere' })).toBeInTheDocument();
+        expect(within(screen.getByTestId('cell-observations-row-2')).queryByRole('button')).toBeNull();
+    });
+});
 
-        await userEvent.click(within(screen.getByTestId('row-row-2')).getByRole('button', { name: 'No aprobar', hidden: true }));
+describe('comisión final y errores', () => {
+    it('descarga la comisión final sin diálogo y sin cambiar estados', async () => {
+        granted.permissions = ['EXPORTAR_GIRAS'];
+        exportTourProcessingDraftFinalCommission.mockResolvedValue({ blob: new Blob(['comision']), fileName: 'comision.xlsx' });
+        renderDraftPage();
 
-        await waitFor(() => expect(updateTourProcessingDraftRowApprovalStatus).toHaveBeenCalledTimes(2));
-        expect(within(screen.getByTestId('row-row-2')).getByText('NOT_APPROVED')).toBeInTheDocument();
+        await userEvent.click(await screen.findByRole('button', { name: 'Opciones' }));
+        await userEvent.click(screen.getByRole('menuitem', { name: 'Descargar' }));
+        await userEvent.click(await screen.findByRole('menuitem', { name: /Comisión Final/ }));
+
+        await waitFor(() => expect(exportTourProcessingDraftFinalCommission).toHaveBeenCalledWith('draft-1'));
+        expect(checkTourProcessingDraftFinalCommission).not.toHaveBeenCalled();
+        expect(rejectTourProcessingDraftIncompleteTours).not.toHaveBeenCalled();
+        expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('muestra los errores y pasa las giras sin chofer o vehículo a No aprobada si se confirma', async () => {
+        granted.permissions = ['EDITAR_GIRAS', 'EXPORTAR_GIRAS'];
+        checkTourProcessingDraftFinalCommission.mockResolvedValue({
+            blockers: [],
+            errors: [],
+            warnings: [],
+            rejections: {
+                code: 'NOT_APPROVED',
+                title: 'Giras sin chofer o sin vehículo',
+                details: ['Gira 100 (04/05/2026), prioridad 1, 3 pasajeros: sin chofer'],
+                tours: [{ id: 'row-1', number: '100', label: 'Gira 100 (04/05/2026), prioridad 1, 3 pasajeros: sin chofer' }],
+            },
+        });
+        rejectTourProcessingDraftIncompleteTours.mockResolvedValue(1);
+        renderDraftPage();
+
+        await userEvent.click(await screen.findByRole('button', { name: 'Opciones' }));
+        await userEvent.click(screen.getByRole('menuitem', { name: 'Visualizar errores' }));
+
+        expect(await screen.findByText('Giras sin atender (1)')).toBeInTheDocument();
+        await userEvent.click(screen.getByRole('button', { name: 'Gira 100 (04/05/2026), prioridad 1, 3 pasajeros: sin chofer' }));
+        await waitFor(() => expect(fetchTourProcessingDraftRow).toHaveBeenCalledWith('draft-1', 'row-1'));
+
+        await userEvent.click(screen.getByRole('button', { name: 'Pasar las giras sin chofer o vehículo a No aprobada' }));
+        expect(rejectTourProcessingDraftIncompleteTours).not.toHaveBeenCalled();
+        await userEvent.click(screen.getByRole('button', { name: 'Sí, pasar a No aprobada' }));
+        await waitFor(() => expect(rejectTourProcessingDraftIncompleteTours).toHaveBeenCalledWith('draft-1'));
+    });
+
+    it('guarda el filtro elegido y lo recupera al recargar la página, y descarta valores que ya no existen', async () => {
+        granted.permissions = ['LEER_GIRAS'];
+        const { unmount } = renderDraftPage();
+
+        await userEvent.click(await screen.findByRole('combobox', { name: /Filtros al mostrar giras/ }));
+        await userEvent.click(await screen.findByRole('option', { name: 'Presentan algún problema' }));
+        expect(localStorage.getItem('tour-processing-draft-rows-rule')).toBe('ANY');
+        unmount();
+
+        fetchTourProcessingDraftRows.mockClear();
+        renderDraftPage();
+        await waitFor(() => expect(fetchTourProcessingDraftRows).toHaveBeenCalledWith('draft-1', expect.objectContaining({ rule: 'ANY' })));
+        expect(await screen.findByRole('combobox', { name: /Filtros al mostrar giras/ })).toHaveTextContent('Presentan algún problema');
+        cleanup();
+
+        localStorage.setItem('tour-processing-draft-rows-rule', 'PLATE_REPEATED_SAME_DAY');
+        fetchTourProcessingDraftRows.mockClear();
+        renderDraftPage();
+        await waitFor(() => expect(fetchTourProcessingDraftRows).toHaveBeenCalledWith('draft-1', expect.objectContaining({ rule: '' })));
+        expect(await screen.findByRole('combobox', { name: /Filtros al mostrar giras/ })).toHaveTextContent('Mostrar todas');
+    });
+
+    it('filtra en el servidor por una condición y por las giras que necesitan más de un viaje', async () => {
+        granted.permissions = ['LEER_GIRAS'];
+        renderDraftPage();
+
+        await userEvent.click(await screen.findByRole('combobox', { name: /Filtros al mostrar giras/ }));
+        await userEvent.click(await screen.findByRole('option', { name: 'Presentan algún problema' }));
+        await waitFor(() => expect(fetchTourProcessingDraftRows).toHaveBeenCalledWith('draft-1', expect.objectContaining({ rule: 'ANY' })));
+
+        await userEvent.click(screen.getByRole('combobox', { name: /Filtros al mostrar giras/ }));
+        await userEvent.click(await screen.findByRole('option', { name: 'Más de un viaje y sin atender' }));
+        await waitFor(() => expect(fetchTourProcessingDraftRows).toHaveBeenCalledWith('draft-1', expect.objectContaining({ rule: 'NEEDS_MULTIPLE_TRIPS' })));
     });
 });

@@ -29,6 +29,15 @@ export async function fetchDriverMonthSurplusCap(year, month) {
     return data?.data ?? null;
 }
 
+export async function updateDriverMonthBusinessDays(driverId, year, month, businessDays) {
+    const { data } = await axios.put(
+        `${TRANSPORT_ENDPOINTS.drivers}/${driverId}/months/${year}/${month}/business-days`,
+        { businessDays },
+        transportConfig,
+    );
+    return data?.data ?? null;
+}
+
 export async function exportDriverOvertimeRequest(year, month) {
     return downloadFile(TRANSPORT_DOCUMENT_ENDPOINTS.driverOvertimeRequestExport, { year, month }, OVERTIME_REQUEST_FALLBACK_FILE_NAME);
 }

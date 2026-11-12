@@ -9,16 +9,18 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { esES } from '@mui/x-date-pickers/locales';
 import 'dayjs/locale/es';
 import TableBase from '../../../../common/components/TablaBase.jsx';
-import { useTourProcessingDraftDriverSummaries, useTourProcessingDraftSchedule } from '../../hooks/useTourProcessingDraftsData.js';
+import { useTourProcessingDraftDriverSummaries, useTourProcessingDraftSchedule, useTourProcessingDraftTourControl } from '../../hooks/useTourProcessingDraftsData.js';
 import { usePersistedPagination } from '../../hooks/usePersistedPagination.js';
 import { usePersistedExpansion } from '../../hooks/usePersistedExpansion.js';
 import { formatDate, formatHours, matchesDriverFilters } from '../../transportUtils.js';
 import TourProcessingDraftTourControlDetail from './TourProcessingDraftTourControlDetail.jsx';
+import TourProcessingDraftTourControlOtherTours from './TourProcessingDraftTourControlOtherTours.jsx';
 import DriverSurplusSummary from '../drivers/DriverSurplusSummary.jsx';
 import TourProcessingDriverFilters from './TourProcessingDriverFilters.jsx';
 
 const DEFAULT_UNIT_FILTER = 'GENERAL_SERVICES';
 const DEFAULT_STATUS_FILTER = 'ACTIVE';
+const OTHER_RESOURCE_SECTIONS = ['OTHER_UNIT', 'EXTERNAL'];
 
 const COLUMNS = [
     {
@@ -54,6 +56,7 @@ export default function TourProcessingDraftTourControlView({ draftId, year, mont
     const date = selectedDate.format('YYYY-MM-DD');
     const { drivers, loading, fetching, error } = useTourProcessingDraftSchedule(draftId, date);
     const { surplusCapPerDriver, drivers: driverSummaries, loading: loadingSummaries } = useTourProcessingDraftDriverSummaries(draftId);
+    const { entries: tourControlEntries } = useTourProcessingDraftTourControl(draftId);
     const [unitFilter, setUnitFilter] = useState(DEFAULT_UNIT_FILTER);
     const [statusFilter, setStatusFilter] = useState(DEFAULT_STATUS_FILTER);
 
@@ -72,6 +75,11 @@ export default function TourProcessingDraftTourControlView({ draftId, year, mont
             }))
             .filter((driver) => matchesDriverFilters(driver, unitFilter, statusFilter));
     }, [drivers, driverSummaries, date, unitFilter, statusFilter]);
+
+    const otherResourceEntries = useMemo(
+        () => tourControlEntries.filter((entry) => entry.date === date && OTHER_RESOURCE_SECTIONS.includes(entry.section)),
+        [tourControlEntries, date],
+    );
 
     const changeFilter = (setFilter) => (value) => {
         setFilter(value);
@@ -141,6 +149,7 @@ export default function TourProcessingDraftTourControlView({ draftId, year, mont
                     paginateExpandedRows: false,
                 }}
             />
+            <TourProcessingDraftTourControlOtherTours entries={otherResourceEntries} date={date} />
         </Box>
     );
 }

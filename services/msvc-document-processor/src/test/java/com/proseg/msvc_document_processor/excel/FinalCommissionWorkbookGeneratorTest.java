@@ -78,6 +78,94 @@ class FinalCommissionWorkbookGeneratorTest {
         assertThat(number("RESUMEN", "R8")).isCloseTo(4.0, within(0.001));
     }
 
+    @Test
+    void availableHoursAddUpEachActiveDriversOwnBusinessDaysAndMax() throws IOException {
+        assertThat(hasNumber(16 * 28 * 8)).isTrue();
+        assertThat(hasNumber(16 * 37.5)).isTrue();
+
+        FinalCommissionReportDto custom = report();
+        custom.setActiveDriversBusinessDays(16 * 28 - 7);
+        custom.setActiveDriversSurplusCap(16 * 37.5 - 9.5);
+        workbook = new XSSFWorkbook(new ByteArrayInputStream(new FinalCommissionWorkbookGenerator().generate(custom)));
+        workbook.getCreationHelper().createFormulaEvaluator().evaluateAll();
+
+        assertThat(hasNumber((16 * 28 - 7) * 8)).isTrue();
+        assertThat(hasNumber(16 * 37.5 - 9.5)).isTrue();
+        assertThat(hasNumber(16 * 28 * 8)).isFalse();
+        assertThat(hasNumber(16 * 37.5)).isFalse();
+    }
+
+    @Test
+    void addsOtherUnitDriverSurplusAndOvertimeFromBorrowedVehicleTours() throws IOException {
+        FinalCommissionReportDto custom = report();
+        FinalCommissionReportDto.Tour weekday = tour("4012", 1, "BORROWED_VEHICLE", 1,
+                LocalDate.of(2026, 5, 29), LocalTime.of(6, 0), LocalDate.of(2026, 5, 29), LocalTime.of(18, 0),
+                List.of(day(LocalDate.of(2026, 5, 29), 6, 18)));
+        FinalCommissionReportDto.Tour weekend = tour("4013", 1, "BORROWED_VEHICLE", 1,
+                LocalDate.of(2026, 5, 30), LocalTime.of(8, 0), LocalDate.of(2026, 5, 30), LocalTime.of(12, 0),
+                List.of(day(LocalDate.of(2026, 5, 30), 8, 12)));
+        weekday.setOrdinaryStart(12);
+        weekday.setOrdinaryEnd(21);
+        weekend.setOrdinaryStart(12);
+        weekend.setOrdinaryEnd(21);
+        custom.setTours(List.of(weekday, weekend));
+        workbook = new XSSFWorkbook(new ByteArrayInputStream(new FinalCommissionWorkbookGenerator().generate(custom)));
+        evaluator = workbook.getCreationHelper().createFormulaEvaluator();
+        evaluator.evaluateAll();
+
+        assertThat(number("P.VEHICULO", "R4")).isCloseTo(6, within(0.001));
+        assertThat(number("P.VEHICULO", "S5")).isCloseTo(4, within(0.001));
+        assertThat(number("TOTALES", "R4")).isCloseTo(6, within(0.001));
+        assertThat(number("TOTALES", "S5")).isCloseTo(4, within(0.001));
+        assertThat(number("RESUMEN", "O6")).isCloseTo(6, within(0.001));
+        assertThat(number("RESUMEN", "P6")).isCloseTo(4, within(0.001));
+    }
+
+    @Test
+    void listsTheColorOfEachPriorityInALegendThatMatchesTheTourRows() {
+        assertThat(text("RESUMEN", "B27")).isEqualTo("COLOR DE LAS GIRAS POR PRIORIDAD");
+        assertThat(text("RESUMEN", "B28")).isEqualTo("PRIORIDAD");
+        assertThat(number("RESUMEN", "B29")).isEqualTo(1);
+        assertThat(number("RESUMEN", "B31")).isEqualTo(3);
+        assertThat(number("RESUMEN", "B35")).isEqualTo(7);
+        assertThat(text("RESUMEN", "B36")).isEqualTo("8 o más");
+        assertThat(number("TOTALES", "H4")).isEqualTo(1);
+        assertThat(number("TOTALES", "H6")).isEqualTo(3);
+        assertThat(fillOf("RESUMEN", "C29")).isEqualTo(fillOf("TOTALES", "H4"));
+        assertThat(fillOf("RESUMEN", "C31")).isEqualTo(fillOf("TOTALES", "H6"));
+        assertThat(fillOf("RESUMEN", "C29")).isNotEqualTo(fillOf("RESUMEN", "C31"));
+    }
+
+    @Test
+    void savesTheFormulaResultsSoTheFileShowsThemWithoutEnablingEditing() throws IOException {
+        XSSFWorkbook untouched = new XSSFWorkbook(new ByteArrayInputStream(new FinalCommissionWorkbookGenerator().generate(report())));
+
+        Cell weekday = untouched.getSheet("TOTALES").getRow(3).getCell(12);
+        assertThat(weekday.getCellType()).isEqualTo(org.apache.poi.ss.usermodel.CellType.FORMULA);
+        assertThat(weekday.getCachedFormulaResultType()).isEqualTo(org.apache.poi.ss.usermodel.CellType.STRING);
+        assertThat(weekday.getStringCellValue()).isEqualTo("Viernes");
+        assertThat(untouched.getSheet("TOTALES").getRow(3).getCell(17).getNumericCellValue()).isCloseTo(4.0, within(0.001));
+        assertThat(untouched.getSheet("RESUMEN").getRow(5).getCell(2).getNumericCellValue()).isEqualTo(1);
+    }
+
+    private String fillOf(String sheetName, String address) {
+        return ((org.apache.poi.xssf.usermodel.XSSFColor) cell(sheetName, address).getCellStyle().getFillForegroundColorColor()).getARGBHex();
+    }
+
+    private boolean hasNumber(double expected) {
+        for (Sheet sheet : workbook) {
+            for (Row row : sheet) {
+                for (Cell cell : row) {
+                    if (cell.getCellType() == org.apache.poi.ss.usermodel.CellType.NUMERIC
+                            && Math.abs(cell.getNumericCellValue() - expected) < 1e-9) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     private List<String> sheetNames() {
         return java.util.stream.IntStream.range(0, workbook.getNumberOfSheets()).mapToObj(workbook::getSheetName).toList();
     }

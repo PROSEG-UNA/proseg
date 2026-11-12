@@ -12,6 +12,7 @@ import com.proseg.msvc_transport.entity.ResourceType;
 import com.proseg.msvc_transport.entity.TourApprovalStatus;
 import com.proseg.msvc_transport.entity.Vehicle;
 import com.proseg.msvc_transport.exception.TransportException;
+import com.proseg.msvc_transport.repository.DriverMonthBusinessDaysRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
@@ -27,6 +28,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -35,7 +37,7 @@ class TourControlReportServiceTest {
 
     private final UUID draftId = UUID.randomUUID();
     private final Driver zoe = Driver.builder().id(UUID.randomUUID()).name("Zoe Mora").status("ACTIVE")
-            .ordinaryStart(LocalTime.of(11, 0)).ordinaryEnd(LocalTime.of(20, 0)).build();
+            .ordinaryStart(LocalTime.of(12, 0)).ordinaryEnd(LocalTime.of(20, 0)).build();
     private final Driver ana = Driver.builder().id(UUID.randomUUID()).name("Ana Pérez").status("ACTIVE").build();
     private final Driver retired = Driver.builder().id(UUID.randomUUID()).name("Luis Rojas").status("INACTIVE").build();
     private final Driver guest = Driver.builder().id(UUID.randomUUID()).name("Jorge Mena").status("ACTIVE")
@@ -60,7 +62,8 @@ class TourControlReportServiceTest {
         when(driverRepository.findAll()).thenReturn(List.of(zoe, ana, retired, guest));
         VehicleRepository vehicleRepository = mock(VehicleRepository.class);
         when(vehicleRepository.findAll()).thenReturn(List.of(bus));
-        service = new TourControlReportService(draftRepository, tourStore, dayRepository, driverRepository, vehicleRepository);
+        service = new TourControlReportService(draftRepository, tourStore, dayRepository, driverRepository, vehicleRepository,
+                new DriverBusinessDaysService(mock(DriverMonthBusinessDaysRepository.class)));
     }
 
     @Test
@@ -90,7 +93,8 @@ class TourControlReportServiceTest {
         TourControlReportDto report = service.report(draftId);
 
         assertThat(report.getDrivers()).extracting(TourControlReportDto.Driver::getName).containsExactly("Ana Pérez", "Zoe Mora");
-        assertThat(report.getDrivers().get(1).getOrdinaryStart()).isEqualTo(11.0);
+        assertThat(report.getDrivers().get(1).getOrdinaryStart()).isEqualTo(12.0);
+        assertThat(report.getDrivers().get(1).getOrdinaryEnd()).isEqualTo(20.0);
         assertThat(report.getDrivers().get(0).getOrdinaryEnd()).isEqualTo(16.5);
         assertThat(report.getWeekdays()).isEqualTo(21);
     }
@@ -137,6 +141,87 @@ class TourControlReportServiceTest {
         assertThat(entries.get(4).getEnd()).isEqualTo(18.0);
         assertThat(report.getDrivers().get(0).getSurplusHours()).isEqualTo(18.0);
         assertThat(report.getDrivers().get(1).getSurplusHours()).isZero();
+    }
+
+    @Test
+    void aPersistedBorrowedDayDoesNotAddHoursToTheOwnDriver() {
+        TourProcessingDraftTour own = tour("3625", "2026-05-04", "08:00", "2026-05-04", "12:00");
+        TourProcessingDraftAssignment driven = own.addAssignment(part(ana, bus));
+        TourProcessingDraftTour lent = tour("4040", "2026-05-04", "08:00", "2026-05-04", "18:00");
+        TourProcessingDraftAssignment borrowed = lent.addAssignment(part(ana, bus));
+        borrowed.setResourceType(ResourceType.BORROWED_VEHICLE);
+        borrowed.setVehicle(null);
+        borrowed.setVehicleId(null);
+        when(tourStore.findPrimariesByDraftId(draftId)).thenReturn(List.of(own, lent));
+        when(dayRepository.findByAssignmentIdIn(any())).thenReturn(List.of(
+                day(driven, "2026-05-04", "08:00", "12:00", 2.0),
+                day(borrowed, "2026-05-04", "08:00", "18:00", 9.0)
+        ));
+
+        TourControlReportDto report = service.report(draftId);
+
+        assertThat(report.getDrivers()).filteredOn(driver -> driver.getName().equals("Ana Pérez"))
+                .extracting(TourControlReportDto.Driver::getSurplusHours)
+                .containsExactly(2.0);
+        assertThat(report.getEntries()).filteredOn(entry -> "4040".equals(entry.getNumber()))
+                .extracting(TourControlReportDto.Entry::getSection)
+                .containsExactly("OTHER_UNIT");
+        assertThat(report.getEntries()).filteredOn(entry -> "3625".equals(entry.getNumber()))
+                .extracting(TourControlReportDto.Entry::getSection)
+                .containsExactly("DRIVER");
+    }
+
+    @Test
+    void aMultiDayExternalTourAppearsOnEveryDayItLasts() {
+        TourProcessingDraftTour hired = tour("8958", "2026-05-02", "06:00", "2026-05-04", "18:00");
+        hired.addAssignment(TourProcessingDraftAssignment.builder().id(UUID.randomUUID()).passengers(30)
+                .resourceType(ResourceType.EXTERNAL).driver("GLODA").vehicle("HB4939").build());
+        when(tourStore.findPrimariesByDraftId(draftId)).thenReturn(List.of(hired));
+
+        List<TourControlReportDto.Entry> entries = service.report(draftId).getEntries();
+
+        assertThat(entries).extracting(TourControlReportDto.Entry::getSection, TourControlReportDto.Entry::getDate)
+                .containsExactly(
+                        tuple("EXTERNAL", LocalDate.parse("2026-05-02")),
+                        tuple("EXTERNAL", LocalDate.parse("2026-05-03")),
+                        tuple("EXTERNAL", LocalDate.parse("2026-05-04")));
+        assertThat(entries).allSatisfy(entry -> {
+            assertThat(entry.getDepartureDate()).isEqualTo(LocalDate.parse("2026-05-02"));
+            assertThat(entry.getReturnDate()).isEqualTo(LocalDate.parse("2026-05-04"));
+            assertThat(entry.getNumber()).isEqualTo("8958");
+            assertThat(entry.getPlate()).isEqualTo("HB4939");
+            assertThat(entry.getPriority()).isEqualTo(1);
+        });
+    }
+
+    @Test
+    void aMultiDayBorrowedTourAppearsOnEveryDayItLasts() {
+        TourProcessingDraftTour lent = tour("4041", "2026-05-02", "07:00", "2026-05-04", "19:00");
+        lent.addAssignment(part(guest, bus));
+        when(tourStore.findPrimariesByDraftId(draftId)).thenReturn(List.of(lent));
+
+        List<TourControlReportDto.Entry> entries = service.report(draftId).getEntries();
+
+        assertThat(entries).extracting(TourControlReportDto.Entry::getSection, TourControlReportDto.Entry::getDate)
+                .containsExactly(
+                        tuple("OTHER_UNIT", LocalDate.parse("2026-05-02")),
+                        tuple("OTHER_UNIT", LocalDate.parse("2026-05-03")),
+                        tuple("OTHER_UNIT", LocalDate.parse("2026-05-04")));
+    }
+
+    @Test
+    void unattendedToursKeepTheirPriority() {
+        TourProcessingDraftTour pending = tour("3531", "2026-05-02", "07:30", "2026-05-02", "10:30");
+        pending.setPriority(3);
+        pending.addAssignment(TourProcessingDraftAssignment.builder().id(UUID.randomUUID()).passengers(22).build());
+        when(tourStore.findPrimariesByDraftId(draftId)).thenReturn(List.of(pending));
+
+        List<TourControlReportDto.Entry> entries = service.report(draftId).getEntries();
+
+        assertThat(entries).singleElement().satisfies(entry -> {
+            assertThat(entry.getSection()).isEqualTo("UNATTENDED");
+            assertThat(entry.getPriority()).isEqualTo(3);
+        });
     }
 
     private TourProcessingDraftTour tour(String number, String departureDate, String departureTime, String returnDate, String returnTime) {

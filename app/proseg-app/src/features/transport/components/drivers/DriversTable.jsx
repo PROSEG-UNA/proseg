@@ -16,7 +16,7 @@ const COLUMN_TO_BACKEND_KEY = {
     organizationalUnit: 'organizationalUnit',
 };
 
-export default function DriversTable({ onEditDriver, monthData, surplusHoursPerDriver }) {
+export default function DriversTable({ onEditDriver, monthData, unit, participantIds = null }) {
     const [pagination, setPagination] = usePersistedPagination('drivers-table-page-size');
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
@@ -30,8 +30,13 @@ export default function DriversTable({ onEditDriver, monthData, surplusHoursPerD
     const debouncedGlobalFilter = useDebounce(globalFilter, 350);
     const debouncedColumnFilters = useDebounce(columnFilters, 350);
 
+    const restrictToParticipants = participantIds !== null;
+    const participantIdsParam = restrictToParticipants ? participantIds.join(',') : '';
+    const noParticipantsToShow = restrictToParticipants && participantIds.length === 0;
+
     const backendFilters = useMemo(() => {
-        const out = {};
+        const out = unit ? { organizationalUnit: unit } : {};
+        if (participantIdsParam) out.ids = participantIdsParam;
         debouncedColumnFilters.forEach(({ id, value }) => {
             const key = COLUMN_TO_BACKEND_KEY[id];
             if (!key) return;
@@ -39,7 +44,7 @@ export default function DriversTable({ onEditDriver, monthData, surplusHoursPerD
             out[key] = value;
         });
         return out;
-    }, [debouncedColumnFilters]);
+    }, [debouncedColumnFilters, unit, participantIdsParam]);
 
     const backendSort = useMemo(
         () => sorting
@@ -73,6 +78,7 @@ export default function DriversTable({ onEditDriver, monthData, surplusHoursPerD
         search: debouncedGlobalFilter,
         filters: backendFilters,
         sort: backendSort,
+        enabled: !noParticipantsToShow,
     });
 
     const showMonthColumns = Boolean(monthData?.enabled);
@@ -82,16 +88,18 @@ export default function DriversTable({ onEditDriver, monthData, surplusHoursPerD
         return rows.map((row) => {
             const driverMonth = monthData.byDriverId.get(row.id);
             const surplusHoursAccrued = driverMonth?.surplusHoursAccrued ?? 0;
+            const surplusCap = driverMonth?.surplusCap ?? 0;
             return {
                 ...row,
+                businessDays: driverMonth?.businessDays ?? null,
                 ordinaryHoursAccrued: driverMonth?.ordinaryHoursAccrued ?? 0,
-                surplusExecutionRatio: surplusHoursPerDriver > 0 ? surplusHoursAccrued / surplusHoursPerDriver : null,
+                surplusExecutionRatio: surplusCap > 0 ? surplusHoursAccrued / surplusCap : null,
                 surplusHoursAccrued,
                 overtimeHoursAccrued: driverMonth?.overtimeHoursAccrued ?? 0,
                 weekendsWorked: driverMonth?.weekendsWorked ?? 0,
             };
         });
-    }, [rows, showMonthColumns, monthData, surplusHoursPerDriver]);
+    }, [rows, showMonthColumns, monthData]);
 
     const columns = useMemo(() => getDriverColumns({ showMonthColumns }), [showMonthColumns]);
 
@@ -99,7 +107,7 @@ export default function DriversTable({ onEditDriver, monthData, surplusHoursPerD
         <TableBase
             columns={columns}
             data={rowsWithMonth}
-            loading={loading}
+            loading={loading || (restrictToParticipants && Boolean(monthData?.loading))}
             fetching={fetching || Boolean(monthData?.loading)}
             error={error ?? monthData?.error}
             onRowClick={canEdit || canDelete ? (row) => onEditDriver(row.original) : undefined}

@@ -76,6 +76,21 @@ class TourControlWorkbookGeneratorTest {
     }
 
     @Test
+    void usesEachDriversOwnBusinessDaysForTheirSurplusMax() throws IOException {
+        TourControlReportDto custom = report();
+        custom.getDrivers().get(1).setBusinessDays(21);
+        workbook = new XSSFWorkbook(new ByteArrayInputStream(new TourControlWorkbookGenerator().generate(custom)));
+        workbook.getCreationHelper().createFormulaEvaluator().evaluateAll();
+
+        int summary = rowOf("HRS.EXTRAOFICIAL", 6, "NOMBRE") + 1;
+
+        assertThat(number("HRS.EXTRAOFICIAL", "N" + summary)).isEqualTo(28);
+        assertThat(number("HRS.EXTRAOFICIAL", "L" + summary)).isCloseTo(37.5, within(0.001));
+        assertThat(number("HRS.EXTRAOFICIAL", "N" + (summary + 1))).isEqualTo(21);
+        assertThat(number("HRS.EXTRAOFICIAL", "L" + (summary + 1))).isCloseTo(28.0, within(0.001));
+    }
+
+    @Test
     void addsBlocksForDaysAfterTheMonthWhenToursContinue() {
         int lastBlock = rowOf("HRS.EXTRAOFICIAL", 6, "NOMBRE") - 1;
         while (cell("HRS.EXTRAOFICIAL", "A" + lastBlock) == null || !"FECHA DE ".equals(cellText("A" + lastBlock))) {
@@ -94,6 +109,61 @@ class TourControlWorkbookGeneratorTest {
         assertThat(number("Hoja1", "B4")).isEqualTo(1);
         assertThat(number("Hoja1", "G4")).isEqualTo(1);
         assertThat(number("Hoja1", "G5")).isZero();
+    }
+
+    @Test
+    void writesThePriorityOfUnattendedToursInColumnT() {
+        assertThat(text("HRS.EXTRAOFICIAL", "T4")).isEqualTo("PRIOR");
+        assertThat(number("HRS.EXTRAOFICIAL", "N16")).isEqualTo(3531);
+        assertThat(number("HRS.EXTRAOFICIAL", "T16")).isEqualTo(1);
+        assertThat(cell("HRS.EXTRAOFICIAL", "A16")).isNull();
+        assertThat(cell("HRS.EXTRAOFICIAL", "F16")).isNull();
+        assertThat(cell("HRS.EXTRAOFICIAL", "G16")).isNull();
+    }
+
+    @Test
+    void listsAMultiDayExternalTourOnEveryDayButOnlyOnceInHoja2() throws IOException {
+        TourControlReportDto custom = report();
+        custom.setEntries(List.of(
+                external("2026-05-02", "2026-05-02", "2026-05-03", "8958"),
+                external("2026-05-03", "2026-05-02", "2026-05-03", "8958")));
+        workbook = new XSSFWorkbook(new ByteArrayInputStream(new TourControlWorkbookGenerator().generate(custom)));
+
+        List<Integer> controlRows = rowsOfTour("HRS.EXTRAOFICIAL", 8958);
+
+        assertThat(controlRows).hasSize(2);
+        assertThat(controlRows.get(0)).isLessThan(controlRows.get(1));
+        assertThat(rowsOfTour("Hoja2", 8958)).hasSize(1);
+    }
+
+    @Test
+    void savesTheFormulaResultsSoTheFileShowsThemWithoutEnablingEditing() throws IOException {
+        XSSFWorkbook untouched = new XSSFWorkbook(new ByteArrayInputStream(new TourControlWorkbookGenerator().generate(report())));
+        Sheet control = untouched.getSheet("HRS.EXTRAOFICIAL");
+
+        Cell weekday = control.getRow(3).getCell(3);
+        assertThat(weekday.getCellType()).isEqualTo(org.apache.poi.ss.usermodel.CellType.FORMULA);
+        assertThat(weekday.getCachedFormulaResultType()).isEqualTo(org.apache.poi.ss.usermodel.CellType.STRING);
+        assertThat(weekday.getStringCellValue()).isEqualTo("VIERNES");
+        assertThat(control.getRow(10).getCell(2).getNumericCellValue()).isCloseTo(13.5, within(0.001));
+    }
+
+    private List<Integer> rowsOfTour(String sheetName, int tourNumber) {
+        int numberColumn = sheetName.equals("Hoja2") ? 9 : 13;
+        List<Integer> rows = new java.util.ArrayList<>();
+        for (Row row : workbook.getSheet(sheetName)) {
+            Cell cell = row.getCell(numberColumn);
+            if (cell != null && cell.getCellType() == org.apache.poi.ss.usermodel.CellType.NUMERIC && (int) cell.getNumericCellValue() == tourNumber) {
+                rows.add(row.getRowNum());
+            }
+        }
+        return rows;
+    }
+
+    private TourControlReportDto.Entry external(String date, String departureDate, String returnDate, String number) {
+        return TourControlReportDto.Entry.builder().section("EXTERNAL").date(LocalDate.parse(date)).driver("GLODA").plate("HB4939")
+                .destination("San Pedro").responsible("Ana Chaves").departureDate(LocalDate.parse(departureDate))
+                .returnDate(LocalDate.parse(returnDate)).start(6.5).end(14.0).passengers(46).number(number).priority(2).build();
     }
 
     private int rowOf(String sheetName, int column, String value) {

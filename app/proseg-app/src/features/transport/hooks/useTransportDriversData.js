@@ -18,13 +18,14 @@ function mapDriverToRow(driver) {
     };
 }
 
-export function useTransportDriversData({ pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [] } = {}) {
+export function useTransportDriversData({ pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [], enabled = true } = {}) {
     const requestParams = { page: pageIndex, size: pageSize, search, filters, sort };
 
     const listQueryKey = queryKeys.transport.driverList(requestParams);
 
     const { data, isLoading, isFetching, error } = useQuery({
         queryKey: listQueryKey,
+        enabled,
         placeholderData: keepPreviousPage(listQueryKey),
         queryFn: async () => {
             const response = await fetchDrivers(requestParams);

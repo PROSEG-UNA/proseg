@@ -14,6 +14,7 @@ import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
 import com.proseg.msvc_transport.repository.VehicleRepository;
+import com.proseg.msvc_transport.service.driverhours.DriverBusinessDays;
 import com.proseg.msvc_transport.service.driverhours.DriverHoursRules;
 import com.proseg.msvc_transport.service.driverhours.OrdinaryWindow;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +61,7 @@ public class TourControlReportService {
     private final TourProcessingDraftDayRepository dayRepository;
     private final DriverRepository driverRepository;
     private final VehicleRepository vehicleRepository;
+    private final DriverBusinessDaysService businessDaysService;
 
     @Transactional(readOnly = true)
     public TourControlReportDto report(UUID draftId) {
@@ -85,6 +87,7 @@ public class TourControlReportService {
         if (draft.getYear() == null || draft.getMonth() == null || draft.getBusinessDays() == null) {
             throw TransportException.unprocessable("TOUR_PROCESSING_DRAFT_WITHOUT_PERIOD", "El borrador no tiene mes ni días hábiles definidos");
         }
+        DriverBusinessDays businessDays = businessDaysService.forDraft(draft);
         List<Driver> catalog = driverRepository.findAll();
         Map<UUID, Driver> driversById = DriverHoursRules.driversById(catalog);
         Map<UUID, Vehicle> vehiclesById = DriverHoursRules.vehiclesById(vehicleRepository.findAll());
@@ -106,8 +109,18 @@ public class TourControlReportService {
                 placements.add(new Placement(tourEntry(UNATTENDED_SECTION, tour, null, null), null));
                 continue;
             }
-            for (TourProcessingDraftAssignment part : tour.getAssignments()) {
-                placements.addAll(place(tour, part, driversById, vehiclesById, daysByAssignment, scheduledDrivers));
+            for (List<TourProcessingDraftAssignment> trips : tripsByDriver(tour)) {
+                List<Placement> placed = place(tour, trips.get(0), driversById, vehiclesById, daysByAssignment, scheduledDrivers);
+                if (trips.size() > 1) {
+                    int passengers = trips.stream().mapToInt(trip -> trip.getPassengers() == null ? 0 : trip.getPassengers()).sum();
+                    String plates = trips.stream().map(trip -> plateOf(trip, vehiclesById)).filter(Objects::nonNull)
+                            .distinct().collect(Collectors.joining(" / "));
+                    placed.forEach(placement -> {
+                        placement.entry().setPassengers(passengers);
+                        placement.entry().setPlate(plates.isEmpty() ? null : plates);
+                    });
+                }
+                placements.addAll(placed);
             }
         }
 
@@ -133,9 +146,18 @@ public class TourControlReportService {
                 .month(draft.getMonth())
                 .businessDays(draft.getBusinessDays())
                 .weekdays(weekdays(draft.getYear(), draft.getMonth()))
-                .drivers(roster.stream().map(driver -> toDriver(driver, scheduledDrivers.get(driver))).toList())
+                .drivers(roster.stream().map(driver -> toDriver(driver, scheduledDrivers.get(driver), businessDays)).toList())
                 .entries(entries)
                 .build();
+    }
+
+    private List<List<TourProcessingDraftAssignment>> tripsByDriver(TourProcessingDraftTour tour) {
+        Map<Object, List<TourProcessingDraftAssignment>> groups = new LinkedHashMap<>();
+        for (TourProcessingDraftAssignment part : tour.getAssignments()) {
+            Object key = part.getResourceType() != ResourceType.EXTERNAL && part.getDriverId() != null ? part.getDriverId() : new Object();
+            groups.computeIfAbsent(key, ignored -> new ArrayList<>()).add(part);
+        }
+        return List.copyOf(groups.values());
     }
 
     private List<Placement> place(
@@ -148,10 +170,10 @@ public class TourControlReportService {
     ) {
         String plate = plateOf(part, vehiclesById);
         if (part.getResourceType() == ResourceType.EXTERNAL) {
-            return List.of(new Placement(tourEntry(EXTERNAL_SECTION, tour, part, plate), null));
+            return externalEntries(tour, part, plate);
         }
         Driver driver = DriverHoursRules.assignedDriver(part, driversById);
-        if (driver != null && driver.getOrganizationalUnit() == DriverUnit.GENERAL_SERVICES) {
+        if (DriverHoursRules.countsTowardOwnDriver(part, driver)) {
             scheduledDrivers.computeIfAbsent(driver, ignored -> new HoursTotals()).add(storedDays(part, daysByAssignment));
             return dayEntries(DRIVER_SECTION, tour, part, driver.getName(), plate, daysByAssignment).stream()
                     .map(entry -> new Placement(entry, driver))
@@ -164,6 +186,19 @@ public class TourControlReportService {
                     .toList();
         }
         return List.of(new Placement(tourEntry(UNATTENDED_SECTION, tour, part, plate), null));
+    }
+
+    private List<Placement> externalEntries(TourProcessingDraftTour tour, TourProcessingDraftAssignment part, String plate) {
+        LocalDate lastDate = tour.getReturnDate() == null || tour.getReturnDate().isBefore(tour.getDepartureDate())
+                ? tour.getDepartureDate()
+                : tour.getReturnDate();
+        List<Placement> placements = new ArrayList<>();
+        for (LocalDate date = tour.getDepartureDate(); !date.isAfter(lastDate); date = date.plusDays(1)) {
+            TourControlReportDto.Entry entry = tourEntry(EXTERNAL_SECTION, tour, part, plate);
+            entry.setDate(date);
+            placements.add(new Placement(entry, null));
+        }
+        return placements;
     }
 
     private List<TourControlReportDto.Entry> dayEntries(
@@ -257,11 +292,12 @@ public class TourControlReportService {
         return Math.round(hours * 100) / 100.0;
     }
 
-    private TourControlReportDto.Driver toDriver(Driver driver, HoursTotals totals) {
+    private TourControlReportDto.Driver toDriver(Driver driver, HoursTotals totals, DriverBusinessDays businessDays) {
         OrdinaryWindow window = OrdinaryWindow.of(driver);
         boolean known = totals == null || totals.complete;
         return TourControlReportDto.Driver.builder()
                 .name(driver.getName())
+                .businessDays(businessDays.businessDaysOf(driver))
                 .ordinaryStart(window.start())
                 .ordinaryEnd(window.end())
                 .surplusHours(known ? round(totals == null ? 0 : totals.surplus) : null)

@@ -30,7 +30,7 @@ describe('caché del borrador de transporte', () => {
 
     it('mantiene los datos en caché sin pedir filas cuando está deshabilitado', async () => {
         const queryClient = new QueryClient();
-        const params = { page: 0, size: 10, search: '', filters: {}, sort: [] };
+        const params = { page: 0, size: 10, search: '', filters: {}, sort: [], rule: '' };
         queryClient.setQueryData(queryKeys.transport.tourProcessingDraftRows('draft-1', params), { rows: [{ id: 'row-1' }], totalElements: 1 });
         fetchTourProcessingDraftRows.mockClear();
 

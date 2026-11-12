@@ -130,6 +130,11 @@ public class TourProcessingDraftTour extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String observations;
 
+    @Column(name = "observation_reviewed", nullable = false)
+    @ColumnDefault("false")
+    @Builder.Default
+    private boolean observationReviewed = false;
+
     @Column(nullable = false)
     @Builder.Default
     private Integer duplicateGroupSize = 1;

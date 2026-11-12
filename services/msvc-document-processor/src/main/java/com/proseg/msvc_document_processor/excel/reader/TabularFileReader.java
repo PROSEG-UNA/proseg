@@ -47,7 +47,36 @@ public class TabularFileReader {
             case HTML -> readHtmlTable(content);
             case CSV -> readCsv(content);
         };
-        return new TabularFile(format, rows);
+        return new TabularFile(format, repairAccents(rows));
+    }
+
+    private List<SheetRow> repairAccents(List<SheetRow> rawRows) {
+        List<String> texts = new ArrayList<>();
+        for (SheetRow row : rawRows) {
+            for (SheetCell cell : row.cells()) {
+                if (cell.text() != null && cell.numericValue() == null) {
+                    texts.add(cell.text());
+                }
+            }
+        }
+        BrokenAccentRepairer repairer = BrokenAccentRepairer.analyze(texts);
+        List<SheetRow> repaired = new ArrayList<>(rawRows.size());
+        for (SheetRow row : rawRows) {
+            List<SheetCell> cells = new ArrayList<>(row.cells().size());
+            for (SheetCell cell : row.cells()) {
+                cells.add(repairCell(cell, repairer));
+            }
+            repaired.add(new SheetRow(row.rowNumber(), cells));
+        }
+        return repaired;
+    }
+
+    private SheetCell repairCell(SheetCell cell, BrokenAccentRepairer repairer) {
+        if (cell.isBlank()) {
+            return SheetCell.empty();
+        }
+        String text = cell.numericValue() == null ? repairer.repair(cell.text()) : cell.text();
+        return new SheetCell(SheetCell.sanitize(text), cell.dateValue(), cell.numericValue());
     }
 
     SpreadsheetFormat detectFormat(String lowerName, byte[] content) {
@@ -106,10 +135,10 @@ public class TabularFileReader {
                 : cell.getCellType();
         String text = formatter.formatCellValue(cell);
         if (type != CellType.NUMERIC) {
-            return SheetCell.ofText(text);
+            return SheetCell.unsanitizedText(text);
         }
         LocalDateTime dateValue = DateUtil.isCellDateFormatted(cell) ? cell.getLocalDateTimeCellValue() : null;
-        return SheetCell.ofNumber(text, cell.getNumericCellValue(), dateValue);
+        return SheetCell.unsanitizedNumber(text, cell.getNumericCellValue(), dateValue);
     }
 
     private List<SheetRow> readHtmlTable(byte[] content) {
@@ -126,7 +155,7 @@ public class TabularFileReader {
                 if (!cell.nameIs("td") && !cell.nameIs("th")) {
                     continue;
                 }
-                cells.add(SheetCell.ofText(cell.text()));
+                cells.add(SheetCell.unsanitizedText(cell.text()));
                 for (int i = 1; i < colspan(cell); i++) {
                     cells.add(SheetCell.empty());
                 }
@@ -154,7 +183,7 @@ public class TabularFileReader {
         try (CSVParser parser = CSVParser.parse(text, format)) {
             for (CSVRecord record : parser) {
                 List<SheetCell> cells = new ArrayList<>(record.size());
-                record.forEach(value -> cells.add(SheetCell.ofText(value)));
+                record.forEach(value -> cells.add(SheetCell.unsanitizedText(value)));
                 rows.add(new SheetRow((int) record.getRecordNumber(), cells));
             }
         } catch (IOException | RuntimeException e) {

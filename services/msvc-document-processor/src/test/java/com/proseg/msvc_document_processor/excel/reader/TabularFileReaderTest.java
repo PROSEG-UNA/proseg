@@ -14,12 +14,41 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class TabularFileReaderTest {
+
+    private static final List<String> BROKEN_OBSERVATIONS = List.of(
+            "Viajan los acadC)micos: Alex ZC:C1iga y su cC)dula 115420617",
+            "Se requiere la asignaciC3n de chofer por dC-a",
+            "SE SOLICITA VEHC CULO PARA EL PRC STAMO Y CONFIRMACIC\u0013N DE MUC\u0011OZ",
+            "Opción C) y bus ABC-123"
+    );
+    private static final List<String> REPAIRED_OBSERVATIONS = List.of(
+            "Viajan los académicos: Alex Zúñiga y su cédula 115420617",
+            "Se requiere la asignación de chofer por día",
+            "SE SOLICITA VEHÍCULO PARA EL PRÉSTAMO Y CONFIRMACIÓN DE MUÑOZ",
+            "Opción C) y bus ABC-123"
+    );
+
+    private static final List<String> BROKEN_PRINTABLE_OBSERVATIONS = List.of(
+            "Viajan los acadC)micos: Alex ZC:C1iga y su cC)dula 115420617",
+            "Se requiere la asignaciC3n de chofer por dC-a",
+            "SE SOLICITA VEHC CULO PARA EL PRC STAMO",
+            "Para contacto llamar al telC)fono de la profesora",
+            "Opción C) y bus ABC-123"
+    );
+    private static final List<String> REPAIRED_PRINTABLE_OBSERVATIONS = List.of(
+            "Viajan los académicos: Alex Zúñiga y su cédula 115420617",
+            "Se requiere la asignación de chofer por día",
+            "SE SOLICITA VEHÍCULO PARA EL PRÉSTAMO",
+            "Para contacto llamar al teléfono de la profesora",
+            "Opción C) y bus ABC-123"
+    );
 
     private final TabularFileReader reader = new TabularFileReader();
 
@@ -92,6 +121,61 @@ class TabularFileReaderTest {
     }
 
     @Test
+    void repairsBrokenAccentsInXlsx() throws IOException {
+        byte[] content;
+        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
+            content = workbookWithTexts(workbook, BROKEN_PRINTABLE_OBSERVATIONS);
+        }
+
+        TabularFile file = reader.read("giras.xlsx", content);
+
+        assertThat(textsOf(file)).containsExactlyElementsOf(REPAIRED_PRINTABLE_OBSERVATIONS);
+    }
+
+    @Test
+    void repairsBrokenAccentsInLegacyXls() throws IOException {
+        byte[] content;
+        try (HSSFWorkbook workbook = new HSSFWorkbook()) {
+            content = workbookWithTexts(workbook, BROKEN_OBSERVATIONS);
+        }
+
+        TabularFile file = reader.read("giras.xls", content);
+
+        assertThat(textsOf(file)).containsExactlyElementsOf(REPAIRED_OBSERVATIONS);
+    }
+
+    @Test
+    void repairsBrokenAccentsInCsv() {
+        String csv = String.join("\r\n", BROKEN_OBSERVATIONS) + "\r\n";
+
+        TabularFile file = reader.read("giras.csv", csv.getBytes(StandardCharsets.UTF_8));
+
+        assertThat(textsOf(file)).containsExactlyElementsOf(REPAIRED_OBSERVATIONS);
+    }
+
+    @Test
+    void repairsBrokenAccentsInHtmlTable() {
+        StringBuilder html = new StringBuilder("<html><body><table>");
+        for (String text : BROKEN_OBSERVATIONS) {
+            html.append("<tr><td>").append(text).append("</td></tr>");
+        }
+        html.append("</table></body></html>");
+
+        TabularFile file = reader.read("giras.xls", html.toString().getBytes(StandardCharsets.UTF_8));
+
+        assertThat(textsOf(file)).containsExactlyElementsOf(REPAIRED_OBSERVATIONS);
+    }
+
+    @Test
+    void repairsUtf8ReadAsWindows1252InCsv() {
+        String csv = "Observaciones\r\nacadÃ©micos de la regiÃ³n\r\n";
+
+        TabularFile file = reader.read("giras.csv", csv.getBytes(StandardCharsets.UTF_8));
+
+        assertThat(file.rows().get(1).cell(0).text()).isEqualTo("académicos de la región");
+    }
+
+    @Test
     void rejectsUnknownBinaryContent() {
         byte[] content = {0x00, 0x01, 0x02, 0x03};
 
@@ -133,6 +217,25 @@ class TabularFileReaderTest {
         assertThat(row.cell(0).numericValue()).isEqualTo(4504d);
         assertThat(row.cell(1).dateValue().toLocalDate()).isEqualTo(LocalDate.of(2026, 5, 1));
         assertThat(row.cell(2).text()).isEqualTo("Merced");
+    }
+
+    private byte[] workbookWithTexts(Workbook workbook, List<String> texts) throws IOException {
+        Sheet sheet = workbook.createSheet("Prueba");
+        for (int index = 0; index < texts.size(); index++) {
+            sheet.createRow(index).createCell(0).setCellValue(texts.get(index));
+        }
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            workbook.write(out);
+            return out.toByteArray();
+        }
+    }
+
+    private List<String> textsOf(TabularFile file) {
+        List<String> texts = new ArrayList<>();
+        for (SheetRow row : file.rows()) {
+            texts.add(row.cell(0).text());
+        }
+        return texts;
     }
 
     private byte[] concat(byte[]... parts) {

@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -23,4 +24,6 @@ public class VehicleResponseDto {
     private boolean available;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    @Builder.Default
+    private List<VehicleOpenDraftTourResponseDto> openDraftTours = List.of();
 }

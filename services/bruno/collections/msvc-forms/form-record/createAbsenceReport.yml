@@ -1,0 +1,31 @@
+info:
+  name: createAbsenceReport
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{gatewayUrl}}/api/{{apiVersion}}/forms"
+  body:
+    type: json
+    data: |-
+      {
+        "formTypeId": "{{absenceFormTypeId}}",
+        "data": {
+          "fecha": "2026-09-13",
+          "hora": "07:00",
+          "guarda": "Carlos Ramirez",
+          "turno": "Diurno",
+          "horaTurno": "07:00 - 15:00",
+          "puestoTrabajo": "Acceso Norte",
+          "motivoAusencia": "Incapacidad",
+          "supervisor": "Supervisor Dos"
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

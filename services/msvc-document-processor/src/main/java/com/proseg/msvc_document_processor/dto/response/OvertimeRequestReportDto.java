@@ -28,6 +28,8 @@ public class OvertimeRequestReportDto {
     @Builder
     public static class DriverBlock {
         private String name;
+        private Integer businessDays;
+        private Double surplusCap;
         private double surplusHours;
         private double overtimeHours;
         private List<TourBlock> tours;

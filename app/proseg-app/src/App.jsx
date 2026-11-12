@@ -29,8 +29,10 @@ import TicketsPage from './features/maintenance/pages/TicketsPage.jsx';
 import TicketsDashboard from './features/maintenance/pages/TicketsDashboard.jsx';
 import DriversPage from './features/transport/pages/drivers/DriversPage.jsx';
 import VehiclesPage from './features/transport/pages/vehicles/VehiclesPage.jsx';
+import FormsPage from './features/forms/pages/FormsPage.jsx';
 import TourProcessingPage from './features/transport/pages/tourProcessing/TourProcessingPage.jsx';
 import TourProcessingDraftPage from './features/transport/pages/tourProcessing/TourProcessingDraftPage.jsx';
+import TransportSettingsPage from './features/transport/pages/settings/TransportSettingsPage.jsx';
 
 function migrateTourProcessingStorage() {
     try {
@@ -211,12 +213,36 @@ function App() {
                                     }
                                 />
                                 <Route
+                                    path="/transporte/configuraciones"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Configuraciones de Transporte" pageTitle="Configuraciones" description="Ajustes del módulo de transporte.">
+                                                    <TransportSettingsPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
                                     path="/transporte/vehiculos"
                                     element={
                                         <ProtectedRoute
                                             element={
                                                 <DashboardLayout title="Gestión de Vehículos" pageTitle="Vehículos" description="Administra el parque de vehículos institucionales.">
                                                     <VehiclesPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/formularios"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Registro de Formularios" pageTitle="Formularios">
+                                                    <FormsPage />
                                                 </DashboardLayout>
                                             }
                                         />

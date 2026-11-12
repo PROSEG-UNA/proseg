@@ -32,12 +32,15 @@ export async function downloadFile(url, params, fallbackFileName) {
     }
 }
 
-export function buildPageParams({ page = 0, size = 10, search = '', filters = {}, sort = [] } = {}) {
+export function buildPageParams({ page = 0, size = 10, search = '', filters = {}, sort = [], rule = '' } = {}) {
     const params = new URLSearchParams();
     params.append('page', String(page));
     params.append('size', String(size));
     if (search && search.trim() !== '') {
         params.append('search', search.trim());
+    }
+    if (rule) {
+        params.append('rule', rule);
     }
 
     Object.entries(filters).forEach(([key, value]) => {

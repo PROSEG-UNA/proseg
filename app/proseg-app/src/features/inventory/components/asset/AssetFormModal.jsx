@@ -35,6 +35,7 @@ import { useAssetPhotos } from '../../hooks/useAssetPhotos.js';
 import { queryKeys } from '../../../../common/query';
 import { usePermissions } from '../../../../common/hooks/usePermissions';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
+import { AssetSectionTitle } from './AssetModalFields.jsx';
 
 const STATUS_OPTIONS = [
     { value: 'APROBADO', label: 'Aprobado' },
@@ -755,15 +756,6 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
         '&::-webkit-scrollbar-thumb:hover': { background: `color-mix(in srgb, ${accentColor} 45%, transparent)` },
     };
 
-    const sectionLabel = (text) => (
-        <Typography sx={{
-            fontSize: 11.5, fontWeight: 700, letterSpacing: '0.08em',
-            textTransform: 'uppercase', color: accentColor, mb: 1.5,
-        }}>
-            {text}
-        </Typography>
-    );
-
     const modelDisabled = saving || loadingOptions || !formValues.brandId || !formValues.typeId;
 
     return (
@@ -772,6 +764,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 open={open}
                 onClose={onClose}
                 maxWidth="md"
+                fillHeight
                 icon={Inventory2OutlinedIcon}
                 title={isEdit ? 'Editar Activo' : 'Nuevo Activo'}
                 subtitle={isEdit ? 'Actualiza los datos del activo' : 'Completa los datos para registrar el activo'}
@@ -790,7 +783,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                 <Box sx={{ px: { xs: 2.5, sm: 3 }, pt: 2.5, pb: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
 
                     <Box>
-                        {sectionLabel('Identificación')}
+                        <AssetSectionTitle>Identificación</AssetSectionTitle>
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                             <Box>
                                 <TextField
@@ -830,7 +823,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     <Divider />
 
                     <Box>
-                        {sectionLabel('Clasificación')}
+                        <AssetSectionTitle>Clasificación</AssetSectionTitle>
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                             <SearchableSelect
                                 label="Marca" value={formValues.brandId} required
@@ -886,7 +879,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     <Divider />
 
                     <Box>
-                        {sectionLabel('Ubicación')}
+                        <AssetSectionTitle>Ubicación</AssetSectionTitle>
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                             <SearchableSelect
                                 label="Campus" value={formValues.campusId} required
@@ -962,7 +955,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     <Divider />
 
                     <Box>
-                        {sectionLabel('Estado')}
+                        <AssetSectionTitle>Estado</AssetSectionTitle>
                         <Box sx={{ display: 'grid', gridTemplateColumns: formValues.status === 'DE_BAJA' ? { xs: '1fr', sm: '1fr 1fr' } : '1fr', gap: 2 }}>
                             <TextField
                                 select label="Estado" value={formValues.status} required
@@ -1001,7 +994,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     {requiresNetworkInterface && (
                         <>
                             <Box>
-                                {sectionLabel('IP y MAC')}
+                                <AssetSectionTitle>IP y MAC</AssetSectionTitle>
                                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                                     <TextField
                                         label="Dirección IP" value={formValues.ipAddress}
@@ -1055,7 +1048,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     )}
 
                     <Box>
-                        {sectionLabel('Fechas')}
+                        <AssetSectionTitle>Fechas</AssetSectionTitle>
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
                             <DatePicker
                                 label="Fecha de adquisición"
@@ -1084,7 +1077,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     <Divider />
 
                     <Box>
-                        {sectionLabel('Coordenadas')}
+                        <AssetSectionTitle>Coordenadas</AssetSectionTitle>
                         <CoordinateMapPicker
                             latitude={formValues.latitude}
                             longitude={formValues.longitude}
@@ -1101,7 +1094,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     <Divider />
 
                     <Box>
-                        {sectionLabel('Responsable')}
+                        <AssetSectionTitle>Responsable</AssetSectionTitle>
                         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2 }}>
                             <SearchableSelect
                                 label="Unidad Ejecutora" value={formValues.executingUnitId}
@@ -1154,7 +1147,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     <Divider />
 
                     <Box>
-                        {sectionLabel('Componentes asociados')}
+                        <AssetSectionTitle>Componentes asociados</AssetSectionTitle>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                             {components.length === 0 ? (
                                 <Typography sx={{ color: 'text.secondary', fontSize: 13.5 }}>
@@ -1271,7 +1264,7 @@ export default function AssetFormModal({ open, onClose, onSaved, assetId = null 
                     <Divider />
 
                     <Box>
-                        {sectionLabel('Fotos')}
+                        <AssetSectionTitle>Fotos</AssetSectionTitle>
                         {canUploadImages ? (
                             <>
                                 <Box

@@ -92,7 +92,10 @@ describe('useTourProcessingCatalogMatch', () => {
             id: '1', label: 'Jorge Francisco Mena', status: 'INACTIVE', unit: 'OTHER_UNIT',
             ordinaryStart: '07:30:00', ordinaryEnd: '16:30:00', allowedVehicleTypes: ['MICROBUS'], restrictions: '',
         }];
-        mocks.vehicles.options = [{ id: '1', label: '301-627', type: 'MICROBUS', capacity: 36, available: false }];
+        mocks.vehicles.options = [
+            { id: '1', label: '301-627', type: 'MICROBUS', capacity: 36, available: true },
+            { id: '2', label: '301-481', type: 'SEDAN', capacity: 4, available: false },
+        ];
         const { driver, vehicle } = renderCatalog();
 
         expect(driver.options[0]).toMatchObject({
@@ -101,12 +104,15 @@ describe('useTourProcessingCatalogMatch', () => {
             secondary: 'Otra Unidad · 07:30 a 16:30 · Maneja: Microbús',
             badge: { label: 'Inactivo', color: 'error' },
         });
+        expect(vehicle.options).toHaveLength(1);
         expect(vehicle.options[0]).toMatchObject({
             label: '301-627',
             secondary: 'Microbús · 36 pasajeros',
-            badge: { label: 'No disponible', color: 'error' },
         });
-        expect(vehicle.options[0].searchText).toContain('36 pasajeros');
+        expect(vehicle.options[0].badge).toBeNull();
+        expect(vehicle.isMissing('301-481')).toBe(false);
+        expect(vehicle.isUnavailable('301-481')).toBe(true);
+        expect(vehicle.isUnavailable('301-627')).toBe(false);
     });
 
     it('solo permite agregar con el permiso de gestionar', () => {

@@ -34,6 +34,6 @@ public class VehicleWorkload {
     }
 
     public Optional<TourProcessingDraftAssignment> findOverlap(TourProcessingDraftAssignment tour) {
-        return tours.stream().filter(existing -> DriverHoursRules.toursOverlap(existing, tour)).findFirst();
+        return tours.stream().filter(existing -> !DriverWorkload.sharedVehicleTrip(existing, tour) && DriverHoursRules.toursOverlap(existing, tour)).findFirst();
     }
 }

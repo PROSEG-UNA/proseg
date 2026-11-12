@@ -27,10 +27,18 @@ export function useTourProcessingCatalogMatch() {
 
     const driverNames = useMemo(() => drivers.options.map((option) => option.label), [drivers.options]);
     const vehiclePlates = useMemo(() => vehicles.options.map((option) => option.label), [vehicles.options]);
+    const selectableVehicles = useMemo(
+        () => vehicles.options.filter((option) => option.available !== false),
+        [vehicles.options],
+    );
     const driverEntries = useMemo(() => drivers.options.map(buildDriverCatalogEntry), [drivers.options]);
-    const vehicleEntries = useMemo(() => vehicles.options.map(buildVehicleCatalogEntry), [vehicles.options]);
+    const vehicleEntries = useMemo(() => selectableVehicles.map(buildVehicleCatalogEntry), [selectableVehicles]);
     const driverKeys = useMemo(() => new Set(driverNames.map(driverMatchKey)), [driverNames]);
     const plateKeys = useMemo(() => new Set(vehiclePlates.map(plateMatchKey)), [vehiclePlates]);
+    const unavailablePlateKeys = useMemo(
+        () => new Set(vehicles.options.filter((option) => option.available === false).map((option) => plateMatchKey(option.label))),
+        [vehicles.options],
+    );
 
     const driversLoaded = canReadDrivers && !drivers.loading && !drivers.error;
     const vehiclesLoaded = canReadVehicles && !vehicles.loading && !vehicles.error;
@@ -45,8 +53,19 @@ export function useTourProcessingCatalogMatch() {
         return vehiclesLoaded && key !== '' && !plateKeys.has(key);
     }, [vehiclesLoaded, plateKeys]);
 
+    const isVehicleUnavailable = useCallback((value) => {
+        const key = plateMatchKey(value);
+        return vehiclesLoaded && key !== '' && unavailablePlateKeys.has(key);
+    }, [vehiclesLoaded, unavailablePlateKeys]);
+
     return useMemo(() => ({
         driver: { options: driverEntries, isMissing: isDriverMissing, canAdd: canAddDrivers },
-        vehicle: { options: vehicleEntries, catalog: vehicles.options, isMissing: isVehicleMissing, canAdd: canAddVehicles },
-    }), [driverEntries, isDriverMissing, canAddDrivers, vehicleEntries, vehicles.options, isVehicleMissing, canAddVehicles]);
+        vehicle: {
+            options: vehicleEntries,
+            catalog: vehicles.options,
+            isMissing: isVehicleMissing,
+            isUnavailable: isVehicleUnavailable,
+            canAdd: canAddVehicles,
+        },
+    }), [driverEntries, isDriverMissing, canAddDrivers, vehicleEntries, vehicles.options, isVehicleMissing, isVehicleUnavailable, canAddVehicles]);
 }

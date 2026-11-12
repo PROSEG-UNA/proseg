@@ -17,6 +17,7 @@ vi.mock('../../drivers/DriverFormModal.jsx', () => ({
     default: ({ initialValues, onSaved, onClose }) => (
         <div>
             <span>{`formulario-chofer:${initialValues.name}`}</span>
+            <span>{`unidad:${initialValues.organizationalUnit ?? ''}`}</span>
             <button type="button" onClick={() => { onSaved({ id: 'driver-3', name: 'Juan Chacón' }); onClose(); }}>
                 guardar-chofer
             </button>
@@ -32,11 +33,12 @@ const DRIVER_ENTRIES = [
     { label: 'Jorge Francisco Mena', unit: 'GENERAL_SERVICES', secondary: 'Servicios Generales · 07:30 a 16:30', searchText: 'Jorge Francisco Mena Servicios Generales 07:30 a 16:30' },
     { label: 'Miguel Fernandez', unit: 'GENERAL_SERVICES', secondary: 'Servicios Generales · 07:30 a 16:30', searchText: 'Miguel Fernandez Servicios Generales 07:30 a 16:30' },
     { label: 'Pedro Otra Unidad', unit: 'OTHER_UNIT', secondary: 'Otra Unidad · 07:30 a 16:30', searchText: 'Pedro Otra Unidad' },
+    { label: 'Juan Pérez', unit: 'OTHER_UNIT', secondary: 'Otra Unidad · 07:30 a 16:30', searchText: 'Juan Pérez' },
 ];
 
 const VEHICLE_ENTRIES = [
     { label: '301-627', secondary: 'Microbús · 36 pasajeros', searchText: '301-627 Microbús 36 pasajeros' },
-    { label: '301-481', secondary: 'Sedán · 4 pasajeros', badge: { label: 'No disponible', color: 'error' }, searchText: '301-481 Sedán 4 pasajeros No disponible' },
+    { label: '301-481', secondary: 'Sedán · 4 pasajeros', searchText: '301-481 Sedán 4 pasajeros' },
 ];
 
 function buildCatalog({ canAddDriver = true, missingDrivers = ['Juan Chacsn'] } = {}) {
@@ -49,6 +51,7 @@ function buildCatalog({ canAddDriver = true, missingDrivers = ['Juan Chacsn'] } 
         vehicle: {
             options: VEHICLE_ENTRIES,
             isMissing: (value) => ['999-999', 'Todo Terreno'].includes(value),
+            isUnavailable: (value) => value === '301-900',
             canAdd: true,
         },
     };
@@ -90,12 +93,12 @@ describe('TourProcessingCatalogField', () => {
         expect(screen.queryByRole('button', { name: 'Seleccionar otro chofer' })).not.toBeInTheDocument();
     });
 
-    it('avisa y ofrece agregar o seleccionar otro cuando el chofer no esta en el sistema', () => {
+    it('avisa y ofrece agregar cuando el chofer no esta en el sistema', () => {
         renderField();
 
         expect(screen.getByText(/Este chofer no se encuentra en el sistema, agrégalo antes de continuar/)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Agregar chofer al sistema' })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Seleccionar otro chofer' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Seleccionar otro chofer' })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Dejar vacío' })).not.toBeInTheDocument();
     });
 
@@ -143,10 +146,10 @@ describe('TourProcessingCatalogField', () => {
         expect(screen.queryByText(/Este chofer no se encuentra en el sistema/)).not.toBeInTheDocument();
     });
 
-    it('abre la lista del sistema para seleccionar otro chofer', async () => {
+    it('abre la lista del sistema desde el campo para seleccionar otro chofer', async () => {
         const { onChange } = renderField();
 
-        await userEvent.click(screen.getByRole('button', { name: 'Seleccionar otro chofer' }));
+        await userEvent.click(screen.getByRole('combobox', { name: 'Chofer' }));
 
         expect(screen.getByRole('combobox', { name: 'Chofer' })).toHaveFocus();
         expect(await screen.findByRole('option', { name: /Jorge Francisco Mena/ })).toBeInTheDocument();
@@ -164,7 +167,15 @@ describe('TourProcessingCatalogField', () => {
 
         expect(await screen.findByText('Microbús · 36 pasajeros')).toBeInTheDocument();
         expect(screen.getByText('Sedán · 4 pasajeros')).toBeInTheDocument();
+        expect(screen.queryByText('No disponible')).not.toBeInTheDocument();
+    });
+
+    it('muestra No disponible junto a la placa asignada aunque no este en las opciones', () => {
+        renderField({ kind: 'vehicle', value: '301-900', isEdit: false });
+
+        expect(screen.getByDisplayValue('301-900')).toBeInTheDocument();
         expect(screen.getByText('No disponible')).toBeInTheDocument();
+        expect(screen.queryByRole('option', { name: /301-900/ })).not.toBeInTheDocument();
     });
 
     it('busca el vehiculo por pasajeros o tipo', async () => {
@@ -185,6 +196,26 @@ describe('TourProcessingCatalogField', () => {
         expect(screen.queryByRole('option', { name: /Pedro Otra Unidad/ })).not.toBeInTheDocument();
     });
 
+    it('en interno avisa que no existe un chofer que es de otra unidad y no ofrece agregarlo', () => {
+        renderField({ value: 'Pedro Otra Unidad', generalServicesOnly: true });
+
+        expect(screen.getByText(/Este chofer no se encuentra en el sistema, agrégalo antes de continuar/)).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Agregar chofer al sistema' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Seleccionar otro chofer' })).not.toBeInTheDocument();
+    });
+
+    it('en interno no avisa de un chofer de Servicios Generales', () => {
+        renderField({ value: 'Jorge Francisco Mena', generalServicesOnly: true });
+
+        expect(screen.queryByText(/Este chofer no se encuentra en el sistema/)).not.toBeInTheDocument();
+    });
+
+    it('en prestamo no avisa de un chofer de otra unidad', () => {
+        renderField({ value: 'Pedro Otra Unidad', unitTabs: true });
+
+        expect(screen.queryByText(/Este chofer no se encuentra en el sistema/)).not.toBeInTheDocument();
+    });
+
     it('sin filtro lista choferes de todas las unidades', async () => {
         renderField({ value: '' });
 
@@ -198,7 +229,7 @@ describe('TourProcessingCatalogField', () => {
         renderField();
 
         expect(screen.queryByRole('button', { name: 'Agregar chofer al sistema' })).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Seleccionar otro chofer' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Seleccionar otro chofer' })).not.toBeInTheDocument();
     });
 
     it('usa la placa en las opciones del vehiculo', async () => {
@@ -216,7 +247,36 @@ describe('TourProcessingCatalogField', () => {
 
         expect(screen.getByText(/Este valor no es una placa/)).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Agregar vehículo al sistema' })).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Seleccionar otro vehículo' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Seleccionar otro vehículo' })).not.toBeInTheDocument();
+    });
+
+    it('en interno no muestra pestañas de unidad', async () => {
+        renderField({ value: '', generalServicesOnly: true });
+
+        await userEvent.click(screen.getByRole('combobox', { name: 'Chofer' }));
+
+        expect(await screen.findByRole('option', { name: /Jorge Francisco Mena/ })).toBeInTheDocument();
+        expect(screen.queryByRole('tab', { name: 'Otra Unidad' })).not.toBeInTheDocument();
+    });
+
+    it('en prestamo abre en la pestaña Otra Unidad y solo lista choferes de otra unidad', async () => {
+        renderField({ value: '', unitTabs: true });
+
+        await userEvent.click(screen.getByRole('combobox', { name: 'Chofer' }));
+
+        expect(await screen.findByRole('tab', { name: 'Otra Unidad', selected: true })).toBeInTheDocument();
+        expect(screen.getByRole('option', { name: /Pedro Otra Unidad/ })).toBeInTheDocument();
+        expect(screen.queryByRole('option', { name: /Jorge Francisco Mena/ })).not.toBeInTheDocument();
+    });
+
+    it('en prestamo la pestaña Servicios Generales lista los choferes de la unidad', async () => {
+        renderField({ value: '', unitTabs: true });
+
+        await userEvent.click(screen.getByRole('combobox', { name: 'Chofer' }));
+        await userEvent.click(await screen.findByRole('tab', { name: 'Servicios Generales' }));
+
+        expect(await screen.findByRole('option', { name: /Jorge Francisco Mena/ })).toBeInTheDocument();
+        expect(screen.queryByRole('option', { name: /Pedro Otra Unidad/ })).not.toBeInTheDocument();
     });
 
     it('muestra el icono de advertencia en modo lectura', () => {

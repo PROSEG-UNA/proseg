@@ -1,26 +1,19 @@
 import { useEffect, useState } from 'react';
-import { Alert, Box, Button, Checkbox, FormControlLabel, ListItemText, MenuItem, Switch, TextField } from '@mui/material';
-import { TimePicker } from '@mui/x-date-pickers/TimePicker';
+import { Box, Button, Checkbox, FormControlLabel, ListItemText, MenuItem, Switch, TextField } from '@mui/material';
 import dayjs from 'dayjs';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import DeleteIcon from '@mui/icons-material/Delete';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
-import { createDriver, deleteDriver, fetchDriverById, updateDriver } from '../../services/drivers/driversService';
+import { createDriver, deleteDriver, fetchDriverById, updateDriver, updateDriverMonthBusinessDays } from '../../services/drivers/driversService';
 import {
-    AFTERNOON_ORDINARY_END,
-    AFTERNOON_ORDINARY_START,
-    DEFAULT_ORDINARY_END,
-    DEFAULT_ORDINARY_START,
     DRIVER_STATUS_OPTIONS,
     DRIVER_UNIT_OPTIONS,
-    MAX_ORDINARY_SCHEDULE_HOURS,
-    ULLOA_SHIFT_OPTIONS,
+    ORDINARY_SCHEDULE_OPTIONS,
+    ULLOA_SHIFT_VALUES,
     VEHICLE_TYPE_OPTIONS,
-    timeToMinutes,
-    toTimeInput,
-    ulloaShiftLabel,
+    ordinaryScheduleValueOf,
     vehicleTypeLabel,
 } from '../../transportUtils';
 
@@ -31,38 +24,50 @@ const INITIAL_VALUES = {
     status: 'ACTIVE',
     organizationalUnit: 'GENERAL_SERVICES',
     allowedVehicleTypes: ALL_VEHICLE_TYPES,
-    ordinaryStart: DEFAULT_ORDINARY_START,
-    ordinaryEnd: DEFAULT_ORDINARY_END,
+    ordinarySchedule: ORDINARY_SCHEDULE_OPTIONS[0].value,
     ulloaEnabled: false,
-    ulloaShifts: [],
 };
 
-const FIELDS_TO_VALIDATE = ['name', 'ordinaryStart', 'ordinaryEnd', 'ulloaShifts'];
+const FIELDS_TO_VALIDATE = ['name'];
 
 function getFieldError(key, values) {
     if (key === 'name' && !values.name?.trim()) return 'Este campo es requerido';
-    if (key === 'ordinaryStart' && !values.ordinaryStart) return 'Este campo es requerido';
-    if (key === 'ordinaryEnd') {
-        if (!values.ordinaryEnd) return 'Este campo es requerido';
-        const start = timeToMinutes(values.ordinaryStart);
-        const end = timeToMinutes(values.ordinaryEnd);
-        if (start !== null && end !== null && end <= start) return 'Debe terminar después del inicio';
-        if (start !== null && end !== null && (end - start) / 60 > MAX_ORDINARY_SCHEDULE_HOURS) {
-            return `No puede superar las ${MAX_ORDINARY_SCHEDULE_HOURS} horas`;
-        }
-    }
-    if (key === 'ulloaShifts' && values.ulloaEnabled && values.ulloaShifts.length === 0) {
-        return 'Selecciona al menos un turno';
-    }
     return '';
 }
 
-function toPickerValue(time) {
-    return time ? dayjs(`2000-01-01T${time}`) : null;
+function getBusinessDaysError(value, period) {
+    if (value === '') return 'Este campo es requerido';
+    const daysInMonth = dayjs(`${period.year}-${String(period.month).padStart(2, '0')}-01`).daysInMonth();
+    return Number(value) > daysInMonth ? `Debe estar entre 0 y ${daysInMonth}` : '';
 }
 
-export default function DriverFormModal({ open, onClose, onSaved, onDeleted, driverId = null, initialValues = null, canEdit = true, canDelete = false }) {
+function getBusinessDaysHelper({ reset, customized, defaultBusinessDays }) {
+    const monthValue = defaultBusinessDays === null ? '' : ` (${defaultBusinessDays})`;
+    if (reset) return `Se usará el valor del mes${monthValue} al guardar.`;
+    if (customized) return `Personalizado para este chofer${defaultBusinessDays === null ? '.' : `. El valor del mes es ${defaultBusinessDays}.`}`;
+    return 'Valor del mes. Puedes cambiarlo solo para este chofer.';
+}
+
+export default function DriverFormModal({
+    open,
+    onClose,
+    onSaved,
+    onDeleted,
+    onBusinessDaysSaved,
+    driverId = null,
+    initialValues = null,
+    canEdit = true,
+    canDelete = false,
+    period = null,
+    monthBusinessDays = null,
+    defaultBusinessDays = null,
+    businessDaysCustomized = false,
+}) {
     const isEdit = !!driverId;
+    const showBusinessDays = isEdit && Boolean(period) && monthBusinessDays !== null;
+    const [businessDaysDraft, setBusinessDaysDraft] = useState(() => (monthBusinessDays === null ? '' : String(monthBusinessDays)));
+    const [businessDaysReset, setBusinessDaysReset] = useState(false);
+    const [businessDaysError, setBusinessDaysError] = useState('');
     const [formValues, setFormValues] = useState(() => ({ ...INITIAL_VALUES, ...initialValues }));
     const [errors, setErrors] = useState({});
     const [touched, setTouched] = useState({});
@@ -81,16 +86,13 @@ export default function DriverFormModal({ open, onClose, onSaved, onDeleted, dri
             try {
                 const driver = await fetchDriverById(driverId);
                 if (cancelled || !driver) return;
-                const ulloaShifts = driver.ulloaShifts ?? [];
                 setFormValues({
                     name: driver.name ?? '',
                     status: driver.status ?? 'ACTIVE',
                     organizationalUnit: driver.organizationalUnit ?? 'GENERAL_SERVICES',
                     allowedVehicleTypes: driver.allowedVehicleTypes ?? ALL_VEHICLE_TYPES,
-                    ordinaryStart: toTimeInput(driver.ordinaryStart, DEFAULT_ORDINARY_START),
-                    ordinaryEnd: toTimeInput(driver.ordinaryEnd, DEFAULT_ORDINARY_END),
-                    ulloaEnabled: ulloaShifts.length > 0,
-                    ulloaShifts,
+                    ordinarySchedule: ordinaryScheduleValueOf(driver.ordinaryStart),
+                    ulloaEnabled: (driver.ulloaShifts ?? []).length > 0,
                 });
             } catch (error) {
                 if (!cancelled) {
@@ -129,12 +131,17 @@ export default function DriverFormModal({ open, onClose, onSaved, onDeleted, dri
         validateField(key, formValues);
     };
 
-    const handleUlloaToggle = (enabled) => {
-        applyChanges({ ulloaEnabled: enabled, ulloaShifts: enabled ? formValues.ulloaShifts : [] });
+    const handleBusinessDaysChange = (value) => {
+        const digits = value.replace(/\D/g, '').slice(0, 2);
+        setBusinessDaysDraft(digits);
+        setBusinessDaysReset(false);
+        setBusinessDaysError(getBusinessDaysError(digits, period));
     };
 
-    const handleUseAfternoonSchedule = () => {
-        applyChanges({ ordinaryStart: AFTERNOON_ORDINARY_START, ordinaryEnd: AFTERNOON_ORDINARY_END });
+    const handleBusinessDaysReset = () => {
+        setBusinessDaysDraft(defaultBusinessDays === null ? '' : String(defaultBusinessDays));
+        setBusinessDaysReset(true);
+        setBusinessDaysError('');
     };
 
     const handleSave = async () => {
@@ -149,6 +156,12 @@ export default function DriverFormModal({ open, onClose, onSaved, onDeleted, dri
             }
         });
 
+        if (showBusinessDays && !businessDaysReset) {
+            const error = getBusinessDaysError(businessDaysDraft, period);
+            setBusinessDaysError(error);
+            if (error) hasError = true;
+        }
+
         setTouched((previousValue) => ({ ...previousValue, ...nextTouched }));
 
         if (hasError) {
@@ -158,19 +171,47 @@ export default function DriverFormModal({ open, onClose, onSaved, onDeleted, dri
 
         setSaving(true);
         try {
+            const schedule = ORDINARY_SCHEDULE_OPTIONS.find((option) => option.value === formValues.ordinarySchedule)
+                ?? ORDINARY_SCHEDULE_OPTIONS[0];
             const payload = {
                 name: formValues.name.trim(),
                 status: formValues.status,
                 organizationalUnit: formValues.organizationalUnit,
                 allowedVehicleTypes: formValues.allowedVehicleTypes,
-                ordinaryStart: formValues.ordinaryStart,
-                ordinaryEnd: formValues.ordinaryEnd,
-                ulloaShifts: formValues.ulloaEnabled ? formValues.ulloaShifts : [],
+                ordinaryStart: schedule.start,
+                ordinaryEnd: schedule.end,
+                ulloaShifts: formValues.ulloaEnabled ? ULLOA_SHIFT_VALUES : [],
             };
 
             const saved = isEdit
                 ? await updateDriver(driverId, payload)
                 : await createDriver(payload);
+
+            const businessDaysChanged = showBusinessDays
+                && (businessDaysReset ? businessDaysCustomized : Number(businessDaysDraft) !== monthBusinessDays);
+            if (businessDaysChanged) {
+                try {
+                    await updateDriverMonthBusinessDays(
+                        driverId,
+                        period.year,
+                        period.month,
+                        businessDaysReset ? null : Number(businessDaysDraft),
+                    );
+                    onBusinessDaysSaved?.({
+                        driverName: payload.name,
+                        previousBusinessDays: monthBusinessDays,
+                        businessDays: businessDaysReset ? defaultBusinessDays : Number(businessDaysDraft),
+                        reset: businessDaysReset,
+                    });
+                } catch (error) {
+                    onSaved?.(saved);
+                    setAlert({
+                        type: 'error',
+                        message: `El chofer se guardó, pero no se pudieron cambiar los días hábiles. ${getFriendlyApiErrorMessage(error, '')}`.trim(),
+                    });
+                    return;
+                }
+            }
 
             onSaved?.(saved);
             onClose?.();
@@ -196,31 +237,6 @@ export default function DriverFormModal({ open, onClose, onSaved, onDeleted, dri
             setDeleting(false);
         }
     };
-
-    const afternoonSelected = formValues.ulloaEnabled && formValues.ulloaShifts.includes('AFTERNOON');
-    const hasAfternoonSchedule = formValues.ordinaryStart === AFTERNOON_ORDINARY_START
-        && formValues.ordinaryEnd === AFTERNOON_ORDINARY_END;
-
-    const renderTimeField = (key, label) => (
-        <TimePicker
-            label={label}
-            ampm={false}
-            format="HH:mm"
-            value={toPickerValue(formValues[key])}
-            disabled={!canEdit}
-            onChange={(value) => handleChange(key, value?.isValid() ? value.format('HH:mm') : '')}
-            onClose={() => handleBlur(key)}
-            slotProps={{
-                textField: {
-                    required: true,
-                    fullWidth: true,
-                    onBlur: () => handleBlur(key),
-                    error: !!errors[key],
-                    helperText: errors[key],
-                },
-            }}
-        />
-    );
 
     return (
         <>
@@ -285,7 +301,11 @@ export default function DriverFormModal({ open, onClose, onSaved, onDeleted, dri
                         label="Unidad a la que pertenece"
                         value={formValues.organizationalUnit}
                         disabled={!canEdit}
-                        onChange={(event) => handleChange('organizationalUnit', event.target.value)}
+                        onChange={(event) => applyChanges({
+                            organizationalUnit: event.target.value,
+                            ...(event.target.value === 'OTHER_UNIT' ? { ulloaEnabled: false } : {}),
+                        })}
+                        sx={{ gridColumn: { md: '1 / -1' } }}
                         fullWidth
                     >
                         {DRIVER_UNIT_OPTIONS.map((option) => (
@@ -320,63 +340,59 @@ export default function DriverFormModal({ open, onClose, onSaved, onDeleted, dri
                             </MenuItem>
                         ))}
                     </TextField>
-                    {renderTimeField('ordinaryStart', 'Inicio del horario ordinario')}
-                    {renderTimeField('ordinaryEnd', 'Fin del horario ordinario')}
+                    <TextField
+                        select
+                        label="Horario ordinario"
+                        value={formValues.ordinarySchedule}
+                        disabled={!canEdit}
+                        onChange={(event) => handleChange('ordinarySchedule', event.target.value)}
+                        helperText="Define también los turnos de giras Periféricas que puede cubrir."
+                        sx={{ gridColumn: { md: '1 / -1' } }}
+                        fullWidth
+                    >
+                        {ORDINARY_SCHEDULE_OPTIONS.map((option) => (
+                            <MenuItem key={option.value} value={option.value}>
+                                {option.label}
+                            </MenuItem>
+                        ))}
+                    </TextField>
                     <FormControlLabel
                         control={(
                             <Switch
                                 checked={formValues.ulloaEnabled}
-                                disabled={!canEdit}
-                                onChange={(event) => handleUlloaToggle(event.target.checked)}
+                                disabled={!canEdit || formValues.organizationalUnit === 'OTHER_UNIT'}
+                                onChange={(event) => handleChange('ulloaEnabled', event.target.checked)}
                             />
                         )}
-                        label="Es conductor de giras hacia Ulloa (Barreal) - Campus Benjamín Núñez"
+                        label="Es conductor de giras Periféricas - Campus Benjamín Núñez"
                         sx={{ gridColumn: { md: '1 / -1' }, m: 0 }}
                     />
-                    {formValues.ulloaEnabled && (
+                    {showBusinessDays && (
                         <TextField
-                            select
-                            label="Turnos de Ulloa que cubre"
-                            value={formValues.ulloaShifts}
+                            label={`Días hábiles de ${period.label}`}
+                            value={businessDaysDraft}
                             disabled={!canEdit}
-                            onChange={(event) => handleChange('ulloaShifts', event.target.value)}
-                            onBlur={() => handleBlur('ulloaShifts')}
-                            error={!!errors.ulloaShifts}
-                            helperText={errors.ulloaShifts || 'Estas giras se asignan primero a los choferes con el turno configurado.'}
-                            slotProps={{
-                                select: {
-                                    multiple: true,
-                                    renderValue: (selected) => selected.map(ulloaShiftLabel).join(', '),
-                                },
-                            }}
-                            sx={{ gridColumn: { md: '1 / -1' } }}
+                            onChange={(event) => handleBusinessDaysChange(event.target.value)}
+                            error={!!businessDaysError}
+                            helperText={businessDaysError || getBusinessDaysHelper({
+                                reset: businessDaysReset,
+                                customized: businessDaysCustomized,
+                                defaultBusinessDays,
+                            })}
+                            required
                             fullWidth
-                        >
-                            {ULLOA_SHIFT_OPTIONS.map((option) => (
-                                <MenuItem key={option.value} value={option.value}>
-                                    <Checkbox
-                                        checked={formValues.ulloaShifts.includes(option.value)}
-                                        tabIndex={-1}
-                                        sx={{ m: 0, mr: 1.5, p: 0 }}
-                                    />
-                                    <ListItemText primary={option.label} />
-                                </MenuItem>
-                            ))}
-                        </TextField>
-                    )}
-                    {canEdit && afternoonSelected && !hasAfternoonSchedule && (
-                        <Alert
-                            severity="info"
-                            variant="outlined"
+                            slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 2 } }}
                             sx={{ gridColumn: { md: '1 / -1' } }}
-                            action={(
-                                <Button color="inherit" size="small" onClick={handleUseAfternoonSchedule}>
-                                    Usar 11:00 a 20:00
-                                </Button>
-                            )}
+                        />
+                    )}
+                    {showBusinessDays && canEdit && businessDaysCustomized && !businessDaysReset && defaultBusinessDays !== null && (
+                        <Button
+                            size="small"
+                            onClick={handleBusinessDaysReset}
+                            sx={{ justifySelf: 'start', gridColumn: { md: '1 / -1' }, mt: -1 }}
                         >
-                            El turno de tarde cuenta 8 horas ordinarias y 2 de sobresueldo cuando el horario ordinario del chofer es de 11:00 a 20:00.
-                        </Alert>
+                            {`Usar el valor del mes (${defaultBusinessDays})`}
+                        </Button>
                     )}
                 </Box>
             </GeneralModal>

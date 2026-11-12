@@ -4,3 +4,7 @@ variables:
     value: http://localhost:8081
   - name: apiVersion
     value: v1
+  - name: auth_identifier
+    value: ""
+  - name: auth_password
+    value: ""

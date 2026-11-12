@@ -2,8 +2,9 @@ import { Box, Typography } from '@mui/material';
 import { formatHours } from '../../transportUtils.js';
 
 export default function DriverSurplusSummary({ surplusCapPerDriver, driver }) {
-    const compliance = driver && surplusCapPerDriver > 0
-        ? driver.surplusHours / surplusCapPerDriver
+    const surplusCap = driver?.surplusCap ?? surplusCapPerDriver;
+    const compliance = driver && surplusCap > 0
+        ? driver.surplusHours / surplusCap
         : null;
 
     return (
@@ -22,8 +23,14 @@ export default function DriverSurplusSummary({ surplusCapPerDriver, driver }) {
         >
             <Box>
                 <Typography component="dt">Horas sobresueldo del mes</Typography>
-                <Typography component="dd">{`${formatHours(surplusCapPerDriver)} h${driver ? '' : ' por chofer'}`}</Typography>
+                <Typography component="dd">{`${formatHours(surplusCap)} h${driver ? '' : ' por defecto'}`}</Typography>
             </Box>
+            {driver?.businessDays != null && (
+                <Box>
+                    <Typography component="dt">Días hábiles</Typography>
+                    <Typography component="dd">{driver.businessDays}</Typography>
+                </Box>
+            )}
             {driver && (
                 <Box>
                     <Typography component="dt">{`Sobresueldo de ${driver.name}`}</Typography>
