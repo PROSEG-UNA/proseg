@@ -26,7 +26,7 @@ public final class DriverHoursRules {
     public static final double ORDINARY_START = 7.5;
     public static final double ORDINARY_END = 16.5;
     public static final double AFTERNOON_ORDINARY_START = 12;
-    public static final double AFTERNOON_ORDINARY_END = 21;
+    public static final double AFTERNOON_ORDINARY_END = 20;
     public static final double MAX_ORDINARY_HOURS_PER_DAY = ORDINARY_END - ORDINARY_START;
     public static final double MULTI_DAY_START = 7.5;
     public static final double WEEKDAY_MULTI_DAY_END = 20.5;

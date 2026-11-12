@@ -109,7 +109,7 @@ export default function TourProcessingAutoAssignmentInfoModal({ open, onClose })
                             Una gira de varios días se asigna completa a un solo chofer, que debe estar libre todos esos días. Nunca se reparte entre choferes.
                         </DetailNote>
                         <DetailNote title="Horario ordinario y tope de sobresueldo">
-                            Cada chofer tiene un solo horario ordinario, que puede ser de 07:30 a 16:30 o de 12:00 a 21:00. Las horas de lunes a viernes fuera de ese horario cuentan como sobresueldo hasta el tope individual del chofer, que depende de sus días hábiles del mes (40 horas por cada 30 días, redondeado a media hora). Lo que excede el tope pasa a horas extra.
+                            Cada chofer tiene un solo horario ordinario, que puede ser de 07:30 a 16:30 o de 12:00 a 20:00. Las horas de lunes a viernes fuera de ese horario cuentan como sobresueldo hasta el tope individual del chofer, que depende de sus días hábiles del mes (40 horas por cada 30 días, redondeado a media hora). Lo que excede el tope pasa a horas extra.
                         </DetailNote>
                         <DetailNote title="Cuándo aparecen las horas extra">
                             Las horas de sábado y domingo siempre son horas extra, igual que lo que excede el sobresueldo. Un chofer solo recibe horas extra si ya tiene al menos el 95 % de su sobresueldo, no supera las 60 horas extra del mes y no pasa de 3 fines de semana trabajados si el mes tiene 5, o de 2 si tiene 4. La única excepción al 95 % son las obligatorias de fin de semana de la cuarta etapa, que se asignan con advertencia si no hay otra opción. La etapa de completar sobresueldo no aumenta las horas extra.

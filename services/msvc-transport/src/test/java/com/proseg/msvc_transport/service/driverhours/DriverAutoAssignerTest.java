@@ -606,7 +606,7 @@ class DriverAutoAssignerTest {
     };
 
     private Driver afternoonDriver(String name) {
-        Driver driver = driverWithSchedule(name, "12:00", "21:00");
+        Driver driver = driverWithSchedule(name, "12:00", "20:00");
         driver.setUlloaShifts(EnumSet.of(UlloaShift.AFTERNOON));
         return driver;
     }
@@ -860,8 +860,8 @@ class DriverAutoAssignerTest {
         DriverWorkload workload = new DriverWorkload(ricardo);
         rows.forEach(workload::add);
         DriverMonthTotals totals = workload.totals(DriverHoursRules.surplusCap(MAY_BUSINESS_DAYS), DriverHoursRules.monthWeekends(2026, 5));
-        assertThat(totals.ordinaryHours()).isEqualTo(180.0);
-        assertThat(totals.surplusHours() + totals.overtimeHours()).isEqualTo(20.0);
+        assertThat(totals.ordinaryHours()).isEqualTo(160.0);
+        assertThat(totals.surplusHours() + totals.overtimeHours()).isEqualTo(40.0);
     }
 
     @Test

@@ -1522,7 +1522,7 @@ class TourProcessingDraftServiceTest {
         draft.setYear(2026);
         draft.setMonth(5);
         Driver ricardo = Driver.builder().id(UUID.randomUUID()).name("Ricardo Jovane").status("ACTIVE")
-                .ordinaryStart(LocalTime.of(12, 0)).ordinaryEnd(LocalTime.of(21, 0))
+                .ordinaryStart(LocalTime.of(12, 0)).ordinaryEnd(LocalTime.of(20, 0))
                 .ulloaShifts(EnumSet.of(UlloaShift.AFTERNOON)).build();
         Driver laura = Driver.builder().id(UUID.randomUUID()).name("Laura Mora").status("ACTIVE").build();
         TourProcessingDraftTour afternoon = ulloaRow(draft, 1, "1", "2026-05-05", "12:00", "22:00", null);

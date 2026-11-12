@@ -223,7 +223,7 @@ class FinalCommissionServiceTest {
     void includesOtherUnitDriversHoursInTheFinalCommissionReport() {
         ana.setOrganizationalUnit(DriverUnit.OTHER_UNIT);
         ana.setOrdinaryStart(LocalTime.parse("12:00"));
-        ana.setOrdinaryEnd(LocalTime.parse("21:00"));
+        ana.setOrdinaryEnd(LocalTime.parse("20:00"));
         BorrowedVehicle borrowedVehicle = BorrowedVehicle.builder().id(UUID.randomUUID()).plate("P-123").build();
         TourProcessingDraftTour weekday = tour("4012", 1, 10, "2026-05-29");
         weekday.setDepartureTime(LocalTime.parse("06:00"));
@@ -245,7 +245,7 @@ class FinalCommissionServiceTest {
         assertThat(report.getTours()).extracting(FinalCommissionReportDto.Tour::getCategory)
                 .containsExactly("BORROWED_VEHICLE", "BORROWED_VEHICLE");
         assertThat(report.getTours().get(0).getOrdinaryStart()).isEqualTo(12);
-        assertThat(report.getTours().get(0).getOrdinaryEnd()).isEqualTo(21);
+        assertThat(report.getTours().get(0).getOrdinaryEnd()).isEqualTo(20);
         assertThat(report.getTours().get(0).getDays()).singleElement().satisfies(day -> {
             assertThat(day.getStart()).isEqualTo(6);
             assertThat(day.getEnd()).isEqualTo(18);

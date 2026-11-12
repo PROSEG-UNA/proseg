@@ -28,7 +28,7 @@ export const ULLOA_SHIFT_VALUES = ['SHORT_MORNING', 'MORNING', 'AFTERNOON'];
 
 export const ORDINARY_SCHEDULE_OPTIONS = [
     { value: '07:30-16:30', label: '07:30 a 16:30', start: '07:30', end: '16:30' },
-    { value: '12:00-21:00', label: '12:00 a 21:00', start: '12:00', end: '21:00' },
+    { value: '12:00-20:00', label: '12:00 a 20:00', start: '12:00', end: '20:00' },
 ];
 export const DEFAULT_ORDINARY_START = ORDINARY_SCHEDULE_OPTIONS[0].start;
 export const DEFAULT_ORDINARY_END = ORDINARY_SCHEDULE_OPTIONS[0].end;

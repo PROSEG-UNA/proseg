@@ -76,9 +76,9 @@ class UlloaToursTest {
     void onlyPeripheralDriversCoverAShiftAndOnlyThroughTheirOrdinarySchedule() {
         Driver standard = driver("Ana");
         standard.setUlloaShifts(EnumSet.of(UlloaShift.MORNING));
-        Driver afternoon = driverWithSchedule("Ricardo", "12:00", "21:00");
+        Driver afternoon = driverWithSchedule("Ricardo", "12:00", "20:00");
         afternoon.setUlloaShifts(EnumSet.of(UlloaShift.AFTERNOON));
-        Driver notPeripheral = driverWithSchedule("Daniel", "12:00", "21:00");
+        Driver notPeripheral = driverWithSchedule("Daniel", "12:00", "20:00");
 
         assertThat(UlloaTours.isCoveredBy(standard, UlloaShift.SHORT_MORNING)).isTrue();
         assertThat(UlloaTours.isCoveredBy(standard, UlloaShift.MORNING)).isTrue();

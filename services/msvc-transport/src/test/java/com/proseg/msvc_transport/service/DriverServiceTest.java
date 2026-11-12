@@ -170,14 +170,14 @@ class DriverServiceTest {
         DriverRequestDto request = DriverRequestDto.builder()
                 .name("Ricardo Jovane")
                 .ordinaryStart(LocalTime.of(12, 0))
-                .ordinaryEnd(LocalTime.of(21, 0))
+                .ordinaryEnd(LocalTime.of(20, 0))
                 .ulloaShifts(Set.of(UlloaShift.AFTERNOON))
                 .build();
 
         DriverResponseDto response = service.create(request);
 
         assertThat(response.getOrdinaryStart()).isEqualTo(LocalTime.of(12, 0));
-        assertThat(response.getOrdinaryEnd()).isEqualTo(LocalTime.of(21, 0));
+        assertThat(response.getOrdinaryEnd()).isEqualTo(LocalTime.of(20, 0));
         assertThat(response.getUlloaShifts()).containsExactly(UlloaShift.AFTERNOON);
     }
 
@@ -200,7 +200,7 @@ class DriverServiceTest {
         DriverRequestDto request = DriverRequestDto.builder()
                 .name("Ricardo Jovane")
                 .ordinaryStart(LocalTime.of(12, 0))
-                .ordinaryEnd(LocalTime.of(21, 0))
+                .ordinaryEnd(LocalTime.of(20, 0))
                 .build();
 
         assertThat(service.create(request).getUlloaShifts()).isEmpty();
@@ -212,9 +212,9 @@ class DriverServiceTest {
                 new LocalTime[]{LocalTime.of(16, 0), LocalTime.of(8, 0)},
                 new LocalTime[]{LocalTime.of(7, 0), LocalTime.of(17, 0)},
                 new LocalTime[]{LocalTime.of(11, 0), LocalTime.of(20, 0)},
-                new LocalTime[]{LocalTime.of(12, 0), LocalTime.of(20, 0)},
+                new LocalTime[]{LocalTime.of(12, 0), LocalTime.of(21, 0)},
                 new LocalTime[]{LocalTime.of(6, 30), LocalTime.of(17, 30)},
-                new LocalTime[]{LocalTime.of(7, 30), LocalTime.of(21, 0)},
+                new LocalTime[]{LocalTime.of(7, 30), LocalTime.of(20, 0)},
                 new LocalTime[]{LocalTime.of(12, 0), LocalTime.of(16, 30)}
         );
 
@@ -227,7 +227,7 @@ class DriverServiceTest {
 
             assertThatThrownBy(() -> service.create(request))
                     .isInstanceOf(TransportException.class)
-                    .hasMessage("El horario ordinario debe ser de 07:30 a 16:30 o 12:00 a 21:00");
+                    .hasMessage("El horario ordinario debe ser de 07:30 a 16:30 o 12:00 a 20:00");
         }
         verify(driverRepository, never()).save(any(Driver.class));
     }
@@ -235,7 +235,7 @@ class DriverServiceTest {
     @Test
     void rejectsASingleOrdinaryScheduleBoundaryThatDoesNotFormAValidSchedule() {
         DriverRequestDto onlyStart = DriverRequestDto.builder().name("Ricardo Jovane").ordinaryStart(LocalTime.of(12, 0)).build();
-        DriverRequestDto onlyEnd = DriverRequestDto.builder().name("Ricardo Jovane").ordinaryEnd(LocalTime.of(21, 0)).build();
+        DriverRequestDto onlyEnd = DriverRequestDto.builder().name("Ricardo Jovane").ordinaryEnd(LocalTime.of(20, 0)).build();
 
         assertThatThrownBy(() -> service.create(onlyStart)).isInstanceOf(TransportException.class);
         assertThatThrownBy(() -> service.create(onlyEnd)).isInstanceOf(TransportException.class);
@@ -250,14 +250,14 @@ class DriverServiceTest {
         DriverRequestDto afternoon = DriverRequestDto.builder()
                 .name("Daniel Zuniga")
                 .ordinaryStart(LocalTime.of(12, 0))
-                .ordinaryEnd(LocalTime.of(21, 0))
+                .ordinaryEnd(LocalTime.of(20, 0))
                 .ulloaShifts(Set.of(UlloaShift.AFTERNOON))
                 .build();
 
         service.update(id, afternoon);
 
         assertThat(driver.getOrdinaryStart()).isEqualTo(LocalTime.of(12, 0));
-        assertThat(driver.getOrdinaryEnd()).isEqualTo(LocalTime.of(21, 0));
+        assertThat(driver.getOrdinaryEnd()).isEqualTo(LocalTime.of(20, 0));
         assertThat(driver.getUlloaShifts()).containsExactly(UlloaShift.AFTERNOON);
 
         service.update(id, DriverRequestDto.builder()

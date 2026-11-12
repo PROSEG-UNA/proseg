@@ -149,14 +149,14 @@ describe('DriverFormModal con horario ordinario y giras Periféricas', () => {
         await userEvent.type(screen.getByRole('textbox', { name: /Nombre/ }), 'Ricardo Jovane');
         await userEvent.click(screen.getByRole('combobox', { name: SCHEDULE_FIELD_LABEL }));
         const options = await screen.findAllByRole('option');
-        expect(options.map((option) => option.textContent)).toEqual(['07:30 a 16:30', '12:00 a 21:00']);
-        await userEvent.click(screen.getByRole('option', { name: '12:00 a 21:00' }));
+        expect(options.map((option) => option.textContent)).toEqual(['07:30 a 16:30', '12:00 a 20:00']);
+        await userEvent.click(screen.getByRole('option', { name: '12:00 a 20:00' }));
         await userEvent.click(screen.getByRole('button', { name: 'Crear' }));
 
         await waitFor(() => expect(createDriver).toHaveBeenCalledTimes(1));
         expect(createDriver).toHaveBeenCalledWith(expect.objectContaining({
             ordinaryStart: '12:00',
-            ordinaryEnd: '21:00',
+            ordinaryEnd: '20:00',
         }));
     });
 
@@ -167,13 +167,13 @@ describe('DriverFormModal con horario ordinario y giras Periféricas', () => {
             status: 'ACTIVE',
             allowedVehicleTypes: ['MICROBUS'],
             ordinaryStart: '12:00:00',
-            ordinaryEnd: '21:00:00',
+            ordinaryEnd: '20:00:00',
             ulloaShifts: ['AFTERNOON'],
         });
         renderModal({ driverId: 'driver-1' });
 
         await waitFor(() => expect(screen.getByRole('switch', { name: PERIPHERAL_SWITCH_LABEL })).toBeChecked());
-        expect(screen.getByRole('combobox', { name: SCHEDULE_FIELD_LABEL })).toHaveTextContent('12:00 a 21:00');
+        expect(screen.getByRole('combobox', { name: SCHEDULE_FIELD_LABEL })).toHaveTextContent('12:00 a 20:00');
         await userEvent.click(screen.getByRole('combobox', { name: SCHEDULE_FIELD_LABEL }));
         await userEvent.click(await screen.findByRole('option', { name: '07:30 a 16:30' }));
         await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
@@ -187,7 +187,7 @@ describe('DriverFormModal con horario ordinario y giras Periféricas', () => {
         }));
     });
 
-    it('lleva un horario guardado que empieza desde las 10:00 al horario de 12:00 a 21:00 y el resto a 07:30 a 16:30', async () => {
+    it('lleva un horario guardado que empieza desde las 10:00 al horario de 12:00 a 20:00 y el resto a 07:30 a 16:30', async () => {
         fetchDriverById.mockResolvedValue({
             id: 'driver-1',
             name: 'Daniel Zuniga',
@@ -199,7 +199,7 @@ describe('DriverFormModal con horario ordinario y giras Periféricas', () => {
         });
         renderModal({ driverId: 'driver-1' });
 
-        await waitFor(() => expect(screen.getByRole('combobox', { name: SCHEDULE_FIELD_LABEL })).toHaveTextContent('12:00 a 21:00'));
+        await waitFor(() => expect(screen.getByRole('combobox', { name: SCHEDULE_FIELD_LABEL })).toHaveTextContent('12:00 a 20:00'));
         cleanup();
 
         fetchDriverById.mockResolvedValue({

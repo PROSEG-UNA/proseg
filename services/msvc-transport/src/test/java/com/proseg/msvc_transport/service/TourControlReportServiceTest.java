@@ -37,7 +37,7 @@ class TourControlReportServiceTest {
 
     private final UUID draftId = UUID.randomUUID();
     private final Driver zoe = Driver.builder().id(UUID.randomUUID()).name("Zoe Mora").status("ACTIVE")
-            .ordinaryStart(LocalTime.of(12, 0)).ordinaryEnd(LocalTime.of(21, 0)).build();
+            .ordinaryStart(LocalTime.of(12, 0)).ordinaryEnd(LocalTime.of(20, 0)).build();
     private final Driver ana = Driver.builder().id(UUID.randomUUID()).name("Ana Pérez").status("ACTIVE").build();
     private final Driver retired = Driver.builder().id(UUID.randomUUID()).name("Luis Rojas").status("INACTIVE").build();
     private final Driver guest = Driver.builder().id(UUID.randomUUID()).name("Jorge Mena").status("ACTIVE")
@@ -94,7 +94,7 @@ class TourControlReportServiceTest {
 
         assertThat(report.getDrivers()).extracting(TourControlReportDto.Driver::getName).containsExactly("Ana Pérez", "Zoe Mora");
         assertThat(report.getDrivers().get(1).getOrdinaryStart()).isEqualTo(12.0);
-        assertThat(report.getDrivers().get(1).getOrdinaryEnd()).isEqualTo(21.0);
+        assertThat(report.getDrivers().get(1).getOrdinaryEnd()).isEqualTo(20.0);
         assertThat(report.getDrivers().get(0).getOrdinaryEnd()).isEqualTo(16.5);
         assertThat(report.getWeekdays()).isEqualTo(21);
     }

@@ -63,7 +63,7 @@ describe('información de la autoasignación', () => {
         expect(within(panel).getByText(/solo se conserva el cambio si el resultado es válido/)).toBeInTheDocument();
         expect(within(panel).getByText(/queda con una advertencia que indica el porcentaje de sobresueldo/)).toBeInTheDocument();
         expect(within(panel).getByText(/Una obligatoria solo queda sin chofer si nadie puede tomarla/)).toBeInTheDocument();
-        expect(within(panel).getByText(/Cada chofer tiene un solo horario ordinario, que puede ser de 07:30 a 16:30 o de 12:00 a 21:00/)).toBeInTheDocument();
+        expect(within(panel).getByText(/Cada chofer tiene un solo horario ordinario, que puede ser de 07:30 a 16:30 o de 12:00 a 20:00/)).toBeInTheDocument();
         expect(within(panel).getByText(/no pasa de 3 fines de semana trabajados si el mes tiene 5, o de 2 si tiene 4/)).toBeInTheDocument();
         expect(within(panel).getByText(/no supera las 60 horas extra del mes/)).toBeInTheDocument();
         expect(within(panel).getByText(/Nunca contrata transporte externo ni pide vehículos prestados/)).toBeInTheDocument();

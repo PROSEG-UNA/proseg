@@ -173,7 +173,7 @@ class DriverWorkloadTest {
     @Test
     void classifiesHoursAgainstTheDriversOwnOrdinarySchedule() {
         DriverWorkload standard = new DriverWorkload();
-        DriverWorkload lateShift = new DriverWorkload(driverWithSchedule("Ricardo", "12:00", "21:00"));
+        DriverWorkload lateShift = new DriverWorkload(driverWithSchedule("Ricardo", "12:00", "20:00"));
         standard.add(sameDayTour("A", "2026-05-05", "12:00", "22:00"));
         lateShift.add(sameDayTour("A", "2026-05-05", "12:00", "22:00"));
 
@@ -182,14 +182,14 @@ class DriverWorkloadTest {
 
         assertThat(standardTotals.ordinaryHours()).isEqualTo(4.5);
         assertThat(standardTotals.surplusHours()).isEqualTo(5.5);
-        assertThat(lateShiftTotals.ordinaryHours()).isEqualTo(9.0);
-        assertThat(lateShiftTotals.surplusHours()).isEqualTo(1.0);
+        assertThat(lateShiftTotals.ordinaryHours()).isEqualTo(8.0);
+        assertThat(lateShiftTotals.surplusHours()).isEqualTo(2.0);
         assertThat(lateShiftTotals.overtimeHours()).isZero();
     }
 
     @Test
     void aWeekdayTourInsideTheAfternoonScheduleIsEntirelyOrdinary() {
-        DriverWorkload lateShift = new DriverWorkload(driverWithSchedule("Ricardo", "12:00", "21:00"));
+        DriverWorkload lateShift = new DriverWorkload(driverWithSchedule("Ricardo", "12:00", "20:00"));
         lateShift.add(sameDayTour("A", "2026-05-05", "14:00", "20:00"));
 
         DriverMonthTotals totals = lateShift.totals(MAY_SURPLUS_CAP, MAY_WEEKENDS);
@@ -200,14 +200,14 @@ class DriverWorkloadTest {
     }
 
     @Test
-    void theAfternoonShiftsLastHourCountsAsSurplusAndItsEarlierHoursAsOrdinary() {
-        DriverWorkload lateShift = new DriverWorkload(driverWithSchedule("Ricardo", "12:00", "21:00"));
+    void theAfternoonShiftsHoursAfterEightCountAsSurplusAndItsEarlierHoursAsOrdinary() {
+        DriverWorkload lateShift = new DriverWorkload(driverWithSchedule("Ricardo", "12:00", "20:00"));
         lateShift.add(sameDayTour("A", "2026-05-05", "12:00", "22:00"));
 
         DriverMonthTotals totals = lateShift.totals(MAY_SURPLUS_CAP, MAY_WEEKENDS);
 
-        assertThat(totals.ordinaryHours()).isEqualTo(9.0);
-        assertThat(totals.surplusHours()).isEqualTo(1.0);
+        assertThat(totals.ordinaryHours()).isEqualTo(8.0);
+        assertThat(totals.surplusHours()).isEqualTo(2.0);
     }
 
     @Test
@@ -223,7 +223,7 @@ class DriverWorkloadTest {
 
     @Test
     void weekendHoursStayOvertimeWhateverTheDriversSchedule() {
-        DriverWorkload lateShift = new DriverWorkload(driverWithSchedule("Ricardo", "12:00", "21:00"));
+        DriverWorkload lateShift = new DriverWorkload(driverWithSchedule("Ricardo", "12:00", "20:00"));
         lateShift.add(sameDayTour("A", "2026-05-09", "12:00", "20:00"));
 
         DriverMonthTotals totals = lateShift.totals(MAY_SURPLUS_CAP, MAY_WEEKENDS);

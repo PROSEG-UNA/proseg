@@ -94,7 +94,7 @@ class TransportExportTargetTest {
                 "organizationalUnit", "OTHER_UNIT",
                 "status", "INACTIVE",
                 "ordinaryStart", "12:00:00",
-                "ordinaryEnd", "21:00:00"
+                "ordinaryEnd", "20:00:00"
         ))));
         when(transportClient.getDriverMonths(2026, 5)).thenReturn(new ApiResponse<>("ok", List.of(Map.of(
                 "driverId", "driver-1",
@@ -120,7 +120,7 @@ class TransportExportTargetTest {
                 "Días Hábiles", "H. Ordinarias", "% Sobresueldo", "H. Sobresueldo", "H. Extra", "Fines de semana");
         assertThat(TransportExportLabels.unit(row.get("organizationalUnit"))).isEqualTo("Otra Unidad");
         assertThat(TransportExportLabels.driverStatus(row.get("status"))).isEqualTo("Inactivo");
-        assertThat(TransportExportLabels.schedule(row.get("ordinaryStart"), row.get("ordinaryEnd"))).isEqualTo("12:00 - 21:00");
+        assertThat(TransportExportLabels.schedule(row.get("ordinaryStart"), row.get("ordinaryEnd"))).isEqualTo("12:00 - 20:00");
         assertThat(TransportExportLabels.whole(row.get("businessDays"))).isEqualTo("22");
         assertThat(TransportExportLabels.hours(row.get("ordinaryHoursAccrued"))).isEqualTo(TransportExportLabels.hours(12.5));
         assertThat(TransportExportLabels.percent(row.get("surplusExecutionRatio"))).isEqualTo(TransportExportLabels.percent(0.95));

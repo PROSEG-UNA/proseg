@@ -99,6 +99,17 @@ class TransportSchemaMigrationTest {
     }
 
     @Test
+    void appliesTheAfternoonOrdinaryEndMigrationOnceAndRecordsItsVersion() {
+        when(jdbc.queryForObject(startsWith("select exists(select 1 from transport_schema_migration"), eq(Boolean.class), eq(7)))
+                .thenReturn(false);
+
+        migration.afterSingletonsInstantiated();
+
+        verify(jdbc).execute(contains("time '20:00'"));
+        verify(jdbc).update("insert into transport_schema_migration(version) values (?)", 7);
+    }
+
+    @Test
     void skipsTheDriverOrdinarySchedulesMigrationWhenItWasAlreadyApplied() {
         migration.afterSingletonsInstantiated();
 
