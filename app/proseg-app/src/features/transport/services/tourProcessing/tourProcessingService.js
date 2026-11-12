@@ -179,11 +179,6 @@ export async function autoAssignTourProcessingDraftDrivers(draftId) {
     return data?.data ?? null;
 }
 
-export async function autoAssignTourProcessingDraftUlloaDrivers(draftId) {
-    const { data } = await axios.post(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/drivers/auto-assign-ulloa`, null, transportConfig);
-    return data?.data ?? null;
-}
-
 export async function autoAssignTourProcessingDraftVehicles(draftId) {
     const { data } = await axios.post(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/vehicles/auto-assign`, null, transportConfig);
     return data?.data ?? null;

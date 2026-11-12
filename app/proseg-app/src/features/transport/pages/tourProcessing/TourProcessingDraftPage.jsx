@@ -24,7 +24,6 @@ import {
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
-import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
 import CallSplitOutlinedIcon from '@mui/icons-material/CallSplitOutlined';
 import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined';
 import CloseIcon from '@mui/icons-material/Close';
@@ -37,9 +36,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import AutoFixHighOutlinedIcon from '@mui/icons-material/AutoFixHighOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import RouteOutlinedIcon from '@mui/icons-material/RouteOutlined';
 import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined';
-import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import { PageHeader } from '../../../../common/components/index.js';
 import AccessDeniedState from '../../../../common/components/AccessDeniedState.jsx';
@@ -47,7 +44,6 @@ import PrimaryButton from '../../../../common/components/PrimaryButton.jsx';
 import NestedMenuItem from '../../../../common/components/NestedMenuItem.jsx';
 import TableBase from '../../../../common/components/TablaBase.jsx';
 import TableSelectFilter from '../../../../common/components/TableSelectFilter.jsx';
-import RowActionsMenu from '../../../../common/components/RowActionsMenu.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { usePermissions } from '../../../../common/hooks/index.js';
@@ -56,28 +52,23 @@ import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
 import { downloadBlob, formatDate } from '../../transportUtils.js';
 import {
     autoAssignTourProcessingDraftDrivers,
-    autoAssignTourProcessingDraftUlloaDrivers,
     autoAssignTourProcessingDraftVehicles,
     checkTourProcessingDraftFinalCommission,
     clearTourProcessingDraftAssignments,
     deleteTourProcessingDraftDuplicates,
-    deleteTourProcessingDraftRow,
     exportTourProcessingDraft,
     exportTourProcessingDraftFinalCommission,
     exportTourProcessingDraftTourControl,
     finishTourProcessingDraft,
     rejectTourProcessingDraftIncompleteTours,
     reopenTourProcessingDraft,
-    previewTourProcessingDraftApprovalWarnings,
     splitTourProcessingDraftOversizedRows,
-    updateTourProcessingDraftRowApprovalStatus,
 } from '../../services/tourProcessing/tourProcessingService';
 import { exportDriverOvertimeRequest } from '../../services/drivers/driversService';
 import { useTourProcessingCatalogMatch } from '../../hooks/useTourProcessingCatalogMatch.js';
 import {
     invalidateTourProcessingDraft,
     loadTourProcessingDraftRow,
-    replaceCachedDraftRow,
     useTourProcessingDraft,
     useTourProcessingDraftRowProblems,
     useTourProcessingDraftRows,
@@ -98,13 +89,11 @@ import TourProcessingDraftDaysDetailPanel from '../../components/tourProcessing/
 import TourProcessingDraftDriverScheduleView from '../../components/tourProcessing/TourProcessingDraftDriverScheduleView.jsx';
 import TourProcessingDraftTourControlView from '../../components/tourProcessing/TourProcessingDraftTourControlView.jsx';
 import {
-    APPROVAL_STATUS,
     APPROVAL_STATUS_FILTER_OPTIONS,
     approvalStatusColor,
     approvalStatusLabel,
     draftPeriodLabel,
     shortPeriodLabel,
-    toggledApprovalStatus,
 } from '../../components/tourProcessing/tourProcessingDraftLabels.js';
 import DuplicateChip from '../../components/tourProcessing/DuplicateChip.jsx';
 import { vehicleDistributionWarning } from '../../components/tourProcessing/vehicleDistributionWarning.js';
@@ -169,7 +158,6 @@ const FILTERABLE_COLUMNS = new Set([
 ]);
 
 const AUTO_ASSIGN_DRIVERS_MESSAGE = 'Las giras con varios viajes se completan en conjunto, asignando choferes y vehículos compatibles. Si no se puede completar una gira, se conservan sus asignaciones existentes y no se agregan partes sueltas.\n\nSi una gira interna tiene un chofer que no existe en el catálogo del sistema (marcado con el ícono de advertencia), esa fila quedará sin chofer y la autoasignación intentará completarla.\n\nLas giras que ya tienen un chofer del catálogo se respetan y no se reasignan. Los préstamos de vehículo no se modifican: el chofer se deja como está. Un chofer de Servicios Generales puesto a mano en un préstamo no se considera ocupado en ese horario.';
-const AUTO_ASSIGN_ULLOA_DRIVERS_MESSAGE = 'Solo se asignan las giras Periféricas de Programa De Servicios Generales que no tienen chofer, usando los choferes marcados como conductores de giras Periféricas según su horario ordinario.\n\nSi alguna gira Periférica interna tiene un chofer que no existe en el catálogo del sistema (marcado con el ícono de advertencia), esa fila quedará sin chofer y se intentará completar. Los préstamos de vehículo y las demás giras no se tocan.';
 const AUTO_ASSIGN_DRIVERS_AND_VEHICLES_MESSAGE = 'Primero se autoasignan los choferes y después los vehículos.\n\nSi una gira interna tiene un chofer o un vehículo que no existe en el catálogo del sistema (marcado con el ícono de advertencia), esa fila quedará vacía y la autoasignación intentará completarla. El chofer de un préstamo de vehículo no se vacía ni se reasigna.\n\nLas giras que ya tienen chofer o vehículo del catálogo se respetan y no se reasignan.';
 const AUTO_ASSIGN_VEHICLES_MESSAGE = 'Las giras que ya tienen chofer del catálogo reciben prioridad para asignarles vehículo. En giras con varios viajes también se buscan los choferes faltantes para completar la gira en conjunto. Las asignaciones existentes se conservan.\n\nSi hay vehículos asignados que no existen en el catálogo del sistema o que no son una placa (marcados con el ícono de advertencia), esas filas quedarán sin vehículo y la autoasignación intentará completarlas.\n\nLas giras que ya tienen un vehículo del catálogo se respetan y no se reasignan.';
 
@@ -191,11 +179,8 @@ const DraftRowsTable = memo(function DraftRowsTable({
     totalElements,
     tableOptions,
     canEdit,
-    canDelete,
     hasDuplicates,
     onOpenRow,
-    onDeleteRow,
-    onToggleApproval,
 }) {
     const [duplicateColumnHidden, setDuplicateColumnHidden] = useState(false);
     const { tableOptions: expansionOptions } = usePersistedExpansion('tour-processing-draft-rows-expand-all');
@@ -221,50 +206,6 @@ const DraftRowsTable = memo(function DraftRowsTable({
         onColumnVisibilityChange(otherColumns);
     }, [columnVisibility, hasDuplicates, onColumnVisibilityChange]);
 
-    const renderRowActions = useCallback(({ row }) => (
-        <RowActionsMenu
-            tooltip="Acciones"
-            actions={[
-                {
-                    key: 'view',
-                    label: 'Ver',
-                    icon: <VisibilityOutlinedIcon fontSize="small" />,
-                    onClick: () => onOpenRow('view', row.original),
-                },
-                {
-                    key: 'edit',
-                    label: 'Editar',
-                    icon: <EditOutlinedIcon fontSize="small" />,
-                    disabled: !canEdit,
-                    onClick: () => onOpenRow('edit', row.original),
-                },
-                row.original.approvalStatus === APPROVAL_STATUS.NOT_APPROVED
-                    ? {
-                        key: 'approve',
-                        label: 'Aprobar',
-                        icon: <CheckCircleOutlineOutlinedIcon fontSize="small" />,
-                        disabled: !canEdit,
-                        onClick: () => onToggleApproval(row.original),
-                    }
-                    : {
-                        key: 'disapprove',
-                        label: 'No aprobar',
-                        icon: <BlockOutlinedIcon fontSize="small" />,
-                        disabled: !canEdit,
-                        onClick: () => onToggleApproval(row.original),
-                    },
-                {
-                    key: 'delete',
-                    label: 'Eliminar',
-                    color: 'error',
-                    icon: <DeleteOutlineOutlinedIcon fontSize="small" />,
-                    disabled: !canDelete,
-                    onClick: () => onDeleteRow(row.original),
-                },
-            ]}
-        />
-    ), [canEdit, canDelete, onOpenRow, onDeleteRow, onToggleApproval]);
-
     const handleRowClick = useCallback(
         (row) => onOpenRow(canEdit ? 'edit' : 'view', row.original),
         [canEdit, onOpenRow],
@@ -287,9 +228,8 @@ const DraftRowsTable = memo(function DraftRowsTable({
             fetching={fetching}
             error={error}
             enableDensityToggle={false}
-            enableRowActions
+            compactFullScreen
             onRowClick={handleRowClick}
-            renderRowActions={renderRowActions}
             renderDetailPanel={({ row }) => row.original.days?.length
                 ? <TourProcessingDraftDaysDetailPanel days={row.original.days} assignments={row.original.assignments} />
                 : null}
@@ -304,13 +244,6 @@ function autoAssignDriversResultMessage(result) {
     if (result?.clearedTours) parts.push(`Se vaciaron ${result.clearedTours} giras que tenían un chofer fuera del catálogo.`);
     if (result?.mandatoryCoverage?.withWarning) parts.push(`${result.mandatoryCoverage.withWarning} giras obligatorias quedaron asignadas con advertencia de sobresueldo.`);
     if (result?.mandatoryCoverage?.unattended) parts.push(`${result.mandatoryCoverage.unattended} giras obligatorias quedaron sin atender.`);
-    return parts.join('\n');
-}
-
-function autoAssignUlloaDriversResultMessage(result) {
-    const parts = [`Se asignó chofer a ${result?.assignedTours ?? 0} giras Periféricas.`];
-    if (result?.unassignedTours) parts.push(`${result.unassignedTours} giras Periféricas quedaron sin chofer.`);
-    if (result?.clearedTours) parts.push(`Se vaciaron ${result.clearedTours} giras Periféricas que tenían un chofer fuera del catálogo.`);
     return parts.join('\n');
 }
 
@@ -353,17 +286,12 @@ export default function TourProcessingDraftPage() {
     const [splitOversizedOpen, setSplitOversizedOpen] = useState(false);
     const [dismissedOversizedRows, setDismissedOversizedRows] = useState(null);
     const [autoAssignDriversOpen, setAutoAssignDriversOpen] = useState(false);
-    const [autoAssignUlloaOpen, setAutoAssignUlloaOpen] = useState(false);
     const [autoAssignVehiclesOpen, setAutoAssignVehiclesOpen] = useState(false);
     const [autoAssignBothOpen, setAutoAssignBothOpen] = useState(false);
     const [autoAssignmentInfoOpen, setAutoAssignmentInfoOpen] = useState(false);
     const [clearAssignmentsOpen, setClearAssignmentsOpen] = useState(false);
-    const [rowToDelete, setRowToDelete] = useState(null);
     const [rowModal, setRowModal] = useState({ open: false, mode: 'view', row: null, rowId: null });
     const [alert, setAlert] = useState(null);
-    const [approvalWarnings, setApprovalWarnings] = useState([]);
-    const [pendingApproval, setPendingApproval] = useState(null);
-    const [reviewingApproval, setReviewingApproval] = useState(false);
     const [assignmentReport, setAssignmentReport] = useState(null);
     const [assignmentReportOpen, setAssignmentReportOpen] = useState(false);
     const [errorsOpen, setErrorsOpen] = useState(false);
@@ -495,21 +423,6 @@ export default function TourProcessingDraftPage() {
         },
     });
 
-    const autoAssignUlloaMutation = useMutation({
-        mutationFn: () => autoAssignTourProcessingDraftUlloaDrivers(draftId),
-        onSuccess: (result) => {
-            setAutoAssignUlloaOpen(false);
-            setAssignmentReport({ draftId, result });
-            setAssignmentReportOpen(true);
-            setAlert({ type: 'success', message: autoAssignUlloaDriversResultMessage(result) });
-            void invalidateTourProcessingDraft(queryClient, draftId);
-        },
-        onError: (error) => {
-            setAutoAssignUlloaOpen(false);
-            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudieron autoasignar los choferes de Periféricas') });
-        },
-    });
-
     const autoAssignVehiclesMutation = useMutation({
         mutationFn: () => autoAssignTourProcessingDraftVehicles(draftId),
         onSuccess: (result) => {
@@ -609,37 +522,6 @@ export default function TourProcessingDraftPage() {
         },
     });
 
-    const deleteRowMutation = useMutation({
-        mutationFn: (row) => deleteTourProcessingDraftRow(draftId, row.id),
-        onSuccess: () => {
-            setRowToDelete(null);
-            setAlert({ type: 'success', message: 'Gira eliminada correctamente' });
-            void invalidateTourProcessingDraft(queryClient, draftId);
-        },
-        onError: (error) => {
-            setRowToDelete(null);
-            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo eliminar la gira') });
-        },
-    });
-
-    const approvalStatusMutation = useMutation({
-        mutationFn: (row) => updateTourProcessingDraftRowApprovalStatus(draftId, row.id, toggledApprovalStatus(row.approvalStatus)),
-        onSuccess: (updatedRow, row) => {
-            replaceCachedDraftRow(queryClient, draftId, updatedRow);
-            const number = updatedRow?.number ?? row.number;
-            setAlert({
-                type: 'success',
-                message: updatedRow?.approvalStatus === APPROVAL_STATUS.NOT_APPROVED
-                    ? `Gira ${number} marcada como no aprobada`
-                    : `Gira ${number} aprobada correctamente`,
-            });
-            void invalidateTourProcessingDraft(queryClient, draftId);
-        },
-        onError: (error) => {
-            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo cambiar el estado de la gira') });
-        },
-    });
-
     const handleObservationReviewed = useCallback((updated) => {
         setRowModal((current) => {
             if (!current.row || current.row.id !== updated?.id) return current;
@@ -655,12 +537,13 @@ export default function TourProcessingDraftPage() {
     }, []);
 
     const columns = useMemo(() => [
-        { accessorKey: 'rowNumber', header: 'Fila', size: 90, grow: false },
+        { accessorKey: 'rowNumber', header: 'Fila', size: 90, grow: false, meta: { fullScreenSize: 70 } },
         {
             accessorKey: 'number',
             header: 'Numero',
             size: 150,
             grow: false,
+            meta: { fullScreenSize: 90 },
             Cell: ({ cell, row }) => (
                 <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, maxWidth: '100%' }}>
                     <TourProblemsIndicator problems={problemsByRowId[row.original.id]} />
@@ -673,6 +556,7 @@ export default function TourProcessingDraftPage() {
             header: 'Repetición',
             size: 120,
             grow: false,
+            meta: { fullScreenSize: 110 },
             enableSorting: false,
             enableColumnFilter: false,
             accessorFn: (row) => row.duplicateRank,
@@ -683,26 +567,36 @@ export default function TourProcessingDraftPage() {
             header: 'Estado',
             size: 120,
             grow: false,
+            meta: { fullScreenSize: 100 },
             filterVariant: 'select',
             filterSelectOptions: APPROVAL_STATUS_FILTER_OPTIONS,
             Filter: ({ column }) => (
                 <TableSelectFilter column={column} label="Estado" options={APPROVAL_STATUS_FILTER_OPTIONS} clearLabel="Todas" />
             ),
-            Cell: ({ cell }) => (
-                <Chip
-                    label={approvalStatusLabel(cell.getValue())}
-                    color={approvalStatusColor(cell.getValue())}
-                    size="small"
-                    variant="outlined"
-                    sx={{ width: 104, justifyContent: 'center' }}
-                />
-            ),
+            Cell: ({ cell, table }) => {
+                const isFullScreen = table.getState().isFullScreen;
+                return (
+                    <Chip
+                        label={approvalStatusLabel(cell.getValue())}
+                        color={approvalStatusColor(cell.getValue())}
+                        size="small"
+                        variant="outlined"
+                        sx={{
+                            width: isFullScreen ? '100%' : 104,
+                            maxWidth: 104,
+                            justifyContent: 'center',
+                            ...(isFullScreen && { height: 20, fontSize: 'inherit' }),
+                        }}
+                    />
+                );
+            },
         },
         {
             accessorKey: 'driver',
             header: 'Chofer',
             size: 210,
             grow: false,
+            meta: { fullScreenSize: 170 },
             Cell: ({ cell, row }) => {
                 if (row.original.assignments?.length > 1) {
                     return <TourProcessingAssignmentsCell kind="driver" assignments={row.original.assignments} isMissing={isDriverMissing} />;
@@ -719,6 +613,7 @@ export default function TourProcessingDraftPage() {
             header: 'Vehículo',
             size: 220,
             grow: false,
+            meta: { fullScreenSize: 100 },
             Cell: ({ cell, row }) => {
                 const warning = vehicleDistributionWarning(row.original);
                 const ownVehicle = row.original.resourceType !== 'EXTERNAL' && row.original.resourceType !== 'BORROWED_VEHICLE';
@@ -752,39 +647,43 @@ export default function TourProcessingDraftPage() {
                 );
             },
         },
-        { accessorKey: 'passengers', header: 'Pasajeros', size: 120, grow: false },
-        { accessorKey: 'executingUnit', header: 'Unidad ejecutora', size: 240, grow: false },
-        { accessorKey: 'responsible', header: 'Responsable', size: 190, grow: false },
-        { accessorKey: 'destination', header: 'Destinos', size: 180, grow: false },
-        { accessorKey: 'durationDays', header: 'Duración', size: 110, grow: false },
-        { accessorKey: 'priority', header: 'Prioridad', size: 110, grow: false },
-        { accessorKey: 'modality', header: 'Modalidad', size: 120, grow: false, Cell: ({ cell }) => cell.getValue() ?? '—' },
+        { accessorKey: 'passengers', header: 'Pasajeros', size: 120, grow: false, meta: { fullScreenSize: 100 } },
+        { accessorKey: 'executingUnit', header: 'Unidad ejecutora', size: 240, grow: false, meta: { fullScreenSize: 136, wrapInFullScreen: true } },
+        { accessorKey: 'responsible', header: 'Responsable', size: 190, grow: false, meta: { fullScreenSize: 116, wrapInFullScreen: true } },
+        { accessorKey: 'destination', header: 'Destinos', size: 180, grow: false, meta: { fullScreenSize: 100, wrapInFullScreen: true } },
+        { accessorKey: 'durationDays', header: 'Duración', size: 110, grow: false, meta: { fullScreenSize: 92 } },
+        { accessorKey: 'priority', header: 'Prioridad', size: 110, grow: false, meta: { fullScreenSize: 96 } },
+        { accessorKey: 'modality', header: 'Modalidad', size: 120, grow: false, meta: { fullScreenSize: 102 }, Cell: ({ cell }) => cell.getValue() ?? '—' },
         {
             accessorKey: 'departureDate',
             header: 'Fecha salida',
             size: 140,
             grow: false,
+            meta: { fullScreenSize: 112 },
             enableColumnFilter: false,
             Cell: ({ cell }) => formatDate(cell.getValue()),
         },
-        { accessorKey: 'departureTime', header: 'Hora salida', size: 120, grow: false, enableColumnFilter: false },
+        { accessorKey: 'departureTime', header: 'Hora salida', size: 120, grow: false, meta: { fullScreenSize: 106 }, enableColumnFilter: false },
         {
             accessorKey: 'returnDate',
             header: 'Fecha regreso',
             size: 140,
             grow: false,
+            meta: { fullScreenSize: 122 },
             enableColumnFilter: false,
             Cell: ({ cell }) => formatDate(cell.getValue()),
         },
-        { accessorKey: 'returnTime', header: 'Hora regreso', size: 130, grow: false, enableColumnFilter: false },
+        { accessorKey: 'returnTime', header: 'Hora regreso', size: 130, grow: false, meta: { fullScreenSize: 114 }, enableColumnFilter: false },
         {
             accessorKey: 'observations',
             header: 'Observaciones',
             size: 320,
             grow: false,
-            Cell: ({ cell, row }) => {
+            meta: { fullScreenSize: 170, wrapInFullScreen: true },
+            Cell: ({ cell, row, table }) => {
                 const value = cell.getValue();
                 if (!value) return '—';
+                const isFullScreen = table.getState().isFullScreen;
                 return (
                     <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, maxWidth: '100%' }}>
                         <TourObservationMatchIndicator
@@ -794,7 +693,22 @@ export default function TourProcessingDraftPage() {
                             onReviewed={handleObservationReviewed}
                         />
                         <Tooltip title={value} placement="top-start">
-                            <Typography noWrap sx={{ fontSize: 'inherit', maxWidth: 300 }}>{value}</Typography>
+                            <Typography
+                                noWrap={!isFullScreen}
+                                sx={{
+                                    fontSize: 'inherit',
+                                    minWidth: 0,
+                                    maxWidth: isFullScreen ? '100%' : 300,
+                                    ...(isFullScreen && {
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden',
+                                    }),
+                                }}
+                            >
+                                {value}
+                            </Typography>
                         </Tooltip>
                     </Box>
                 );
@@ -822,36 +736,6 @@ export default function TourProcessingDraftPage() {
             active = false;
         };
     }, [draftId, pendingRowId]);
-    const openDeleteRow = useCallback((row) => setRowToDelete(row), []);
-    const { isPending: changingApproval, mutate: toggleApproval } = approvalStatusMutation;
-    const handleToggleApproval = useCallback(async (row) => {
-        if (changingApproval || reviewingApproval) return;
-        if (toggledApprovalStatus(row.approvalStatus) !== APPROVAL_STATUS.APPROVED) {
-            toggleApproval(row);
-            return;
-        }
-        setReviewingApproval(true);
-        try {
-            const warnings = await previewTourProcessingDraftApprovalWarnings(draftId, row.id);
-            if (warnings.length > 0) {
-                setPendingApproval(row);
-                setApprovalWarnings(warnings);
-                return;
-            }
-        } catch (error) {
-            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo revisar la gira') });
-            return;
-        } finally {
-            setReviewingApproval(false);
-        }
-        toggleApproval(row);
-    }, [changingApproval, reviewingApproval, toggleApproval, draftId]);
-    const confirmApprovalWarnings = () => {
-        const row = pendingApproval;
-        setApprovalWarnings([]);
-        setPendingApproval(null);
-        if (row) toggleApproval(row);
-    };
 
     if (!canReadTourProcessing) return <AccessDeniedState />;
 
@@ -867,7 +751,6 @@ export default function TourProcessingDraftPage() {
     const oversizedRows = draft?.oversizedRows ?? 0;
     const exporting = exportMutation.isPending;
     const autoAssigningDrivers = autoAssignDriversMutation.isPending;
-    const autoAssigningUlloa = autoAssignUlloaMutation.isPending;
     const autoAssigningVehicles = autoAssignVehiclesMutation.isPending;
     const autoAssigningBoth = autoAssignBothMutation.isPending;
     const clearingAssignments = clearAssignmentsMutation.isPending;
@@ -877,7 +760,7 @@ export default function TourProcessingDraftPage() {
     const periodLabel = draft?.year && draft?.month ? shortPeriodLabel(draft.year, draft.month) : null;
     const exportLabel = draft?.year && draft?.month ? `Descargar '${draftPeriodLabel(draft)}'` : 'Descargar borrador';
     const hasAssignmentReport = assignmentReport?.draftId === draftId;
-    const busy = finishMutation.isPending || reopenMutation.isPending || autoAssigningDrivers || autoAssigningUlloa || autoAssigningVehicles || autoAssigningBoth || clearingAssignments || deleteDuplicatesMutation.isPending || splitOversizedMutation.isPending;
+    const busy = finishMutation.isPending || reopenMutation.isPending || autoAssigningDrivers || autoAssigningVehicles || autoAssigningBoth || clearingAssignments || deleteDuplicatesMutation.isPending || splitOversizedMutation.isPending;
     const pageTitle = draft?.year && draft?.month
         ? `Depuración de giras ${draftPeriodLabel(draft).toLowerCase()}`
         : 'Depuración de giras';
@@ -902,11 +785,6 @@ export default function TourProcessingDraftPage() {
     const handleAutoAssignDrivers = () => {
         closeOptions();
         setAutoAssignDriversOpen(true);
-    };
-
-    const handleAutoAssignUlloa = () => {
-        closeOptions();
-        setAutoAssignUlloaOpen(true);
     };
 
     const handleOpenAssignmentReport = () => {
@@ -969,10 +847,6 @@ export default function TourProcessingDraftPage() {
         if (!autoAssignDriversMutation.isPending) autoAssignDriversMutation.mutate();
     };
 
-    const confirmAutoAssignUlloa = () => {
-        if (!autoAssignUlloaMutation.isPending) autoAssignUlloaMutation.mutate();
-    };
-
     const confirmAutoAssignVehicles = () => {
         if (!autoAssignVehiclesMutation.isPending) autoAssignVehiclesMutation.mutate();
     };
@@ -983,10 +857,6 @@ export default function TourProcessingDraftPage() {
 
     const confirmClearAssignments = () => {
         if (!clearAssignmentsMutation.isPending) clearAssignmentsMutation.mutate();
-    };
-
-    const confirmDeleteRow = () => {
-        if (!deleteRowMutation.isPending) deleteRowMutation.mutate(rowToDelete);
     };
 
     const confirmDeleteDuplicates = () => {
@@ -1049,6 +919,10 @@ export default function TourProcessingDraftPage() {
                                         )}
                                         {canEditRows && (
                                             <NestedMenuItem label="Autoasignar" icon={<AutoFixHighOutlinedIcon fontSize="small" />}>
+                                                <MenuItem onClick={handleAutoAssignBoth}>
+                                                    <ListItemIcon><GroupsOutlinedIcon fontSize="small" /></ListItemIcon>
+                                                    <ListItemText>Autoasignar choferes y vehículos</ListItemText>
+                                                </MenuItem>
                                                 <MenuItem onClick={handleAutoAssignDrivers}>
                                                     <ListItemIcon><BadgeOutlinedIcon fontSize="small" /></ListItemIcon>
                                                     <ListItemText>Autoasignar choferes</ListItemText>
@@ -1056,14 +930,6 @@ export default function TourProcessingDraftPage() {
                                                 <MenuItem onClick={handleAutoAssignVehicles}>
                                                     <ListItemIcon><DirectionsCarFilledOutlinedIcon fontSize="small" /></ListItemIcon>
                                                     <ListItemText>Autoasignar vehículos</ListItemText>
-                                                </MenuItem>
-                                                <MenuItem onClick={handleAutoAssignUlloa}>
-                                                    <ListItemIcon><RouteOutlinedIcon fontSize="small" /></ListItemIcon>
-                                                    <ListItemText>Autoasignar choferes - Solo Periféricas</ListItemText>
-                                                </MenuItem>
-                                                <MenuItem onClick={handleAutoAssignBoth}>
-                                                    <ListItemIcon><GroupsOutlinedIcon fontSize="small" /></ListItemIcon>
-                                                    <ListItemText>Autoasignar choferes y vehículos</ListItemText>
                                                 </MenuItem>
                                                  <MenuItem onClick={handleAutoAssignmentInfo}>
                                                      <ListItemIcon><InfoOutlinedIcon fontSize="small" /></ListItemIcon>
@@ -1136,7 +1002,7 @@ export default function TourProcessingDraftPage() {
                     )}
                 />
 
-                {(loadingDraft || exporting || exportingTourControl || exportingOvertimeRequest || exportingFinalCommission || autoAssigningDrivers || autoAssigningUlloa || autoAssigningVehicles || autoAssigningBoth || clearingAssignments) && <LinearProgress sx={{ mb: 2 }} />}
+                {(loadingDraft || exporting || exportingTourControl || exportingOvertimeRequest || exportingFinalCommission || autoAssigningDrivers || autoAssigningVehicles || autoAssigningBoth || clearingAssignments) && <LinearProgress sx={{ mb: 2 }} />}
 
                 {draftError && (
                     <Alert severity="error" variant="outlined" sx={{ mb: 2 }}>
@@ -1241,11 +1107,8 @@ export default function TourProcessingDraftPage() {
                         totalElements={totalElements}
                         tableOptions={tableOptions}
                         canEdit={canEditRows}
-                        canDelete={canDeleteRows}
                         hasDuplicates={duplicateRows > 0}
                         onOpenRow={openRowModal}
-                        onDeleteRow={openDeleteRow}
-                        onToggleApproval={handleToggleApproval}
                     />
                     </Stack>
                 )}
@@ -1273,21 +1136,6 @@ export default function TourProcessingDraftPage() {
             />
 
             <DialogModal
-                open={approvalWarnings.length > 0}
-                type="warning"
-                title="Esta gira rompe algunas reglas"
-                message={approvalWarnings.map((warning) => `${warning.title}\n${warning.message}`).join('\n\n')}
-                cancelLabel="Cancelar"
-                cancelAtStart
-                confirmLabel={changingApproval ? 'Guardando...' : 'Guardar de todos modos'}
-                onConfirm={confirmApprovalWarnings}
-                onClose={() => {
-                    setApprovalWarnings([]);
-                    setPendingApproval(null);
-                }}
-            />
-
-            <DialogModal
                 open={finishOpen}
                 type="warning"
                 title="Terminar depuración"
@@ -1305,16 +1153,6 @@ export default function TourProcessingDraftPage() {
                 confirmLabel={reopenMutation.isPending ? 'Reabriendo...' : 'Devolver a borrador'}
                 onConfirm={() => { if (!reopenMutation.isPending) reopenMutation.mutate(); }}
                 onClose={reopenMutation.isPending ? undefined : () => setReopenOpen(false)}
-            />
-
-            <DialogModal
-                open={Boolean(rowToDelete)}
-                type="delete"
-                title="Eliminar gira"
-                message={rowToDelete ? `Se eliminará la fila ${rowToDelete.rowNumber} (Número ${rowToDelete.number}) del borrador.` : ''}
-                confirmLabel={deleteRowMutation.isPending ? 'Eliminando...' : 'Sí, eliminar'}
-                onConfirm={confirmDeleteRow}
-                onClose={() => setRowToDelete(null)}
             />
 
             {hasAssignmentReport && (
@@ -1364,16 +1202,6 @@ export default function TourProcessingDraftPage() {
             <TourProcessingAutoAssignmentInfoModal
                 open={autoAssignmentInfoOpen}
                 onClose={() => setAutoAssignmentInfoOpen(false)}
-            />
-
-            <DialogModal
-                open={autoAssignUlloaOpen}
-                type="warning"
-                title="Autoasignar choferes - Solo Periféricas"
-                message={AUTO_ASSIGN_ULLOA_DRIVERS_MESSAGE}
-                confirmLabel={autoAssigningUlloa ? 'Asignando...' : 'Sí, autoasignar'}
-                onConfirm={confirmAutoAssignUlloa}
-                onClose={autoAssigningUlloa ? undefined : () => setAutoAssignUlloaOpen(false)}
             />
 
             <DialogModal
