@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
 
-function readStoredVisibility(storageKey) {
+function readStoredVisibility(storageKey, defaultVisibility) {
     try {
         const parsed = JSON.parse(localStorage.getItem(storageKey));
-        return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+        return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : defaultVisibility;
     } catch {
-        return {};
+        return defaultVisibility;
     }
 }
 
-export function usePersistedColumnVisibility(storageKey) {
-    const [columnVisibility, setColumnVisibility] = useState(() => readStoredVisibility(storageKey));
+export function usePersistedColumnVisibility(storageKey, defaultVisibility = {}) {
+    const [columnVisibility, setColumnVisibility] = useState(() => readStoredVisibility(storageKey, defaultVisibility));
 
     useEffect(() => {
         try {

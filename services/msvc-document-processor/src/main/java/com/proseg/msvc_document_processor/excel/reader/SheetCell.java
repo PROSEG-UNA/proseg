@@ -21,6 +21,14 @@ public record SheetCell(String text, LocalDateTime dateValue, Double numericValu
         return new SheetCell(sanitize(raw), dateValue, numericValue);
     }
 
+    static SheetCell unsanitizedText(String raw) {
+        return new SheetCell(raw, null, null);
+    }
+
+    static SheetCell unsanitizedNumber(String raw, Double numericValue, LocalDateTime dateValue) {
+        return new SheetCell(raw, dateValue, numericValue);
+    }
+
     public boolean isBlank() {
         return text == null && dateValue == null && numericValue == null;
     }

@@ -11,6 +11,11 @@ export async function fetchVehicleById(vehicleId) {
     return data?.data ?? null;
 }
 
+export async function fetchVehicleOpenDraftTours(vehicleId) {
+    const { data } = await axios.get(`${TRANSPORT_ENDPOINTS.vehicles}/${vehicleId}/open-draft-tours`, transportConfig);
+    return data?.data ?? [];
+}
+
 export async function createVehicle(payload) {
     const { data } = await axios.post(TRANSPORT_ENDPOINTS.vehicles, payload, transportConfig);
     return data?.data;

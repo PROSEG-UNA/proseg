@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.List;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -28,5 +29,17 @@ public class FinalCommissionCheckDto {
         private String code;
         private String title;
         private List<String> details;
+        private List<TourRef> tours;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class TourRef {
+        private UUID id;
+        private String number;
+        private String label;
     }
 }

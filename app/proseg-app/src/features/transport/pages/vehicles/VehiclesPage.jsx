@@ -1,18 +1,24 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Box, Container, Tab, Tabs } from '@mui/material';
+import { Box, Button, Container, MenuItem, Tab, Tabs, TextField } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DirectionsCarFilledOutlinedIcon from '@mui/icons-material/DirectionsCarFilledOutlined';
 import CarRentalOutlinedIcon from '@mui/icons-material/CarRentalOutlined';
 import { PageHeader } from '../../../../common/components/index.js';
 import AccessDeniedState from '../../../../common/components/AccessDeniedState.jsx';
+import DialogModal from '../../../../common/components/DialogModal.jsx';
+import ExportIcon from '../../../../common/components/icons/ExportIcon.jsx';
 import { PrimaryButton } from '../../../../common/components/PrimaryButton.jsx';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { usePermissions } from '../../../../common/hooks/index.js';
+import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
 import VehiclesTable from '../../components/vehicles/VehiclesTable.jsx';
 import VehicleFormModal from '../../components/vehicles/VehicleFormModal.jsx';
+import { VEHICLE_AVAILABILITY_FILTER_OPTIONS } from '../../components/vehicles/vehicleColumns.jsx';
 import BorrowedVehiclesTable from '../../components/vehicles/BorrowedVehiclesTable.jsx';
 import BorrowedVehicleFormModal from '../../components/vehicles/BorrowedVehicleFormModal.jsx';
+import { exportBorrowedVehicles, exportVehicles } from '../../services/transportExportService.js';
+import { downloadBlob } from '../../transportUtils.js';
 import { queryKeys } from '../../../../common/query';
 
 const VEHICLE_SUB_TABS = [
@@ -24,8 +30,11 @@ export default function VehiclesPage() {
     const [vehicleFormOpen, setVehicleFormOpen] = useState(false);
     const [vehicleFormId, setVehicleFormId] = useState(null);
     const [vehicleSubTab, setVehicleSubTab] = useState('own');
+    const [availabilityFilter, setAvailabilityFilter] = useState('all');
     const [borrowedVehicleFormOpen, setBorrowedVehicleFormOpen] = useState(false);
     const [borrowedVehicleFormId, setBorrowedVehicleFormId] = useState(null);
+    const [exporting, setExporting] = useState(false);
+    const [alert, setAlert] = useState(null);
     const queryClient = useQueryClient();
     const { hasPermission, hasAnyPermission } = usePermissions();
 
@@ -34,6 +43,23 @@ export default function VehiclesPage() {
         PERMISSIONS.TRANSPORT.VEHICLES.MANAGE,
         PERMISSIONS.TRANSPORT.VEHICLES.DELETE,
     ]);
+    const canExportVehicles = hasPermission(PERMISSIONS.TRANSPORT.VEHICLES.READ);
+    const canManageVehicles = hasPermission(PERMISSIONS.TRANSPORT.VEHICLES.MANAGE);
+
+    const handleExport = async () => {
+        if (exporting) return;
+        setExporting(true);
+        try {
+            const { blob, fileName } = vehicleSubTab === 'borrowed'
+                ? await exportBorrowedVehicles()
+                : await exportVehicles();
+            downloadBlob(blob, fileName);
+        } catch (error) {
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo exportar') });
+        } finally {
+            setExporting(false);
+        }
+    };
 
     const openCreateVehicle = () => {
         setVehicleFormId(null);
@@ -55,14 +81,20 @@ export default function VehiclesPage() {
         setBorrowedVehicleFormOpen(true);
     };
 
-    const refreshVehicles = () => {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.transport.vehicles() });
-        void queryClient.invalidateQueries({ queryKey: queryKeys.transport.tourProcessingDrafts() });
+    const showSavedMessage = (message) => {
+        if (message) setAlert({ type: 'success', message });
     };
 
-    const refreshBorrowedVehicles = () => {
+    const refreshVehicles = (_saved, message) => {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.transport.vehicles() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.transport.tourProcessingDrafts() });
+        showSavedMessage(message);
+    };
+
+    const refreshBorrowedVehicles = (_saved, message) => {
         void queryClient.invalidateQueries({ queryKey: queryKeys.transport.borrowedVehicles() });
         void queryClient.invalidateQueries({ queryKey: queryKeys.transport.tourProcessingDrafts() });
+        showSavedMessage(message);
     };
 
     if (!canViewVehicles) return <AccessDeniedState />;
@@ -73,14 +105,29 @@ export default function VehiclesPage() {
                 <PageHeader
                     title="Vehículos"
                     description="Gestión de vehículos."
-                    action={hasPermission(PERMISSIONS.TRANSPORT.VEHICLES.MANAGE) ? (
-                        <PrimaryButton
-                            startIcon={<AddIcon />}
-                            onClick={vehicleSubTab === 'borrowed' ? openCreateBorrowedVehicle : openCreateVehicle}
-                            sx={{ px: '28px' }}
-                        >
-                            Crear
-                        </PrimaryButton>
+                    action={canExportVehicles || canManageVehicles ? (
+                        <Box sx={{ display: 'flex', gap: 1.25, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                            {canExportVehicles && (
+                                <Button
+                                    variant="outlined"
+                                    startIcon={<ExportIcon style={{ fontSize: 16, marginRight: 2 }} />}
+                                    onClick={handleExport}
+                                    disabled={exporting}
+                                    sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '10px', px: 2.5 }}
+                                >
+                                    {exporting ? 'Exportando...' : 'Exportar'}
+                                </Button>
+                            )}
+                            {canManageVehicles && (
+                                <PrimaryButton
+                                    startIcon={<AddIcon />}
+                                    onClick={vehicleSubTab === 'borrowed' ? openCreateBorrowedVehicle : openCreateVehicle}
+                                    sx={{ px: '28px' }}
+                                >
+                                    Crear
+                                </PrimaryButton>
+                            )}
+                        </Box>
                     ) : null}
                 />
 
@@ -108,8 +155,27 @@ export default function VehiclesPage() {
                     </Tabs>
                 </Box>
 
+                {vehicleSubTab === 'own' && (
+                    <Box sx={{ pt: 3 }}>
+                        <TextField
+                            select
+                            size="small"
+                            label="Estado"
+                            value={availabilityFilter}
+                            onChange={(event) => setAvailabilityFilter(event.target.value)}
+                            sx={{ width: { xs: '100%', sm: 320 } }}
+                        >
+                            {VEHICLE_AVAILABILITY_FILTER_OPTIONS.map((option) => (
+                                <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+                            ))}
+                        </TextField>
+                    </Box>
+                )}
+
                 <Box sx={{ pt: 3 }}>
-                    {vehicleSubTab === 'own' && <VehiclesTable onEditVehicle={openEditVehicle} />}
+                    {vehicleSubTab === 'own' && (
+                        <VehiclesTable onEditVehicle={openEditVehicle} availabilityFilter={availabilityFilter} />
+                    )}
                     {vehicleSubTab === 'borrowed' && <BorrowedVehiclesTable onEditBorrowedVehicle={openEditBorrowedVehicle} />}
                 </Box>
             </Container>
@@ -131,6 +197,13 @@ export default function VehiclesPage() {
                     onSaved={refreshBorrowedVehicles}
                 />
             ) : null}
+
+            <DialogModal
+                open={!!alert}
+                type={alert?.type}
+                message={alert?.message}
+                onClose={() => setAlert(null)}
+            />
         </Box>
     );
 }

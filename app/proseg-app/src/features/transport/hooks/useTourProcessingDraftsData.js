@@ -4,12 +4,16 @@ import {
     fetchTourProcessingDraftDriverSchedule,
     fetchTourProcessingDraftDriverSummaries,
     fetchTourProcessingDraftRow,
+    fetchTourProcessingDraftRowProblems,
     fetchTourProcessingDraftRows,
     fetchTourProcessingDraftSchedule,
+    fetchTourProcessingDraftTourControl,
     fetchTourProcessingDrafts,
 } from '../services/tourProcessing/tourProcessingService';
 import { getFriendlyApiErrorMessage } from '../../../common/utils';
 import { keepPreviousPage, queryKeys } from '../../../common/query';
+
+const EMPTY_PROBLEMS = Object.freeze({});
 
 function mapDraftToRow(draft) {
     return {
@@ -72,8 +76,8 @@ export function useTourProcessingDraft(draftId) {
     };
 }
 
-export function useTourProcessingDraftRows(draftId, { pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [] } = {}, { enabled = true } = {}) {
-    const requestParams = { page: pageIndex, size: pageSize, search, filters, sort };
+export function useTourProcessingDraftRows(draftId, { pageIndex = 0, pageSize = 10, search = '', filters = {}, sort = [], rule = '' } = {}, { enabled = true } = {}) {
+    const requestParams = { page: pageIndex, size: pageSize, search, filters, sort, rule };
     const listQueryKey = queryKeys.transport.tourProcessingDraftRows(draftId, requestParams);
 
     const { data, isLoading, isFetching, error } = useQuery({
@@ -96,6 +100,16 @@ export function useTourProcessingDraftRows(draftId, { pageIndex = 0, pageSize = 
         error: error ? getFriendlyApiErrorMessage(error, 'No se pudieron cargar las filas del borrador') : null,
         totalElements: data?.totalElements ?? 0,
     };
+}
+
+export function useTourProcessingDraftRowProblems(draftId, { enabled = true } = {}) {
+    const { data } = useQuery({
+        queryKey: queryKeys.transport.tourProcessingDraftRowProblems(draftId),
+        queryFn: () => fetchTourProcessingDraftRowProblems(draftId),
+        enabled: Boolean(draftId) && enabled,
+    });
+
+    return { problemsByRowId: data ?? EMPTY_PROBLEMS };
 }
 
 export async function loadTourProcessingDraftRow(draftId, rowId) {
@@ -148,6 +162,21 @@ export function useTourProcessingDraftSchedule(draftId, date) {
         loading: isLoading,
         fetching: isFetching,
         error: error ? getFriendlyApiErrorMessage(error, 'No se pudo cargar el control de giras') : null,
+    };
+}
+
+export function useTourProcessingDraftTourControl(draftId) {
+    const { data, isLoading, isFetching, error } = useQuery({
+        queryKey: queryKeys.transport.tourProcessingDraftTourControl(draftId),
+        queryFn: () => fetchTourProcessingDraftTourControl(draftId),
+        enabled: Boolean(draftId),
+    });
+
+    return {
+        entries: data?.entries ?? [],
+        loading: isLoading,
+        fetching: isFetching,
+        error: error ? getFriendlyApiErrorMessage(error, 'No se pudieron cargar las giras con otros recursos') : null,
     };
 }
 

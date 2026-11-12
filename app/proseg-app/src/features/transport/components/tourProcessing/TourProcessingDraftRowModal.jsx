@@ -1,7 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-    Autocomplete,
     Box,
     Button,
     Chip,
@@ -33,6 +32,9 @@ import { invalidateTourProcessingDraft, replaceCachedDraftRow } from '../../hook
 import {
     createTourProcessingDraftRow,
     deleteTourProcessingDraftRow,
+    previewNewTourProcessingDraftRowWarnings,
+    previewTourProcessingDraftRowDayWarnings,
+    previewTourProcessingDraftRowWarnings,
     updateTourProcessingDraftRow,
     updateTourProcessingDraftRowDay,
 } from '../../services/tourProcessing/tourProcessingService.js';
@@ -44,8 +46,14 @@ import {
     toggledApprovalStatus,
 } from './tourProcessingDraftLabels.js';
 import TourProcessingCatalogField from './TourProcessingCatalogField.jsx';
+import BorrowedVehicleCatalogField from './BorrowedVehicleCatalogField.jsx';
 import DuplicateChip from './DuplicateChip.jsx';
+import { describeDraftRowChanges } from './draftRowChanges.js';
+import { useTourProcessingCatalogMatch } from '../../hooks/useTourProcessingCatalogMatch.js';
 import TourProcessingDraftDistributionEditor from './TourProcessingDraftDistributionEditor.jsx';
+import TourProcessingTripSplitDialog from './TourProcessingTripSplitDialog.jsx';
+import TourObservationMatchIndicator from './TourObservationMatchIndicator.jsx';
+import { TRIP_MODES, buildTrips, minimumTrips } from './tripDistribution.js';
 
 const RESOURCE_TYPE_OPTIONS = [
     { value: 'INTERNAL', label: 'Interno' },
@@ -173,6 +181,10 @@ function validateDay(values) {
     return errors;
 }
 
+function ruleWarningMessage(warnings) {
+    return warnings.map((warning) => `${warning.title}\n${warning.message}`).join('\n\n');
+}
+
 function dayToPayload(values) {
     return {
         startTime: values.startTime,
@@ -192,6 +204,8 @@ function TourProcessingDraftRowDayCard({ day, draftId, rowId, canEdit, onSaved }
     const [values, setValues] = useState(() => toDayFormValues(day));
     const [submitted, setSubmitted] = useState(false);
     const [needsOvertimeConfirm, setNeedsOvertimeConfirm] = useState(false);
+    const [ruleWarnings, setRuleWarnings] = useState([]);
+    const [previewError, setPreviewError] = useState('');
     const errors = useMemo(() => validateDay(values), [values]);
 
     const mutation = useMutation({
@@ -228,15 +242,33 @@ function TourProcessingDraftRowDayCard({ day, draftId, rowId, canEdit, onSaved }
 
     const handleHoursChange = (key, raw) => setValues((current) => ({ ...current, [key]: raw.replace(/[^0-9.]/g, '') }));
 
-    const handleSave = () => {
+    const handleSave = async () => {
         setSubmitted(true);
         if (Object.keys(errors).length > 0) return;
-        mutation.mutate(dayToPayload(values));
+        const payload = dayToPayload(values);
+        setPreviewError('');
+        try {
+            const warnings = await previewTourProcessingDraftRowDayWarnings(draftId, rowId, day.id, payload);
+            if (warnings.length > 0) {
+                setRuleWarnings(warnings);
+                return;
+            }
+        } catch (error) {
+            setPreviewError(getFriendlyApiErrorMessage(error, 'No se pudo revisar el día'));
+            return;
+        }
+        mutation.mutate(payload);
     };
 
     const confirmOvertimeAnyway = () => {
         setNeedsOvertimeConfirm(false);
         mutation.mutate({ ...dayToPayload(values), confirmOvertimeBelowSurplusThreshold: true });
+    };
+
+    const confirmRuleWarnings = () => {
+        const payload = { ...dayToPayload(values), confirmOvertimeBelowSurplusThreshold: true };
+        setRuleWarnings([]);
+        mutation.mutate(payload);
     };
 
     const visibleError = (key) => (submitted ? errors[key] : undefined);
@@ -310,11 +342,22 @@ function TourProcessingDraftRowDayCard({ day, draftId, rowId, canEdit, onSaved }
                 {editing ? renderHoursField('surplusHours', 'Horas sobresueldo') : renderReadOnlyField('Horas sobresueldo', formatHours(day.surplusHours), fieldSx)}
                 {editing ? renderHoursField('overtimeHours', 'Horas extra') : renderReadOnlyField('Horas extra', formatHours(day.overtimeHours), fieldSx)}
             </Box>
-            {mutation.isError && !needsOvertimeConfirm && (
+            {(previewError || (mutation.isError && !needsOvertimeConfirm)) && (
                 <Typography sx={{ fontSize: 12.5, color: 'error.main', mt: 1 }}>
-                    {getFriendlyApiErrorMessage(mutation.error, 'No se pudo guardar el día')}
+                    {previewError || getFriendlyApiErrorMessage(mutation.error, 'No se pudo guardar el día')}
                 </Typography>
             )}
+            <DialogModal
+                open={ruleWarnings.length > 0}
+                type="warning"
+                title="Esta gira rompe algunas reglas"
+                message={ruleWarningMessage(ruleWarnings)}
+                cancelLabel="Cancelar"
+                cancelAtStart
+                confirmLabel={saving ? 'Guardando...' : 'Guardar de todos modos'}
+                onConfirm={confirmRuleWarnings}
+                onClose={() => setRuleWarnings([])}
+            />
             <DialogModal
                 open={needsOvertimeConfirm}
                 type="warning"
@@ -358,7 +401,9 @@ function toFormValues(row) {
     };
 }
 
-function validate(values, vehicleOptions, borrowedVehicleOptions) {
+const BORROWED_DRIVER_MISSING_MESSAGE = 'El chofer no existe en el sistema. Agrégalo como chofer de otra unidad para poder guardar la gira de préstamo de vehículo';
+
+function validate(values, vehicleOptions, borrowedVehicleOptions, isDriverMissing) {
     const errors = {};
 
     REQUIRED_TEXT_KEYS.forEach((key) => {
@@ -377,23 +422,18 @@ function validate(values, vehicleOptions, borrowedVehicleOptions) {
     if (values.resourceType === 'BORROWED_VEHICLE' && !values.borrowedVehicleId) {
         if (!values.assignments) errors.borrowedVehicleId = 'Selecciona el vehículo prestado';
     }
+    if (values.resourceType === 'BORROWED_VEHICLE' && !values.assignments && isDriverMissing(values.driver)) {
+        errors.driver = BORROWED_DRIVER_MISSING_MESSAGE;
+    }
 
     if (values.assignments) {
-        const assigned = values.assignments.reduce((sum, assignment) => sum + Number(assignment.passengers || 0), 0);
-        if (assigned !== Number(values.passengers)) errors.assignments = 'La suma debe coincidir con el total de pasajeros';
-        const usedDrivers = new Set();
-        const usedVehicles = new Set();
         values.assignments.forEach((assignment) => {
             const passengers = Number(assignment.passengers);
-            if (!Number.isInteger(passengers) || passengers < 1) errors.assignments = 'Cada vehículo debe tener al menos un pasajero';
-            const driver = assignment.driver?.trim().toLowerCase();
-            if (driver && usedDrivers.has(driver)) errors.assignments = 'Un chofer no puede conducir dos vehículos de la misma gira';
-            if (driver) usedDrivers.add(driver);
+            if (!Number.isInteger(passengers) || passengers < 1) errors.assignments = 'Cada viaje debe tener al menos un pasajero';
             const type = assignment.resourceType || 'INTERNAL';
             const vehicle = type === 'BORROWED_VEHICLE' ? assignment.borrowedVehicleId : assignment.vehicle?.trim().toUpperCase();
-            if (vehicle && usedVehicles.has(vehicle)) errors.assignments = 'Un vehículo no puede aparecer dos veces en la misma gira';
-            if (vehicle) usedVehicles.add(vehicle);
             if (type === 'BORROWED_VEHICLE' && !assignment.borrowedVehicleId) errors.assignments = 'Selecciona cada vehículo prestado';
+            if (type === 'BORROWED_VEHICLE' && isDriverMissing(assignment.driver)) errors.assignments = BORROWED_DRIVER_MISSING_MESSAGE;
             const capacity = type === 'BORROWED_VEHICLE'
                 ? borrowedVehicleOptions.find((option) => option.id === assignment.borrowedVehicleId)?.capacity
                 : type === 'INTERNAL'
@@ -468,12 +508,15 @@ function toPayload(values, rowNumber, wasDistributed) {
     };
 }
 
-function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions, showDelete, approvalStatus, onToggleApproval, onDelete, onSubmit, onInvalid }) {
+function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions, showDelete, approvalStatus, onToggleApproval, onDelete, onSubmit, onInvalid, onObservationReviewed }) {
     const theme = useTheme();
     const accentColor = theme.vars.palette.tones.rose.fg;
     const [values, setValues] = useState(() => toFormValues(row));
     const [touched, setTouched] = useState({});
     const [submitted, setSubmitted] = useState(false);
+    const [splitDialogOpen, setSplitDialogOpen] = useState(false);
+    const [splitMode, setSplitMode] = useState(null);
+    const resourceSectionRef = useRef(null);
     const [days, setDays] = useState(() => row.days ?? []);
     const [distributionDays, setDistributionDays] = useState(() => row.assignments?.map((assignment) => ({
         rowId: assignment.rowId,
@@ -485,9 +528,10 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
         values.resourceType === 'BORROWED_VEHICLE'
         || values.assignments?.some((assignment) => assignment.resourceType === 'BORROWED_VEHICLE')
     ));
+    const isDriverMissing = useTourProcessingCatalogMatch().driver.isMissing;
     const errors = useMemo(
-        () => validate(values, vehicleOptions.options, borrowedVehicles.options),
-        [values, vehicleOptions.options, borrowedVehicles.options],
+        () => validate(values, vehicleOptions.options, borrowedVehicles.options, isDriverMissing),
+        [values, vehicleOptions.options, borrowedVehicles.options, isDriverMissing],
     );
     const returnRangeErrors = useMemo(() => validateReturnRange(values), [values]);
 
@@ -543,7 +587,20 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
             && selectedBorrowedCapacity != null && passengers > selectedBorrowedCapacity)
     );
 
-    const startDistribution = () => {
+    const capacityOfResource = (resource) => {
+        if (resource.resourceType === 'BORROWED_VEHICLE') {
+            return borrowedVehicles.options.find((option) => option.id === resource.borrowedVehicleId)?.capacity;
+        }
+        if (resource.resourceType === 'INTERNAL' || !resource.resourceType) {
+            return vehicleOptions.options.find((option) => option.label.toUpperCase() === resource.vehicle?.trim().toUpperCase())?.capacity;
+        }
+        return null;
+    };
+
+    const startDistribution = (mode) => {
+        setSplitDialogOpen(false);
+        setSplitMode(mode);
+        setTimeout(() => resourceSectionRef.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' }), 0);
         const capacities = vehicleOptions.options
             .filter((option) => option.available !== false && option.capacity > 0)
             .map((option) => option.capacity)
@@ -558,27 +615,36 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
             }
             suggestedCount = Math.max(2, combinedCapacity >= passengers ? count : Math.ceil(passengers / capacities[0]));
         }
+        const selectedCapacity = values.resourceType === 'BORROWED_VEHICLE' ? selectedBorrowedCapacity : selectedVehicleCapacity;
+        suggestedCount = Math.max(suggestedCount, minimumTrips(passengers, selectedCapacity) ?? 0);
         suggestedCount = Math.min(suggestedCount, passengers);
-        setValues((current) => ({
-            ...current,
-            assignments: Array.from({ length: suggestedCount }, (_, index) => ({
+        setValues((current) => {
+            const distinctAssignments = Array.from({ length: suggestedCount }, (_, index) => ({
                 passengers: String(Math.floor(passengers / suggestedCount) + (index < passengers % suggestedCount ? 1 : 0)),
                 driver: index === 0 ? current.driver : '',
                 vehicle: index === 0 ? current.vehicle : '',
                 resourceType: index === 0 ? current.resourceType : 'INTERNAL',
                 borrowedVehicleId: index === 0 ? current.borrowedVehicleId : '',
-            })),
-        }));
+            }));
+            return {
+                ...current,
+                assignments: mode === TRIP_MODES.DISTINCT ? distinctAssignments : buildTrips({
+                    mode, passengers, tripCount: suggestedCount, driverCount: 1, assignments: distinctAssignments, capacityOf: capacityOfResource,
+                }),
+            };
+        });
     };
 
-    const stopDistribution = () => setValues((current) => ({
+    const stopDistribution = () => {
+        setValues((current) => ({
         ...current,
         driver: current.assignments?.[0]?.driver ?? current.driver,
         vehicle: current.assignments?.[0]?.vehicle ?? current.vehicle,
         resourceType: current.assignments?.[0]?.resourceType ?? current.resourceType,
         borrowedVehicleId: current.assignments?.[0]?.borrowedVehicleId ?? current.borrowedVehicleId,
         assignments: null,
-    }));
+        }));
+    };
 
     const handleSubmit = (event) => {
         event.preventDefault();
@@ -638,6 +704,8 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
             isEdit={isEdit}
             disabled={saving}
             errorText={isEdit ? visibleError(key) : undefined}
+            generalServicesOnly={key === 'driver' && (!values.resourceType || values.resourceType === 'INTERNAL')}
+            unitTabs={key === 'driver' && values.resourceType === 'BORROWED_VEHICLE'}
             sx={fieldSx}
         />
     );
@@ -701,7 +769,7 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
 
             <Divider />
 
-            <Box>
+            <Box ref={resourceSectionRef} sx={{ scrollMarginTop: 8 }}>
                 {sectionLabel('Chofer y vehículo')}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
                     {isEdit && !values.assignments ? (
@@ -724,7 +792,7 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
                             size="small"
                             variant="outlined"
                         />
-                    ) : <Chip label={`${values.assignments.length} vehículos`} size="small" variant="outlined" />}
+                    ) : null}
                     {pendingContracting && (
                         <Chip label="Pendiente de contratar" size="small" color="warning" variant="outlined" />
                     )}
@@ -735,32 +803,24 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
                         : renderCatalogField('driver')}
                     {values.resourceType === 'EXTERNAL' && renderField('vehicle', 'Placa (contratación externa)')}
                     {values.resourceType === 'BORROWED_VEHICLE' && (isEdit ? (
-                        <Autocomplete
+                        <BorrowedVehicleCatalogField
                             options={borrowedVehicles.options}
                             loading={borrowedVehicles.loading}
-                            value={borrowedVehicles.options.find((option) => option.id === values.borrowedVehicleId) ?? null}
-                            onChange={(_, next) => handleChange('borrowedVehicleId', next?.id ?? '')}
-                            getOptionLabel={(option) => option.label ?? ''}
-                            isOptionEqualToValue={(option, value) => option.id === value.id}
+                            value={values.borrowedVehicleId}
+                            plate={row.borrowedVehiclePlate ?? ''}
+                            onChange={(id) => handleChange('borrowedVehicleId', id)}
+                            onBlur={() => handleBlur('borrowedVehicleId')}
                             disabled={saving}
-                            size="small"
-                            renderInput={(params) => (
-                                <TextField
-                                    {...params}
-                                    label="Vehículo prestado"
-                                    required
-                                    error={Boolean(visibleError('borrowedVehicleId'))}
-                                    helperText={visibleError('borrowedVehicleId') || ' '}
-                                    onBlur={() => handleBlur('borrowedVehicleId')}
-                                    sx={fieldSx}
-                                />
-                            )}
+                            errorText={visibleError('borrowedVehicleId')}
+                            required
+                            sx={fieldSx}
                         />
                     ) : renderReadOnly('Vehículo prestado', row.borrowedVehiclePlate))}
                     {values.resourceType === 'INTERNAL' && renderCatalogField('vehicle')}
                 </Box>}
                 {values.assignments && (
                     <TourProcessingDraftDistributionEditor
+                        initialMode={splitMode}
                         assignments={values.assignments}
                         totalPassengers={values.passengers}
                         onChange={(assignments) => handleChange('assignments', assignments)}
@@ -794,12 +854,12 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
                             )}
                         </Box>
                         {values.assignments ? (
-                            <Button onClick={stopDistribution} disabled={saving} size="small" sx={{ textTransform: 'none', fontWeight: 700 }}>
-                                Volver a un vehículo
+                            <Button onClick={stopDistribution} disabled={saving} variant="outlined" size="small" sx={{ textTransform: 'none', fontWeight: 700 }}>
+                                Volver a un solo viaje
                             </Button>
                         ) : (
-                            <Button onClick={startDistribution} disabled={saving || passengers < 2} size="small" sx={{ textTransform: 'none', fontWeight: 700 }}>
-                                Distribuir pasajeros entre vehículos
+                            <Button onClick={() => setSplitDialogOpen(true)} disabled={saving || passengers < 2} variant={needsSeveralVehicles ? 'contained' : 'outlined'} size="small" sx={{ textTransform: 'none', fontWeight: 700 }}>
+                                Dividir en varios viajes
                             </Button>
                         )}
                     </Box>
@@ -887,7 +947,16 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
             )}
 
             <Box>
-                {sectionLabel('Observaciones')}
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                    {sectionLabel('Observaciones')}
+                    <TourObservationMatchIndicator
+                        draftId={draftId}
+                        row={row}
+                        canReview={isEdit}
+                        allowReopen
+                        onReviewed={onObservationReviewed}
+                    />
+                </Box>
                 {renderField('observations', 'Observaciones', { multiline: true })}
             </Box>
 
@@ -934,16 +1003,23 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
                     </Box>
                 </>
             )}
+            <TourProcessingTripSplitDialog
+                open={splitDialogOpen}
+                onConfirm={startDistribution}
+                onClose={() => setSplitDialogOpen(false)}
+            />
         </Box>
     );
 }
 
-export default function TourProcessingDraftRowModal({ open, mode, row, loadingRow = false, draftId, canDelete = true, onClose, onSaved, onDeleted, onEdit }) {
+export default function TourProcessingDraftRowModal({ open, mode, row, loadingRow = false, draftId, canDelete = true, onClose, onSaved, onDeleted, onEdit, onObservationReviewed }) {
     const theme = useTheme();
     const accentColor = theme.vars.palette.tones.rose.fg;
     const queryClient = useQueryClient();
     const [alert, setAlert] = useState(null);
     const [deleteOpen, setDeleteOpen] = useState(false);
+    const [ruleWarnings, setRuleWarnings] = useState([]);
+    const [pendingSave, setPendingSave] = useState(null);
     const isCreate = mode === 'create';
     const isEdit = mode !== 'view';
     const canChangeExistingRow = mode === 'edit' && Boolean(row);
@@ -963,10 +1039,14 @@ export default function TourProcessingDraftRowModal({ open, mode, row, loadingRo
         mutationFn: (payload) => (isCreate
             ? createTourProcessingDraftRow(draftId, payload)
             : updateTourProcessingDraftRow(draftId, row.id, payload)),
-        onSuccess: (savedRow) => {
+        onSuccess: (savedRow, payload) => {
             replaceCachedDraftRow(queryClient, draftId, savedRow);
             void invalidateTourProcessingDraft(queryClient, draftId);
-            onSaved?.();
+            onSaved?.({
+                created: isCreate,
+                number: payload.number,
+                changes: isCreate ? [] : describeDraftRowChanges(row, payload),
+            });
             onClose();
         },
         onError: (error) => {
@@ -996,6 +1076,30 @@ export default function TourProcessingDraftRowModal({ open, mode, row, loadingRo
 
     const confirmDelete = () => {
         if (!deleting) deleteMutation.mutate();
+    };
+
+    const reviewBeforeSave = async (payload) => {
+        try {
+            const warnings = isCreate
+                ? await previewNewTourProcessingDraftRowWarnings(draftId, payload)
+                : await previewTourProcessingDraftRowWarnings(draftId, row.id, payload);
+            if (warnings.length > 0) {
+                setPendingSave(payload);
+                setRuleWarnings(warnings);
+                return;
+            }
+        } catch (error) {
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo revisar la gira') });
+            return;
+        }
+        saveMutation.mutate(payload);
+    };
+
+    const confirmRuleWarnings = () => {
+        const payload = pendingSave;
+        setRuleWarnings([]);
+        setPendingSave(null);
+        if (payload) saveMutation.mutate(payload);
     };
 
     const contentSx = {
@@ -1055,8 +1159,9 @@ export default function TourProcessingDraftRowModal({ open, mode, row, loadingRo
                         approvalStatus={approvalStatus}
                         onToggleApproval={toggleApproval}
                         onDelete={() => setDeleteOpen(true)}
-                        onSubmit={(payload) => saveMutation.mutate(payload)}
+                        onSubmit={reviewBeforeSave}
                         onInvalid={() => setAlert({ type: 'warning', message: 'Revisa los datos antes de continuar' })}
+                        onObservationReviewed={onObservationReviewed}
                     />
                 )}
             </GeneralModal>
@@ -1069,6 +1174,21 @@ export default function TourProcessingDraftRowModal({ open, mode, row, loadingRo
                 confirmLabel={deleting ? 'Eliminando...' : 'Sí, eliminar'}
                 onConfirm={confirmDelete}
                 onClose={() => setDeleteOpen(false)}
+            />
+
+            <DialogModal
+                open={ruleWarnings.length > 0}
+                type="warning"
+                title="Esta gira rompe algunas reglas"
+                message={ruleWarningMessage(ruleWarnings)}
+                cancelLabel="Cancelar"
+                cancelAtStart
+                confirmLabel={saveMutation.isPending ? 'Guardando...' : 'Guardar de todos modos'}
+                onConfirm={confirmRuleWarnings}
+                onClose={() => {
+                    setRuleWarnings([]);
+                    setPendingSave(null);
+                }}
             />
 
             <DialogModal

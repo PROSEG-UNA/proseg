@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Container, LinearProgress, ListItemIcon, ListItemText, Menu, MenuItem, Stack } from '@mui/material';
+import { Alert, Box, Container, LinearProgress, ListItemIcon, ListItemText, Menu, MenuItem, Stack, Tab, Tabs, TextField } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
+import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
+import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
@@ -16,18 +19,60 @@ import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
 import DriversTable from '../../components/drivers/DriversTable.jsx';
 import DriverFormModal from '../../components/drivers/DriverFormModal.jsx';
 import DriverSurplusSummary from '../../components/drivers/DriverSurplusSummary.jsx';
+import {
+    PARTICIPATION_FILTER_OPTIONS,
+    PARTICIPATION_FILTER_VALUES,
+    participatingDriverIds,
+} from '../../components/drivers/driverParticipation.js';
 import { shortPeriodLabel } from '../../components/tourProcessing/tourProcessingDraftLabels.js';
 import { usePersistedMonth } from '../../hooks/usePersistedMonth.js';
+import { usePersistedOption } from '../../hooks/usePersistedOption.js';
 import { useTransportDriverMonthsData } from '../../hooks/useTransportDriverMonthsData.js';
 import { useTransportDriverMonthSurplusCap } from '../../hooks/useTransportDriverMonthSurplusCap.js';
 import { exportDriverOvertimeRequest } from '../../services/drivers/driversService';
+import { exportDrivers } from '../../services/transportExportService.js';
 import { exportMonthTourControl } from '../../services/tourProcessing/tourProcessingService';
 import { downloadBlob } from '../../transportUtils.js';
 import { queryKeys } from '../../../../common/query';
 
 const SELECTED_MONTH_STORAGE_KEY = 'transport-drivers-selected-month';
+const PARTICIPATION_FILTER_STORAGE_KEY = 'transport-drivers-participation-filter';
+
+const DRIVER_SUB_TABS = [
+    { key: 'servicios-generales', label: 'Choferes de la unidad', unit: 'GENERAL_SERVICES', icon: BadgeOutlinedIcon },
+    { key: 'otra-unidad', label: 'Choferes de otra unidad', unit: 'OTHER_UNIT', icon: PeopleAltOutlinedIcon },
+];
+
+const DEFAULT_DRIVER_SUB_TAB = DRIVER_SUB_TABS[0].key;
+const OTHER_UNIT_SUB_TAB = 'otra-unidad';
 
 export default function DriversPage() {
+    const [searchParams, setSearchParams] = useSearchParams();
+    const requestedSubTab = searchParams.get('tab');
+    const driverSubTab = DRIVER_SUB_TABS.some((tab) => tab.key === requestedSubTab) ? requestedSubTab : DEFAULT_DRIVER_SUB_TAB;
+    const activeDriverSubTab = DRIVER_SUB_TABS.find((tab) => tab.key === driverSubTab);
+    const [participationFilter, setParticipationFilter] = usePersistedOption(
+        PARTICIPATION_FILTER_STORAGE_KEY,
+        PARTICIPATION_FILTER_VALUES,
+        PARTICIPATION_FILTER_VALUES[0],
+    );
+
+    useEffect(() => {
+        if (requestedSubTab === driverSubTab) return;
+        setSearchParams((current) => {
+            const next = new URLSearchParams(current);
+            next.set('tab', driverSubTab);
+            return next;
+        }, { replace: true });
+    }, [requestedSubTab, driverSubTab, setSearchParams]);
+
+    const handleSubTabChange = (_, value) => {
+        setSearchParams((current) => {
+            const next = new URLSearchParams(current);
+            next.set('tab', value);
+            return next;
+        });
+    };
     const [driverFormOpen, setDriverFormOpen] = useState(false);
     const [driverFormId, setDriverFormId] = useState(null);
     const [selectedMonth, setSelectedMonth] = usePersistedMonth(SELECTED_MONTH_STORAGE_KEY);
@@ -45,8 +90,14 @@ export default function DriversPage() {
     const year = selectedMonth?.year();
     const month = selectedMonth ? selectedMonth.month() + 1 : undefined;
     const monthData = useTransportDriverMonthsData(year, month);
-    const { surplusHoursPerDriver } = useTransportDriverMonthSurplusCap(year, month);
+    const { businessDays: defaultBusinessDays, surplusHoursPerDriver } = useTransportDriverMonthSurplusCap(year, month);
     const showEmptyMonthNotice = monthData.enabled && !monthData.loading && !monthData.hasAnyRecord;
+    const showParticipationFilter = monthData.enabled && driverSubTab === OTHER_UNIT_SUB_TAB;
+    const restrictToParticipants = showParticipationFilter && participationFilter === 'participated';
+    const participantIds = useMemo(
+        () => (restrictToParticipants ? participatingDriverIds(monthData.byDriverId) : null),
+        [restrictToParticipants, monthData.byDriverId],
+    );
     const canReadDrivers = hasPermission(PERMISSIONS.TRANSPORT.DRIVERS.READ);
     const canManageDrivers = hasPermission(PERMISSIONS.TRANSPORT.DRIVERS.MANAGE);
     const canDeleteDrivers = hasPermission(PERMISSIONS.TRANSPORT.DRIVERS.DELETE);
@@ -68,8 +119,16 @@ export default function DriversPage() {
             setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo generar el control de giras') });
         },
     });
+    const driversExportMutation = useMutation({
+        mutationFn: () => exportDrivers(monthData.enabled && year && month ? { year, month } : {}),
+        onSuccess: ({ blob, fileName }) => downloadBlob(blob, fileName),
+        onError: (error) => {
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudieron exportar los choferes') });
+        },
+    });
     const exportingOvertimeRequest = overtimeRequestMutation.isPending;
     const exportingTourControl = tourControlMutation.isPending;
+    const exportingDrivers = driversExportMutation.isPending;
 
     const closeOptions = () => setOptionsAnchor(null);
 
@@ -81,6 +140,11 @@ export default function DriversPage() {
     const handleExportOvertimeRequest = () => {
         closeOptions();
         if (!overtimeRequestMutation.isPending) overtimeRequestMutation.mutate();
+    };
+
+    const handleExportDrivers = () => {
+        closeOptions();
+        if (!driversExportMutation.isPending) driversExportMutation.mutate();
     };
 
     const openCreateDriver = () => {
@@ -99,6 +163,23 @@ export default function DriversPage() {
         void queryClient.invalidateQueries({ queryKey: queryKeys.transport.tourProcessingDrafts() });
     };
 
+    const handleBusinessDaysSaved = ({ driverName, previousBusinessDays, businessDays, reset }) => {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.transport.driverMonths(year, month) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.transport.tourProcessingDrafts() });
+        const valueText = businessDays === null || businessDays === undefined ? '' : ` (${businessDays})`;
+        const previousText = previousBusinessDays === null || previousBusinessDays === undefined
+            ? ''
+            : `\nValor anterior: ${previousBusinessDays}`;
+        setAlert({
+            type: 'success',
+            message: reset
+                ? `Chofer: ${driverName}\nMes: ${periodLabel}\nLos días hábiles volvieron al valor del mes${valueText}${previousText}`
+                : `Chofer: ${driverName}\nMes: ${periodLabel}\nLos días hábiles se cambiaron correctamente a ${businessDays}${previousText}`,
+        });
+    };
+
+    const editingDriverMonth = driverFormId ? monthData.byDriverId?.get(driverFormId) : undefined;
+
     if (!canViewDrivers) return <AccessDeniedState />;
 
     return (
@@ -107,7 +188,7 @@ export default function DriversPage() {
                 <PageHeader
                     title="Choferes"
                     description="Gestión de choferes."
-                    action={canManageDrivers || canExportOvertime || canExportTourControl ? (
+                    action={canManageDrivers || canReadDrivers || canExportTourControl ? (
                         <>
                             <PrimaryButton
                                 onClick={(event) => setOptionsAnchor(event.currentTarget)}
@@ -138,6 +219,12 @@ export default function DriversPage() {
                                         <ListItemText>{`Descargar 'Control de Giras ${periodLabel}'`}</ListItemText>
                                     </MenuItem>
                                 )}
+                                {canReadDrivers && (
+                                    <MenuItem onClick={handleExportDrivers} disabled={exportingDrivers}>
+                                        <ListItemIcon><DownloadOutlinedIcon fontSize="small" /></ListItemIcon>
+                                        <ListItemText>Exportar choferes</ListItemText>
+                                    </MenuItem>
+                                )}
                                 {canExportOvertime && (
                                     <MenuItem onClick={handleExportOvertimeRequest} disabled={exportingOvertimeRequest}>
                                         <ListItemIcon><DownloadOutlinedIcon fontSize="small" /></ListItemIcon>
@@ -149,7 +236,31 @@ export default function DriversPage() {
                     ) : null}
                 />
 
-                {(exportingOvertimeRequest || exportingTourControl) && <LinearProgress sx={{ mt: 2 }} />}
+                {(exportingOvertimeRequest || exportingTourControl || exportingDrivers) && <LinearProgress sx={{ mt: 2 }} />}
+
+                <Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 3 }}>
+                    <Tabs
+                        value={driverSubTab}
+                        onChange={handleSubTabChange}
+                        variant="scrollable"
+                        scrollButtons="auto"
+                        allowScrollButtonsMobile
+                    >
+                        {DRIVER_SUB_TABS.map((tab) => {
+                            const Icon = tab.icon;
+                            return (
+                                <Tab
+                                    key={tab.key}
+                                    value={tab.key}
+                                    label={tab.label}
+                                    icon={<Icon sx={{ fontSize: 18 }} />}
+                                    iconPosition="start"
+                                    sx={{ textTransform: 'none', fontWeight: 700 }}
+                                />
+                            );
+                        })}
+                    </Tabs>
+                </Box>
 
                 <Stack
                     direction={{ xs: 'column', sm: 'row' }}
@@ -168,6 +279,20 @@ export default function DriversPage() {
                             clearable
                         />
                     </Box>
+                    {showParticipationFilter && (
+                        <TextField
+                            select
+                            size="small"
+                            label="Mostrar"
+                            value={participationFilter}
+                            onChange={(event) => setParticipationFilter(event.target.value)}
+                            sx={{ width: { xs: '100%', sm: 320 }, flexShrink: 0 }}
+                        >
+                            {PARTICIPATION_FILTER_OPTIONS.map((option) => (
+                                <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+                            ))}
+                        </TextField>
+                    )}
                     {monthData.enabled && surplusHoursPerDriver !== null && (
                         <DriverSurplusSummary surplusCapPerDriver={surplusHoursPerDriver} />
                     )}
@@ -179,7 +304,13 @@ export default function DriversPage() {
                 </Stack>
 
                 <Box sx={{ pt: 3 }}>
-                    <DriversTable onEditDriver={openEditDriver} monthData={monthData} surplusHoursPerDriver={surplusHoursPerDriver} />
+                    <DriversTable
+                        key={driverSubTab}
+                        unit={activeDriverSubTab.unit}
+                        onEditDriver={openEditDriver}
+                        monthData={monthData}
+                        participantIds={participantIds}
+                    />
                 </Box>
             </Container>
 
@@ -191,6 +322,11 @@ export default function DriversPage() {
                     canDelete={canDeleteDrivers}
                     onClose={() => setDriverFormOpen(false)}
                     onSaved={refreshDrivers}
+                    onBusinessDaysSaved={handleBusinessDaysSaved}
+                    period={monthData.enabled ? { year, month, label: periodLabel } : null}
+                    monthBusinessDays={editingDriverMonth?.businessDays ?? null}
+                    defaultBusinessDays={defaultBusinessDays ?? null}
+                    businessDaysCustomized={Boolean(editingDriverMonth?.businessDaysCustomized)}
                     onDeleted={() => {
                         refreshDrivers();
                         setAlert({ type: 'success', message: 'Chofer eliminado correctamente' });

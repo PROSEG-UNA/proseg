@@ -197,5 +197,25 @@ class TourDraftExportServiceTest {
         public ApiResponse<OvertimeRequestReportDto> getOvertimeRequestReport(int year, int month) {
             throw new UnsupportedOperationException();
         }
+
+        @Override
+        public ApiResponse<PageResponse<Map<String, Object>>> getVehicles(MultiValueMap<String, String> queryParams) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ApiResponse<PageResponse<Map<String, Object>>> getBorrowedVehicles(MultiValueMap<String, String> queryParams) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ApiResponse<PageResponse<Map<String, Object>>> getDrivers(MultiValueMap<String, String> queryParams) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ApiResponse<List<Map<String, Object>>> getDriverMonths(int year, int month) {
+            throw new UnsupportedOperationException();
+        }
     }
 }

@@ -19,6 +19,7 @@ import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import DirectionsCarFilledOutlinedIcon from '@mui/icons-material/DirectionsCarFilledOutlined';
 import DescriptionIcon from '@mui/icons-material/Description';
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import { PERMISSIONS } from '../../constants/permissions';
 import { usePermissions } from '../../hooks';
 
@@ -217,6 +218,7 @@ export function useNavSections() {
                     canViewTourProcessingSubmodule ? { key: 'tourProcessing', icon: FactCheckOutlinedIcon, label: 'Depuración', path: '/transporte/depuracion' } : null,
                     canViewDriversSubmodule ? { key: 'drivers', icon: BadgeOutlinedIcon, label: 'Choferes', path: '/transporte/choferes' } : null,
                     canViewVehiclesSubmodule ? { key: 'vehicles', icon: DirectionsCarFilledOutlinedIcon, label: 'Vehículos', path: '/transporte/vehiculos' } : null,
+                    canViewTourProcessingSubmodule ? { key: 'transportSettings', icon: SettingsOutlinedIcon, label: 'Configuraciones', path: '/transporte/configuraciones' } : null,
                 ].filter(Boolean),
             });
         }

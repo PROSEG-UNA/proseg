@@ -7,6 +7,7 @@ import com.proseg.msvc_transport.entity.Driver;
 import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
 import com.proseg.msvc_transport.service.driverhours.DayAllocation;
+import com.proseg.msvc_transport.service.driverhours.DriverBusinessDays;
 import com.proseg.msvc_transport.service.driverhours.DriverHoursRules;
 import com.proseg.msvc_transport.service.driverhours.DriverWorkload;
 import com.proseg.msvc_transport.service.driverhours.ManualDays;
@@ -35,6 +36,7 @@ public class DraftHoursService {
 
     private final DriverRepository driverRepository;
     private final TourProcessingDraftDayRepository dayRepository;
+    private final DriverBusinessDaysService businessDaysService;
 
     public static Map<UUID, Set<WorkloadSlot>> workloadSlots(List<TourProcessingDraftAssignment> assignments) {
         Map<UUID, Set<WorkloadSlot>> slots = new HashMap<>();
@@ -79,17 +81,18 @@ public class DraftHoursService {
         if (draft.getYear() == null || draft.getMonth() == null || draft.getBusinessDays() == null) {
             return;
         }
-        double surplusCap = DriverHoursRules.surplusCap(draft.getBusinessDays());
+        DriverBusinessDays businessDays = businessDaysService.forDraft(draft);
         Map<UUID, Driver> driversById = DriverHoursRules.driversById(driverRepository.findAll());
         List<TourProcessingDraftDay> existing = dayRepository.findAllByDraftId(draft.getId());
         Map<UUID, List<TourProcessingDraftDay>> existingByAssignment = existing.stream()
                 .collect(Collectors.groupingBy(day -> day.getAssignment().getId()));
-        Map<UUID, DriverWorkload> workloads = DriverWorkload.fromAssignments(assignments, driversById, ManualDays.of(existing));
+        ManualDays manualDays = ManualDays.of(existing);
+        Map<UUID, DriverWorkload> workloads = DriverWorkload.fromAssignments(assignments, driversById, manualDays);
+        Map<UUID, DriverWorkload> informational = DriverWorkload.fromUncountedAssignments(assignments, driversById, manualDays);
 
-        Set<UUID> assignmentsWithDays = workloads.values().stream()
-                .flatMap(workload -> workload.tours().stream())
-                .map(TourProcessingDraftAssignment::getId)
-                .collect(Collectors.toSet());
+        Set<UUID> assignmentsWithDays = new HashSet<>();
+        workloads.values().forEach(workload -> workload.tours().forEach(tour -> assignmentsWithDays.add(tour.getId())));
+        informational.values().forEach(workload -> workload.tours().forEach(tour -> assignmentsWithDays.add(tour.getId())));
         List<UUID> staleDayIds = new ArrayList<>();
         existingByAssignment.forEach((assignmentId, days) -> {
             if (!assignmentsWithDays.contains(assignmentId)) {
@@ -98,16 +101,8 @@ public class DraftHoursService {
         });
 
         List<TourProcessingDraftDay> daysToSave = new ArrayList<>();
-        workloads.forEach((driverId, workload) -> {
-            if (onlyDriverIds != null && !onlyDriverIds.contains(driverId)) {
-                return;
-            }
-            for (TourAllocation allocation : workload.allocations(surplusCap)) {
-                TourProcessingDraftAssignment assignment = allocation.tour();
-                syncAssignmentDays(assignment, allocation.days(), existingByAssignment.getOrDefault(assignment.getId(), List.of()),
-                        daysToSave, staleDayIds);
-            }
-        });
+        appendDays(workloads, onlyDriverIds, businessDays, existingByAssignment, daysToSave, staleDayIds);
+        appendDays(informational, onlyDriverIds, businessDays, existingByAssignment, daysToSave, staleDayIds);
 
         if (!staleDayIds.isEmpty()) {
             dayRepository.deleteAllByIdInBatch(staleDayIds);
@@ -115,6 +110,26 @@ public class DraftHoursService {
         if (!daysToSave.isEmpty()) {
             dayRepository.saveAll(daysToSave);
         }
+    }
+
+    private void appendDays(
+            Map<UUID, DriverWorkload> workloads,
+            Set<UUID> onlyDriverIds,
+            DriverBusinessDays businessDays,
+            Map<UUID, List<TourProcessingDraftDay>> existingByAssignment,
+            List<TourProcessingDraftDay> daysToSave,
+            List<UUID> staleDayIds
+    ) {
+        workloads.forEach((driverId, workload) -> {
+            if (onlyDriverIds != null && !onlyDriverIds.contains(driverId)) {
+                return;
+            }
+            for (TourAllocation allocation : workload.allocations(businessDays.surplusCapOf(driverId))) {
+                TourProcessingDraftAssignment assignment = allocation.tour();
+                syncAssignmentDays(assignment, allocation.days(), existingByAssignment.getOrDefault(assignment.getId(), List.of()),
+                        daysToSave, staleDayIds);
+            }
+        });
     }
 
     private void syncAssignmentDays(

@@ -2,6 +2,8 @@ package com.proseg.msvc_transport.service.driverhours;
 
 import com.proseg.msvc_transport.entity.TourProcessingDraftAssignment;
 import com.proseg.msvc_transport.entity.Driver;
+import com.proseg.msvc_transport.entity.DriverUnit;
+import com.proseg.msvc_transport.entity.ResourceType;
 import com.proseg.msvc_transport.entity.Vehicle;
 
 import java.time.DayOfWeek;
@@ -23,6 +25,8 @@ public final class DriverHoursRules {
 
     public static final double ORDINARY_START = 7.5;
     public static final double ORDINARY_END = 16.5;
+    public static final double AFTERNOON_ORDINARY_START = 12;
+    public static final double AFTERNOON_ORDINARY_END = 20;
     public static final double MAX_ORDINARY_HOURS_PER_DAY = ORDINARY_END - ORDINARY_START;
     public static final double MULTI_DAY_START = 7.5;
     public static final double WEEKDAY_MULTI_DAY_END = 20.5;
@@ -62,6 +66,10 @@ public final class DriverHoursRules {
         return plate.length() <= PLATE_MAX_LENGTH ? plate : plate.substring(0, PLATE_MAX_LENGTH);
     }
 
+    public static String comparablePlate(String value) {
+        return value == null ? "" : value.toUpperCase(Locale.ROOT).replaceAll("[\\s-]", "");
+    }
+
     public static boolean looksLikePlate(String value) {
         return value != null && value.chars().anyMatch(Character::isDigit);
     }
@@ -90,6 +98,12 @@ public final class DriverHoursRules {
 
     public static Driver assignedDriver(TourProcessingDraftAssignment assignment, Map<UUID, Driver> driversById) {
         return assignment.getDriverId() == null ? null : driversById.get(assignment.getDriverId());
+    }
+
+    public static boolean countsTowardOwnDriver(TourProcessingDraftAssignment assignment, Driver driver) {
+        return assignment.getResourceType() == ResourceType.INTERNAL
+                && driver != null
+                && driver.getOrganizationalUnit() == DriverUnit.GENERAL_SERVICES;
     }
 
     public static Vehicle assignedVehicle(TourProcessingDraftAssignment assignment, Map<UUID, Vehicle> vehiclesById) {

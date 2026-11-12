@@ -39,6 +39,17 @@ final class DriverHoursTestRows {
         return tour(number, date, departureTime, date, returnTime);
     }
 
+    static TourProcessingDraftAssignment withPassengers(TourProcessingDraftAssignment tour, int passengers) {
+        tour.setPassengers(passengers);
+        tour.getTour().setPassengers(passengers);
+        return tour;
+    }
+
+    static TourProcessingDraftAssignment withPriority(TourProcessingDraftAssignment tour, int priority) {
+        tour.getTour().setPriority(priority);
+        return tour;
+    }
+
     static TourProcessingDraftAssignment fullSurplusTour(String number, String date) {
         return sameDayTour(number, date, "00:00", "23:30");
     }

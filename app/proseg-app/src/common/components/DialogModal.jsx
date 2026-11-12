@@ -90,6 +90,8 @@ export default function DialogModal({
     onConfirm,
     confirmLabel = 'Sí, continuar',
     cancelLabel,
+    cancelAtStart = false,
+    extraActions = [],
 }) {
     const titleId = useId();
     const [shown, setShown] = useState({ type, title, message });
@@ -169,9 +171,18 @@ export default function DialogModal({
                 bgcolor: 'background.paper',
                 ...t.applyStyles('dark', { bgcolor: 'background.paper' }),
             })}>
-                <Button disableElevation onClick={onClose} sx={cancelBtnSx}>
+                <Button
+                    disableElevation
+                    onClick={onClose}
+                    sx={[cancelBtnSx, cancelAtStart && { mr: { sm: 'auto' } }]}
+                >
                     {resolvedCancelLabel}
                 </Button>
+                {extraActions.map((action) => (
+                    <Button key={action.label} disableElevation onClick={action.onClick} sx={cancelBtnSx}>
+                        {action.label}
+                    </Button>
+                ))}
                 {onConfirm && (
                     <Button
                         variant="contained"

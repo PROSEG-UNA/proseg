@@ -23,4 +23,7 @@ public class DriverMonthResponseDto {
     private Double overtimeHoursAccrued;
     private Integer weekendsWorked;
     private boolean hasRecord;
+    private Integer businessDays;
+    private Double surplusCap;
+    private boolean businessDaysCustomized;
 }

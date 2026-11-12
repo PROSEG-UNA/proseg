@@ -22,8 +22,25 @@ public class TourProcessingDriverAutoAssignResponseDto {
     private List<TourIssue> unassignedDetails;
     private List<TourIssue> preservedAssignmentWarnings;
     private Map<String, Double> surplusDeficits;
+    private Map<String, Double> surplusTargets;
     private double surplusTargetHours;
     private boolean optimizationLimitReached;
+    private MandatoryCoverage mandatoryCoverage;
+    private int priorityOneUnassigned;
 
     public record TourIssue(UUID rowId, String number, List<String> reasons) {}
+
+    public record CoveringDriver(String name, double surplusHours, double targetHours, double surplusPercent, List<String> tourNumbers) {}
+
+    public record MandatoryCoverage(
+            int total,
+            int fulfilled,
+            int withWarning,
+            int unattended,
+            List<TourIssue> warnings,
+            List<TourIssue> unattendedDetails,
+            List<CoveringDriver> coveringDrivers,
+            int driversBelowTarget,
+            int driversBelowTargetByConcentration
+    ) {}
 }

@@ -32,6 +32,8 @@ public class OvertimeRequestReportDto {
         private String name;
         private String organizationalUnit;
         private String status;
+        private int businessDays;
+        private double surplusCap;
         private double surplusHours;
         private double overtimeHours;
         private List<TourBlock> tours;

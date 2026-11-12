@@ -49,7 +49,23 @@ public class DraftTourStore {
     }
 
     public Page<TourProcessingDraftTour> findPage(UUID draftId, String search, Map<String, String> filters, Pageable pageable) {
+        return findPage(draftId, search, filters, null, pageable);
+    }
+
+    public Page<TourProcessingDraftTour> findPage(
+            UUID draftId,
+            String search,
+            Map<String, String> filters,
+            Collection<UUID> tourIds,
+            Pageable pageable
+    ) {
+        if (tourIds != null && tourIds.isEmpty()) {
+            return new PageImpl<>(List.of(), pageable, 0);
+        }
         Specification<TourProcessingDraftRowIndex> spec = (root, query, cb) -> cb.equal(root.get("draftId"), draftId);
+        if (tourIds != null) {
+            spec = spec.and((root, query, cb) -> root.get("id").in(tourIds));
+        }
         spec = spec.and(GenericSpecifications.withSearch(TourProcessingDraftRowIndex.class, search))
                 .and(GenericSpecifications.withColumnFilters(TourProcessingDraftRowIndex.class, filters));
         Sort sort = GenericSpecifications.sanitizeSort(TourProcessingDraftRowIndex.class, pageable.getSort());

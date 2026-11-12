@@ -6,6 +6,7 @@ import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
 import { createBorrowedVehicle, fetchBorrowedVehicleById, updateBorrowedVehicle } from '../../services/borrowedVehicles/borrowedVehiclesService';
 import { VEHICLE_TYPE_OPTIONS } from '../../transportUtils';
+import { describeVehicleChanges, vehicleSavedMessage } from './vehicleChanges.js';
 
 const INITIAL_VALUES = {
     plate: '',
@@ -16,6 +17,7 @@ const INITIAL_VALUES = {
 export default function BorrowedVehicleFormModal({ open, onClose, onSaved, borrowedVehicleId = null, initialValues = null }) {
     const isEdit = !!borrowedVehicleId;
     const [formValues, setFormValues] = useState(() => ({ ...INITIAL_VALUES, ...initialValues }));
+    const [originalValues, setOriginalValues] = useState(() => ({ ...INITIAL_VALUES, ...initialValues }));
     const [errors, setErrors] = useState({});
     const [touched, setTouched] = useState({});
     const [saving, setSaving] = useState(false);
@@ -31,11 +33,13 @@ export default function BorrowedVehicleFormModal({ open, onClose, onSaved, borro
             try {
                 const vehicle = await fetchBorrowedVehicleById(borrowedVehicleId);
                 if (cancelled || !vehicle) return;
-                setFormValues({
+                const loadedValues = {
                     plate: vehicle.plate ?? '',
                     type: vehicle.type ?? '',
                     capacity: vehicle.capacity ?? '',
-                });
+                };
+                setOriginalValues(loadedValues);
+                setFormValues(loadedValues);
             } catch (error) {
                 if (!cancelled) {
                     setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo cargar el vehículo prestado') });
@@ -111,7 +115,12 @@ export default function BorrowedVehicleFormModal({ open, onClose, onSaved, borro
                 ? await updateBorrowedVehicle(borrowedVehicleId, payload)
                 : await createBorrowedVehicle(payload);
 
-            onSaved?.(saved);
+            onSaved?.(saved, vehicleSavedMessage({
+                kind: 'Vehículo prestado',
+                plate: payload.plate,
+                created: !isEdit,
+                changes: isEdit ? describeVehicleChanges(originalValues, payload) : [],
+            }));
             onClose?.();
         } catch (error) {
             setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo guardar el vehículo prestado') });

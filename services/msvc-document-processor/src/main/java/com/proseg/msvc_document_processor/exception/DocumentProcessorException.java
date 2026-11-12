@@ -65,6 +65,14 @@ public class DocumentProcessorException extends BaseException {
         );
     }
 
+    public static DocumentProcessorException transportExportFailed() {
+        return new DocumentProcessorException(
+                HttpStatus.BAD_GATEWAY,
+                "TRANSPORT_UNAVAILABLE",
+                "No fue posible obtener los datos de transporte"
+        );
+    }
+
     public static DocumentProcessorException unreadableWorkbook() {
         return new DocumentProcessorException(
                 HttpStatus.BAD_REQUEST,
@@ -93,7 +101,7 @@ public class DocumentProcessorException extends BaseException {
         return new DocumentProcessorException(
                 HttpStatus.BAD_REQUEST,
                 "UNSUPPORTED_DOCUMENT_TYPE",
-                "Tipo de documento no soportado: " + documentType
+                "No fue posible procesar este documento porque su tipo no está disponible"
         );
     }
 

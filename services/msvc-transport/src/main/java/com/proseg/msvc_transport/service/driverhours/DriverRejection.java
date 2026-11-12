@@ -17,7 +17,8 @@ public record DriverRejection(Reason reason, String message) {
         OVERLAP,
         DAY_HOURS_EXCEEDED,
         WEEKEND_WITHOUT_SURPLUS,
-        OVERTIME_CAP_EXCEEDED
+        OVERTIME_CAP_EXCEEDED,
+        WEEKEND_CAP_EXCEEDED
     }
 
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -57,6 +58,12 @@ public record DriverRejection(Reason reason, String message) {
         return new DriverRejection(Reason.OVERTIME_CAP_EXCEEDED, "Con esta gira el chofer " + driver.getName()
                 + " llegaría a " + hours(overtimeHours) + " horas extra en el mes, por encima del tope de "
                 + hours(DriverHoursRules.MONTHLY_OVERTIME_CAP) + " horas.");
+    }
+
+    static DriverRejection weekendCapExceeded(Driver driver, int weekendsWorked, int weekendCap) {
+        return new DriverRejection(Reason.WEEKEND_CAP_EXCEEDED, "Con esta gira el chofer " + driver.getName()
+                + " trabajaría " + weekendsWorked + " fines de semana del mes, por encima del máximo de "
+                + weekendCap + " por chofer.");
     }
 
     private static String hours(double value) {

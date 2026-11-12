@@ -24,17 +24,15 @@ export const VEHICLE_TYPE_OPTIONS = [
     { value: 'STATION_WAGON', label: 'Station Wagon' },
 ];
 
-export const ULLOA_SHIFT_OPTIONS = [
-    { value: 'SHORT_MORNING', label: 'Mañana corta, 06:30 a 12:00' },
-    { value: 'MORNING', label: 'Mañana, 06:30 a 17:30' },
-    { value: 'AFTERNOON', label: 'Tarde, 12:00 a 22:00' },
-];
+export const ULLOA_SHIFT_VALUES = ['SHORT_MORNING', 'MORNING', 'AFTERNOON'];
 
-export const DEFAULT_ORDINARY_START = '07:30';
-export const DEFAULT_ORDINARY_END = '16:30';
-export const AFTERNOON_ORDINARY_START = '11:00';
-export const AFTERNOON_ORDINARY_END = '20:00';
-export const MAX_ORDINARY_SCHEDULE_HOURS = 9;
+export const ORDINARY_SCHEDULE_OPTIONS = [
+    { value: '07:30-16:30', label: '07:30 a 16:30', start: '07:30', end: '16:30' },
+    { value: '12:00-20:00', label: '12:00 a 20:00', start: '12:00', end: '20:00' },
+];
+export const DEFAULT_ORDINARY_START = ORDINARY_SCHEDULE_OPTIONS[0].start;
+export const DEFAULT_ORDINARY_END = ORDINARY_SCHEDULE_OPTIONS[0].end;
+const AFTERNOON_SCHEDULE_FIRST_MINUTE = 10 * 60;
 
 const HOURS_FORMATTER = new Intl.NumberFormat('es-CR', { maximumFractionDigits: 1 });
 const PERCENT_FORMATTER = new Intl.NumberFormat('es-CR', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -93,10 +91,6 @@ export function vehicleTypeLabel(value) {
     return findStatusLabel(value, VEHICLE_TYPE_OPTIONS);
 }
 
-export function ulloaShiftLabel(value) {
-    return findStatusLabel(value, ULLOA_SHIFT_OPTIONS);
-}
-
 export function toTimeInput(value, fallback = '') {
     return value ? String(value).slice(0, 5) : fallback;
 }
@@ -105,6 +99,12 @@ export function timeToMinutes(value) {
     const [hours, minutes] = String(value ?? '').split(':').map(Number);
     if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
     return hours * 60 + minutes;
+}
+
+export function ordinaryScheduleValueOf(start) {
+    const startMinutes = timeToMinutes(start);
+    const afternoon = startMinutes !== null && startMinutes >= AFTERNOON_SCHEDULE_FIRST_MINUTE;
+    return ORDINARY_SCHEDULE_OPTIONS[afternoon ? 1 : 0].value;
 }
 
 export function getStatusChipColor(value) {

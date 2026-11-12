@@ -33,6 +33,9 @@ public class TourProcessingDraftRowResponseDto {
     private TourApprovalStatus approvalStatus;
     private Integer passengers;
     private List<TourProcessingDraftAssignmentDto> assignments;
+    private int trips;
+    private Integer totalCapacity;
+    private int assignedPassengers;
     private String executingUnit;
     private String responsible;
     private String destination;
@@ -48,8 +51,11 @@ public class TourProcessingDraftRowResponseDto {
     @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
     private LocalDate returnDate;
     private String observations;
+    private boolean observationReviewed;
+    private List<String> matchedObservationKeywords;
     private int duplicateGroupSize;
     private int duplicateRank;
     private boolean conflicting;
+    private boolean needsMultipleTrips;
     private List<TourProcessingDraftRowDayResponseDto> days;
 }

@@ -37,20 +37,34 @@ public interface TourProcessingDraftDayRepository extends JpaRepository<TourProc
             join tour_processing_draft_tour_table t on t.id = a.tour_id
             where t.draft_id = :draftId and t.duplicate_rank = 1 and t.approval_status = 'APPROVED'
               and a.driver_id is not null
+              and a.resource_type = 'INTERNAL'
+              and exists (
+                  select 1 from driver_table dr
+                  where dr.id = a.driver_id
+                    and dr.organizational_unit = 'GENERAL_SERVICES'
+              )
             group by a.driver_id
             """, nativeQuery = true)
     List<MonthlyTotals> summarizeMonth(@Param("draftId") UUID draftId,
                                       @Param("startDate") java.time.LocalDate startDate,
                                       @Param("endDate") java.time.LocalDate endDate);
 
-    @Query("""
-            select a.driverId as driverId, sum(d.ordinaryHours) as ordinaryHours,
-                   sum(d.surplusHours) as surplusHours, sum(d.overtimeHours) as overtimeHours
-            from TourProcessingDraftDay d join d.assignment a join a.tour t
-            where t.draft.id = :draftId and t.duplicateRank = 1 and t.approvalStatus = 'APPROVED'
-              and a.driverId is not null
-            group by a.driverId
-            """)
+    @Query(value = """
+            select a.driver_id as "driverId", sum(d.ordinary_hours) as "ordinaryHours",
+                   sum(d.surplus_hours) as "surplusHours", sum(d.overtime_hours) as "overtimeHours"
+            from tour_processing_draft_day_table d
+            join tour_processing_draft_assignment_table a on a.id = d.assignment_id
+            join tour_processing_draft_tour_table t on t.id = a.tour_id
+            where t.draft_id = :draftId and t.duplicate_rank = 1 and t.approval_status = 'APPROVED'
+              and a.driver_id is not null
+              and a.resource_type = 'INTERNAL'
+              and exists (
+                  select 1 from driver_table dr
+                  where dr.id = a.driver_id
+                    and dr.organizational_unit = 'GENERAL_SERVICES'
+              )
+            group by a.driver_id
+            """, nativeQuery = true)
     List<DriverTotals> summarizeByDriver(@Param("draftId") UUID draftId);
 
     @Query("""

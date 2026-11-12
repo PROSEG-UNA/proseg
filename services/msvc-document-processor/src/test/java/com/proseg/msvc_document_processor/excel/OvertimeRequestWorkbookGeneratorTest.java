@@ -28,12 +28,66 @@ class OvertimeRequestWorkbookGeneratorTest {
 
     @BeforeEach
     void setUp() throws IOException {
-        byte[] content = new OvertimeRequestWorkbookGenerator().generate(report());
+        load(report());
+    }
+
+    private void load(OvertimeRequestReportDto report) throws IOException {
+        byte[] content = new OvertimeRequestWorkbookGenerator().generate(report);
         workbook = new XSSFWorkbook(new ByteArrayInputStream(content));
         evaluator = workbook.getCreationHelper().createFormulaEvaluator();
         evaluator.evaluateAll();
         projection = workbook.getSheet(OvertimeRequestWorkbookGenerator.PROJECTION_SHEET);
         summary = workbook.getSheet(OvertimeRequestWorkbookGenerator.SUMMARY_SHEET);
+    }
+
+    @Test
+    void usesEachDriversOwnBusinessDaysAndMaxInTheirBlockAndInTheSummary() throws IOException {
+        OvertimeRequestReportDto custom = report();
+        custom.getDrivers().get(1).setBusinessDays(21);
+        custom.getDrivers().get(1).setSurplusCap(28.0);
+        load(custom);
+
+        int firstTotal = rowWithText(projection, "Nota: Cantidad de horas de sobresueldo correspondiente a los 28 días de mayo del 2026");
+        int secondTotal = rowWithText(projection, "Nota: Cantidad de horas de sobresueldo correspondiente a los 21 días de mayo del 2026");
+
+        assertThat(projection.getRow(firstTotal + 1).getCell(8).getCellFormula()).startsWith("+$");
+        assertThat(cachedNumber(projection, firstTotal + 1, 8)).isEqualTo(37.5);
+        assertThat(projection.getRow(secondTotal + 1).getCell(8).getCellType()).isEqualTo(CellType.NUMERIC);
+        assertThat(cachedNumber(projection, secondTotal + 1, 8)).isEqualTo(28.0);
+        assertThat(cachedNumber(projection, rowWithText(projection, "TOTAL DE HORAS SOBRESUELDO POR CUMPLIR"), 8)).isEqualTo(65.5);
+        assertThat(cachedNumber(summary, 4, 4)).isEqualTo(65.5);
+    }
+
+    @Test
+    void keepsEveryDriversMaxLinkedToTheSharedCapWhileTheyUseTheMonthValue() throws IOException {
+        OvertimeRequestReportDto custom = report();
+        custom.getDrivers().forEach(driver -> {
+            driver.setBusinessDays(28);
+            driver.setSurplusCap(37.5);
+        });
+        load(custom);
+
+        int firstTotal = rowWithText(projection, "Nota: Cantidad de horas de sobresueldo correspondiente a los 28 días de mayo del 2026");
+
+        assertThat(projection.getRow(firstTotal + 1).getCell(8).getCellFormula()).startsWith("+$");
+        assertThat(cachedNumber(summary, 4, 4)).isEqualTo(75.0);
+    }
+
+    @Test
+    void savesTheFormulaResultsSoTheFileShowsThemWithoutEnablingEditing() throws IOException {
+        XSSFWorkbook untouched = new XSSFWorkbook(new ByteArrayInputStream(new OvertimeRequestWorkbookGenerator().generate(report())));
+        Sheet untouchedProjection = untouched.getSheet(OvertimeRequestWorkbookGenerator.PROJECTION_SHEET);
+        int firstTotal = rowWithText(untouchedProjection, "Nota: Cantidad de horas de sobresueldo correspondiente a los 28 días de mayo del 2026");
+
+        Cell cap = untouchedProjection.getRow(firstTotal + 1).getCell(8);
+        assertThat(cap.getCellType()).isEqualTo(CellType.FORMULA);
+        assertThat(cap.getCachedFormulaResultType()).isEqualTo(CellType.NUMERIC);
+        assertThat(cap.getNumericCellValue()).isEqualTo(37.5);
+
+        Cell weekday = untouchedProjection.getRow(rowWithText(untouchedProjection, "1. ÁLVARO PARADA") + 4).getCell(5);
+        assertThat(weekday.getCellType()).isEqualTo(CellType.FORMULA);
+        assertThat(weekday.getCachedFormulaResultType()).isEqualTo(CellType.STRING);
+        assertThat(weekday.getStringCellValue()).isNotBlank();
     }
 
     @Test

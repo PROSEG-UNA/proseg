@@ -7,13 +7,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AppTheme from '../../../../../common/theme/AppTheme';
 import TourProcessingDraftRowModal from '../TourProcessingDraftRowModal.jsx';
 import { queryKeys } from '../../../../../common/query';
-import { updateTourProcessingDraftRow, updateTourProcessingDraftRowDay } from '../../../services/tourProcessing/tourProcessingService.js';
+import {
+    previewTourProcessingDraftRowDayWarnings,
+    previewTourProcessingDraftRowWarnings,
+    updateTourProcessingDraftRow,
+    updateTourProcessingDraftRowDay,
+} from '../../../services/tourProcessing/tourProcessingService.js';
 
 vi.mock('../../../services/tourProcessing/tourProcessingService.js', () => ({
     createTourProcessingDraftRow: vi.fn(),
     deleteTourProcessingDraftRow: vi.fn(),
+    previewNewTourProcessingDraftRowWarnings: vi.fn(async () => []),
+    previewTourProcessingDraftRowDayWarnings: vi.fn(async () => []),
+    previewTourProcessingDraftRowWarnings: vi.fn(async () => []),
     updateTourProcessingDraftRow: vi.fn(),
     updateTourProcessingDraftRowDay: vi.fn(),
+    updateTourObservationReviewed: vi.fn(),
 }));
 
 vi.mock('../../../hooks/useTourProcessingCatalogMatch.js', () => ({
@@ -93,6 +102,10 @@ beforeEach(() => {
     updateTourProcessingDraftRow.mockReset();
     updateTourProcessingDraftRow.mockResolvedValue(ROW);
     updateTourProcessingDraftRowDay.mockReset();
+    previewTourProcessingDraftRowWarnings.mockReset();
+    previewTourProcessingDraftRowWarnings.mockResolvedValue([]);
+    previewTourProcessingDraftRowDayWarnings.mockReset();
+    previewTourProcessingDraftRowDayWarnings.mockResolvedValue([]);
 });
 
 afterEach(cleanup);
@@ -110,6 +123,20 @@ describe('TourProcessingDraftRowModal y recargas pendientes', () => {
         expect(queryClient.getQueryData(key).rows[0]).toEqual(expect.objectContaining({ observations: 'Guardado', departureTime: '07:00' }));
         expect(queryClient.getQueryState(key).fetchStatus).toBe('fetching');
         unsubscribe();
+    });
+
+    it('informa el número de la gira y lo que se cambió al guardar', async () => {
+        const { onSaved } = renderModal('edit', ROW);
+
+        await userEvent.type(screen.getByRole('textbox', { name: 'Observaciones' }), 'Salida temprano');
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+        await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+        expect(onSaved).toHaveBeenCalledWith({
+            created: false,
+            number: '04040',
+            changes: ['Observaciones: se agregó Salida temprano'],
+        });
     });
 
     it('mantiene el modal y la caché al fallar el PUT', async () => {
@@ -139,6 +166,25 @@ describe('TourProcessingDraftRowModal y recargas pendientes', () => {
     });
 });
 
+describe('TourProcessingDraftRowModal con prestamo de vehiculo', () => {
+    it('no deja guardar si el chofer del prestamo no esta en el sistema', async () => {
+        renderModal('edit', { ...ROW, resourceType: 'BORROWED_VEHICLE', borrowedVehicleId: 'b1', vehicle: null });
+
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+        expect(await screen.findByText(/Agrégalo como chofer de otra unidad/)).toBeInTheDocument();
+        expect(updateTourProcessingDraftRow).not.toHaveBeenCalled();
+    });
+
+    it('guarda el prestamo cuando el chofer esta en el sistema', async () => {
+        renderModal('edit', { ...ROW, driver: 'Jorge Francisco Mena', resourceType: 'BORROWED_VEHICLE', borrowedVehicleId: 'b1', vehicle: null });
+
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+        await waitFor(() => expect(updateTourProcessingDraftRow).toHaveBeenCalledTimes(1));
+    });
+});
+
 describe('TourProcessingDraftRowModal con chofer y vehiculo fuera del sistema', () => {
     it('guarda la fila con el chofer vacio y el vehiculo elegido del sistema', async () => {
         renderModal('edit');
@@ -151,7 +197,7 @@ describe('TourProcessingDraftRowModal con chofer y vehiculo fuera del sistema', 
         expect(screen.getByRole('combobox', { name: 'Chofer' })).toHaveValue('');
         expect(screen.queryByText(/Este chofer no se encuentra en el sistema/)).not.toBeInTheDocument();
 
-        await userEvent.click(screen.getByRole('button', { name: 'Seleccionar otro vehículo' }));
+        await userEvent.click(screen.getByRole('combobox', { name: 'Vehículo' }));
         await userEvent.click(await screen.findByRole('option', { name: '301-627' }));
         expect(screen.queryByText(/Este vehículo no se encuentra en el sistema/)).not.toBeInTheDocument();
 
@@ -316,23 +362,18 @@ describe('TourProcessingDraftRowModal con fechas de regreso invalidas', () => {
 });
 
 describe('TourProcessingDraftRowModal con pasajeros distribuidos', () => {
-    it('exige que la suma de los vehículos coincida con el total antes de guardar', async () => {
+    it('permite guardar aunque la suma de los viajes no coincida con el total de pasajeros', async () => {
         renderModal('edit', { ...ROW, driver: null, vehicle: null });
 
-        await userEvent.click(screen.getByRole('button', { name: 'Distribuir pasajeros entre vehículos' }));
-        expect(screen.getByText('Vehículo 1')).toBeInTheDocument();
-        expect(screen.getByText('Vehículo 2')).toBeInTheDocument();
+        await userEvent.click(screen.getByRole('button', { name: 'Dividir en varios viajes' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Dividir' }));
+        expect(screen.getByText('Viaje 1')).toBeInTheDocument();
+        expect(screen.getByText('Viaje 2')).toBeInTheDocument();
 
-        const passengerFields = screen.getAllByRole('textbox', { name: 'Pasajeros' });
+        const passengerFields = await screen.findAllByRole('textbox', { name: 'Pasajeros' });
         await userEvent.clear(passengerFields[0]);
         await userEvent.type(passengerFields[0], '6');
-        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
-        expect(updateTourProcessingDraftRow).not.toHaveBeenCalled();
-
-        await userEvent.click(screen.getByRole('button', { name: 'Aceptar' }));
-        await waitFor(() => expect(screen.queryByRole('button', { name: 'Aceptar' })).not.toBeInTheDocument());
-        await userEvent.clear(screen.getAllByRole('textbox', { name: 'Pasajeros' })[1]);
-        await userEvent.type(screen.getAllByRole('textbox', { name: 'Pasajeros' })[1], '9');
+        expect(screen.getByText('Faltan 2 pasajeros por cubrir.')).toBeInTheDocument();
         await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
 
         await waitFor(() => expect(updateTourProcessingDraftRow).toHaveBeenCalledTimes(1));
@@ -340,9 +381,78 @@ describe('TourProcessingDraftRowModal con pasajeros distribuidos', () => {
             passengers: 15,
             assignments: [
                 expect.objectContaining({ passengers: 6 }),
-                expect.objectContaining({ passengers: 9 }),
+                expect.objectContaining({ passengers: 7 }),
             ],
         }));
+    });
+
+    it('no marca error cuando el mismo chofer y vehículo se repiten en los viajes', async () => {
+        renderModal('edit', {
+            ...ROW,
+            driver: 'Ana',
+            vehicle: '301-627',
+            assignments: [
+                { rowId: 'a-1', driver: 'Ana', vehicle: '301-627', resourceType: 'INTERNAL', passengers: 8 },
+                { rowId: 'a-2', driver: 'Ana', vehicle: '301-627', resourceType: 'INTERNAL', passengers: 7 },
+            ],
+        });
+
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+        await waitFor(() => expect(updateTourProcessingDraftRow).toHaveBeenCalledTimes(1));
+        expect(updateTourProcessingDraftRow).toHaveBeenCalledWith('draft-1', 'row-1', expect.objectContaining({
+            assignments: [
+                expect.objectContaining({ driver: 'Ana', vehicle: '301-627', passengers: 8 }),
+                expect.objectContaining({ driver: 'Ana', vehicle: '301-627', passengers: 7 }),
+            ],
+        }));
+    });
+});
+
+describe('TourProcessingDraftRowModal cuando la gira rompe una regla', () => {
+    it('muestra el motivo y guarda solo si se confirma', async () => {
+        previewTourProcessingDraftRowWarnings.mockResolvedValue([
+            { code: 'DRIVER_OVERLAP', title: 'Choferes con giras que se cruzan', message: 'Ana: giras 100 y 200 (04/05/2026)' },
+        ]);
+        renderModal('edit', ROW);
+
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+        expect(await screen.findByText('Esta gira rompe algunas reglas')).toBeInTheDocument();
+        expect(screen.getByText(/Ana: giras 100 y 200/)).toBeInTheDocument();
+        expect(updateTourProcessingDraftRow).not.toHaveBeenCalled();
+
+        await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+        expect(updateTourProcessingDraftRow).not.toHaveBeenCalled();
+        await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Esta gira rompe algunas reglas' })).not.toBeInTheDocument());
+
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+        await userEvent.click(await screen.findByRole('button', { name: 'Guardar de todos modos' }));
+
+        await waitFor(() => expect(updateTourProcessingDraftRow).toHaveBeenCalledTimes(1));
+    });
+
+    it('avisa al guardar un día y permite confirmar', async () => {
+        previewTourProcessingDraftRowDayWarnings.mockResolvedValue([
+            { code: 'SURPLUS_CAP_EXCEEDED', title: 'Choferes que superan el tope de sobresueldo del mes', message: 'Ana: 40 h de sobresueldo, tope de 37.5 h' },
+        ]);
+        updateTourProcessingDraftRowDay.mockResolvedValue({ ...ROW_WITH_DAYS.days[0], manuallyEdited: true });
+        renderModal('edit', ROW_WITH_DAYS);
+
+        await userEvent.click(screen.getByRole('button', { name: 'Editar día' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar día' }));
+
+        expect(await screen.findByText(/40 h de sobresueldo/)).toBeInTheDocument();
+        expect(updateTourProcessingDraftRowDay).not.toHaveBeenCalled();
+
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar de todos modos' }));
+
+        await waitFor(() => expect(updateTourProcessingDraftRowDay).toHaveBeenCalledWith(
+            'draft-1',
+            'row-1',
+            'day-1',
+            expect.objectContaining({ confirmOvertimeBelowSurplusThreshold: true }),
+        ));
     });
 });
 

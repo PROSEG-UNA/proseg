@@ -19,6 +19,10 @@ import TableHorizontalScrollbar from './TableHorizontalScrollbar.jsx';
 import { useFillToBottom, TOP_GAP, BOTTOM_GAP } from '../hooks/useFillToBottom.js';
 
 const GLOBAL_FILTER_DEBOUNCE_MS = 300;
+const COMPACT_FULL_SCREEN_FONT_REM = 0.78;
+const COMPACT_FULL_SCREEN_MIN_FONT_REM = 0.66;
+const COMPACT_FULL_SCREEN_MIN_SCALE = 0.72;
+const COMPACT_FULL_SCREEN_CELL_PADDING_X = '0.4rem';
 const INTERACTIVE_ELEMENTS_SELECTOR = 'button, a, input, textarea, select, label, [role="button"], [role="checkbox"], [role="menuitem"]';
 
 function applyGlobalFilter(table, value) {
@@ -172,6 +176,7 @@ export default function TableBase({
                                       maxHeight,
                                       fillToBottom = true,
                                       fitParent = false,
+                                      compactFullScreen = false,
                                       tableOptions = {},
                                   }) {
     const theme = useTheme();
@@ -182,6 +187,19 @@ export default function TableBase({
     const fillsToBottom = fillToBottom && !maxHeight;
     const fitsParent = fitParent && !fillsToBottom && !maxHeight;
     const flexLayout = fillsToBottom || fitsParent;
+    const [compactContainerWidth, setCompactContainerWidth] = useState(0);
+
+    const isCompactFullScreen = (table) => compactFullScreen && table.getState().isFullScreen;
+
+    const getCompactCellSx = (table, column) => {
+        if (!isCompactFullScreen(table)) return {};
+        const { columnDef } = column;
+        const baseSize = columnDef.meta?.fullScreenSize ?? columnDef.size;
+        const appliedSize = table.getState().columnSizing[column.id] ?? baseSize;
+        const scale = Math.min(appliedSize / baseSize, 1);
+        const fontRem = Math.max(COMPACT_FULL_SCREEN_FONT_REM * scale, COMPACT_FULL_SCREEN_MIN_FONT_REM);
+        return { fontSize: `${fontRem}rem`, px: COMPACT_FULL_SCREEN_CELL_PADDING_X };
+    };
 
     const stableColumns = useMemo(() => columns, [columns]);
     const tableOptionsState = tableOptions.state ?? {};
@@ -292,13 +310,14 @@ export default function TableBase({
             baseBackgroundColor: muiTheme.palette.background.paperWarm,
         }),
 
-        muiTableProps: {
+        muiTableProps: ({ table }) => ({
             ref: tableElRef,
             sx: {
                 backgroundColor: 'background.paperWarm',
                 willChange: isTouch ? undefined : 'transform',
+                ...(isCompactFullScreen(table) ? { tableLayout: 'fixed' } : {}),
             },
-        },
+        }),
 
         muiTablePaperProps: ({ table }) => ({
             elevation: 0,
@@ -322,6 +341,7 @@ export default function TableBase({
                 '& .Mui-TableHeadCell-Content-Actions': {
                     transition: 'opacity 150ms ease',
                     marginLeft: '4px',
+                    ...(isCompactFullScreen(table) ? { display: 'none' } : {}),
                 },
                 '& th:hover .Mui-TableHeadCell-Content-Actions': {
                     opacity: 1,
@@ -407,25 +427,30 @@ export default function TableBase({
             }),
         },
 
-        muiTableHeadCellProps: {
+        muiTableHeadCellProps: ({ column, table }) => ({
             sx: (t) => ({
                 ...headerSurfaceSx(t),
                 fontWeight: 600,
                 fontSize: '0.9rem',
                 border: 'none',
                 '&:focus, &:focus-within': { outline: 'none' },
+                ...getCompactCellSx(table, column),
             }),
-        },
+        }),
 
-        muiTableBodyCellProps: {
+        muiTableBodyCellProps: ({ column, table }) => ({
             sx: {
                 backgroundColor: 'background.paperWarm',
                 fontSize: '0.9rem',
                 borderTop: '1px solid',
                 borderTopColor: 'divider',
                 '&:focus, &:focus-within': { outline: 'none' },
+                ...getCompactCellSx(table, column),
+                ...(isCompactFullScreen(table) && column.columnDef.meta?.wrapInFullScreen
+                    ? { whiteSpace: 'normal', overflowWrap: 'anywhere' }
+                    : {}),
             },
-        },
+        }),
 
         muiTableBodyRowProps: ({ row }) => ({
             onClick: onRowClick
@@ -526,6 +551,63 @@ export default function TableBase({
 
     const isFullScreen = table.getState().isFullScreen;
     const { slotRef, paneRef } = useFillToBottom(fillsToBottom && !isFullScreen);
+
+    const isCompactActive = compactFullScreen && isFullScreen;
+    const visibleColumnIds = table.getVisibleLeafColumns().map((column) => column.id).join('|');
+
+    useLayoutEffect(() => {
+        if (!isCompactActive) return undefined;
+        const container = table.refs.tableContainerRef.current;
+        if (!container) return undefined;
+        const measure = () => setCompactContainerWidth(container.clientWidth);
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(container);
+        return () => observer.disconnect();
+    }, [isCompactActive, table]);
+
+    useLayoutEffect(() => {
+        if (!compactFullScreen) return;
+        const currentSizing = table.getState().columnSizing;
+
+        if (!isCompactActive) {
+            if (Object.keys(currentSizing).length) table.setColumnSizing({});
+            return;
+        }
+        if (!compactContainerWidth) return;
+
+        let fixedWidth = 0;
+        let scalableWidth = 0;
+        const sizedColumns = table.getVisibleLeafColumns().map((column) => {
+            const { columnDef } = column;
+            const isDisplayColumn = columnDef.columnDefType === 'display';
+            const size = columnDef.meta?.fullScreenSize ?? columnDef.size;
+            if (isDisplayColumn) fixedWidth += size;
+            else scalableWidth += size;
+            return { id: column.id, size, isDisplayColumn };
+        });
+
+        const fittingScale = scalableWidth ? (compactContainerWidth - fixedWidth) / scalableWidth : 1;
+        const scale = Math.min(Math.max(fittingScale, COMPACT_FULL_SCREEN_MIN_SCALE), 1);
+        const nextSizing = Object.fromEntries(
+            sizedColumns.map(({ id, size, isDisplayColumn }) => [id, isDisplayColumn ? size : Math.floor(size * scale)]),
+        );
+
+        const nextIds = Object.keys(nextSizing);
+        const isSameSizing = nextIds.length === Object.keys(currentSizing).length
+            && nextIds.every((id) => currentSizing[id] === nextSizing[id]);
+        if (!isSameSizing) table.setColumnSizing(nextSizing);
+    }, [compactFullScreen, isCompactActive, compactContainerWidth, visibleColumnIds, table]);
+
+    useEffect(() => {
+        if (!isFullScreen) return undefined;
+        const root = document.documentElement;
+        const previousOverflow = root.style.overflow;
+        root.style.overflow = 'hidden';
+        return () => {
+            root.style.overflow = previousOverflow;
+        };
+    }, [isFullScreen]);
 
     if (fitsParent) {
         return (

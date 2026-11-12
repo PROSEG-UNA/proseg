@@ -32,8 +32,8 @@ public class DocumentExportService {
         List<Map<String, Object>> rows = collectRows(target, queryParams);
 
         byte[] content = switch (format) {
-            case CSV -> csvExportWriter.write(target.columns(), rows);
-            case XLSX -> excelExportWriter.write(target.columns(), rows);
+            case CSV -> csvExportWriter.write(target.columns(queryParams), rows);
+            case XLSX -> excelExportWriter.write(target.columns(queryParams), rows);
         };
 
         return new ExportResult(format, content);
