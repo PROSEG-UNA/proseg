@@ -50,6 +50,7 @@ export default function TableHorizontalScrollbar({ containerRef, tableElRef }) {
         measure();
         const resizeObserver = new ResizeObserver(scheduleMeasure);
         resizeObserver.observe(container);
+        if (tableElRef?.current) resizeObserver.observe(tableElRef.current);
         if (trackRef.current) resizeObserver.observe(trackRef.current);
         const mutationObserver = new MutationObserver(scheduleMeasure);
         mutationObserver.observe(container, { childList: true, subtree: true });
@@ -58,13 +59,14 @@ export default function TableHorizontalScrollbar({ containerRef, tableElRef }) {
             resizeObserver.disconnect();
             mutationObserver.disconnect();
         };
-    }, [containerRef, measure, scheduleMeasure]);
+    }, [containerRef, tableElRef, measure, scheduleMeasure]);
 
     const maxScroll = scrollWidth - clientWidth;
 
     useEffect(() => {
         const timeoutId = setTimeout(() => {
-            if (maxScroll >= 0 && scrollXRef.current > maxScroll + CLAMP_TOLERANCE) {
+            const tolerance = maxScroll > 0 ? CLAMP_TOLERANCE : 0;
+            if (maxScroll >= 0 && scrollXRef.current > maxScroll + tolerance) {
                 applyScrollX(maxScroll);
             }
         }, 250);
