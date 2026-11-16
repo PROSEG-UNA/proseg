@@ -28,7 +28,7 @@ describe('información de la autoasignación', () => {
         expect(within(screen.getByRole('tabpanel')).getByText('Autoasignación de choferes')).toBeInTheDocument();
     });
 
-    it('describe las ocho etapas de choferes en el orden en que se ejecutan', () => {
+    it('describe las nueve etapas de choferes en el orden en que se ejecutan', () => {
         render(
             <AppTheme defaultColorScheme="light">
                 <TourProcessingAutoAssignmentInfoModal open onClose={vi.fn()} />
@@ -36,9 +36,9 @@ describe('información de la autoasignación', () => {
         );
 
         const panel = screen.getByRole('tabpanel');
-        expect(within(panel).getByText(/construye el horario de cada chofer en ocho etapas/)).toBeInTheDocument();
+        expect(within(panel).getByText(/construye el horario de cada chofer en nueve etapas/)).toBeInTheDocument();
         const titles = within(panel).getAllByRole('heading', { level: 4 }).map((heading) => heading.textContent);
-        expect(titles.slice(0, 8)).toEqual([
+        expect(titles.slice(0, 9)).toEqual([
             'Preparar las giras',
             'Asignar al solicitante',
             'Asignar giras Periféricas',
@@ -47,6 +47,7 @@ describe('información de la autoasignación', () => {
             'Asignar las giras pendientes',
             'Reacomodar y volver a intentar',
             'Buscar el mejor reparto',
+            'Completar el sobresueldo de la prioridad 1 pendiente',
         ]);
     });
 
