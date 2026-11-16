@@ -25,6 +25,25 @@ const COMPACT_FULL_SCREEN_MIN_SCALE = 0.72;
 const COMPACT_FULL_SCREEN_CELL_PADDING_X = '0.4rem';
 const INTERACTIVE_ELEMENTS_SELECTOR = 'button, a, input, textarea, select, label, [role="button"], [role="checkbox"], [role="menuitem"]';
 
+function getCompactColumnSizing(table, containerWidth) {
+    let fixedWidth = 0;
+    let scalableWidth = 0;
+    const sizedColumns = table.getVisibleLeafColumns().map((column) => {
+        const { columnDef } = column;
+        const isDisplayColumn = columnDef.columnDefType === 'display';
+        const size = columnDef.meta?.fullScreenSize ?? columnDef.size;
+        if (isDisplayColumn) fixedWidth += size;
+        else scalableWidth += size;
+        return { id: column.id, size, isDisplayColumn };
+    });
+
+    const fittingScale = scalableWidth ? (containerWidth - fixedWidth) / scalableWidth : 1;
+    const scale = Math.min(Math.max(fittingScale, COMPACT_FULL_SCREEN_MIN_SCALE), 1);
+    return Object.fromEntries(
+        sizedColumns.map(({ id, size, isDisplayColumn }) => [id, isDisplayColumn ? size : Math.floor(size * scale)]),
+    );
+}
+
 function applyGlobalFilter(table, value) {
     const nextValue = value || undefined;
     if (nextValue === (table.getState().globalFilter || undefined)) return;
@@ -177,6 +196,7 @@ export default function TableBase({
                                       fillToBottom = true,
                                       fitParent = false,
                                       compactFullScreen = false,
+                                      fitColumnsToWidth = false,
                                       tableOptions = {},
                                   }) {
     const theme = useTheme();
@@ -187,9 +207,7 @@ export default function TableBase({
     const fillsToBottom = fillToBottom && !maxHeight;
     const fitsParent = fitParent && !fillsToBottom && !maxHeight;
     const flexLayout = fillsToBottom || fitsParent;
-    const [compactContainerWidth, setCompactContainerWidth] = useState(0);
-
-    const isCompactFullScreen = (table) => compactFullScreen && table.getState().isFullScreen;
+    const isCompactFullScreen = (table) => compactFullScreen && (fitColumnsToWidth || table.getState().isFullScreen);
 
     const getCompactCellSx = (table, column) => {
         if (!isCompactFullScreen(table)) return {};
@@ -361,7 +379,15 @@ export default function TableBase({
                     )}
                     {enableHiding && <MRT_ShowHideColumnsButton table={table} />}
                     {enableDensityToggle && <MRT_ToggleDensePaddingButton table={table} />}
-                    {enableFullScreenToggle && <MRT_ToggleFullScreenButton table={table} />}
+                    {enableFullScreenToggle && (
+                        <MRT_ToggleFullScreenButton
+                            table={table}
+                            {...(compactFullScreen && !fitColumnsToWidth ? { onClickCapture: () => {
+                                const isFullScreen = table.getState().isFullScreen;
+                                table.setColumnSizing(isFullScreen ? {} : getCompactColumnSizing(table, window.innerWidth - 2));
+                            } } : {})}
+                        />
+                    )}
                 </>
             );
             if (isMobile) {
@@ -552,19 +578,8 @@ export default function TableBase({
     const isFullScreen = table.getState().isFullScreen;
     const { slotRef, paneRef } = useFillToBottom(fillsToBottom && !isFullScreen);
 
-    const isCompactActive = compactFullScreen && isFullScreen;
+    const isCompactActive = compactFullScreen && (fitColumnsToWidth || isFullScreen);
     const visibleColumnIds = table.getVisibleLeafColumns().map((column) => column.id).join('|');
-
-    useLayoutEffect(() => {
-        if (!isCompactActive) return undefined;
-        const container = table.refs.tableContainerRef.current;
-        if (!container) return undefined;
-        const measure = () => setCompactContainerWidth(container.clientWidth);
-        measure();
-        const observer = new ResizeObserver(measure);
-        observer.observe(container);
-        return () => observer.disconnect();
-    }, [isCompactActive, table]);
 
     useLayoutEffect(() => {
         if (!compactFullScreen) return;
@@ -574,30 +589,21 @@ export default function TableBase({
             if (Object.keys(currentSizing).length) table.setColumnSizing({});
             return;
         }
-        if (!compactContainerWidth) return;
-
-        let fixedWidth = 0;
-        let scalableWidth = 0;
-        const sizedColumns = table.getVisibleLeafColumns().map((column) => {
-            const { columnDef } = column;
-            const isDisplayColumn = columnDef.columnDefType === 'display';
-            const size = columnDef.meta?.fullScreenSize ?? columnDef.size;
-            if (isDisplayColumn) fixedWidth += size;
-            else scalableWidth += size;
-            return { id: column.id, size, isDisplayColumn };
-        });
-
-        const fittingScale = scalableWidth ? (compactContainerWidth - fixedWidth) / scalableWidth : 1;
-        const scale = Math.min(Math.max(fittingScale, COMPACT_FULL_SCREEN_MIN_SCALE), 1);
-        const nextSizing = Object.fromEntries(
-            sizedColumns.map(({ id, size, isDisplayColumn }) => [id, isDisplayColumn ? size : Math.floor(size * scale)]),
-        );
-
-        const nextIds = Object.keys(nextSizing);
-        const isSameSizing = nextIds.length === Object.keys(currentSizing).length
-            && nextIds.every((id) => currentSizing[id] === nextSizing[id]);
-        if (!isSameSizing) table.setColumnSizing(nextSizing);
-    }, [compactFullScreen, isCompactActive, compactContainerWidth, visibleColumnIds, table]);
+        const container = table.refs.tableContainerRef.current;
+        if (!container) return;
+        const measure = () => {
+            const nextSizing = getCompactColumnSizing(table, container.clientWidth);
+            const currentSizing = table.getState().columnSizing;
+            const nextIds = Object.keys(nextSizing);
+            const isSameSizing = nextIds.length === Object.keys(currentSizing).length
+                && nextIds.every((id) => currentSizing[id] === nextSizing[id]);
+            if (!isSameSizing) table.setColumnSizing(nextSizing);
+        };
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(container);
+        return () => observer.disconnect();
+    }, [compactFullScreen, isCompactActive, visibleColumnIds, table]);
 
     useEffect(() => {
         if (!isFullScreen) return undefined;
