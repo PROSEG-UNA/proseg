@@ -16,6 +16,15 @@ const COLUMN_TO_BACKEND_KEY = {
     organizationalUnit: 'organizationalUnit',
 };
 
+const MONTH_COLUMN_KEYS = new Set([
+    'businessDays',
+    'ordinaryHoursAccrued',
+    'surplusExecutionRatio',
+    'surplusHoursAccrued',
+    'overtimeHoursAccrued',
+    'weekendsWorked',
+]);
+
 export default function DriversTable({ onEditDriver, monthData, unit, participantIds = null }) {
     const [pagination, setPagination] = usePersistedPagination('drivers-table-page-size');
     const [globalFilter, setGlobalFilter] = useState('');
@@ -34,9 +43,18 @@ export default function DriversTable({ onEditDriver, monthData, unit, participan
     const participantIdsParam = restrictToParticipants ? participantIds.join(',') : '';
     const noParticipantsToShow = restrictToParticipants && participantIds.length === 0;
 
+    const showMonthColumns = Boolean(monthData?.enabled);
+    const monthYear = monthData?.year;
+    const monthNumber = monthData?.month;
+    const sortsByMonthColumn = showMonthColumns && sorting.some(({ id }) => MONTH_COLUMN_KEYS.has(id));
+
     const backendFilters = useMemo(() => {
         const out = unit ? { organizationalUnit: unit } : {};
         if (participantIdsParam) out.ids = participantIdsParam;
+        if (sortsByMonthColumn) {
+            out.year = monthYear;
+            out.month = monthNumber;
+        }
         debouncedColumnFilters.forEach(({ id, value }) => {
             const key = COLUMN_TO_BACKEND_KEY[id];
             if (!key) return;
@@ -44,17 +62,17 @@ export default function DriversTable({ onEditDriver, monthData, unit, participan
             out[key] = value;
         });
         return out;
-    }, [debouncedColumnFilters, unit, participantIdsParam]);
+    }, [debouncedColumnFilters, unit, participantIdsParam, sortsByMonthColumn, monthYear, monthNumber]);
 
     const backendSort = useMemo(
         () => sorting
             .map(({ id, desc }) => {
-                const key = COLUMN_TO_BACKEND_KEY[id];
+                const key = COLUMN_TO_BACKEND_KEY[id] ?? (showMonthColumns && MONTH_COLUMN_KEYS.has(id) ? id : null);
                 if (!key) return null;
                 return `${key},${desc ? 'desc' : 'asc'}`;
             })
             .filter(Boolean),
-        [sorting]
+        [sorting, showMonthColumns]
     );
 
     const handleGlobalFilterChange = useCallback((updater) => {
@@ -80,8 +98,6 @@ export default function DriversTable({ onEditDriver, monthData, unit, participan
         sort: backendSort,
         enabled: !noParticipantsToShow,
     });
-
-    const showMonthColumns = Boolean(monthData?.enabled);
 
     const rowsWithMonth = useMemo(() => {
         if (!showMonthColumns) return rows;

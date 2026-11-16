@@ -47,6 +47,8 @@ import com.proseg.msvc_transport.service.driverhours.TourTrips;
 import com.proseg.msvc_transport.service.driverhours.UlloaTours;
 import com.proseg.msvc_transport.service.driverhours.VehicleAutoAssigner;
 import com.proseg.msvc_transport.service.rules.TourAssignmentRules;
+import com.proseg.msvc_transport.specification.DisplayLabels;
+import com.proseg.msvc_transport.specification.DisplaySearch;
 import com.proseg.msvc_transport.specification.GenericSpecifications;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -195,7 +197,11 @@ public class TourProcessingDraftService {
     @Transactional(readOnly = true)
     public Page<TourProcessingDraftResponseDto> findAll(String search, Map<String, String> filters, Pageable pageable) {
         Specification<TourProcessingDraft> spec = Specification
-                .where(GenericSpecifications.withSearch(TourProcessingDraft.class, search))
+                .where(GenericSpecifications.withSearch(
+                        TourProcessingDraft.class,
+                        search,
+                        DisplaySearch.labelMatching("status", DisplayLabels.DRAFT_STATUS, search),
+                        DisplaySearch.periodMatching("year", "month", search)))
                 .and(GenericSpecifications.withColumnFilters(TourProcessingDraft.class, filters));
         Sort sort = GenericSpecifications.sanitizeSort(TourProcessingDraft.class, pageable.getSort());
         Sort effectiveSort = sort.isUnsorted() ? Sort.by(Sort.Order.desc("importedAt")) : sort;
@@ -662,13 +668,13 @@ public class TourProcessingDraftService {
         copy.setDuplicateGroupSize(source.getDuplicateGroupSize());
         copy.setDuplicateRank(source.getDuplicateRank());
         copy.setConflicting(source.isConflicting());
+        copy.setRepeatsTrips(source.isRepeatsTrips());
         if (source.getAssignments() != null) {
             for (TourProcessingDraftAssignment assignment : source.getAssignments()) {
                 TourProcessingDraftAssignment copied = detachedAssignment(assignment);
                 copy.addAssignment(copied);
                 copied.setPart(assignment.getPart());
             }
-        copy.setRepeatsTrips(source.isRepeatsTrips());
         }
         return copy;
     }
@@ -833,13 +839,13 @@ public class TourProcessingDraftService {
     private void splitIntoParts(TourProcessingDraftTour tour, int parts, TourSplitMode mode) {
         int totalPassengers = tour.getPassengers();
         TourProcessingDraftAssignment first = tour.primaryAssignment();
+        tour.setRepeatsTrips(mode == TourSplitMode.SAME_DRIVER_AND_VEHICLE);
         first.setPassengers(passengersOfPart(totalPassengers, parts, 1));
         for (int part = 2; part <= parts; part++) {
             TourProcessingDraftAssignment.TourProcessingDraftAssignmentBuilder trip = TourProcessingDraftAssignment.builder()
                     .resourceType(ResourceType.INTERNAL)
                     .passengers(passengersOfPart(totalPassengers, parts, part));
             if (mode == TourSplitMode.SAME_DRIVER_AND_VEHICLE) {
-        tour.setRepeatsTrips(mode == TourSplitMode.SAME_DRIVER_AND_VEHICLE);
                 trip.resourceType(first.getResourceType())
                         .driver(first.getDriver())
                         .driverId(first.getDriverId())
@@ -1011,6 +1017,7 @@ public class TourProcessingDraftService {
                 .surplusTargets(assigner.surplusTargets())
                 .surplusTargetHours(assigner.defaultSurplusTargetHours())
                 .optimizationLimitReached(assigner.optimizationLimitReached())
+                .bestScheduleProven(assigner.bestScheduleProven())
                 .mandatoryCoverage(mandatoryCoverageOf(assigner.coverageSummary()))
                 .priorityOneUnassigned(priorityOneUnassigned(pendingDriverTours(assignments, scope)))
                 .build();
@@ -1019,7 +1026,6 @@ public class TourProcessingDraftService {
     private static TourProcessingDriverAutoAssignResponseDto.MandatoryCoverage mandatoryCoverageOf(MandatoryCoverageSummary summary) {
         return new TourProcessingDriverAutoAssignResponseDto.MandatoryCoverage(
                 summary.total(),
-                .bestScheduleProven(assigner.bestScheduleProven())
                 summary.fulfilled(),
                 summary.withWarning(),
                 summary.unattended(),
@@ -1584,14 +1590,14 @@ public class TourProcessingDraftService {
             applyAssignment(target, requested.get(index));
             linker.link(target);
         }
+        boolean repeats = request.getRepeatsTrips() == null ? tour.isRepeatsTrips() : request.getRepeatsTrips();
+        tour.setRepeatsTrips(repeats && requested.size() > 1);
     }
 
     private void applyAssignment(TourProcessingDraftAssignment assignment, TourProcessingDraftAssignmentDto requested) {
         ResourceType type = requested.getResourceType() == null ? ResourceType.INTERNAL : requested.getResourceType();
         assignment.setResourceType(type);
         assignment.setDriver(trimToNull(requested.getDriver()));
-        boolean repeats = request.getRepeatsTrips() == null ? tour.isRepeatsTrips() : request.getRepeatsTrips();
-        tour.setRepeatsTrips(repeats && requested.size() > 1);
         assignment.setVehicle(type == ResourceType.BORROWED_VEHICLE ? null : trimToNull(requested.getVehicle()));
         assignment.setBorrowedVehicle(type == ResourceType.BORROWED_VEHICLE ? resolveBorrowedVehicle(requested.getBorrowedVehicleId()) : null);
         assignment.setPassengers(requested.getPassengers());
@@ -1695,13 +1701,13 @@ public class TourProcessingDraftService {
                         ? parts.stream().map(part -> toAssignmentResponse(part, daysOf(part, hoursSource, daysByAssignmentId))).toList()
                         : null)
                 .trips(tripSummary.trips())
+                .repeatsTrips(tour.isRepeatsTrips())
                 .totalCapacity(tripSummary.totalCapacity())
                 .assignedPassengers(tripSummary.assignedPassengers())
                 .executingUnit(tour.getExecutingUnit())
                 .responsible(tour.getResponsible())
                 .destination(tour.getDestination())
                 .durationDays(tour.getDurationDays())
-                .repeatsTrips(tour.isRepeatsTrips())
                 .priority(tour.getPriority())
                 .modality(tour.getModality())
                 .departureTime(tour.getDepartureTime())
