@@ -162,7 +162,7 @@ final class ScheduleOptimizer {
             }
         }
         for (TourProcessingDraftAssignment row : tours) {
-            if (!assignments.containsKey(row) && !row.getTour().isDistributed() && DriverAutoAssigner.hasValidSchedule(row)
+            if (!assignments.containsKey(row) && !TourTrips.isGroupedTour(row.getTour()) && DriverAutoAssigner.hasValidSchedule(row)
                     && row.isActive() && row.getResourceType() == ResourceType.INTERNAL && seen.add(row)) {
                 rows.add(row);
                 rowOwners.add(-1);
@@ -224,7 +224,7 @@ final class ScheduleOptimizer {
         profile.level = DriverAutoAssigner.assignmentLevel(row);
         profile.conditional = assigner.conditionalTours().contains(row);
         profile.ulloa = UlloaTours.isUlloaTour(row);
-        profile.movable = !assigner.lockedTours().contains(row) && !row.getTour().isDistributed();
+        profile.movable = !assigner.lockedTours().contains(row) && !TourTrips.isGroupedTour(row.getTour());
         List<TourDaySpan> spans = DriverHoursRules.daySpans(row);
         Map<LocalDate, DayAllocation> manual = assigner.manualDays().of(row);
         int count = spans.size();

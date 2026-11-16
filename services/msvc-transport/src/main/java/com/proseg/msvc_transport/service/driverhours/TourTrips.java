@@ -57,6 +57,69 @@ public record TourTrips(int trips, Integer totalCapacity, int assignedPassengers
         return false;
     }
 
+    public static boolean isRepeatTour(TourProcessingDraftTour tour) {
+        if (!tour.isRepeatsTrips() || tour.getAssignments().isEmpty()) {
+            return false;
+        }
+        Set<UUID> drivers = new HashSet<>();
+        Set<UUID> vehicles = new HashSet<>();
+        for (TourProcessingDraftAssignment part : tour.getAssignments()) {
+            if (part.getResourceType() != ResourceType.INTERNAL) {
+                return false;
+            }
+            if (part.getDriverId() != null) {
+                drivers.add(part.getDriverId());
+            }
+            if (part.getVehicleId() != null) {
+                vehicles.add(part.getVehicleId());
+            }
+        }
+        return drivers.size() <= 1 && vehicles.size() <= 1;
+    }
+
+    public static boolean isRepeatFollower(TourProcessingDraftAssignment part) {
+        TourProcessingDraftTour tour = part.getTour();
+        return tour != null && part != tour.primaryAssignment() && isRepeatTour(tour);
+    }
+
+    public static boolean isGroupedTour(TourProcessingDraftTour tour) {
+        return tour.isDistributed() && !isRepeatTour(tour);
+    }
+
+    public static void alignRepeatTrips(TourProcessingDraftTour tour) {
+        if (!isRepeatTour(tour)) {
+            return;
+        }
+        TourProcessingDraftAssignment driverSource = tour.getAssignments().stream()
+                .filter(part -> part.getDriverId() != null).findFirst().orElse(null);
+        TourProcessingDraftAssignment vehicleSource = tour.getAssignments().stream()
+                .filter(part -> part.getVehicleId() != null).findFirst().orElse(null);
+        for (TourProcessingDraftAssignment part : tour.getAssignments()) {
+            if (driverSource != null) {
+                part.setDriver(driverSource.getDriver());
+                part.setDriverId(driverSource.getDriverId());
+            }
+            if (vehicleSource != null) {
+                part.setVehicle(vehicleSource.getVehicle());
+                part.setVehicleId(vehicleSource.getVehicleId());
+            }
+        }
+    }
+
+    public static void copyFirstTripResources(TourProcessingDraftTour tour) {
+        TourProcessingDraftAssignment first = tour.primaryAssignment();
+        for (TourProcessingDraftAssignment part : tour.getAssignments()) {
+            if (part != first) {
+                part.setDriver(first.getDriver());
+                part.setDriverId(first.getDriverId());
+                part.setVehicle(first.getVehicle());
+                part.setVehicleId(first.getVehicleId());
+                part.setDriverAutoAssigned(first.isDriverAutoAssigned());
+                part.setVehicleAutoAssigned(first.isVehicleAutoAssigned());
+            }
+        }
+    }
+
     private static Integer capacityOf(TourProcessingDraftAssignment part, Map<UUID, Vehicle> vehiclesById) {
         if (part.getResourceType() == ResourceType.BORROWED_VEHICLE) {
             return part.getBorrowedVehicle() == null ? null : part.getBorrowedVehicle().getCapacity();

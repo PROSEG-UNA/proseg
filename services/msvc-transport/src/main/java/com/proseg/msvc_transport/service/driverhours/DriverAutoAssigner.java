@@ -33,6 +33,7 @@ public class DriverAutoAssigner {
     private static final int MAX_OPTIMIZATION_PASSES = 20;
     private static final int MAX_OPTIMIZATION_ATTEMPTS = 10_000;
     private static final int MAX_SEARCH_ROUNDS = 4;
+    private static final int MAX_SURPLUS_LIFT_CHECKS = 2_000;
     private static final long SEARCH_TRANSACTION_LIMIT = 500_000L;
     private static final Pattern DIGITS = Pattern.compile("\\d+");
 
@@ -90,6 +91,7 @@ public class DriverAutoAssigner {
             ManualDays manualDays
     ) {
         this.manualDays = manualDays;
+        rows = rows.stream().filter(row -> !TourTrips.isRepeatFollower(row)).toList();
         this.allRows = List.copyOf(rows);
         this.businessDays = businessDays;
         this.monthWeekends = DriverHoursRules.monthWeekends(year, month);
@@ -312,6 +314,7 @@ public class DriverAutoAssigner {
         pendingTours.stream()
                 .filter(DriverHoursRules::isActive)
                 .filter(tour -> tour.getResourceType() == ResourceType.INTERNAL)
+                .filter(tour -> !TourTrips.isRepeatFollower(tour))
                 .forEach(tours::add);
         assignRequesterPending(tours, assignments);
         assignUlloaPending(tours, assignments);
@@ -324,8 +327,101 @@ public class DriverAutoAssigner {
         for (int round = 0; round < MAX_SEARCH_ROUNDS && searchEnabled && searchBestSchedule(tours, assignments); round++) {
             assignPending(tours, assignments);
         }
+        completeSurplusForPriorityOne(tours, assignments);
         validateFinalAssignments(assignments);
         return changesOf(tours, assignments);
+    }
+
+    void completeSurplusForPriorityOne(Set<TourProcessingDraftAssignment> tours, Map<TourProcessingDraftAssignment, Driver> assignments) {
+        for (TourProcessingDraftAssignment tour : pendingTours(tours, assignments)) {
+            if (!isRelaxablePriorityOne(tour)) {
+                continue;
+            }
+            List<Driver> candidates = availableDrivers.stream()
+                    .filter(driver -> canAssign(driver, workloadOf(driver), tour, false))
+                    .sorted(Comparator.comparingDouble((Driver driver) -> -surplusPercentOf(driver))
+                            .thenComparingDouble(driver -> totalsOf(driver).overtimeHours())
+                            .thenComparing(Driver::getName, String.CASE_INSENSITIVE_ORDER))
+                    .toList();
+            for (Driver driver : candidates) {
+                if (tryCompleteSurplus(tour, driver, assignments)) {
+                    break;
+                }
+            }
+        }
+    }
+
+    private boolean tryCompleteSurplus(TourProcessingDraftAssignment tour, Driver driver, Map<TourProcessingDraftAssignment, Driver> assignments) {
+        assignConditionally(tour, driver, assignments);
+        if (!meetsSurplusThreshold(driver, workloadOf(driver))) {
+            Optional<List<SurplusDonation>> plan = planSurplusLift(driver, assignments);
+            if (plan.isEmpty()) {
+                unassign(tour, driver, assignments);
+                return false;
+            }
+            for (SurplusDonation donation : plan.get()) {
+                unassign(donation.tour(), donation.donor(), assignments);
+                assignTour(donation.tour(), driver, assignments);
+            }
+        }
+        conditionalTours.remove(tour);
+        return true;
+    }
+
+    private Optional<List<SurplusDonation>> planSurplusLift(Driver driver, Map<TourProcessingDraftAssignment, Driver> assignments) {
+        double surplusCap = businessDays.surplusCapOf(driver);
+        DriverWorkload receiver = workloadOf(driver).copy();
+        Map<UUID, DriverWorkload> donorWorkloads = new LinkedHashMap<>();
+        List<SurplusDonation> plan = new ArrayList<>();
+        int checks = 0;
+        while (!meetsSurplusThreshold(driver, receiver)) {
+            double surplusBefore = receiver.totals(surplusCap, monthWeekends).surplusHours();
+            SurplusDonation best = null;
+            double bestGain = DriverHoursRules.HOURS_TOLERANCE;
+            for (Driver donor : availableDrivers) {
+                if (donor.equals(driver)) {
+                    continue;
+                }
+                DriverWorkload donorWorkload = donorWorkloads.computeIfAbsent(donor.getId(), id -> workloadOf(donor).copy());
+                for (TourProcessingDraftAssignment candidate : List.copyOf(donorWorkload.tours())) {
+                    if (!assignments.containsKey(candidate) || lockedTours.contains(candidate) || initialAssignments.containsKey(candidate)
+                            || TourTrips.isGroupedTour(candidate.getTour()) || !canAssign(driver, receiver, candidate, true)) {
+                        continue;
+                    }
+                    double gain = receiver.totalsWith(candidate, surplusCap, monthWeekends).surplusHours() - surplusBefore;
+                    if (gain <= bestGain) {
+                        continue;
+                    }
+                    if (++checks > MAX_SURPLUS_LIFT_CHECKS) {
+                        return Optional.empty();
+                    }
+                    DriverWorkload without = donorWorkload.without(candidate);
+                    if (structurallyValid(donor, without) && keepsCoverageCondition(donor, without)) {
+                        best = new SurplusDonation(candidate, donor);
+                        bestGain = gain;
+                    }
+                }
+            }
+            if (best == null) {
+                return Optional.empty();
+            }
+            receiver.add(best.tour());
+            donorWorkloads.put(best.donor().getId(), donorWorkloads.get(best.donor().getId()).without(best.tour()));
+            plan.add(best);
+        }
+        return Optional.of(plan);
+    }
+
+    private record SurplusDonation(TourProcessingDraftAssignment tour, Driver donor) {}
+
+    private static boolean isRelaxablePriorityOne(TourProcessingDraftAssignment tour) {
+        return tour.getPriority() != null && tour.getPriority() <= 1
+                && tour.getTour().getPassengers() != null && tour.getTour().getPassengers() >= LARGE_GROUP_PASSENGERS;
+    }
+
+    private double surplusPercentOf(Driver driver) {
+        double cap = businessDays.surplusCapOf(driver);
+        return cap <= 0 ? 0 : surplusHoursOf(driver) / cap;
     }
 
     private boolean searchBestSchedule(Set<TourProcessingDraftAssignment> tours, Map<TourProcessingDraftAssignment, Driver> assignments) {
@@ -371,6 +467,7 @@ public class DriverAutoAssigner {
         pendingTours.stream()
                 .filter(DriverHoursRules::isActive)
                 .filter(tour -> tour.getResourceType() == ResourceType.INTERNAL)
+                .filter(tour -> !TourTrips.isRepeatFollower(tour))
                 .filter(UlloaTours::isUlloaTour)
                 .forEach(tours::add);
         assignUlloaPending(tours, assignments);
@@ -396,7 +493,7 @@ public class DriverAutoAssigner {
     private boolean assignGroups(Set<TourProcessingDraftAssignment> scope, Map<TourProcessingDraftAssignment, Driver> assignments,
                                  boolean ulloaOnly, boolean surplusOnly) {
         List<TourProcessingDraftAssignment> representatives = scope.stream()
-                .filter(part -> part.getTour().isDistributed()).filter(DriverAutoAssigner::hasValidSchedule)
+                .filter(part -> TourTrips.isGroupedTour(part.getTour())).filter(DriverAutoAssigner::hasValidSchedule)
                 .filter(part -> !TourTrips.sharesResources(part.getTour()))
                 .filter(part -> !ulloaOnly || UlloaTours.isUlloaTour(part))
                 .sorted(Comparator.comparingInt(DriverAutoAssigner::assignmentLevel)
@@ -632,7 +729,7 @@ public class DriverAutoAssigner {
             progressed = assignUlloaPending(tours, assignments);
             Set<UUID> visitedGroups = new LinkedHashSet<>();
             for (TourProcessingDraftAssignment tour : tours.stream().filter(DriverAutoAssigner::hasValidSchedule).sorted(ASSIGNMENT_ORDER).toList()) {
-                if (tour.getTour().isDistributed()) {
+                if (TourTrips.isGroupedTour(tour.getTour())) {
                     if (visitedGroups.add(tour.getTour().getId())) {
                         progressed |= assignGroups(Set.of(tour), assignments, false, false);
                     }
@@ -651,7 +748,7 @@ public class DriverAutoAssigner {
     }
 
     List<TourProcessingDraftAssignment> pendingTours(Set<TourProcessingDraftAssignment> tours, Map<TourProcessingDraftAssignment, Driver> assignments) {
-        return tours.stream().filter(tour -> !tour.getTour().isDistributed()).filter(tour -> !assignments.containsKey(tour))
+        return tours.stream().filter(tour -> !TourTrips.isGroupedTour(tour.getTour())).filter(tour -> !assignments.containsKey(tour))
                 .filter(DriverAutoAssigner::hasValidSchedule).sorted(ASSIGNMENT_ORDER).toList();
     }
 
