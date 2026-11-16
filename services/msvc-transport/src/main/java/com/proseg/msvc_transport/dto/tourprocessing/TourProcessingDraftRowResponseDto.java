@@ -34,6 +34,7 @@ public class TourProcessingDraftRowResponseDto {
     private Integer passengers;
     private List<TourProcessingDraftAssignmentDto> assignments;
     private int trips;
+    private boolean repeatsTrips;
     private Integer totalCapacity;
     private int assignedPassengers;
     private String executingUnit;

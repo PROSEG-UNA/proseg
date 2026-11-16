@@ -1116,6 +1116,68 @@ class TourProcessingDraftServiceTest {
         assertThat(repeating.getAssignments()).extracting(TourProcessingDraftAssignment::getDriver).containsOnly("Daniel Zuniga");
         assertThat(distinct.getAssignments()).extracting(TourProcessingDraftAssignment::getDriver).containsExactly("Daniel Zuniga", null);
         assertThat(unlisted.getAssignments()).extracting(TourProcessingDraftAssignment::getDriver).containsOnly("Daniel Zuniga");
+        assertThat(repeating.isRepeatsTrips()).isTrue();
+        assertThat(distinct.isRepeatsTrips()).isFalse();
+        assertThat(unlisted.isRepeatsTrips()).isTrue();
+    }
+
+    @Test
+    void marksAsRepeatingTripsTheToursOfARepeatingDestinationEvenWhenNoDriverIsAssignedYet() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        TourProcessingDraftTour heredia = entity(draft, 1, "02787", "Heredia");
+        heredia.setPassengers(47);
+        heredia.primaryAssignment().setDriver(null);
+        heredia.primaryAssignment().setVehicle(null);
+        TourProcessingDraftTour cartago = entity(draft, 2, "02788", "Cartago");
+        cartago.setPassengers(47);
+        cartago.primaryAssignment().setDriver(null);
+        cartago.primaryAssignment().setVehicle(null);
+        stubDraft(draft, heredia, cartago);
+        when(vehicleRepository.findAll()).thenReturn(List.of(
+                Vehicle.builder().id(UUID.randomUUID()).plate("301-295").type(VehicleType.SEDAN).capacity(30).build()
+        ));
+        configureSplit(
+                TourSplitMode.DISTINCT_VEHICLES,
+                splitKeyword("Heredia", TourSplitMode.SAME_DRIVER_AND_VEHICLE)
+        );
+
+        service.splitOversizedRows(draft.getId());
+
+        assertThat(heredia.getAssignments()).extracting(TourProcessingDraftAssignment::getPassengers).containsExactly(24, 23);
+        assertThat(heredia.isRepeatsTrips()).isTrue();
+        assertThat(cartago.getAssignments()).extracting(TourProcessingDraftAssignment::getPassengers).containsExactly(24, 23);
+        assertThat(cartago.isRepeatsTrips()).isFalse();
+    }
+
+    @Test
+    void savesTheRepeatingTripsMarkSentByTheEditorAndKeepsItWhenTheRequestOmitsIt() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        TourProcessingDraftTour tour = entity(draft, 1, "02787", "Heredia");
+        tour.setPassengers(47);
+        tour.setRepeatsTrips(true);
+        tour.primaryAssignment().setPassengers(24);
+        tour.addAssignment(TourProcessingDraftAssignment.builder().passengers(23).build());
+        stubDraft(draft, tour);
+        when(vehicleRepository.findAll()).thenReturn(List.of(
+                Vehicle.builder().id(UUID.randomUUID()).plate("301-295").type(VehicleType.SEDAN).capacity(30).build()
+        ));
+        TourProcessingDraftRowRequestDto request = row(1, "02787", "Heredia");
+        request.setPassengers(47);
+        request.setAssignments(List.of(
+                TourProcessingDraftAssignmentDto.builder().resourceType(ResourceType.INTERNAL).passengers(24).build(),
+                TourProcessingDraftAssignmentDto.builder().resourceType(ResourceType.INTERNAL).passengers(23).build()
+        ));
+
+        service.updateRow(draft.getId(), tour.getId(), request);
+        assertThat(tour.isRepeatsTrips()).isTrue();
+
+        request.setRepeatsTrips(false);
+        service.updateRow(draft.getId(), tour.getId(), request);
+        assertThat(tour.isRepeatsTrips()).isFalse();
+
+        request.setRepeatsTrips(true);
+        service.updateRow(draft.getId(), tour.getId(), request);
+        assertThat(tour.isRepeatsTrips()).isTrue();
     }
 
     @Test

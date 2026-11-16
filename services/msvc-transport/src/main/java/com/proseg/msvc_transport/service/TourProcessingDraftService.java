@@ -668,6 +668,7 @@ public class TourProcessingDraftService {
                 copy.addAssignment(copied);
                 copied.setPart(assignment.getPart());
             }
+        copy.setRepeatsTrips(source.isRepeatsTrips());
         }
         return copy;
     }
@@ -838,6 +839,7 @@ public class TourProcessingDraftService {
                     .resourceType(ResourceType.INTERNAL)
                     .passengers(passengersOfPart(totalPassengers, parts, part));
             if (mode == TourSplitMode.SAME_DRIVER_AND_VEHICLE) {
+        tour.setRepeatsTrips(mode == TourSplitMode.SAME_DRIVER_AND_VEHICLE);
                 trip.resourceType(first.getResourceType())
                         .driver(first.getDriver())
                         .driverId(first.getDriverId())
@@ -1588,6 +1590,8 @@ public class TourProcessingDraftService {
         ResourceType type = requested.getResourceType() == null ? ResourceType.INTERNAL : requested.getResourceType();
         assignment.setResourceType(type);
         assignment.setDriver(trimToNull(requested.getDriver()));
+        boolean repeats = request.getRepeatsTrips() == null ? tour.isRepeatsTrips() : request.getRepeatsTrips();
+        tour.setRepeatsTrips(repeats && requested.size() > 1);
         assignment.setVehicle(type == ResourceType.BORROWED_VEHICLE ? null : trimToNull(requested.getVehicle()));
         assignment.setBorrowedVehicle(type == ResourceType.BORROWED_VEHICLE ? resolveBorrowedVehicle(requested.getBorrowedVehicleId()) : null);
         assignment.setPassengers(requested.getPassengers());
@@ -1697,6 +1701,7 @@ public class TourProcessingDraftService {
                 .responsible(tour.getResponsible())
                 .destination(tour.getDestination())
                 .durationDays(tour.getDurationDays())
+                .repeatsTrips(tour.isRepeatsTrips())
                 .priority(tour.getPriority())
                 .modality(tour.getModality())
                 .departureTime(tour.getDepartureTime())

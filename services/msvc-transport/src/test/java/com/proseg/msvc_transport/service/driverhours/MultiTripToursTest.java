@@ -169,6 +169,17 @@ class MultiTripToursTest {
     }
 
     @Test
+    void aTourMarkedAsRepeatingTripsSharesResourcesEvenWithoutAssignedDriversOrVehicles() {
+        var trips = trips(sameDayTour("1", "2026-05-04", "08:00", "12:00"), 2, 24);
+
+        assertThat(TourTrips.sharesResources(trips.get(0).getTour())).isFalse();
+
+        trips.get(0).getTour().setRepeatsTrips(true);
+
+        assertThat(TourTrips.sharesResources(trips.get(0).getTour())).isTrue();
+    }
+
+    @Test
     void aSingleTripTourHasOneTripAndItsOwnCapacity() {
         Vehicle bus = vehicle("301-295", null, 30);
         var single = sameDayTour("1", "2026-05-04", "08:00", "12:00");

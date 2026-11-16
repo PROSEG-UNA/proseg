@@ -35,6 +35,9 @@ public record TourTrips(int trips, Integer totalCapacity, int assignedPassengers
     }
 
     public static boolean sharesResources(TourProcessingDraftTour tour) {
+        if (tour.isRepeatsTrips()) {
+            return true;
+        }
         Set<UUID> drivers = new HashSet<>();
         Set<Object> vehicles = new HashSet<>();
         for (TourProcessingDraftAssignment part : tour.getAssignments()) {
