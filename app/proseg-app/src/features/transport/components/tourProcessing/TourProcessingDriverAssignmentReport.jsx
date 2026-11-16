@@ -232,6 +232,12 @@ function ReportBody({ result }) {
                 </Typography>
             )}
 
+            {result.bestScheduleProven && (
+                <Typography variant="body2" color="text.secondary" sx={{ px: { xs: 2.5, sm: 3 }, pb: 2 }}>
+                    Se revisaron todas las combinaciones posibles de las giras que quedaban por decidir: no existe una distribución mejor que esta.
+                </Typography>
+            )}
+
             {!current && (
                 <Typography variant="body2" color="text.secondary" sx={{ px: { xs: 2.5, sm: 3 }, pb: 3 }}>
                     Todas las giras se asignaron sin observaciones.

@@ -1017,6 +1017,7 @@ public class TourProcessingDraftService {
     private static TourProcessingDriverAutoAssignResponseDto.MandatoryCoverage mandatoryCoverageOf(MandatoryCoverageSummary summary) {
         return new TourProcessingDriverAutoAssignResponseDto.MandatoryCoverage(
                 summary.total(),
+                .bestScheduleProven(assigner.bestScheduleProven())
                 summary.fulfilled(),
                 summary.withWarning(),
                 summary.unattended(),

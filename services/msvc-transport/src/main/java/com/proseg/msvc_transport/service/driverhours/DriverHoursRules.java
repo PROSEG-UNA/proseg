@@ -11,6 +11,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
+import java.time.ZoneOffset;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -181,6 +182,14 @@ public final class DriverHoursRules {
             minute = 0;
         }
         return LocalTime.of(wholeHour % 24, minute);
+    }
+
+    public static long startMinutes(TourProcessingDraftAssignment tour) {
+        return startOf(tour).toEpochSecond(ZoneOffset.UTC) / 60;
+    }
+
+    public static long endMinutes(TourProcessingDraftAssignment tour) {
+        return endOf(tour).toEpochSecond(ZoneOffset.UTC) / 60;
     }
 
     private static LocalDateTime startOf(TourProcessingDraftAssignment tour) {

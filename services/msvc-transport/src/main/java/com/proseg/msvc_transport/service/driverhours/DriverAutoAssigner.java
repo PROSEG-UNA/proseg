@@ -32,6 +32,8 @@ public class DriverAutoAssigner {
     private static final int GENERAL_SERVICES_LEVEL = 1;
     private static final int MAX_OPTIMIZATION_PASSES = 20;
     private static final int MAX_OPTIMIZATION_ATTEMPTS = 10_000;
+    private static final int MAX_SEARCH_ROUNDS = 4;
+    private static final long SEARCH_TRANSACTION_LIMIT = 500_000L;
     private static final Pattern DIGITS = Pattern.compile("\\d+");
 
     static final Comparator<TourProcessingDraftAssignment> ASSIGNMENT_ORDER = Comparator
@@ -74,6 +76,9 @@ public class DriverAutoAssigner {
     private MandatoryCoverage coverage;
     private int optimizationAttempts;
     private boolean optimizationLimitReached;
+    private ScheduleOptimizer.Stats searchStats;
+    private boolean searchEnabled = true;
+    private long searchTransactions;
 
     public DriverAutoAssigner(
             int year,
@@ -229,12 +234,24 @@ public class DriverAutoAssigner {
         return optimizationLimitReached;
     }
 
+    public boolean bestScheduleProven() {
+        return searchStats != null && searchStats.provenOptimal() && !optimizationLimitReached;
+    }
+
     public MandatoryCoverageSummary coverageSummary() {
         return coverage == null ? MandatoryCoverageSummary.EMPTY : coverage.summary();
     }
 
     List<Driver> drivers() {
         return availableDrivers;
+    }
+
+    ManualDays manualDays() {
+        return manualDays;
+    }
+
+    Map<UUID, Vehicle> vehiclesById() {
+        return vehiclesById;
     }
 
     Map<UUID, DriverWorkload> workloads() {
@@ -304,8 +321,48 @@ public class DriverAutoAssigner {
         assignPending(tours, assignments);
         optimizeSchedule(tours, assignments);
         assignPending(tours, assignments);
+        for (int round = 0; round < MAX_SEARCH_ROUNDS && searchEnabled && searchBestSchedule(tours, assignments); round++) {
+            assignPending(tours, assignments);
+        }
         validateFinalAssignments(assignments);
         return changesOf(tours, assignments);
+    }
+
+    private boolean searchBestSchedule(Set<TourProcessingDraftAssignment> tours, Map<TourProcessingDraftAssignment, Driver> assignments) {
+        if (availableDrivers.isEmpty()) {
+            return false;
+        }
+        long remaining = SEARCH_TRANSACTION_LIMIT - searchTransactions;
+        if (remaining <= 0) {
+            optimizationLimitReached = true;
+            return false;
+        }
+        ScheduleOptimizer optimizer = new ScheduleOptimizer(this, tours, assignments, remaining);
+        optimizer.run();
+        searchTransactions += optimizer.stats().transactions();
+        Map<TourProcessingDraftAssignment, Driver> changes = optimizer.result();
+        searchStats = optimizer.stats();
+        optimizationLimitReached |= searchStats.limitReached();
+        changes.keySet().forEach(tour -> {
+            Driver previous = assignments.get(tour);
+            if (previous != null) {
+                unassign(tour, previous, assignments);
+            }
+        });
+        changes.forEach((tour, driver) -> {
+            if (driver != null) {
+                assignTour(tour, driver, assignments);
+            }
+        });
+        return !changes.isEmpty();
+    }
+
+    ScheduleOptimizer.Stats searchStats() {
+        return searchStats;
+    }
+
+    void disableSearch() {
+        searchEnabled = false;
     }
 
     public Map<TourProcessingDraftAssignment, Driver> assignUlloaOnly(List<TourProcessingDraftAssignment> pendingTours) {
@@ -753,7 +810,7 @@ public class DriverAutoAssigner {
         return true;
     }
 
-    private int compareQuality(ScheduleQuality after, ScheduleQuality before) {
+    int compareQuality(ScheduleQuality after, ScheduleQuality before) {
         int comparison = compareHours(after.surplusDeficit(), before.surplusDeficit());
         if (comparison == 0) {
             comparison = Integer.compare(after.stackedDays(), before.stackedDays());
@@ -770,7 +827,7 @@ public class DriverAutoAssigner {
         return comparison;
     }
 
-    private ScheduleQuality quality(Map<UUID, DriverWorkload> driverWorkloads) {
+    ScheduleQuality quality(Map<UUID, DriverWorkload> driverWorkloads) {
         double deficit = 0;
         double squaredOvertime = 0;
         double squaredHours = 0;
@@ -819,7 +876,7 @@ public class DriverAutoAssigner {
         return workload.totals(surplusCap, monthWeekends).surplusHours() >= Math.min(target, currentSurplus) - DriverHoursRules.HOURS_TOLERANCE;
     }
 
-    private boolean structurallyValid(Driver driver, DriverWorkload workload) {
+    boolean structurallyValid(Driver driver, DriverWorkload workload) {
         if (!availableDrivers.contains(driver)) {
             return workload.tours().isEmpty();
         }
@@ -969,8 +1026,8 @@ public class DriverAutoAssigner {
 
     private record SurplusOptions(Driver driver, double surplusHours, List<TourProcessingDraftAssignment> tours) {}
 
-    private record ScheduleQuality(double surplusDeficit, int stackedDays,
-                                   double squaredOvertime, double spacingPenalty, double squaredHours) {}
+    record ScheduleQuality(double surplusDeficit, int stackedDays,
+                           double squaredOvertime, double spacingPenalty, double squaredHours) {}
 
     private record Evaluation(Candidate candidate, DriverRejection rejection) {
 
