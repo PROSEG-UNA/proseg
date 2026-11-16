@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.charset.StandardCharsets;
@@ -29,8 +30,11 @@ public class TourExportController {
     private final TourControlExportService tourControlExportService;
 
     @GetMapping("/drafts/{draftId}")
-    public ResponseEntity<byte[]> exportDraft(@PathVariable UUID draftId) {
-        TourDraftExport export = tourDraftExportService.export(draftId);
+    public ResponseEntity<byte[]> exportDraft(
+            @PathVariable UUID draftId,
+            @RequestParam(defaultValue = "false") boolean highlightProblems
+    ) {
+        TourDraftExport export = tourDraftExportService.export(draftId, highlightProblems);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(ExportFormat.XLSX.getContentType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()

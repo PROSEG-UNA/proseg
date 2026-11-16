@@ -6,6 +6,7 @@ import com.proseg.msvc_document_processor.client.TransportClient;
 import com.proseg.msvc_document_processor.dto.request.TourDraftRequestDto;
 import com.proseg.msvc_document_processor.dto.response.FinalCommissionReportDto;
 import com.proseg.msvc_document_processor.dto.response.TourControlReportDto;
+import com.proseg.msvc_document_processor.dto.response.TourProblemDto;
 import com.proseg.msvc_document_processor.dto.response.OvertimeRequestReportDto;
 import com.proseg.msvc_document_processor.dto.response.SchemaDto;
 import com.proseg.msvc_document_processor.dto.response.TourDraftDto;
@@ -79,6 +80,11 @@ class OvertimeRequestExportServiceTest {
 
         @Override
         public ApiResponse<PageResponse<Map<String, Object>>> getTourProcessingDraftRows(UUID id, MultiValueMap<String, String> queryParams) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ApiResponse<Map<String, List<TourProblemDto>>> getTourProcessingDraftRowProblems(UUID id) {
             throw new UnsupportedOperationException();
         }
 
