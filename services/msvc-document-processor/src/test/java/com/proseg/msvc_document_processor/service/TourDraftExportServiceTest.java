@@ -10,10 +10,13 @@ import com.proseg.msvc_document_processor.dto.response.OvertimeRequestReportDto;
 import com.proseg.msvc_document_processor.dto.response.SchemaDto;
 import com.proseg.msvc_document_processor.dto.response.TourDraftDto;
 import com.proseg.msvc_document_processor.dto.response.TourDraftResultDto;
+import com.proseg.msvc_document_processor.dto.response.TourProblemDto;
 import com.proseg.msvc_document_processor.excel.TourSchemaFixture;
 import com.proseg.msvc_document_processor.excel.TourWorkbookGenerator;
 import com.proseg.msvc_document_processor.exception.DocumentProcessorException;
 import com.proseg.msvc_document_processor.export.TourDraftExport;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -34,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class TourDraftExportServiceTest {
 
     private static final UUID DRAFT_ID = UUID.randomUUID();
+    private static final UUID PROBLEM_TOUR_ID = UUID.randomUUID();
 
     private final FakeTransportClient transportClient = new FakeTransportClient();
     private final TourDraftExportService service = new TourDraftExportService(transportClient, new TourWorkbookGenerator());
@@ -72,6 +76,52 @@ class TourDraftExportServiceTest {
         assertThat(transportClient.rowQueries)
                 .extracting(query -> query.getFirst("approvalStatus"))
                 .containsExactly("APPROVED", "APPROVED");
+    }
+
+    @Test
+    void highlightsToursWithProblemsAndListsThemInTheLastColumn() throws IOException {
+        transportClient.draft = draft(2026, 5, "1-mayo.xls");
+        Map<String, Object> withProblem = row(3, "A", "2026-05-02");
+        withProblem.put("id", PROBLEM_TOUR_ID.toString());
+        Map<String, Object> withoutProblem = row(7, "B", "2026-05-02");
+        withoutProblem.put("id", UUID.randomUUID().toString());
+        transportClient.pages = List.of(page(true, withProblem, withoutProblem));
+        transportClient.problems = Map.of(PROBLEM_TOUR_ID.toString(), List.of(
+                new TourProblemDto("Sin chofer o sin vehículo", "La gira está aprobada pero ninguno de sus viajes tiene chofer y vehículo"),
+                new TourProblemDto("Viajes a medias", "Algunos viajes de la gira no tienen chofer o vehículo")));
+
+        TourDraftExport export = service.export(DRAFT_ID, true);
+
+        try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(export.content()))) {
+            Sheet sheet = workbook.getSheetAt(0);
+            int problemsColumn = TourSchemaFixture.REAL_FILE_HEADERS.size();
+            Row highlighted = sheet.getRow(2);
+            Row plain = sheet.getRow(3);
+
+            assertThat(sheet.getRow(1).getCell(problemsColumn).getStringCellValue()).isEqualTo("Problema presentado:");
+            assertThat(highlighted.getCell(problemsColumn).getStringCellValue()).isEqualTo(
+                    "Sin chofer o sin vehículo: La gira está aprobada pero ninguno de sus viajes tiene chofer y vehículo\n"
+                            + "Viajes a medias: Algunos viajes de la gira no tienen chofer o vehículo");
+            assertThat(highlighted.getCell(0).getCellStyle().getFillForegroundColor()).isEqualTo(IndexedColors.YELLOW.getIndex());
+            assertThat(highlighted.getCell(5).getCellStyle().getFillForegroundColor()).isEqualTo(IndexedColors.YELLOW.getIndex());
+            assertThat(highlighted.getCell(problemsColumn).getCellStyle().getFillForegroundColor()).isEqualTo(IndexedColors.YELLOW.getIndex());
+            assertThat(plain.getCell(problemsColumn)).isNull();
+            assertThat(plain.getCell(3).getCellStyle().getFillPattern()).isEqualTo(FillPatternType.NO_FILL);
+        }
+        assertThat(transportClient.problemRequests).isEqualTo(1);
+    }
+
+    @Test
+    void doesNotAskForProblemsUnlessHighlightingIsRequested() throws IOException {
+        transportClient.draft = draft(2026, 5, "1-mayo.xls");
+        transportClient.pages = List.of(page(true, row(3, "A", "2026-05-02")));
+
+        TourDraftExport export = service.export(DRAFT_ID);
+
+        try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(export.content()))) {
+            assertThat(workbook.getSheetAt(0).getRow(1).getLastCellNum()).isEqualTo((short) TourSchemaFixture.REAL_FILE_HEADERS.size());
+        }
+        assertThat(transportClient.problemRequests).isZero();
     }
 
     @Test
@@ -156,6 +206,14 @@ class TourDraftExportServiceTest {
         private TourDraftDto draft;
         private List<PageResponse<Map<String, Object>>> pages = List.of();
         private final List<MultiValueMap<String, String>> rowQueries = new ArrayList<>();
+        private Map<String, List<TourProblemDto>> problems = Map.of();
+        private int problemRequests;
+
+        @Override
+        public ApiResponse<Map<String, List<TourProblemDto>>> getTourProcessingDraftRowProblems(UUID id) {
+            problemRequests++;
+            return new ApiResponse<>("ok", problems, 200);
+        }
 
         @Override
         public ApiResponse<SchemaDto> getTourProcessingImportSchema() {

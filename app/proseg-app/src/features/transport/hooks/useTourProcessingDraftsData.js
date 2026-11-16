@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import {
+    fetchAutoAssignWizard,
     fetchTourProcessingDraft,
     fetchTourProcessingDraftDriverSchedule,
     fetchTourProcessingDraftDriverSummaries,
@@ -110,6 +111,23 @@ export function useTourProcessingDraftRowProblems(draftId, { enabled = true } = 
     });
 
     return { problemsByRowId: data ?? EMPTY_PROBLEMS };
+}
+
+const INACTIVE_WIZARD = Object.freeze({ active: false, currentStep: null, dirty: false, steps: [], lastResult: null });
+
+export function useTourProcessingAutoAssignWizard(draftId, { enabled = true } = {}) {
+    const { data, isLoading, isFetching, error } = useQuery({
+        queryKey: queryKeys.transport.tourProcessingDraftAutoAssignWizard(draftId),
+        queryFn: () => fetchAutoAssignWizard(draftId),
+        enabled: Boolean(draftId) && enabled,
+    });
+
+    return {
+        wizard: data ?? INACTIVE_WIZARD,
+        loading: isLoading,
+        fetching: isFetching,
+        error: error ? getFriendlyApiErrorMessage(error, 'No se pudo cargar el asistente de autoasignación') : null,
+    };
 }
 
 export async function loadTourProcessingDraftRow(draftId, rowId) {

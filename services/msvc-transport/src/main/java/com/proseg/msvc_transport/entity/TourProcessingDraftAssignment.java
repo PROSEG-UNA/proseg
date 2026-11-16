@@ -87,6 +87,16 @@ public class TourProcessingDraftAssignment extends BaseEntity {
     @JoinColumn(name = "borrowed_vehicle_id")
     private BorrowedVehicle borrowedVehicle;
 
+    @Column(name = "driver_auto_assigned", nullable = false)
+    @ColumnDefault("false")
+    @Builder.Default
+    private boolean driverAutoAssigned = false;
+
+    @Column(name = "vehicle_auto_assigned", nullable = false)
+    @ColumnDefault("false")
+    @Builder.Default
+    private boolean vehicleAutoAssigned = false;
+
     public String getNumber() {
         return tour.getNumber();
     }

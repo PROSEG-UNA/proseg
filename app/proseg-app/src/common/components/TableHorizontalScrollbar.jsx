@@ -52,12 +52,9 @@ export default function TableHorizontalScrollbar({ containerRef, tableElRef }) {
         resizeObserver.observe(container);
         if (tableElRef?.current) resizeObserver.observe(tableElRef.current);
         if (trackRef.current) resizeObserver.observe(trackRef.current);
-        const mutationObserver = new MutationObserver(scheduleMeasure);
-        mutationObserver.observe(container, { childList: true, subtree: true });
         return () => {
             if (measureRafIdRef.current) cancelAnimationFrame(measureRafIdRef.current);
             resizeObserver.disconnect();
-            mutationObserver.disconnect();
         };
     }, [containerRef, tableElRef, measure, scheduleMeasure]);
 

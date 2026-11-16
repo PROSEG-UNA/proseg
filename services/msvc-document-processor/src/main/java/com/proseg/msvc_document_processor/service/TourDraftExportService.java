@@ -6,6 +6,7 @@ import com.proseg.msvc_document_processor.client.DownstreamErrorTranslator;
 import com.proseg.msvc_document_processor.client.TransportClient;
 import com.proseg.msvc_document_processor.dto.response.SchemaDto;
 import com.proseg.msvc_document_processor.dto.response.TourDraftDto;
+import com.proseg.msvc_document_processor.dto.response.TourProblemDto;
 import com.proseg.msvc_document_processor.exception.DocumentProcessorException;
 import com.proseg.msvc_document_processor.excel.TourSheetBlock;
 import com.proseg.msvc_document_processor.excel.TourWorkbookGenerator;
@@ -37,6 +38,7 @@ public class TourDraftExportService {
     private static final String ROW_SORT = "rowNumber,asc";
     private static final String APPROVAL_STATUS_ATTRIBUTE = "approvalStatus";
     private static final String APPROVED_STATUS = "APPROVED";
+    private static final String ID_ATTRIBUTE = "id";
     private static final String ROW_NUMBER_ATTRIBUTE = "rowNumber";
     private static final String DEPARTURE_DATE_ATTRIBUTE = "departureDate";
     private static final String FILE_SUFFIX = "_depurado.xlsx";
@@ -55,13 +57,32 @@ public class TourDraftExportService {
     private final TourWorkbookGenerator tourWorkbookGenerator;
 
     public TourDraftExport export(UUID draftId) {
-        TourDraftDto draft = read(() -> transportClient.getTourProcessingDraft(draftId));
-        SchemaDto schema = read(transportClient::getTourProcessingImportSchema);
-        List<TourSheetBlock> blocks = dailyBlocks(fetchRows(draftId));
-        return new TourDraftExport(fileName(draft), tourWorkbookGenerator.generate(schema, blocks));
+        return export(draftId, false);
     }
 
-    private List<Map<String, Object>> fetchRows(UUID draftId) {
+    public TourDraftExport export(UUID draftId, boolean highlightProblems) {
+        TourDraftDto draft = read(() -> transportClient.getTourProcessingDraft(draftId));
+        SchemaDto schema = read(transportClient::getTourProcessingImportSchema);
+        Map<String, List<TourProblemDto>> problems = highlightProblems
+                ? read(() -> transportClient.getTourProcessingDraftRowProblems(draftId))
+                : Map.of();
+        List<TourSheetBlock> blocks = dailyBlocks(fetchRows(draftId, problems));
+        return new TourDraftExport(fileName(draft), tourWorkbookGenerator.generate(schema, blocks, highlightProblems));
+    }
+
+    private Map<String, Object> withProblems(Map<String, Object> row, Map<String, List<TourProblemDto>> problems) {
+        List<TourProblemDto> found = problems.get(String.valueOf(row.get(ID_ATTRIBUTE)));
+        if (found == null || found.isEmpty()) {
+            return row;
+        }
+        Map<String, Object> highlighted = new LinkedHashMap<>(row);
+        highlighted.put(TourWorkbookGenerator.PROBLEMS_ATTRIBUTE, found.stream()
+                .map(problem -> problem.title() + ": " + problem.detail())
+                .collect(Collectors.joining("\n")));
+        return highlighted;
+    }
+
+    private List<Map<String, Object>> fetchRows(UUID draftId, Map<String, List<TourProblemDto>> problems) {
         List<Map<String, Object>> rows = new ArrayList<>();
         for (int page = 0; ; page++) {
             MultiValueMap<String, String> queryParams = new LinkedMultiValueMap<>();
@@ -76,7 +97,7 @@ public class TourDraftExportService {
                 if (assignmentsValue instanceof List<?> assignments && !assignments.isEmpty()) {
                     for (Object assignmentValue : assignments) {
                         if (!(assignmentValue instanceof Map<?, ?> assignment)) continue;
-                        Map<String, Object> exported = new LinkedHashMap<>(row);
+                        Map<String, Object> exported = new LinkedHashMap<>(withProblems(row, problems));
                         exported.put("driver", assignment.get("driver"));
                         Object vehicle = "BORROWED_VEHICLE".equals(assignment.get("resourceType"))
                                 ? assignment.get("borrowedVehiclePlate") : assignment.get("vehicle");
@@ -85,7 +106,7 @@ public class TourDraftExportService {
                         rows.add(exported);
                     }
                 } else {
-                    rows.add(row);
+                    rows.add(withProblems(row, problems));
                 }
             }
             if (response.isLast() || content.isEmpty()) {

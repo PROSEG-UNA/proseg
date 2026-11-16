@@ -4,6 +4,8 @@ import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftAssignmen
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowResponseDto;
 import com.proseg.msvc_transport.entity.*;
 import com.proseg.msvc_transport.repository.*;
+import com.proseg.msvc_transport.specification.DisplayLabels;
+import com.proseg.msvc_transport.specification.DisplaySearch;
 import com.proseg.msvc_transport.specification.GenericSpecifications;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -66,7 +68,12 @@ public class DraftTourStore {
         if (tourIds != null) {
             spec = spec.and((root, query, cb) -> root.get("id").in(tourIds));
         }
-        spec = spec.and(GenericSpecifications.withSearch(TourProcessingDraftRowIndex.class, search))
+        spec = spec.and(GenericSpecifications.withSearch(
+                        TourProcessingDraftRowIndex.class,
+                        search,
+                        DisplaySearch.labelMatching("approvalStatus", DisplayLabels.APPROVAL_STATUS, search),
+                        DisplaySearch.dateMatching("departureDate", search),
+                        DisplaySearch.dateMatching("returnDate", search)))
                 .and(GenericSpecifications.withColumnFilters(TourProcessingDraftRowIndex.class, filters));
         Sort sort = GenericSpecifications.sanitizeSort(TourProcessingDraftRowIndex.class, pageable.getSort());
         Page<TourProcessingDraftRowIndex> page = index.findAll(spec, PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),

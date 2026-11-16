@@ -25,6 +25,7 @@ public class TourProcessingDriverAutoAssignResponseDto {
     private Map<String, Double> surplusTargets;
     private double surplusTargetHours;
     private boolean optimizationLimitReached;
+    private boolean bestScheduleProven;
     private MandatoryCoverage mandatoryCoverage;
     private int priorityOneUnassigned;
 

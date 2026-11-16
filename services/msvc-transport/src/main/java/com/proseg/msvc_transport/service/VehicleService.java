@@ -7,6 +7,8 @@ import com.proseg.msvc_transport.dto.response.VehicleResponseDto;
 import com.proseg.msvc_transport.entity.Vehicle;
 import com.proseg.msvc_transport.exception.TransportException;
 import com.proseg.msvc_transport.repository.VehicleRepository;
+import com.proseg.msvc_transport.specification.DisplayLabels;
+import com.proseg.msvc_transport.specification.DisplaySearch;
 import com.proseg.msvc_transport.specification.GenericSpecifications;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,11 +21,14 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class VehicleService {
+
+    private static final Set<String> SORTABLE_NON_FILTERABLE_FIELDS = Set.of("available");
 
     private final VehicleRepository vehicleRepository;
     private final DraftCatalogService draftCatalogService;
@@ -52,10 +57,14 @@ public class VehicleService {
             columnFilters.putAll(filters);
         }
         String available = columnFilters.remove("available");
-        Specification<Vehicle> spec = Specification.where(GenericSpecifications.withSearch(Vehicle.class, search))
+        Specification<Vehicle> spec = Specification.where(GenericSpecifications.withSearch(
+                        Vehicle.class,
+                        search,
+                        DisplaySearch.labelMatching("type", DisplayLabels.VEHICLE_TYPE, search),
+                        DisplaySearch.labelMatching("available", DisplayLabels.VEHICLE_AVAILABILITY, search)))
                 .and(GenericSpecifications.withColumnFilters(Vehicle.class, columnFilters))
                 .and(availableFilter(available));
-        Pageable sanitized = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), GenericSpecifications.sanitizeSort(Vehicle.class, pageable.getSort()));
+        Pageable sanitized = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), GenericSpecifications.sanitizeSort(Vehicle.class, pageable.getSort(), SORTABLE_NON_FILTERABLE_FIELDS));
         return vehicleRepository.findAll(spec, sanitized).map(this::toResponse);
     }
 

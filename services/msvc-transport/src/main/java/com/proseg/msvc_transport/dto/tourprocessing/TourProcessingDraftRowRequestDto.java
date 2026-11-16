@@ -51,6 +51,8 @@ public class TourProcessingDraftRowRequestDto {
     @Valid
     private List<TourProcessingDraftAssignmentDto> assignments;
 
+    private Boolean repeatsTrips;
+
     @NotBlank(message = "El campo obligatorio 'Unidad Ejecutora' está vacío")
     @Size(max = 255, message = "La unidad ejecutora no puede superar los 255 caracteres")
     private String executingUnit;

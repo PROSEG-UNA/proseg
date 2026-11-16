@@ -40,7 +40,7 @@ final class MandatoryCoverage {
     }
 
     static boolean isMandatory(TourProcessingDraftAssignment tour) {
-        return DriverAutoAssigner.hasValidSchedule(tour) && !tour.getTour().isDistributed() && DriverAutoAssigner.assignmentLevel(tour) == 0;
+        return DriverAutoAssigner.hasValidSchedule(tour) && !TourTrips.isGroupedTour(tour.getTour()) && DriverAutoAssigner.assignmentLevel(tour) == 0;
     }
 
     static boolean requiresExtras(TourProcessingDraftAssignment tour) {

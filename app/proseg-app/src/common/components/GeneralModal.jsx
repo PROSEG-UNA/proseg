@@ -5,6 +5,8 @@ import {
     useTheme, useMediaQuery,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 
 export default function GeneralModal({
     open,
@@ -18,6 +20,8 @@ export default function GeneralModal({
     subtitle,
     loading = false,
     showCloseButton = true,
+    expanded = false,
+    onExpandedChange,
     footerLeft,
     primaryButton,
     secondaryButton,
@@ -28,7 +32,7 @@ export default function GeneralModal({
 }) {
     const titleId = useId();
     const theme = useTheme();
-    const isSmall = useMediaQuery(theme.breakpoints.down(fullScreenAt));
+    const isSmall = useMediaQuery(theme.breakpoints.down(fullScreenAt)) || expanded;
     const accentColor = theme.vars.palette.tones.rose.fg;
     const headerBg = theme.vars.palette.tones.rose.headerBg;
     const headerBgEnd = theme.vars.palette.tones.rose.headerBgEnd;
@@ -96,21 +100,39 @@ export default function GeneralModal({
                         )}
                     </Box>
                 </Box>
-                {showCloseButton && (
-                    <IconButton
-                        onClick={onClose}
-                        size="small"
-                        sx={{
-                            color: theme.vars.palette.tones.rose.headerTextSubtle,
-                            border: `1px solid ${theme.vars.palette.tones.rose.headerTextBorder}`,
-                            p: 0.625,
-                            flexShrink: 0,
-                            '&:hover': { bgcolor: theme.vars.palette.tones.rose.headerOverlayHover, color: '#fff' },
-                        }}
-                    >
-                        <CloseIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                )}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+                    {onExpandedChange && (
+                        <IconButton
+                            onClick={() => onExpandedChange(!expanded)}
+                            size="small"
+                            aria-label={expanded ? 'Salir de pantalla completa' : 'Pantalla completa'}
+                            sx={{
+                                color: theme.vars.palette.tones.rose.headerTextSubtle,
+                                border: `1px solid ${theme.vars.palette.tones.rose.headerTextBorder}`,
+                                p: 0.625,
+                                flexShrink: 0,
+                                '&:hover': { bgcolor: theme.vars.palette.tones.rose.headerOverlayHover, color: '#fff' },
+                            }}
+                        >
+                            {expanded ? <FullscreenExitIcon sx={{ fontSize: 16 }} /> : <FullscreenIcon sx={{ fontSize: 16 }} />}
+                        </IconButton>
+                    )}
+                    {showCloseButton && (
+                        <IconButton
+                            onClick={onClose}
+                            size="small"
+                            sx={{
+                                color: theme.vars.palette.tones.rose.headerTextSubtle,
+                                border: `1px solid ${theme.vars.palette.tones.rose.headerTextBorder}`,
+                                p: 0.625,
+                                flexShrink: 0,
+                                '&:hover': { bgcolor: theme.vars.palette.tones.rose.headerOverlayHover, color: '#fff' },
+                            }}
+                        >
+                            <CloseIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                    )}
+                </Box>
             </Box>
 
             {loading && (

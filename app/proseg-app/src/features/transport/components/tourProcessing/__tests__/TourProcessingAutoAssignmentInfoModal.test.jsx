@@ -28,7 +28,7 @@ describe('información de la autoasignación', () => {
         expect(within(screen.getByRole('tabpanel')).getByText('Autoasignación de choferes')).toBeInTheDocument();
     });
 
-    it('describe las siete etapas de choferes en el orden en que se ejecutan', () => {
+    it('describe las nueve etapas de choferes en el orden en que se ejecutan', () => {
         render(
             <AppTheme defaultColorScheme="light">
                 <TourProcessingAutoAssignmentInfoModal open onClose={vi.fn()} />
@@ -36,9 +36,9 @@ describe('información de la autoasignación', () => {
         );
 
         const panel = screen.getByRole('tabpanel');
-        expect(within(panel).getByText(/construye el horario de cada chofer en siete etapas/)).toBeInTheDocument();
+        expect(within(panel).getByText(/construye el horario de cada chofer en nueve etapas/)).toBeInTheDocument();
         const titles = within(panel).getAllByRole('heading', { level: 4 }).map((heading) => heading.textContent);
-        expect(titles.slice(0, 7)).toEqual([
+        expect(titles.slice(0, 9)).toEqual([
             'Preparar las giras',
             'Asignar al solicitante',
             'Asignar giras Periféricas',
@@ -46,6 +46,8 @@ describe('información de la autoasignación', () => {
             'Completar sobresueldo',
             'Asignar las giras pendientes',
             'Reacomodar y volver a intentar',
+            'Buscar el mejor reparto',
+            'Completar el sobresueldo de la prioridad 1 pendiente',
         ]);
     });
 
@@ -69,5 +71,18 @@ describe('información de la autoasignación', () => {
         expect(within(panel).getByText(/Nunca contrata transporte externo ni pide vehículos prestados/)).toBeInTheDocument();
         expect(within(panel).getByText(/Una gira de varios días se asigna completa a un solo chofer/)).toBeInTheDocument();
         expect(within(panel).queryByText(/conservar fines de semana libres/)).toBeNull();
+    });
+
+    it('explica que se prueban otras combinaciones y que solo se conserva un cambio válido que mejora', () => {
+        render(
+            <AppTheme defaultColorScheme="light">
+                <TourProcessingAutoAssignmentInfoModal open onClose={vi.fn()} />
+            </AppTheme>,
+        );
+
+        const panel = screen.getByRole('tabpanel');
+        expect(within(panel).getByText(/solo conserva un cambio si todos los choferes siguen cumpliendo las reglas y el resultado mejora/)).toBeInTheDocument();
+        expect(within(panel).getByText(/Más giras atendidas, empezando por las de prioridad 1 con menos de 5 pasajeros/)).toBeInTheDocument();
+        expect(within(panel).getByText(/el resultado es el mejor que existe con las giras que no se mueven/)).toBeInTheDocument();
     });
 });

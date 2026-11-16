@@ -29,8 +29,12 @@ export async function downloadTourProcessingTemplate() {
     return data;
 }
 
-export async function exportTourProcessingDraft(draftId) {
-    return downloadFile(`${TRANSPORT_DOCUMENT_ENDPOINTS.tourProcessingDraftExport}/${draftId}`, undefined, DRAFT_EXPORT_FALLBACK_FILE_NAME);
+export async function exportTourProcessingDraft(draftId, { highlightProblems = false } = {}) {
+    return downloadFile(
+        `${TRANSPORT_DOCUMENT_ENDPOINTS.tourProcessingDraftExport}/${draftId}`,
+        highlightProblems ? { highlightProblems: true } : undefined,
+        DRAFT_EXPORT_FALLBACK_FILE_NAME,
+    );
 }
 
 export async function exportTourProcessingDraftTourControl(draftId) {
@@ -182,6 +186,43 @@ export async function autoAssignTourProcessingDraftDrivers(draftId) {
 export async function autoAssignTourProcessingDraftVehicles(draftId) {
     const { data } = await axios.post(`${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/vehicles/auto-assign`, null, transportConfig);
     return data?.data ?? null;
+}
+
+function autoAssignWizardUrl(draftId, action = '') {
+    return `${TRANSPORT_ENDPOINTS.tourProcessingDrafts}/${draftId}/auto-assign-wizard${action}`;
+}
+
+export async function fetchAutoAssignWizard(draftId) {
+    const { data } = await axios.get(autoAssignWizardUrl(draftId), transportConfig);
+    return data?.data ?? null;
+}
+
+export async function startAutoAssignWizard(draftId) {
+    const { data } = await axios.post(autoAssignWizardUrl(draftId, '/start'), null, transportConfig);
+    return data?.data ?? null;
+}
+
+export async function recalculateAutoAssignWizard(draftId) {
+    const { data } = await axios.post(autoAssignWizardUrl(draftId, '/recalculate'), null, transportConfig);
+    return data?.data ?? null;
+}
+
+export async function setAutoAssignWizardStep(draftId, currentStep) {
+    const { data } = await axios.put(autoAssignWizardUrl(draftId, '/progress'), { currentStep }, transportConfig);
+    return data?.data ?? null;
+}
+
+export async function saveAutoAssignWizard(draftId, currentStep) {
+    const { data } = await axios.post(autoAssignWizardUrl(draftId, '/save'), { currentStep }, transportConfig);
+    return data?.data ?? null;
+}
+
+export async function finishAutoAssignWizard(draftId) {
+    await axios.post(autoAssignWizardUrl(draftId, '/finish'), null, transportConfig);
+}
+
+export async function discardAutoAssignWizard(draftId) {
+    await axios.post(autoAssignWizardUrl(draftId, '/discard'), null, transportConfig);
 }
 
 export async function clearTourProcessingDraftAssignments(draftId) {

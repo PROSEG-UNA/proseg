@@ -38,6 +38,19 @@ describe('TourProcessingDriverAssignmentReport', () => {
         expect(screen.getByText('Ana tiene un traslape con la gira 02787.')).toBeTruthy();
     });
 
+    it('avisa cuando se revisaron todas las combinaciones y no existe una distribución mejor', () => {
+        renderReport({ result: { ...fullResult, optimizationLimitReached: false, bestScheduleProven: true } });
+
+        expect(screen.getByText(/no existe una distribución mejor que esta/)).toBeTruthy();
+        expect(screen.queryByText(/Se alcanzó el límite de búsqueda/)).toBeNull();
+    });
+
+    it('no afirma que sea la mejor distribución si no se revisaron todas las combinaciones', () => {
+        renderReport({ result: fullResult });
+
+        expect(screen.queryByText(/no existe una distribución mejor que esta/)).toBeNull();
+    });
+
     it('cambia entre pendientes, conservadas que requieren revisión y déficit de sobresueldo', () => {
         renderReport({ result: fullResult });
 

@@ -1116,6 +1116,68 @@ class TourProcessingDraftServiceTest {
         assertThat(repeating.getAssignments()).extracting(TourProcessingDraftAssignment::getDriver).containsOnly("Daniel Zuniga");
         assertThat(distinct.getAssignments()).extracting(TourProcessingDraftAssignment::getDriver).containsExactly("Daniel Zuniga", null);
         assertThat(unlisted.getAssignments()).extracting(TourProcessingDraftAssignment::getDriver).containsOnly("Daniel Zuniga");
+        assertThat(repeating.isRepeatsTrips()).isTrue();
+        assertThat(distinct.isRepeatsTrips()).isFalse();
+        assertThat(unlisted.isRepeatsTrips()).isTrue();
+    }
+
+    @Test
+    void marksAsRepeatingTripsTheToursOfARepeatingDestinationEvenWhenNoDriverIsAssignedYet() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        TourProcessingDraftTour heredia = entity(draft, 1, "02787", "Heredia");
+        heredia.setPassengers(47);
+        heredia.primaryAssignment().setDriver(null);
+        heredia.primaryAssignment().setVehicle(null);
+        TourProcessingDraftTour cartago = entity(draft, 2, "02788", "Cartago");
+        cartago.setPassengers(47);
+        cartago.primaryAssignment().setDriver(null);
+        cartago.primaryAssignment().setVehicle(null);
+        stubDraft(draft, heredia, cartago);
+        when(vehicleRepository.findAll()).thenReturn(List.of(
+                Vehicle.builder().id(UUID.randomUUID()).plate("301-295").type(VehicleType.SEDAN).capacity(30).build()
+        ));
+        configureSplit(
+                TourSplitMode.DISTINCT_VEHICLES,
+                splitKeyword("Heredia", TourSplitMode.SAME_DRIVER_AND_VEHICLE)
+        );
+
+        service.splitOversizedRows(draft.getId());
+
+        assertThat(heredia.getAssignments()).extracting(TourProcessingDraftAssignment::getPassengers).containsExactly(24, 23);
+        assertThat(heredia.isRepeatsTrips()).isTrue();
+        assertThat(cartago.getAssignments()).extracting(TourProcessingDraftAssignment::getPassengers).containsExactly(24, 23);
+        assertThat(cartago.isRepeatsTrips()).isFalse();
+    }
+
+    @Test
+    void savesTheRepeatingTripsMarkSentByTheEditorAndKeepsItWhenTheRequestOmitsIt() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        TourProcessingDraftTour tour = entity(draft, 1, "02787", "Heredia");
+        tour.setPassengers(47);
+        tour.setRepeatsTrips(true);
+        tour.primaryAssignment().setPassengers(24);
+        tour.addAssignment(TourProcessingDraftAssignment.builder().passengers(23).build());
+        stubDraft(draft, tour);
+        when(vehicleRepository.findAll()).thenReturn(List.of(
+                Vehicle.builder().id(UUID.randomUUID()).plate("301-295").type(VehicleType.SEDAN).capacity(30).build()
+        ));
+        TourProcessingDraftRowRequestDto request = row(1, "02787", "Heredia");
+        request.setPassengers(47);
+        request.setAssignments(List.of(
+                TourProcessingDraftAssignmentDto.builder().resourceType(ResourceType.INTERNAL).passengers(24).build(),
+                TourProcessingDraftAssignmentDto.builder().resourceType(ResourceType.INTERNAL).passengers(23).build()
+        ));
+
+        service.updateRow(draft.getId(), tour.getId(), request);
+        assertThat(tour.isRepeatsTrips()).isTrue();
+
+        request.setRepeatsTrips(false);
+        service.updateRow(draft.getId(), tour.getId(), request);
+        assertThat(tour.isRepeatsTrips()).isFalse();
+
+        request.setRepeatsTrips(true);
+        service.updateRow(draft.getId(), tour.getId(), request);
+        assertThat(tour.isRepeatsTrips()).isTrue();
     }
 
     @Test
@@ -1266,6 +1328,101 @@ class TourProcessingDraftServiceTest {
         assertThat(result.getAssignedTours()).isEqualTo(1);
         assertThat(result.getUnassignedTours()).isZero();
         verify(draftHoursService).syncChanged(eq(draft), anyMap(), anyList());
+    }
+
+    @Test
+    void autoAssignMarksTheDriversItChoosesAsAutomaticAndKeepsCatalogDriversAsManual() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        draft.setYear(2026);
+        draft.setMonth(5);
+        draft.setBusinessDays(28);
+        TourProcessingDraftTour manual = shortRow(draft, 1, "100", "2026-05-06", "08:00", "12:00", "Daniel Zuniga");
+        TourProcessingDraftTour pending = shortRow(draft, 2, "200", "2026-05-07", "13:00", "15:00", null);
+        stubDraft(draft, manual, pending);
+        when(driverRepository.findAll()).thenReturn(List.of(
+                Driver.builder().id(UUID.randomUUID()).name("Daniel Zuniga").status("ACTIVE").build(),
+                Driver.builder().id(UUID.randomUUID()).name("Laura Mora").status("ACTIVE").build()
+        ));
+
+        service.autoAssignDrivers(draft.getId());
+
+        assertThat(pending.primaryAssignment().getDriver()).isNotNull();
+        assertThat(pending.primaryAssignment().isDriverAutoAssigned()).isTrue();
+        assertThat(manual.primaryAssignment().isDriverAutoAssigned()).isFalse();
+    }
+
+    @Test
+    void autoAssignVehiclesMarksTheVehiclesItChoosesAsAutomatic() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        TourProcessingDraftTour pending = entity(draft, 1, "100", "Cartago");
+        pending.primaryAssignment().setVehicle(null);
+        TourProcessingDraftTour kept = entity(draft, 2, "200", "Heredia");
+        kept.primaryAssignment().setVehicle("301-295");
+        kept.setDepartureDate(LocalDate.of(2026, 6, 10));
+        kept.setReturnDate(LocalDate.of(2026, 6, 11));
+        stubDraft(draft, pending, kept);
+        when(vehicleRepository.findAll()).thenReturn(List.of(
+                Vehicle.builder().id(UUID.randomUUID()).plate("301-295").type(VehicleType.SEDAN).capacity(5).build(),
+                Vehicle.builder().id(UUID.randomUUID()).plate("600-600").type(VehicleType.SEDAN).capacity(5).build()
+        ));
+
+        service.autoAssignVehicles(draft.getId());
+
+        assertThat(pending.primaryAssignment().getVehicle()).isNotNull();
+        assertThat(pending.primaryAssignment().isVehicleAutoAssigned()).isTrue();
+        assertThat(kept.primaryAssignment().isVehicleAutoAssigned()).isFalse();
+    }
+
+    @Test
+    void clearAutoAssignmentsOnlyRemovesWhatTheAlgorithmAssigned() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        TourProcessingDraftTour automatic = entity(draft, 1, "100", "Cartago");
+        automatic.primaryAssignment().setDriverId(UUID.randomUUID());
+        automatic.primaryAssignment().setDriverAutoAssigned(true);
+        automatic.primaryAssignment().setVehicleId(UUID.randomUUID());
+        automatic.primaryAssignment().setVehicleAutoAssigned(true);
+        TourProcessingDraftTour mixed = entity(draft, 2, "200", "Heredia");
+        mixed.primaryAssignment().setDriverId(UUID.randomUUID());
+        mixed.primaryAssignment().setVehicleId(UUID.randomUUID());
+        mixed.primaryAssignment().setVehicleAutoAssigned(true);
+        stubDraft(draft, automatic, mixed);
+        when(driverRepository.findAll()).thenReturn(List.of(
+                Driver.builder().id(UUID.randomUUID()).name("Daniel Zuniga").status("ACTIVE").build()
+        ));
+
+        int cleared = service.clearAutoAssignments(draft.getId());
+
+        assertThat(cleared).isEqualTo(1);
+        assertThat(automatic.primaryAssignment().getDriver()).isNull();
+        assertThat(automatic.primaryAssignment().getDriverId()).isNull();
+        assertThat(automatic.primaryAssignment().getVehicle()).isNull();
+        assertThat(automatic.primaryAssignment().getVehicleId()).isNull();
+        assertThat(mixed.primaryAssignment().getDriver()).isEqualTo("Daniel Zuniga");
+        assertThat(mixed.primaryAssignment().getDriverId()).isNotNull();
+        assertThat(mixed.primaryAssignment().getVehicle()).isNull();
+        assertThat(mixed.primaryAssignment().isVehicleAutoAssigned()).isFalse();
+        verify(draftHoursService).syncChanged(eq(draft), anyMap(), anyList());
+    }
+
+    @Test
+    void editingADriverByHandMarksItAsManualButKeepingItDoesNot() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        TourProcessingDraftTour existing = entity(draft, 8, "03625", "Tayutic");
+        existing.primaryAssignment().setDriverAutoAssigned(true);
+        existing.primaryAssignment().setVehicleAutoAssigned(true);
+        stubDraft(draft, existing);
+
+        service.updateRow(draft.getId(), existing.getId(), row(8, "03625", "Tayutic"));
+
+        assertThat(existing.primaryAssignment().isDriverAutoAssigned()).isTrue();
+        assertThat(existing.primaryAssignment().isVehicleAutoAssigned()).isTrue();
+
+        TourProcessingDraftRowRequestDto changed = row(8, "03625", "Tayutic");
+        changed.setDriver("Laura Mora");
+        service.updateRow(draft.getId(), existing.getId(), changed);
+
+        assertThat(existing.primaryAssignment().isDriverAutoAssigned()).isFalse();
+        assertThat(existing.primaryAssignment().isVehicleAutoAssigned()).isTrue();
     }
 
     @Test
@@ -1619,6 +1776,32 @@ class TourProcessingDraftServiceTest {
     }
 
     @Test
+    void vehicleAutoAssignForAssignedDriversSkipsToursWithoutDriverWhileThePlainOneFillsThem() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        TourProcessingDraftTour withDriver = shortRow(draft, 1, "200", "2026-05-04", "08:00", "10:00", "Daniel Zuniga");
+        withDriver.primaryAssignment().setVehicle(null);
+        TourProcessingDraftTour withoutDriver = shortRow(draft, 2, "100", "2026-05-05", "08:00", "10:00", null);
+        withoutDriver.primaryAssignment().setVehicle(null);
+        stubDraft(draft, withDriver, withoutDriver);
+        when(driverRepository.findAll()).thenReturn(List.of(Driver.builder().id(UUID.randomUUID()).name("Daniel Zuniga").build()));
+        when(vehicleRepository.findAll()).thenReturn(List.of(
+                Vehicle.builder().id(UUID.randomUUID()).plate("100-001").capacity(5).build(),
+                Vehicle.builder().id(UUID.randomUUID()).plate("200-002").capacity(5).build()
+        ));
+
+        TourProcessingVehicleAutoAssignResponseDto result = service.autoAssignVehiclesForAssignedDrivers(draft.getId());
+
+        assertThat(withDriver.primaryAssignment().getVehicle()).isNotNull();
+        assertThat(withoutDriver.primaryAssignment().getVehicle()).isNull();
+        assertThat(result.getAssignedTours()).isEqualTo(1);
+        assertThat(result.getUnassignedDetails()).isEmpty();
+
+        service.autoAssignVehicles(draft.getId());
+
+        assertThat(withoutDriver.primaryAssignment().getVehicle()).isNotNull();
+    }
+
+    @Test
     void completesDistributedTourWithExistingDriverBeforeTourWithoutDriver() {
         TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
         draft.setYear(2026);
@@ -1653,6 +1836,180 @@ class TourProcessingDraftServiceTest {
         assertThat(result.getAssignedTours()).isEqualTo(2);
         assertThat(result.getUnassignedDetails()).hasSize(2)
                 .allSatisfy(issue -> assertThat(issue.reasons()).anyMatch(reason -> reason.contains("combinación completa")));
+    }
+
+    private TourProcessingDraftTour driverWithoutVehicleRow(TourProcessingDraft draft, String destination, int passengers) {
+        TourProcessingDraftTour row = shortRow(draft, 1, "100", "2026-05-04", "08:00", "10:00", "Ana");
+        row.setDestination(destination);
+        row.setPriority(2);
+        row.setPassengers(passengers);
+        row.primaryAssignment().setPassengers(passengers);
+        row.primaryAssignment().setVehicle(null);
+        return row;
+    }
+
+    private Driver activeDriver(String name) {
+        return Driver.builder().id(UUID.randomUUID()).name(name).status("ACTIVE").build();
+    }
+
+    @Test
+    void resplitsARepeatTourByTheCapacityOfTheVehicleChosenForIt() {
+        TourProcessingDraft draft = draftWithPeriod();
+        TourProcessingDraftTour repeat = driverWithoutVehicleRow(draft, "Heredia", 100);
+        repeat.setRepeatsTrips(true);
+        repeat.primaryAssignment().setPassengers(34);
+        repeat.addAssignment(TourProcessingDraftAssignment.builder().id(UUID.randomUUID()).passengers(33).build());
+        repeat.addAssignment(TourProcessingDraftAssignment.builder().id(UUID.randomUUID()).passengers(33).build());
+        stubDraft(draft, repeat);
+        when(driverRepository.findAll()).thenReturn(List.of(activeDriver("Ana")));
+        when(vehicleRepository.findAll()).thenReturn(List.of(
+                Vehicle.builder().id(UUID.randomUUID()).plate("100-001").capacity(30).build()
+        ));
+
+        TourProcessingVehicleAutoAssignResponseDto result = service.autoAssignVehicles(draft.getId());
+
+        assertThat(repeat.isRepeatsTrips()).isTrue();
+        assertThat(repeat.getAssignments()).hasSize(4);
+        assertThat(repeat.getAssignments()).extracting(TourProcessingDraftAssignment::getPassengers).containsExactly(25, 25, 25, 25);
+        assertThat(repeat.getAssignments()).allSatisfy(part -> {
+            assertThat(part.getVehicle()).isEqualTo("100-001");
+            assertThat(part.getDriver()).isEqualTo("Ana");
+            assertThat(part.getDriverId()).isNotNull();
+        });
+        assertThat(result.getAssignedTours()).isEqualTo(1);
+        assertThat(result.getUnassignedTours()).isZero();
+    }
+
+    @Test
+    void doesNotResplitARepeatTourThatAlreadyHadAVehicle() {
+        TourProcessingDraft draft = draftWithPeriod();
+        TourProcessingDraftTour repeat = driverWithoutVehicleRow(draft, "Heredia", 100);
+        repeat.setRepeatsTrips(true);
+        repeat.primaryAssignment().setPassengers(50);
+        repeat.primaryAssignment().setVehicle("100-001");
+        repeat.addAssignment(TourProcessingDraftAssignment.builder().id(UUID.randomUUID()).passengers(50).vehicle("100-001").build());
+        stubDraft(draft, repeat);
+        when(driverRepository.findAll()).thenReturn(List.of(activeDriver("Ana")));
+        when(vehicleRepository.findAll()).thenReturn(List.of(
+                Vehicle.builder().id(UUID.randomUUID()).plate("100-001").capacity(30).build()
+        ));
+
+        service.autoAssignVehicles(draft.getId());
+
+        assertThat(repeat.getAssignments()).hasSize(2);
+        assertThat(repeat.getAssignments()).extracting(TourProcessingDraftAssignment::getPassengers).containsExactly(50, 50);
+        assertThat(repeat.getAssignments()).allSatisfy(part -> assertThat(part.getVehicle()).isEqualTo("100-001"));
+    }
+
+    @Test
+    void turnsADriverWithoutVehicleTourIntoRepeatedTripsWhenTheDestinationIsInTheBank() {
+        TourProcessingDraft draft = draftWithPeriod();
+        TourProcessingDraftTour deadEnd = driverWithoutVehicleRow(draft, "Heredia centro", 40);
+        stubDraft(draft, deadEnd);
+        configureSplit(TourSplitMode.DISTINCT_VEHICLES, splitKeyword("Heredia", TourSplitMode.SAME_DRIVER_AND_VEHICLE));
+        when(driverRepository.findAll()).thenReturn(List.of(activeDriver("Ana")));
+        when(vehicleRepository.findAll()).thenReturn(List.of(
+                Vehicle.builder().id(UUID.randomUUID()).plate("100-001").capacity(30).build()
+        ));
+
+        TourProcessingVehicleAutoAssignResponseDto result = service.autoAssignVehicles(draft.getId());
+
+        assertThat(deadEnd.isRepeatsTrips()).isTrue();
+        assertThat(deadEnd.getAssignments()).hasSize(2);
+        assertThat(deadEnd.getAssignments()).extracting(TourProcessingDraftAssignment::getPassengers).containsExactly(20, 20);
+        assertThat(deadEnd.getAssignments()).allSatisfy(part -> {
+            assertThat(part.getVehicle()).isEqualTo("100-001");
+            assertThat(part.getDriver()).isEqualTo("Ana");
+        });
+        assertThat(result.getAssignedTours()).isEqualTo(1);
+        assertThat(result.getUnassignedTours()).isZero();
+    }
+
+    @Test
+    void keepsADriverWithoutVehicleTourWhoseDestinationRepeatsButNoVehicleCanCarryTrips() {
+        TourProcessingDraft draft = draftWithPeriod();
+        TourProcessingDraftTour deadEnd = driverWithoutVehicleRow(draft, "Heredia centro", 40);
+        stubDraft(draft, deadEnd);
+        configureSplit(TourSplitMode.DISTINCT_VEHICLES, splitKeyword("Heredia", TourSplitMode.SAME_DRIVER_AND_VEHICLE));
+        when(driverRepository.findAll()).thenReturn(List.of(activeDriver("Ana")));
+        when(vehicleRepository.findAll()).thenReturn(List.of(
+                Vehicle.builder().id(UUID.randomUUID()).plate("100-001").capacity(7).build()
+        ));
+
+        TourProcessingVehicleAutoAssignResponseDto result = service.autoAssignVehicles(draft.getId());
+
+        assertThat(deadEnd.isRepeatsTrips()).isFalse();
+        assertThat(deadEnd.getAssignments()).hasSize(1);
+        assertThat(deadEnd.primaryAssignment().getPassengers()).isEqualTo(40);
+        assertThat(deadEnd.primaryAssignment().getVehicle()).isNull();
+        assertThat(result.getUnassignedTours()).isEqualTo(1);
+    }
+
+    @Test
+    void splitsADriverWithoutVehicleTourIntoTwoBusesWithDifferentDriversWhenTheDestinationIsNotInTheBank() {
+        TourProcessingDraft draft = draftWithPeriod();
+        TourProcessingDraftTour deadEnd = driverWithoutVehicleRow(draft, "Copey", 40);
+        stubDraft(draft, deadEnd);
+        configureSplit(TourSplitMode.DISTINCT_VEHICLES, splitKeyword("Heredia", TourSplitMode.SAME_DRIVER_AND_VEHICLE));
+        when(driverRepository.findAll()).thenReturn(List.of(activeDriver("Ana"), activeDriver("Beto")));
+        when(vehicleRepository.findAll()).thenReturn(List.of(
+                Vehicle.builder().id(UUID.randomUUID()).plate("100-001").capacity(30).build(),
+                Vehicle.builder().id(UUID.randomUUID()).plate("100-002").capacity(30).build()
+        ));
+
+        TourProcessingVehicleAutoAssignResponseDto result = service.autoAssignVehicles(draft.getId());
+
+        assertThat(deadEnd.isRepeatsTrips()).isFalse();
+        assertThat(deadEnd.getAssignments()).hasSize(2);
+        assertThat(deadEnd.getAssignments()).extracting(TourProcessingDraftAssignment::getPassengers).containsExactly(20, 20);
+        assertThat(deadEnd.getAssignments()).extracting(TourProcessingDraftAssignment::getDriver).containsExactlyInAnyOrder("Ana", "Beto");
+        assertThat(deadEnd.getAssignments()).extracting(TourProcessingDraftAssignment::getVehicle).containsExactlyInAnyOrder("100-001", "100-002");
+        assertThat(result.getAssignedTours()).isEqualTo(1);
+        assertThat(result.getUnassignedTours()).isZero();
+    }
+
+    @Test
+    void revertsTheTwoBusSplitWhenNoCompleteCombinationExists() {
+        TourProcessingDraft draft = draftWithPeriod();
+        TourProcessingDraftTour deadEnd = driverWithoutVehicleRow(draft, "Copey", 40);
+        stubDraft(draft, deadEnd);
+        configureSplit(TourSplitMode.DISTINCT_VEHICLES);
+        when(driverRepository.findAll()).thenReturn(List.of(activeDriver("Ana"), activeDriver("Beto")));
+        when(vehicleRepository.findAll()).thenReturn(List.of(
+                Vehicle.builder().id(UUID.randomUUID()).plate("100-001").capacity(30).build()
+        ));
+
+        TourProcessingVehicleAutoAssignResponseDto result = service.autoAssignVehicles(draft.getId());
+
+        assertThat(deadEnd.getAssignments()).hasSize(1);
+        assertThat(deadEnd.primaryAssignment().getPassengers()).isEqualTo(40);
+        assertThat(deadEnd.primaryAssignment().getDriver()).isEqualTo("Ana");
+        assertThat(deadEnd.primaryAssignment().getVehicle()).isNull();
+        assertThat(result.getAssignedTours()).isZero();
+        assertThat(result.getUnassignedTours()).isEqualTo(1);
+    }
+
+    @Test
+    void autoAssignsDriversToTheFirstTripOfARepeatTourAndCopiesThemToTheRest() {
+        TourProcessingDraft draft = draftWithPeriod();
+        TourProcessingDraftTour repeat = driverWithoutVehicleRow(draft, "Heredia", 90);
+        repeat.primaryAssignment().setDriver(null);
+        repeat.setRepeatsTrips(true);
+        repeat.primaryAssignment().setPassengers(30);
+        repeat.addAssignment(TourProcessingDraftAssignment.builder().id(UUID.randomUUID()).passengers(30).build());
+        repeat.addAssignment(TourProcessingDraftAssignment.builder().id(UUID.randomUUID()).passengers(30).build());
+        stubDraft(draft, repeat);
+        when(driverRepository.findAll()).thenReturn(List.of(activeDriver("Ana")));
+        when(vehicleRepository.findAll()).thenReturn(List.of());
+
+        TourProcessingDriverAutoAssignResponseDto result = service.autoAssignDrivers(draft.getId());
+
+        assertThat(repeat.getAssignments()).allSatisfy(part -> {
+            assertThat(part.getDriver()).isEqualTo("Ana");
+            assertThat(part.getDriverId()).isNotNull();
+        });
+        assertThat(result.getAssignedTours()).isEqualTo(1);
+        assertThat(result.getUnassignedTours()).isZero();
     }
 
     @Test

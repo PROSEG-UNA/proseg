@@ -409,6 +409,52 @@ describe('TourProcessingDraftRowModal con pasajeros distribuidos', () => {
     });
 });
 
+describe('TourProcessingDraftRowModal con viajes marcados para repetir chofer', () => {
+    const REPEATING_ROW = {
+        ...ROW,
+        driver: null,
+        vehicle: null,
+        repeatsTrips: true,
+        assignments: [
+            { rowId: 'a-1', driver: null, vehicle: null, resourceType: 'INTERNAL', passengers: 8 },
+            { rowId: 'a-2', driver: null, vehicle: null, resourceType: 'INTERNAL', passengers: 7 },
+        ],
+    };
+
+    it('abre en choferes que repiten viajes aunque todavía no tenga chofer y conserva la marca al guardar', async () => {
+        renderModal('edit', REPEATING_ROW);
+
+        expect(screen.getByRole('button', { name: 'Choferes que repiten viajes' })).toHaveAttribute('aria-pressed', 'true');
+        expect(screen.getByRole('button', { name: 'Choferes distintos' })).toHaveAttribute('aria-pressed', 'false');
+
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+        await waitFor(() => expect(updateTourProcessingDraftRow).toHaveBeenCalledTimes(1));
+        expect(updateTourProcessingDraftRow).toHaveBeenCalledWith('draft-1', 'row-1', expect.objectContaining({ repeatsTrips: true }));
+    });
+
+    it('guarda la marca apagada al cambiar a choferes distintos', async () => {
+        renderModal('edit', REPEATING_ROW);
+
+        await userEvent.click(screen.getByRole('button', { name: 'Choferes distintos' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+        await waitFor(() => expect(updateTourProcessingDraftRow).toHaveBeenCalledTimes(1));
+        expect(updateTourProcessingDraftRow).toHaveBeenCalledWith('draft-1', 'row-1', expect.objectContaining({ repeatsTrips: false }));
+    });
+
+    it('una gira dividida sin marca abre en choferes distintos y guarda la marca apagada', async () => {
+        renderModal('edit', { ...REPEATING_ROW, repeatsTrips: false });
+
+        expect(screen.getByRole('button', { name: 'Choferes distintos' })).toHaveAttribute('aria-pressed', 'true');
+
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+        await waitFor(() => expect(updateTourProcessingDraftRow).toHaveBeenCalledTimes(1));
+        expect(updateTourProcessingDraftRow).toHaveBeenCalledWith('draft-1', 'row-1', expect.objectContaining({ repeatsTrips: false }));
+    });
+});
+
 describe('TourProcessingDraftRowModal cuando la gira rompe una regla', () => {
     it('muestra el motivo y guarda solo si se confirma', async () => {
         previewTourProcessingDraftRowWarnings.mockResolvedValue([

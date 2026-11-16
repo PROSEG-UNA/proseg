@@ -387,6 +387,7 @@ function toFormValues(row) {
             borrowedVehiclePlate: assignment.borrowedVehiclePlate ?? '',
             passengers: String(assignment.passengers ?? ''),
         })) ?? null,
+        repeatsTrips: Boolean(row.repeatsTrips),
         executingUnit: row.executingUnit ?? '',
         responsible: row.responsible ?? '',
         destination: row.destination ?? '',
@@ -494,6 +495,7 @@ function toPayload(values, rowNumber, wasDistributed) {
             borrowedVehicleId: assignment.resourceType === 'BORROWED_VEHICLE' ? (assignment.borrowedVehicleId || null) : null,
             passengers: Number(assignment.passengers),
         })) ?? null,
+        repeatsTrips: Boolean(values.assignments && values.repeatsTrips),
         executingUnit: values.executingUnit.trim(),
         responsible: values.responsible.trim(),
         destination: values.destination.trim(),
@@ -628,6 +630,7 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
             }));
             return {
                 ...current,
+                repeatsTrips: mode !== TRIP_MODES.DISTINCT,
                 assignments: mode === TRIP_MODES.DISTINCT ? distinctAssignments : buildTrips({
                     mode, passengers, tripCount: suggestedCount, driverCount: 1, assignments: distinctAssignments, capacityOf: capacityOfResource,
                 }),
@@ -820,7 +823,8 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
                 </Box>}
                 {values.assignments && (
                     <TourProcessingDraftDistributionEditor
-                        initialMode={splitMode}
+                        initialMode={splitMode ?? (values.repeatsTrips ? TRIP_MODES.SHARED : null)}
+                        onModeChange={(repeatsTrips) => handleChange('repeatsTrips', repeatsTrips)}
                         assignments={values.assignments}
                         totalPassengers={values.passengers}
                         onChange={(assignments) => handleChange('assignments', assignments)}

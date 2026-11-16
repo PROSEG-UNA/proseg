@@ -3,9 +3,12 @@ package com.proseg.msvc_document_processor.excel;
 import com.proseg.msvc_document_processor.dto.response.ColumnSchemaDto;
 import com.proseg.msvc_document_processor.dto.response.SchemaDto;
 import com.proseg.msvc_document_processor.exception.DocumentProcessorException;
+import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -43,24 +46,31 @@ public class TourWorkbookGenerator {
     private static final int DEFAULT_COLUMN_WIDTH = 5302;
     private static final int LAST_COLUMN_WIDTH = 7862;
     private static final double SECONDS_PER_DAY = 86_400d;
+    private static final String PROBLEMS_HEADER = "Problema presentado:";
+    private static final int PROBLEM_CHARACTERS_PER_LINE = 32;
+    public static final String PROBLEMS_ATTRIBUTE = "problems";
 
     public byte[] generateTemplate(SchemaDto schema) {
         try {
-            return write(schema, List.of(new TourSheetBlock(TITLE_PLACEHOLDER, List.of())));
+            return write(schema, List.of(new TourSheetBlock(TITLE_PLACEHOLDER, List.of())), false);
         } catch (IOException e) {
             throw DocumentProcessorException.templateGenerationFailed();
         }
     }
 
     public byte[] generate(SchemaDto schema, List<TourSheetBlock> blocks) {
+        return generate(schema, blocks, false);
+    }
+
+    public byte[] generate(SchemaDto schema, List<TourSheetBlock> blocks, boolean withProblems) {
         try {
-            return write(schema, blocks);
+            return write(schema, blocks, withProblems);
         } catch (IOException e) {
             throw DocumentProcessorException.exportGenerationFailed();
         }
     }
 
-    private byte[] write(SchemaDto schema, List<TourSheetBlock> blocks) throws IOException {
+    private byte[] write(SchemaDto schema, List<TourSheetBlock> blocks, boolean withProblems) throws IOException {
         List<ColumnSchemaDto> columns = schema != null && schema.getColumns() != null ? schema.getColumns() : List.of();
         int leading = LEADING_HEADERS.size();
         int columnCount = leading + columns.size();
@@ -72,15 +82,25 @@ public class TourWorkbookGenerator {
             font.setFontName(FONT_NAME);
             font.setFontHeightInPoints(FONT_SIZE);
             Map<String, CellStyle> styles = new HashMap<>();
-            CellStyle baseStyle = styleFor(workbook, font, styles, GENERAL_FORMAT);
+            CellStyle baseStyle = styleFor(workbook, font, styles, GENERAL_FORMAT, false);
+            CellStyle highlightedBaseStyle = styleFor(workbook, font, styles, GENERAL_FORMAT, true);
             List<CellStyle> dataStyles = columns.stream()
                     .map(column -> styleFor(workbook, font, styles,
-                            DATA_FORMATS.getOrDefault(column.getType(), GENERAL_FORMAT)))
+                            DATA_FORMATS.getOrDefault(column.getType(), GENERAL_FORMAT), false))
                     .toList();
+            List<CellStyle> highlightedDataStyles = columns.stream()
+                    .map(column -> styleFor(workbook, font, styles,
+                            DATA_FORMATS.getOrDefault(column.getType(), GENERAL_FORMAT), true))
+                    .toList();
+            int problemsIndex = columnCount;
 
             for (int i = 0; i < columnCount; i++) {
                 sheet.setColumnWidth(i, widthOf(i, columnCount));
                 sheet.setDefaultColumnStyle(i, i < leading ? baseStyle : dataStyles.get(i - leading));
+            }
+            if (withProblems) {
+                sheet.setColumnWidth(problemsIndex, LAST_COLUMN_WIDTH);
+                sheet.setDefaultColumnStyle(problemsIndex, baseStyle);
             }
 
             int rowIndex = 0;
@@ -97,12 +117,28 @@ public class TourWorkbookGenerator {
                 for (int i = 0; i < columns.size(); i++) {
                     writeCell(headerRow, leading + i, headerLabel(columns.get(i)), baseStyle);
                 }
+                if (withProblems) {
+                    writeCell(headerRow, problemsIndex, PROBLEMS_HEADER, baseStyle);
+                }
 
                 for (Map<String, Object> values : block.rows()) {
                     Row dataRow = createRow(sheet, rowIndex++);
+                    Object problems = withProblems ? values.get(PROBLEMS_ATTRIBUTE) : null;
+                    boolean highlighted = problems != null;
+                    if (highlighted) {
+                        dataRow.setHeightInPoints(ROW_HEIGHT * linesOf(problems.toString()));
+                        for (int i = 0; i < leading; i++) {
+                            dataRow.createCell(i).setCellStyle(highlightedBaseStyle);
+                        }
+                        writeCell(dataRow, problemsIndex, problems.toString(), highlightedBaseStyle);
+                    }
                     for (int i = 0; i < columns.size(); i++) {
                         ColumnSchemaDto column = columns.get(i);
-                        writeValue(dataRow, leading + i, column.getType(), values.get(column.getAttribute()), dataStyles.get(i));
+                        CellStyle style = highlighted ? highlightedDataStyles.get(i) : dataStyles.get(i);
+                        if (highlighted) {
+                            dataRow.createCell(leading + i).setCellStyle(style);
+                        }
+                        writeValue(dataRow, leading + i, column.getType(), values.get(column.getAttribute()), style);
                     }
                 }
             }
@@ -118,14 +154,30 @@ public class TourWorkbookGenerator {
         return row;
     }
 
-    private CellStyle styleFor(XSSFWorkbook workbook, Font font, Map<String, CellStyle> styles, String format) {
-        return styles.computeIfAbsent(format, value -> {
+    private CellStyle styleFor(XSSFWorkbook workbook, Font font, Map<String, CellStyle> styles, String format, boolean highlighted) {
+        return styles.computeIfAbsent(format + highlighted, key -> {
             CellStyle style = workbook.createCellStyle();
             style.setFont(font);
             style.setWrapText(true);
-            style.setDataFormat(workbook.createDataFormat().getFormat(value));
+            style.setDataFormat(workbook.createDataFormat().getFormat(format));
+            if (highlighted) {
+                style.setFillForegroundColor(IndexedColors.YELLOW.getIndex());
+                style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+                style.setBorderTop(BorderStyle.THIN);
+                style.setBorderBottom(BorderStyle.THIN);
+                style.setBorderLeft(BorderStyle.THIN);
+                style.setBorderRight(BorderStyle.THIN);
+                style.setTopBorderColor(IndexedColors.GREY_25_PERCENT.getIndex());
+                style.setBottomBorderColor(IndexedColors.GREY_25_PERCENT.getIndex());
+                style.setLeftBorderColor(IndexedColors.GREY_25_PERCENT.getIndex());
+                style.setRightBorderColor(IndexedColors.GREY_25_PERCENT.getIndex());
+            }
             return style;
         });
+    }
+
+    private int linesOf(String text) {
+        return Math.max(1, text.lines().mapToInt(line -> (int) Math.ceil(line.length() / (double) PROBLEM_CHARACTERS_PER_LINE)).sum());
     }
 
     private int widthOf(int index, int columnCount) {
