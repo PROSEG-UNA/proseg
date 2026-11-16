@@ -18,6 +18,8 @@ export function useTransportDriverMonthsData(year, month) {
 
     return {
         enabled,
+        year,
+        month,
         byDriverId,
         hasAnyRecord,
         loading: enabled && isLoading,

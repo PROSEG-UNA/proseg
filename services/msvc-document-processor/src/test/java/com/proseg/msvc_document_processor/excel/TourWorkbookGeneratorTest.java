@@ -4,11 +4,14 @@ import com.proseg.msvc_document_processor.dto.response.RowIssueDto;
 import com.proseg.msvc_document_processor.excel.block.DailyBlockSheetParser;
 import com.proseg.msvc_document_processor.excel.reader.TabularFile;
 import com.proseg.msvc_document_processor.excel.reader.TabularFileReader;
+import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.DateUtil;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -147,6 +150,29 @@ class TourWorkbookGeneratorTest {
         assertThat(result.getRows().get(0).get("returnTime")).isEqualTo(LocalTime.of(22, 15));
         assertThat(result.getRows().get(2)).doesNotContainKey("vehicle");
         assertThat(result.getRows().get(2).get("returnTime")).isEqualTo(LocalTime.of(17, 45));
+    }
+
+    @Test
+    void highlightedRowsKeepCellBordersIncludingEmptyCells() throws IOException {
+        Map<String, Object> highlightedRow = draftRow(1, null, "01900", "301-627", 22,
+                "07:30:00", "22:15:00", "2026-05-06", "2026-05-06", null);
+        highlightedRow.put(TourWorkbookGenerator.PROBLEMS_ATTRIBUTE, "Falta chofer");
+        List<TourSheetBlock> blocks = List.of(new TourSheetBlock("Miercoles 6 de Mayo de 2026", List.of(highlightedRow)));
+
+        try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(generator.generate(TourSchemaFixture.schema(), blocks, true)))) {
+            Row row = workbook.getSheetAt(0).getRow(2);
+            int problemsIndex = TourSchemaFixture.REAL_FILE_HEADERS.size();
+
+            for (int index = 0; index <= problemsIndex; index++) {
+                CellStyle style = row.getCell(index).getCellStyle();
+                assertThat(style.getFillPattern()).isEqualTo(FillPatternType.SOLID_FOREGROUND);
+                assertThat(style.getFillForegroundColor()).isEqualTo(IndexedColors.YELLOW.getIndex());
+                assertThat(style.getBorderTop()).isEqualTo(BorderStyle.THIN);
+                assertThat(style.getBorderBottom()).isEqualTo(BorderStyle.THIN);
+                assertThat(style.getBorderLeft()).isEqualTo(BorderStyle.THIN);
+                assertThat(style.getBorderRight()).isEqualTo(BorderStyle.THIN);
+            }
+        }
     }
 
     private Map<String, Object> draftRow(

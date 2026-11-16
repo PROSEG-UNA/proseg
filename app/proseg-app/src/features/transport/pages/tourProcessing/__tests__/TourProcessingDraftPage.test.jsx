@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AppTheme from '../../../../../common/theme/AppTheme';
 import TourProcessingDraftPage from '../TourProcessingDraftPage.jsx';
-import { checkTourProcessingDraftFinalCommission, exportTourProcessingDraftFinalCommission, fetchTourProcessingDraftRow, fetchTourProcessingDraftRowProblems, fetchTourProcessingDraftRows, finishTourProcessingDraft, rejectTourProcessingDraftIncompleteTours, reopenTourProcessingDraft } from '../../../services/tourProcessing/tourProcessingService.js';
+import { checkTourProcessingDraftFinalCommission, exportTourProcessingDraft, fetchAutoAssignWizard, startAutoAssignWizard, exportTourProcessingDraftFinalCommission, fetchTourProcessingDraftRow, fetchTourProcessingDraftRowProblems, fetchTourProcessingDraftRows, finishTourProcessingDraft, rejectTourProcessingDraftIncompleteTours, reopenTourProcessingDraft } from '../../../services/tourProcessing/tourProcessingService.js';
 import { queryKeys } from '../../../../../common/query';
 
 const granted = vi.hoisted(() => ({ permissions: null }));
@@ -38,6 +38,9 @@ vi.mock('../../../components/tourProcessing/TourProcessingDraftRowModal.jsx', ()
     default: ({ open, mode, row }) => (open ? <div data-testid="row-modal">{`${mode}:${row?.id ?? ''}`}</div> : null),
 }));
 vi.mock('../../../components/tourProcessing/TourProcessingDriverAssignmentReport.jsx', () => ({ default: () => null }));
+vi.mock('../../../components/tourProcessing/TourProcessingAutoAssignWizard.jsx', () => ({
+    default: ({ wizard, onClose }) => <div data-testid="wizard">{`paso:${wizard.currentStep}`}<button type="button" onClick={onClose}>Cerrar asistente</button></div>,
+}));
 
 vi.mock('../../../hooks/useTourProcessingCatalogMatch.js', () => ({
     useTourProcessingCatalogMatch: () => ({
@@ -51,7 +54,10 @@ vi.mock('../../../services/tourProcessing/tourProcessingService.js', () => ({
     fetchTourProcessingDraftRows: vi.fn(),
     fetchTourProcessingDraftRow: vi.fn(),
     fetchTourProcessingDraftRowProblems: vi.fn(async () => ({})),
+    fetchAutoAssignWizard: vi.fn(),
+    startAutoAssignWizard: vi.fn(),
     checkTourProcessingDraftFinalCommission: vi.fn(),
+    exportTourProcessingDraft: vi.fn(),
     exportTourProcessingDraftFinalCommission: vi.fn(),
     rejectTourProcessingDraftIncompleteTours: vi.fn(),
     finishTourProcessingDraft: vi.fn(),
@@ -91,6 +97,7 @@ beforeEach(async () => {
     fetchTourProcessingDraftRows.mockResolvedValueOnce({ content: rows, totalElements: 2 });
     fetchTourProcessingDraftRows.mockImplementation(() => new Promise(() => {}));
     checkTourProcessingDraftFinalCommission.mockReset();
+    exportTourProcessingDraft.mockReset();
     exportTourProcessingDraftFinalCommission.mockReset();
     rejectTourProcessingDraftIncompleteTours.mockReset();
     fetchTourProcessingDraftRow.mockReset();
@@ -99,6 +106,9 @@ beforeEach(async () => {
     finishTourProcessingDraft.mockResolvedValue({ id: 'draft-1', status: 'CLOSED', year: 2026, month: 5 });
     reopenTourProcessingDraft.mockReset();
     reopenTourProcessingDraft.mockResolvedValue({ id: 'draft-1', status: 'DRAFT', year: 2026, month: 5 });
+    fetchAutoAssignWizard.mockReset();
+    fetchAutoAssignWizard.mockResolvedValue({ active: false, currentStep: null, dirty: false, steps: [], lastResult: null });
+    startAutoAssignWizard.mockReset();
 });
 
 describe('estado de depuración', () => {
@@ -219,6 +229,44 @@ describe('permisos del borrador', () => {
     });
 });
 
+describe('descarga del borrador', () => {
+    const openExportQuestion = async () => {
+        granted.permissions = ['EXPORTAR_GIRAS'];
+        exportTourProcessingDraft.mockResolvedValue({ blob: new Blob(['borrador']), fileName: 'borrador.xlsx' });
+        renderDraftPage();
+
+        await userEvent.click(await screen.findByRole('button', { name: 'Opciones' }));
+        await userEvent.click(screen.getByRole('menuitem', { name: 'Descargar' }));
+        await userEvent.click(await screen.findByRole('menuitem', { name: /Descargar 'Mayo 2026'/ }));
+        return screen.findByRole('dialog');
+    };
+
+    it('pregunta antes de descargar y resalta las giras con problemas si se acepta', async () => {
+        const dialog = await openExportQuestion();
+
+        expect(exportTourProcessingDraft).not.toHaveBeenCalled();
+        await userEvent.click(within(dialog).getByRole('button', { name: 'Sí, resaltar' }));
+
+        await waitFor(() => expect(exportTourProcessingDraft).toHaveBeenCalledWith('draft-1', { highlightProblems: true }));
+    });
+
+    it('descarga sin resaltar si se rechaza y no descarga si se cancela', async () => {
+        const dialog = await openExportQuestion();
+
+        await userEvent.click(within(dialog).getByRole('button', { name: 'No, descargar sin resaltar' }));
+        await waitFor(() => expect(exportTourProcessingDraft).toHaveBeenCalledWith('draft-1', { highlightProblems: false }));
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+
+        exportTourProcessingDraft.mockClear();
+        await userEvent.click(screen.getByRole('button', { name: 'Opciones' }));
+        await userEvent.click(screen.getByRole('menuitem', { name: 'Descargar' }));
+        await userEvent.click(await screen.findByRole('menuitem', { name: /Descargar 'Mayo 2026'/ }));
+        await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancelar' }));
+
+        expect(exportTourProcessingDraft).not.toHaveBeenCalled();
+    });
+});
+
 describe('columnas de la tabla', () => {
     it('muestra el ícono de problemas solo en las giras con problemas y las coincidencias junto a la observación', async () => {
         fetchTourProcessingDraftRowProblems.mockResolvedValueOnce({
@@ -325,5 +373,52 @@ describe('comisión final y errores', () => {
         await userEvent.click(screen.getByRole('combobox', { name: /Filtros al mostrar giras/ }));
         await userEvent.click(await screen.findByRole('option', { name: 'Más de un viaje y sin atender' }));
         await waitFor(() => expect(fetchTourProcessingDraftRows).toHaveBeenCalledWith('draft-1', expect.objectContaining({ rule: 'NEEDS_MULTIPLE_TRIPS' })));
+    });
+});
+
+describe('autoasignación paso a paso', () => {
+    const activeWizard = { active: true, currentStep: 'PERIPHERAL', dirty: false, steps: [{ code: 'PERIPHERAL' }], lastResult: null };
+
+    it('explica los pasos, calcula la autoasignación al confirmar y abre el asistente', async () => {
+        const started = { ...activeWizard, currentStep: 'MANDATORY' };
+        startAutoAssignWizard.mockImplementation(async () => {
+            fetchAutoAssignWizard.mockResolvedValue(started);
+            return started;
+        });
+        renderDraftPage();
+
+        await userEvent.click(await screen.findByRole('button', { name: 'Opciones' }));
+        await userEvent.click(screen.getByText('Autoasignar'));
+        await userEvent.click(await screen.findByText('Autoasignar choferes y vehículos'));
+
+        expect(await screen.findByText(/se te mostrará paso a paso/)).toBeInTheDocument();
+        await userEvent.click(screen.getByRole('button', { name: 'Sí, empezar' }));
+
+        await waitFor(() => expect(startAutoAssignWizard).toHaveBeenCalledWith('draft-1'));
+        expect(await screen.findByTestId('wizard')).toHaveTextContent('paso:MANDATORY');
+    });
+
+    it('avisa que hay una autoasignación guardada y permite retomarla', async () => {
+        fetchAutoAssignWizard.mockResolvedValue(activeWizard);
+        renderDraftPage();
+
+        await userEvent.click(await screen.findByRole('button', { name: 'Continuar autoasignación' }));
+
+        expect(await screen.findByTestId('wizard')).toHaveTextContent('paso:PERIPHERAL');
+        expect(startAutoAssignWizard).not.toHaveBeenCalled();
+        expect(screen.queryByRole('button', { name: 'Continuar autoasignación' })).not.toBeInTheDocument();
+    });
+
+    it('no pregunta ni recalcula cuando ya hay una autoasignación en curso y abre el asistente directo', async () => {
+        fetchAutoAssignWizard.mockResolvedValue(activeWizard);
+        renderDraftPage();
+        await screen.findByRole('button', { name: 'Continuar autoasignación' });
+
+        await userEvent.click(screen.getByRole('button', { name: 'Opciones' }));
+        await userEvent.click(screen.getByText('Autoasignar'));
+        await userEvent.click(await screen.findByText('Autoasignar choferes y vehículos'));
+
+        expect(await screen.findByTestId('wizard')).toBeInTheDocument();
+        expect(startAutoAssignWizard).not.toHaveBeenCalled();
     });
 });

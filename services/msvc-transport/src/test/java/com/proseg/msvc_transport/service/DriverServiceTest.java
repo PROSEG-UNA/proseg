@@ -1,6 +1,7 @@
 package com.proseg.msvc_transport.service;
 
 import com.proseg.msvc_transport.dto.request.DriverRequestDto;
+import com.proseg.msvc_transport.dto.response.DriverMonthResponseDto;
 import com.proseg.msvc_transport.dto.response.DriverResponseDto;
 import com.proseg.msvc_transport.entity.Driver;
 import com.proseg.msvc_transport.entity.DriverUnit;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalTime;
@@ -132,6 +134,75 @@ class DriverServiceTest {
                 .isInstanceOf(TransportException.class)
                 .hasMessage("La lista de choferes no es válida");
         verify(driverRepository, never()).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    void sortsByAMonthColumnAcrossAllTheDriversBeforePaginating() {
+        Driver ana = driverNamed("Ana");
+        Driver beto = driverNamed("Beto");
+        Driver carla = driverNamed("Carla");
+        Driver dario = driverNamed("Dario");
+        when(driverRepository.findAll(any(Specification.class))).thenReturn(List.of(ana, beto, carla, dario));
+        Map<UUID, DriverMonthResponseDto> months = Map.of(
+                ana.getId(), monthOf(ana, 2.0, 10.0),
+                beto.getId(), monthOf(beto, 10.0, 10.0),
+                carla.getId(), monthOf(carla, 5.0, 10.0),
+                dario.getId(), monthOf(dario, 10.0, 10.0)
+        );
+        Sort bySurplusDescending = Sort.by(Sort.Direction.DESC, "surplusHoursAccrued");
+
+        Page<DriverResponseDto> firstPage = service.findAll(null, Map.of(), PageRequest.of(0, 3, bySurplusDescending), months);
+        Page<DriverResponseDto> secondPage = service.findAll(null, Map.of(), PageRequest.of(1, 3, bySurplusDescending), months);
+
+        assertThat(firstPage.getContent()).extracting(DriverResponseDto::getName).containsExactly("Beto", "Dario", "Carla");
+        assertThat(secondPage.getContent()).extracting(DriverResponseDto::getName).containsExactly("Ana");
+        assertThat(firstPage.getTotalElements()).isEqualTo(4);
+        verify(driverRepository, never()).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    void sortsBySurplusExecutionRatioKeepingTheDriversWithoutACapLastInBothDirections() {
+        Driver ana = driverNamed("Ana");
+        Driver beto = driverNamed("Beto");
+        Driver carla = driverNamed("Carla");
+        when(driverRepository.findAll(any(Specification.class))).thenReturn(List.of(ana, beto, carla));
+        Map<UUID, DriverMonthResponseDto> months = Map.of(
+                ana.getId(), monthOf(ana, 4.0, 10.0),
+                beto.getId(), monthOf(beto, 3.0, 4.0),
+                carla.getId(), monthOf(carla, 3.0, 0.0)
+        );
+
+        Page<DriverResponseDto> ascending = service.findAll(null, Map.of(), PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "surplusExecutionRatio")), months);
+        Page<DriverResponseDto> descending = service.findAll(null, Map.of(), PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "surplusExecutionRatio")), months);
+
+        assertThat(ascending.getContent()).extracting(DriverResponseDto::getName).containsExactly("Ana", "Beto", "Carla");
+        assertThat(descending.getContent()).extracting(DriverResponseDto::getName).containsExactly("Beto", "Ana", "Carla");
+    }
+
+    @Test
+    void ignoresAMonthColumnSortWhenNoMonthDataWasRequested() {
+        when(driverRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
+
+        service.findAll(null, Map.of(), PageRequest.of(0, 10, Sort.by("surplusHoursAccrued")));
+
+        verify(driverRepository).findAll(any(Specification.class), any(Pageable.class));
+        verify(driverRepository, never()).findAll(any(Specification.class));
+    }
+
+    private static Driver driverNamed(String name) {
+        return Driver.builder().id(UUID.randomUUID()).name(name).build();
+    }
+
+    private static DriverMonthResponseDto monthOf(Driver driver, double surplusHours, double surplusCap) {
+        return DriverMonthResponseDto.builder()
+                .driverId(driver.getId())
+                .driverName(driver.getName())
+                .ordinaryHoursAccrued(0D)
+                .surplusHoursAccrued(surplusHours)
+                .overtimeHoursAccrued(0D)
+                .weekendsWorked(0)
+                .surplusCap(surplusCap)
+                .build();
     }
 
     @Test

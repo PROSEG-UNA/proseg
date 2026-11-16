@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.util.List;
@@ -88,6 +89,28 @@ class VehicleServiceTest {
 
         assertThat(VehicleService.availableFilter("false").toPredicate(root, null, criteriaBuilder)).isSameAs(predicate);
         assertThat(VehicleService.availableFilter(" ").toPredicate(root, null, criteriaBuilder)).isNull();
+    }
+
+    @Test
+    void sortsByTheAvailableFlagWhichIsNotAFilterableColumn() {
+        when(vehicleRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
+        org.mockito.ArgumentCaptor<Pageable> pageable = org.mockito.ArgumentCaptor.forClass(Pageable.class);
+
+        service.findAll(null, Map.of(), PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "available")));
+
+        verify(vehicleRepository).findAll(any(Specification.class), pageable.capture());
+        assertThat(pageable.getValue().getSort()).isEqualTo(Sort.by(Sort.Direction.DESC, "available"));
+    }
+
+    @Test
+    void dropsASortOnAFieldThatIsNeitherFilterableNorExplicitlySortable() {
+        when(vehicleRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(Page.empty());
+        org.mockito.ArgumentCaptor<Pageable> pageable = org.mockito.ArgumentCaptor.forClass(Pageable.class);
+
+        service.findAll(null, Map.of(), PageRequest.of(0, 10, Sort.by("isDeleted")));
+
+        verify(vehicleRepository).findAll(any(Specification.class), pageable.capture());
+        assertThat(pageable.getValue().getSort().isUnsorted()).isTrue();
     }
 
     @Test

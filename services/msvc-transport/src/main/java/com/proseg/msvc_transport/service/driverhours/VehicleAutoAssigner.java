@@ -15,6 +15,7 @@ import java.util.UUID;
 
 public class VehicleAutoAssigner {
 
+    public static final int MIN_REPEAT_CAPACITY = 13;
     private static final int MAX_REASSIGNMENT_ATTEMPTS = 10_000;
     private static final Comparator<Vehicle> VEHICLE_ORDER = Comparator
             .comparing(Vehicle::getCapacity, Comparator.nullsLast(Comparator.naturalOrder()))
@@ -37,8 +38,10 @@ public class VehicleAutoAssigner {
     public Map<TourProcessingDraftAssignment, Vehicle> assign(List<TourProcessingDraftAssignment> pendingTours) {
         Map<TourProcessingDraftAssignment, Vehicle> assignments = new LinkedHashMap<>();
         Set<String> visited = new LinkedHashSet<>();
-        for (TourProcessingDraftAssignment tour : pendingTours.stream().filter(part -> !part.getTour().isDistributed())
+        for (TourProcessingDraftAssignment tour : pendingTours.stream()
+                .filter(part -> !TourTrips.isGroupedTour(part.getTour()) && !TourTrips.isRepeatFollower(part))
                 .sorted(Comparator.comparing((TourProcessingDraftAssignment part) -> part.getDriverId() == null)
+                        .thenComparing(part -> TourTrips.isRepeatTour(part.getTour()))
                         .thenComparing(DriverAutoAssigner.ASSIGNMENT_ORDER)).toList()) {
             if (!visited.add(tour.getNumber().toLowerCase(Locale.ROOT) + ":" + tour.getPart())) continue;
             int[] attempts = {0};
@@ -109,12 +112,29 @@ public class VehicleAutoAssigner {
                 .sorted(Comparator.comparing((Vehicle vehicle) -> assignments.entrySet().stream()
                                 .anyMatch(entry -> entry.getValue().getId().equals(vehicle.getId())
                                         && DriverHoursRules.toursOverlap(entry.getKey(), tour)))
+                        .thenComparingInt(vehicle -> TourTrips.isRepeatTour(tour.getTour()) ? tripsWith(vehicle, tour) : 0)
                         .thenComparing(VEHICLE_ORDER))
                 .toList();
     }
 
+    public static int tripsWith(Vehicle vehicle, TourProcessingDraftAssignment tour) {
+        int capacity = vehicle.getCapacity() == null ? 0 : vehicle.getCapacity();
+        return capacity <= 0 ? Integer.MAX_VALUE : (totalPassengers(tour) + capacity - 1) / capacity;
+    }
+
+    private static int totalPassengers(TourProcessingDraftAssignment tour) {
+        Integer total = tour.getTour() == null ? null : tour.getTour().getPassengers();
+        return total == null ? tour.getPassengers() : total;
+    }
+
     private boolean hasRoomFor(Vehicle vehicle, TourProcessingDraftAssignment tour) {
-        return vehicle.getCapacity() != null && vehicle.getCapacity() >= tour.getPassengers();
+        if (vehicle.getCapacity() == null) {
+            return false;
+        }
+        if (tour.getTour() != null && TourTrips.isRepeatTour(tour.getTour())) {
+            return vehicle.getCapacity() >= MIN_REPEAT_CAPACITY || vehicle.getCapacity() >= totalPassengers(tour);
+        }
+        return vehicle.getCapacity() >= tour.getPassengers();
     }
 
     private VehicleWorkload workloadOf(Vehicle vehicle) {

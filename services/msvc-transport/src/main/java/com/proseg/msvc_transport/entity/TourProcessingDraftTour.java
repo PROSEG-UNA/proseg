@@ -146,6 +146,11 @@ public class TourProcessingDraftTour extends BaseEntity {
     @Column(nullable = false)
     private boolean conflicting;
 
+    @Column(name = "repeats_trips", nullable = false)
+    @ColumnDefault("false")
+    @Builder.Default
+    private boolean repeatsTrips = false;
+
     @OneToMany(mappedBy = "tour", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("part ASC")
     @Builder.Default

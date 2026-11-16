@@ -1,11 +1,10 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     Alert,
     Box,
     Button,
-    Chip,
     Container,
     IconButton,
     LinearProgress,
@@ -17,8 +16,6 @@ import {
     Tab,
     Tabs,
     TextField,
-    Tooltip,
-    Typography,
     useTheme,
 } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
@@ -42,14 +39,12 @@ import { PageHeader } from '../../../../common/components/index.js';
 import AccessDeniedState from '../../../../common/components/AccessDeniedState.jsx';
 import PrimaryButton from '../../../../common/components/PrimaryButton.jsx';
 import NestedMenuItem from '../../../../common/components/NestedMenuItem.jsx';
-import TableBase from '../../../../common/components/TablaBase.jsx';
-import TableSelectFilter from '../../../../common/components/TableSelectFilter.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { PERMISSIONS } from '../../../../common/constants/permissions';
 import { usePermissions } from '../../../../common/hooks/index.js';
 import { queryKeys } from '../../../../common/query';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
-import { downloadBlob, formatDate } from '../../transportUtils.js';
+import { downloadBlob } from '../../transportUtils.js';
 import {
     autoAssignTourProcessingDraftDrivers,
     autoAssignTourProcessingDraftVehicles,
@@ -63,41 +58,33 @@ import {
     rejectTourProcessingDraftIncompleteTours,
     reopenTourProcessingDraft,
     splitTourProcessingDraftOversizedRows,
+    startAutoAssignWizard,
 } from '../../services/tourProcessing/tourProcessingService';
 import { exportDriverOvertimeRequest } from '../../services/drivers/driversService';
-import { useTourProcessingCatalogMatch } from '../../hooks/useTourProcessingCatalogMatch.js';
 import {
     invalidateTourProcessingDraft,
     loadTourProcessingDraftRow,
+    useTourProcessingAutoAssignWizard,
     useTourProcessingDraft,
     useTourProcessingDraftRowProblems,
     useTourProcessingDraftRows,
 } from '../../hooks/useTourProcessingDraftsData.js';
 import { useServerTableState } from '../../hooks/useServerTableState.js';
-import { usePersistedExpansion } from '../../hooks/usePersistedExpansion.js';
-import CatalogValueCell from '../../components/tourProcessing/CatalogValueCell.jsx';
-import TourProcessingAssignmentsCell from '../../components/tourProcessing/TourProcessingAssignmentsCell.jsx';
+import DraftRowsTable from '../../components/tourProcessing/DraftRowsTable.jsx';
+import TourProcessingAutoAssignWizard from '../../components/tourProcessing/TourProcessingAutoAssignWizard.jsx';
+import { DRAFT_ROWS_FILTERABLE_COLUMNS, useDraftRowColumns } from '../../components/tourProcessing/useDraftRowColumns.jsx';
 import TourProcessingDraftRowModal from '../../components/tourProcessing/TourProcessingDraftRowModal.jsx';
-import TourObservationMatchIndicator from '../../components/tourProcessing/TourObservationMatchIndicator.jsx';
-import TourProblemsIndicator from '../../components/tourProcessing/TourProblemsIndicator.jsx';
 import TourProcessingDriverAssignmentReport from '../../components/tourProcessing/TourProcessingDriverAssignmentReport.jsx';
 import TourProcessingAutoAssignmentInfoModal from '../../components/tourProcessing/TourProcessingAutoAssignmentInfoModal.jsx';
 import TourProcessingFinalCommissionDialog from '../../components/tourProcessing/TourProcessingFinalCommissionDialog.jsx';
 import TourProcessingSplitModeDialog from '../../components/tourProcessing/TourProcessingSplitModeDialog.jsx';
 import { TOUR_RULE_FILTERS } from '../../components/tourProcessing/tourRuleFilters.js';
-import TourProcessingDraftDaysDetailPanel from '../../components/tourProcessing/TourProcessingDraftDaysDetailPanel.jsx';
 import TourProcessingDraftDriverScheduleView from '../../components/tourProcessing/TourProcessingDraftDriverScheduleView.jsx';
 import TourProcessingDraftTourControlView from '../../components/tourProcessing/TourProcessingDraftTourControlView.jsx';
 import {
-    APPROVAL_STATUS_FILTER_OPTIONS,
-    approvalStatusColor,
-    approvalStatusLabel,
     draftPeriodLabel,
     shortPeriodLabel,
 } from '../../components/tourProcessing/tourProcessingDraftLabels.js';
-import DuplicateChip from '../../components/tourProcessing/DuplicateChip.jsx';
-import { vehicleDistributionWarning } from '../../components/tourProcessing/vehicleDistributionWarning.js';
-import { checksDriverCatalog } from '../../components/tourProcessing/tourProcessingCatalogMatch.js';
 
 const HUB_PATH = '/transporte/depuracion';
 const alertActionButtonSx = (theme) => ({
@@ -152,91 +139,9 @@ function writeStoredRule(rule) {
         return;
     }
 }
-const FILTERABLE_COLUMNS = new Set([
-    'rowNumber', 'number', 'approvalStatus', 'driver', 'vehicle', 'passengers', 'executingUnit', 'responsible',
-    'destination', 'durationDays', 'priority', 'modality', 'observations',
-]);
-
 const AUTO_ASSIGN_DRIVERS_MESSAGE = 'Las giras con varios viajes se completan en conjunto, asignando choferes y vehículos compatibles. Si no se puede completar una gira, se conservan sus asignaciones existentes y no se agregan partes sueltas.\n\nSi una gira interna tiene un chofer que no existe en el catálogo del sistema (marcado con el ícono de advertencia), esa fila quedará sin chofer y la autoasignación intentará completarla.\n\nLas giras que ya tienen un chofer del catálogo se respetan y no se reasignan. Los préstamos de vehículo no se modifican: el chofer se deja como está. Un chofer de Servicios Generales puesto a mano en un préstamo no se considera ocupado en ese horario.';
-const AUTO_ASSIGN_DRIVERS_AND_VEHICLES_MESSAGE = 'Primero se autoasignan los choferes y después los vehículos.\n\nSi una gira interna tiene un chofer o un vehículo que no existe en el catálogo del sistema (marcado con el ícono de advertencia), esa fila quedará vacía y la autoasignación intentará completarla. El chofer de un préstamo de vehículo no se vacía ni se reasigna.\n\nLas giras que ya tienen chofer o vehículo del catálogo se respetan y no se reasignan.';
+const AUTO_ASSIGN_DRIVERS_AND_VEHICLES_MESSAGE = 'Se calculará la autoasignación completa de choferes y vehículos y se te mostrará paso a paso: primero las giras de prioridad 1 con menos de 5 pasajeros, luego las Periféricas, después las demás prioridades sin horas extra y al final las que usan fin de semana u horas extra.\n\nEn cada paso puedes revisar y editar los choferes y vehículos antes de aceptarlo. Si cambias algo a mano, al continuar se recalcula lo que se asignó automáticamente respetando tus cambios.\n\nSolo se consideran las giras aprobadas sin chofer o sin vehículo del catálogo. Las que ya tienen ambos se respetan. Podrás guardar el progreso y retomarlo después, o descartar todo y volver al estado inicial.';
 const AUTO_ASSIGN_VEHICLES_MESSAGE = 'Las giras que ya tienen chofer del catálogo reciben prioridad para asignarles vehículo. En giras con varios viajes también se buscan los choferes faltantes para completar la gira en conjunto. Las asignaciones existentes se conservan.\n\nSi hay vehículos asignados que no existen en el catálogo del sistema o que no son una placa (marcados con el ícono de advertencia), esas filas quedarán sin vehículo y la autoasignación intentará completarlas.\n\nLas giras que ya tienen un vehículo del catálogo se respetan y no se reasignan.';
-
-const NO_DUPLICATES_HEADER = (
-    <Box component="span" sx={{ display: 'flex', flexDirection: 'column' }}>
-        Repetición
-        <Typography component="span" sx={{ fontSize: 11.5, color: 'text.disabled' }}>
-            No hay giras duplicadas
-        </Typography>
-    </Box>
-);
-
-const DraftRowsTable = memo(function DraftRowsTable({
-    columns,
-    rows,
-    loading,
-    fetching,
-    error,
-    totalElements,
-    tableOptions,
-    canEdit,
-    hasDuplicates,
-    onOpenRow,
-}) {
-    const [duplicateColumnHidden, setDuplicateColumnHidden] = useState(false);
-    const { tableOptions: expansionOptions } = usePersistedExpansion('tour-processing-draft-rows-expand-all');
-
-    if (!hasDuplicates && duplicateColumnHidden) setDuplicateColumnHidden(false);
-
-    const tableColumns = useMemo(() => columns.map((column) => (
-        column.id === 'duplicate' && !hasDuplicates
-            ? { ...column, enableHiding: false, header: NO_DUPLICATES_HEADER }
-            : column
-    )), [columns, hasDuplicates]);
-
-    const columnVisibility = useMemo(() => ({
-        ...tableOptions.state.columnVisibility,
-        duplicate: hasDuplicates && !duplicateColumnHidden,
-    }), [tableOptions.state.columnVisibility, hasDuplicates, duplicateColumnHidden]);
-
-    const { onColumnVisibilityChange } = tableOptions;
-    const handleColumnVisibilityChange = useCallback((updater) => {
-        const nextVisibility = typeof updater === 'function' ? updater(columnVisibility) : updater;
-        const { duplicate, ...otherColumns } = nextVisibility;
-        if (hasDuplicates) setDuplicateColumnHidden(duplicate === false);
-        onColumnVisibilityChange(otherColumns);
-    }, [columnVisibility, hasDuplicates, onColumnVisibilityChange]);
-
-    const handleRowClick = useCallback(
-        (row) => onOpenRow(canEdit ? 'edit' : 'view', row.original),
-        [canEdit, onOpenRow],
-    );
-
-    const mergedTableOptions = useMemo(() => ({
-        ...tableOptions,
-        ...expansionOptions,
-        onColumnVisibilityChange: handleColumnVisibilityChange,
-        state: { ...tableOptions.state, ...expansionOptions.state, columnVisibility, density: 'compact' },
-        rowCount: totalElements,
-        muiPaginationProps: { rowsPerPageOptions: [10, 20, 50] },
-    }), [tableOptions, expansionOptions, handleColumnVisibilityChange, columnVisibility, totalElements]);
-
-    return (
-        <TableBase
-            columns={tableColumns}
-            data={rows}
-            loading={loading}
-            fetching={fetching}
-            error={error}
-            enableDensityToggle={false}
-            compactFullScreen
-            onRowClick={handleRowClick}
-            renderDetailPanel={({ row }) => row.original.days?.length
-                ? <TourProcessingDraftDaysDetailPanel days={row.original.days} assignments={row.original.assignments} />
-                : null}
-            tableOptions={mergedTableOptions}
-        />
-    );
-});
 
 function autoAssignDriversResultMessage(result) {
     const parts = [`Se asignó chofer a ${result?.assignedTours ?? 0} giras.`];
@@ -257,10 +162,6 @@ function rejectedIncompleteMessage(rejectedTours) {
     return rejectedTours > 0
         ? `Se pasaron ${rejectedTours} giras sin chofer o vehículo a estado No aprobada.`
         : 'No había giras sin chofer o vehículo.';
-}
-
-function autoAssignDriversAndVehiclesResultMessage({ drivers, vehicles }) {
-    return `${autoAssignDriversResultMessage(drivers)}\n${autoAssignVehiclesResultMessage(vehicles)}`;
 }
 
 function autoAssignVehiclesResultMessage(result) {
@@ -288,8 +189,11 @@ export default function TourProcessingDraftPage() {
     const [autoAssignDriversOpen, setAutoAssignDriversOpen] = useState(false);
     const [autoAssignVehiclesOpen, setAutoAssignVehiclesOpen] = useState(false);
     const [autoAssignBothOpen, setAutoAssignBothOpen] = useState(false);
+    const [wizardOpen, setWizardOpen] = useState(false);
+    const [wizardNoticeDismissed, setWizardNoticeDismissed] = useState(false);
     const [autoAssignmentInfoOpen, setAutoAssignmentInfoOpen] = useState(false);
     const [clearAssignmentsOpen, setClearAssignmentsOpen] = useState(false);
+    const [exportHighlightOpen, setExportHighlightOpen] = useState(false);
     const [rowModal, setRowModal] = useState({ open: false, mode: 'view', row: null, rowId: null });
     const [alert, setAlert] = useState(null);
     const [assignmentReport, setAssignmentReport] = useState(null);
@@ -333,14 +237,11 @@ export default function TourProcessingDraftPage() {
         PERMISSIONS.TRANSPORT.TOURS.EXPORT,
     ]);
 
-    const {
-        driver: { isMissing: isDriverMissing },
-        vehicle: { isMissing: isVehicleMissing, isUnavailable: isVehicleUnavailable },
-    } = useTourProcessingCatalogMatch();
     const { draft, loading: loadingDraft, error: draftError } = useTourProcessingDraft(draftId);
+    const { wizard } = useTourProcessingAutoAssignWizard(draftId, { enabled: draft?.status === 'DRAFT' && canEditTours });
     const { requestParams, tableOptions } = useServerTableState({
         initialSorting: INITIAL_SORTING,
-        filterableColumns: FILTERABLE_COLUMNS,
+        filterableColumns: DRAFT_ROWS_FILTERABLE_COLUMNS,
         initialPageSize: INITIAL_PAGE_SIZE,
         initialColumnVisibility: INITIAL_COLUMN_VISIBILITY,
         storageKey: TABLE_STORAGE_KEY,
@@ -438,22 +339,17 @@ export default function TourProcessingDraftPage() {
         },
     });
 
-    const autoAssignBothMutation = useMutation({
-        mutationFn: async () => {
-            const drivers = await autoAssignTourProcessingDraftDrivers(draftId);
-            const vehicles = await autoAssignTourProcessingDraftVehicles(draftId);
-            return { drivers, vehicles };
-        },
-        onSuccess: (result) => {
+    const startWizardMutation = useMutation({
+        mutationFn: () => startAutoAssignWizard(draftId),
+        onSuccess: (started) => {
             setAutoAssignBothOpen(false);
-            setAssignmentReport({ draftId, result: result.drivers, vehicleResult: result.vehicles });
-            setAssignmentReportOpen(true);
-            setAlert({ type: 'success', message: autoAssignDriversAndVehiclesResultMessage(result) });
+            queryClient.setQueryData(queryKeys.transport.tourProcessingDraftAutoAssignWizard(draftId), started);
+            setWizardOpen(true);
             void invalidateTourProcessingDraft(queryClient, draftId);
         },
         onError: (error) => {
             setAutoAssignBothOpen(false);
-            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudieron autoasignar los choferes y vehículos') });
+            setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo iniciar la autoasignación') });
             void invalidateTourProcessingDraft(queryClient, draftId);
         },
     });
@@ -472,7 +368,7 @@ export default function TourProcessingDraftPage() {
     });
 
     const exportMutation = useMutation({
-        mutationFn: () => exportTourProcessingDraft(draftId),
+        mutationFn: (highlightProblems) => exportTourProcessingDraft(draftId, { highlightProblems }),
         onSuccess: ({ blob, fileName }) => downloadBlob(blob, fileName),
         onError: (error) => {
             setAlert({ type: 'error', message: getFriendlyApiErrorMessage(error, 'No se pudo exportar el borrador') });
@@ -536,189 +432,20 @@ export default function TourProcessingDraftPage() {
         });
     }, []);
 
-    const columns = useMemo(() => [
-        { accessorKey: 'rowNumber', header: 'Fila', size: 90, grow: false, meta: { fullScreenSize: 70 } },
-        {
-            accessorKey: 'number',
-            header: 'Numero',
-            size: 150,
-            grow: false,
-            meta: { fullScreenSize: 90 },
-            Cell: ({ cell, row }) => (
-                <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, maxWidth: '100%' }}>
-                    <TourProblemsIndicator problems={problemsByRowId[row.original.id]} />
-                    {cell.getValue()}
-                </Box>
-            ),
-        },
-        {
-            id: 'duplicate',
-            header: 'Repetición',
-            size: 120,
-            grow: false,
-            meta: { fullScreenSize: 110 },
-            enableSorting: false,
-            enableColumnFilter: false,
-            accessorFn: (row) => row.duplicateRank,
-            Cell: ({ row }) => <DuplicateChip row={row.original} />,
-        },
-        {
-            accessorKey: 'approvalStatus',
-            header: 'Estado',
-            size: 120,
-            grow: false,
-            meta: { fullScreenSize: 100 },
-            filterVariant: 'select',
-            filterSelectOptions: APPROVAL_STATUS_FILTER_OPTIONS,
-            Filter: ({ column }) => (
-                <TableSelectFilter column={column} label="Estado" options={APPROVAL_STATUS_FILTER_OPTIONS} clearLabel="Todas" />
-            ),
-            Cell: ({ cell, table }) => {
-                const isFullScreen = table.getState().isFullScreen;
-                return (
-                    <Chip
-                        label={approvalStatusLabel(cell.getValue())}
-                        color={approvalStatusColor(cell.getValue())}
-                        size="small"
-                        variant="outlined"
-                        sx={{
-                            width: isFullScreen ? '100%' : 104,
-                            maxWidth: 104,
-                            justifyContent: 'center',
-                            ...(isFullScreen && { height: 20, fontSize: 'inherit' }),
-                        }}
-                    />
-                );
-            },
-        },
-        {
-            accessorKey: 'driver',
-            header: 'Chofer',
-            size: 210,
-            grow: false,
-            meta: { fullScreenSize: 170 },
-            Cell: ({ cell, row }) => {
-                if (row.original.assignments?.length > 1) {
-                    return <TourProcessingAssignmentsCell kind="driver" assignments={row.original.assignments} isMissing={isDriverMissing} />;
-                }
-                return <CatalogValueCell
-                    kind="driver"
-                    value={cell.getValue()}
-                    missing={checksDriverCatalog(row.original.resourceType) && isDriverMissing(cell.getValue())}
-                />;
-            },
-        },
-        {
-            accessorKey: 'vehicle',
-            header: 'Vehículo',
-            size: 220,
-            grow: false,
-            meta: { fullScreenSize: 100 },
-            Cell: ({ cell, row }) => {
-                const warning = vehicleDistributionWarning(row.original);
-                const ownVehicle = row.original.resourceType !== 'EXTERNAL' && row.original.resourceType !== 'BORROWED_VEHICLE';
-                if (row.original.assignments?.length > 1) {
-                    return (
-                        <TourProcessingAssignmentsCell
-                            kind="vehicle"
-                            assignments={row.original.assignments}
-                            isMissing={isVehicleMissing}
-                            isUnavailable={isVehicleUnavailable}
-                        />
-                    );
-                }
-                return (
-                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, maxWidth: '100%' }}>
-                        <CatalogValueCell
-                            kind="vehicle"
-                            value={row.original.resourceType === 'BORROWED_VEHICLE' ? row.original.borrowedVehiclePlate : cell.getValue()}
-                            missing={ownVehicle && isVehicleMissing(cell.getValue())}
-                        />
-                        {warning && (
-                            <Tooltip title={warning} placement="top">
-                                <WarningAmberOutlinedIcon
-                                    role="img"
-                                    aria-label={warning}
-                                    sx={{ fontSize: 18, color: 'warning.main', flexShrink: 0, cursor: 'default' }}
-                                />
-                            </Tooltip>
-                        )}
-                    </Box>
-                );
-            },
-        },
-        { accessorKey: 'passengers', header: 'Pasajeros', size: 120, grow: false, meta: { fullScreenSize: 100 } },
-        { accessorKey: 'executingUnit', header: 'Unidad ejecutora', size: 240, grow: false, meta: { fullScreenSize: 136, wrapInFullScreen: true } },
-        { accessorKey: 'responsible', header: 'Responsable', size: 190, grow: false, meta: { fullScreenSize: 116, wrapInFullScreen: true } },
-        { accessorKey: 'destination', header: 'Destinos', size: 180, grow: false, meta: { fullScreenSize: 100, wrapInFullScreen: true } },
-        { accessorKey: 'durationDays', header: 'Duración', size: 110, grow: false, meta: { fullScreenSize: 92 } },
-        { accessorKey: 'priority', header: 'Prioridad', size: 110, grow: false, meta: { fullScreenSize: 96 } },
-        { accessorKey: 'modality', header: 'Modalidad', size: 120, grow: false, meta: { fullScreenSize: 102 }, Cell: ({ cell }) => cell.getValue() ?? '—' },
-        {
-            accessorKey: 'departureDate',
-            header: 'Fecha salida',
-            size: 140,
-            grow: false,
-            meta: { fullScreenSize: 112 },
-            enableColumnFilter: false,
-            Cell: ({ cell }) => formatDate(cell.getValue()),
-        },
-        { accessorKey: 'departureTime', header: 'Hora salida', size: 120, grow: false, meta: { fullScreenSize: 106 }, enableColumnFilter: false },
-        {
-            accessorKey: 'returnDate',
-            header: 'Fecha regreso',
-            size: 140,
-            grow: false,
-            meta: { fullScreenSize: 122 },
-            enableColumnFilter: false,
-            Cell: ({ cell }) => formatDate(cell.getValue()),
-        },
-        { accessorKey: 'returnTime', header: 'Hora regreso', size: 130, grow: false, meta: { fullScreenSize: 114 }, enableColumnFilter: false },
-        {
-            accessorKey: 'observations',
-            header: 'Observaciones',
-            size: 320,
-            grow: false,
-            meta: { fullScreenSize: 170, wrapInFullScreen: true },
-            Cell: ({ cell, row, table }) => {
-                const value = cell.getValue();
-                if (!value) return '—';
-                const isFullScreen = table.getState().isFullScreen;
-                return (
-                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, maxWidth: '100%' }}>
-                        <TourObservationMatchIndicator
-                            draftId={draftId}
-                            row={row.original}
-                            canReview={draft?.status === 'DRAFT' && canEditTours}
-                            onReviewed={handleObservationReviewed}
-                        />
-                        <Tooltip title={value} placement="top-start">
-                            <Typography
-                                noWrap={!isFullScreen}
-                                sx={{
-                                    fontSize: 'inherit',
-                                    minWidth: 0,
-                                    maxWidth: isFullScreen ? '100%' : 300,
-                                    ...(isFullScreen && {
-                                        display: '-webkit-box',
-                                        WebkitLineClamp: 2,
-                                        WebkitBoxOrient: 'vertical',
-                                        overflow: 'hidden',
-                                    }),
-                                }}
-                            >
-                                {value}
-                            </Typography>
-                        </Tooltip>
-                    </Box>
-                );
-            },
-        },
-    ], [isDriverMissing, isVehicleMissing, isVehicleUnavailable, draftId, draft?.status, canEditTours, handleObservationReviewed, problemsByRowId]);
+    const columns = useDraftRowColumns({
+        draftId,
+        canReviewObservations: draft?.status === 'DRAFT' && canEditTours,
+        problemsByRowId,
+        onObservationReviewed: handleObservationReviewed,
+    });
 
     const openRowModal = useCallback((mode, row) => setRowModal({ open: true, mode, row, rowId: row?.id ?? null }), []);
     const openRowModalById = useCallback((mode, rowId) => setRowModal({ open: true, mode, row: null, rowId }), []);
     const pendingRowId = rowModal.open && !rowModal.row ? rowModal.rowId : null;
+
+    useEffect(() => {
+        if (!wizard.active) setWizardNoticeDismissed(false);
+    }, [wizard.active]);
 
     useEffect(() => {
         if (!pendingRowId) return undefined;
@@ -752,7 +479,7 @@ export default function TourProcessingDraftPage() {
     const exporting = exportMutation.isPending;
     const autoAssigningDrivers = autoAssignDriversMutation.isPending;
     const autoAssigningVehicles = autoAssignVehiclesMutation.isPending;
-    const autoAssigningBoth = autoAssignBothMutation.isPending;
+    const startingWizard = startWizardMutation.isPending;
     const clearingAssignments = clearAssignmentsMutation.isPending;
     const exportingTourControl = tourControlMutation.isPending;
     const exportingOvertimeRequest = overtimeRequestMutation.isPending;
@@ -760,7 +487,7 @@ export default function TourProcessingDraftPage() {
     const periodLabel = draft?.year && draft?.month ? shortPeriodLabel(draft.year, draft.month) : null;
     const exportLabel = draft?.year && draft?.month ? `Descargar '${draftPeriodLabel(draft)}'` : 'Descargar borrador';
     const hasAssignmentReport = assignmentReport?.draftId === draftId;
-    const busy = finishMutation.isPending || reopenMutation.isPending || autoAssigningDrivers || autoAssigningVehicles || autoAssigningBoth || clearingAssignments || deleteDuplicatesMutation.isPending || splitOversizedMutation.isPending;
+    const busy = finishMutation.isPending || reopenMutation.isPending || autoAssigningDrivers || autoAssigningVehicles || startingWizard || clearingAssignments || deleteDuplicatesMutation.isPending || splitOversizedMutation.isPending;
     const pageTitle = draft?.year && draft?.month
         ? `Depuración de giras ${draftPeriodLabel(draft).toLowerCase()}`
         : 'Depuración de giras';
@@ -799,7 +526,8 @@ export default function TourProcessingDraftPage() {
 
     const handleAutoAssignBoth = () => {
         closeOptions();
-        setAutoAssignBothOpen(true);
+        if (wizard.active) setWizardOpen(true);
+        else setAutoAssignBothOpen(true);
     };
 
     const handleAutoAssignmentInfo = () => {
@@ -814,7 +542,12 @@ export default function TourProcessingDraftPage() {
 
     const handleExport = () => {
         closeOptions();
-        if (!exportMutation.isPending) exportMutation.mutate();
+        setExportHighlightOpen(true);
+    };
+
+    const confirmExport = (highlightProblems) => {
+        setExportHighlightOpen(false);
+        if (!exportMutation.isPending) exportMutation.mutate(highlightProblems);
     };
 
     const handleExportTourControl = () => {
@@ -852,7 +585,7 @@ export default function TourProcessingDraftPage() {
     };
 
     const confirmAutoAssignBoth = () => {
-        if (!autoAssignBothMutation.isPending) autoAssignBothMutation.mutate();
+        if (!startWizardMutation.isPending) startWizardMutation.mutate();
     };
 
     const confirmClearAssignments = () => {
@@ -1002,7 +735,7 @@ export default function TourProcessingDraftPage() {
                     )}
                 />
 
-                {(loadingDraft || exporting || exportingTourControl || exportingOvertimeRequest || exportingFinalCommission || autoAssigningDrivers || autoAssigningVehicles || autoAssigningBoth || clearingAssignments) && <LinearProgress sx={{ mb: 2 }} />}
+                {(loadingDraft || exporting || exportingTourControl || exportingOvertimeRequest || exportingFinalCommission || autoAssigningDrivers || autoAssigningVehicles || startingWizard || clearingAssignments) && <LinearProgress sx={{ mb: 2 }} />}
 
                 {draftError && (
                     <Alert severity="error" variant="outlined" sx={{ mb: 2 }}>
@@ -1012,6 +745,37 @@ export default function TourProcessingDraftPage() {
 
                 {draft && (
                     <Stack spacing={1.5} sx={{ mb: 2 }}>
+                        {canEditRows && wizard.active && !wizardOpen && !wizardNoticeDismissed && (
+                            <Alert
+                                severity="info"
+                                variant="outlined"
+                                action={(
+                                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                                        <Button
+                                            variant="contained"
+                                            color="inherit"
+                                            size="small"
+                                            onClick={() => setWizardOpen(true)}
+                                            disabled={busy}
+                                            startIcon={<AutoFixHighOutlinedIcon />}
+                                            sx={alertActionButtonSx}
+                                        >
+                                            Continuar autoasignación
+                                        </Button>
+                                        <IconButton
+                                            color="inherit"
+                                            size="small"
+                                            aria-label="Cerrar advertencia"
+                                            onClick={() => setWizardNoticeDismissed(true)}
+                                        >
+                                            <CloseIcon fontSize="small" />
+                                        </IconButton>
+                                    </Stack>
+                                )}
+                            >
+                                Hay una autoasignación paso a paso en curso. Continúala para aceptar los pasos pendientes o descártala desde el asistente.
+                            </Alert>
+                        )}
                         {canEditRows && conflictingRows > 0 && (
                             <Alert severity="error" variant="outlined">
                                 Hay {conflictingRows} filas con un Numero repetido pero con datos distintos. No se puede registrar hasta resolverlas.
@@ -1121,6 +885,24 @@ export default function TourProcessingDraftPage() {
                 )}
             </Container>
 
+            {wizardOpen && wizard.active && (
+                <TourProcessingAutoAssignWizard
+                    draftId={draftId}
+                    wizard={wizard}
+                    subtitle={draft ? draftPeriodLabel(draft) : ''}
+                    canEdit={canEditRows}
+                    onClose={() => setWizardOpen(false)}
+                    onFinished={(lastResult) => {
+                        setAssignmentReport({ draftId, result: lastResult?.drivers ?? null, vehicleResult: lastResult?.vehicles ?? null });
+                        setAssignmentReportOpen(true);
+                        setAlert({ type: 'success', message: 'Autoasignación terminada. Las asignaciones quedaron guardadas en el borrador.' });
+                    }}
+                    onOpenRow={openRowModal}
+                    onObservationReviewed={handleObservationReviewed}
+                    onMessage={(type, message) => setAlert({ type, message })}
+                />
+            )}
+
             <TourProcessingDraftRowModal
                 open={rowModal.open}
                 mode={rowModal.mode}
@@ -1190,6 +972,17 @@ export default function TourProcessingDraftPage() {
             />
 
             <DialogModal
+                open={exportHighlightOpen}
+                type="info"
+                title="Resaltar giras con problemas"
+                message="¿Desea que las giras que presentan algún problema se resalten en amarillo, con una columna que indique el problema de cada una?"
+                confirmLabel="Sí, resaltar"
+                extraActions={[{ label: 'No, descargar sin resaltar', onClick: () => confirmExport(false) }]}
+                onConfirm={() => confirmExport(true)}
+                onClose={() => setExportHighlightOpen(false)}
+            />
+
+            <DialogModal
                 open={autoAssignDriversOpen}
                 type="warning"
                 title="Autoasignar choferes"
@@ -1219,9 +1012,9 @@ export default function TourProcessingDraftPage() {
                 type="warning"
                 title="Autoasignar choferes y vehículos"
                 message={AUTO_ASSIGN_DRIVERS_AND_VEHICLES_MESSAGE}
-                confirmLabel={autoAssigningBoth ? 'Asignando...' : 'Sí, autoasignar'}
+                confirmLabel={startingWizard ? 'Calculando...' : 'Sí, empezar'}
                 onConfirm={confirmAutoAssignBoth}
-                onClose={autoAssigningBoth ? undefined : () => setAutoAssignBothOpen(false)}
+                onClose={startingWizard ? undefined : () => setAutoAssignBothOpen(false)}
             />
 
             <DialogModal

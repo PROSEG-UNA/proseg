@@ -86,6 +86,18 @@ public final class GenericSpecifications {
         };
     }
 
+    @SafeVarargs
+    public static <T> Specification<T> withSearch(Class<T> entityClass, String term, Specification<T>... displayMatches) {
+        if (term == null || term.isBlank()) {
+            return (root, query, cb) -> null;
+        }
+        Specification<T> combined = withSearch(entityClass, term);
+        for (Specification<T> displayMatch : displayMatches) {
+            combined = combined.or(displayMatch);
+        }
+        return combined;
+    }
+
     public static <T> Specification<T> withColumnFilters(Class<T> entityClass, Map<String, String> filters) {
         if (filters == null || filters.isEmpty()) {
             return (root, query, cb) -> null;
@@ -109,12 +121,16 @@ public final class GenericSpecifications {
     }
 
     public static Sort sanitizeSort(Class<?> entityClass, Sort requestedSort) {
+        return sanitizeSort(entityClass, requestedSort, Set.of());
+    }
+
+    public static Sort sanitizeSort(Class<?> entityClass, Sort requestedSort, Set<String> extraSortableFields) {
         if (requestedSort == null || requestedSort.isUnsorted()) {
             return Sort.unsorted();
         }
         Set<String> allowed = getMetadata(entityClass).keySet();
         List<Sort.Order> valid = requestedSort.stream()
-                .filter(order -> allowed.contains(order.getProperty()))
+                .filter(order -> allowed.contains(order.getProperty()) || extraSortableFields.contains(order.getProperty()))
                 .toList();
         return valid.isEmpty() ? Sort.unsorted() : Sort.by(valid);
     }

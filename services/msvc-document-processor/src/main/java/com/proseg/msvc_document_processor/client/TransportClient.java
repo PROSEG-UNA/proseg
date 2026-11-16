@@ -10,6 +10,7 @@ import com.proseg.msvc_document_processor.dto.response.SchemaDto;
 import com.proseg.msvc_document_processor.dto.response.TourControlReportDto;
 import com.proseg.msvc_document_processor.dto.response.TourDraftDto;
 import com.proseg.msvc_document_processor.dto.response.TourDraftResultDto;
+import com.proseg.msvc_document_processor.dto.response.TourProblemDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -43,6 +44,9 @@ public interface TransportClient {
             @PathVariable("id") UUID id,
             @RequestParam MultiValueMap<String, String> queryParams
     );
+
+    @GetMapping("/v1/transport/tour-processing/drafts/{id}/row-problems")
+    ApiResponse<Map<String, List<TourProblemDto>>> getTourProcessingDraftRowProblems(@PathVariable("id") UUID id);
 
     @GetMapping("/v1/transport/tour-processing/drafts/{id}/final-commission")
     ApiResponse<FinalCommissionReportDto> getFinalCommissionReport(@PathVariable("id") UUID id);

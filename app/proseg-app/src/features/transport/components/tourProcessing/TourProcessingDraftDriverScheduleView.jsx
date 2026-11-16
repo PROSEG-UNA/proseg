@@ -93,7 +93,7 @@ const COLUMNS = [
         enableColumnFilter: false,
         Cell: ({ cell }) => formatHours(cell.getValue()),
     },
-];
+].map((column) => ({ ...column, enableSorting: false }));
 
 export default function TourProcessingDraftDriverScheduleView({ draftId, canEdit, onOpenRowById }) {
     const [selectedDriverId, setSelectedDriverId] = useState(null);

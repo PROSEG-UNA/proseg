@@ -6,6 +6,8 @@ import com.proseg.msvc_transport.entity.BorrowedVehicle;
 import com.proseg.msvc_transport.exception.TransportException;
 import com.proseg.msvc_transport.repository.BorrowedVehicleRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftAssignmentRepository;
+import com.proseg.msvc_transport.specification.DisplayLabels;
+import com.proseg.msvc_transport.specification.DisplaySearch;
 import com.proseg.msvc_transport.specification.GenericSpecifications;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -48,7 +50,7 @@ public class BorrowedVehicleService {
     @Transactional(readOnly = true)
     public Page<BorrowedVehicleResponseDto> findAll(String search, Map<String, String> filters, Pageable pageable) {
         Specification<BorrowedVehicle> notDeleted = (root, query, builder) -> builder.isFalse(root.get("isDeleted"));
-        Specification<BorrowedVehicle> spec = notDeleted.and(GenericSpecifications.withSearch(BorrowedVehicle.class, search)).and(GenericSpecifications.withColumnFilters(BorrowedVehicle.class, filters));
+        Specification<BorrowedVehicle> spec = notDeleted.and(GenericSpecifications.withSearch(BorrowedVehicle.class, search, DisplaySearch.labelMatching("type", DisplayLabels.VEHICLE_TYPE, search))).and(GenericSpecifications.withColumnFilters(BorrowedVehicle.class, filters));
         Pageable sanitized = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), GenericSpecifications.sanitizeSort(BorrowedVehicle.class, pageable.getSort()));
         return borrowedVehicleRepository.findAll(spec, sanitized).map(this::toResponse);
     }

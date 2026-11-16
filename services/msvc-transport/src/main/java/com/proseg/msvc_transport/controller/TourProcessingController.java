@@ -26,6 +26,9 @@ import com.proseg.msvc_transport.service.TourProcessingDraftService;
 import com.proseg.msvc_transport.service.FinalCommissionService;
 import com.proseg.msvc_transport.service.rules.TourAssignmentRules;
 import com.proseg.msvc_transport.service.TourControlReportService;
+import com.proseg.msvc_transport.service.autoassign.AutoAssignStepCatalog;
+import com.proseg.msvc_transport.service.autoassign.TourProcessingAutoAssignSteps;
+import com.proseg.msvc_transport.service.autoassign.TourProcessingAutoAssignWizardService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -36,6 +39,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -46,6 +50,8 @@ public class TourProcessingController {
     private final TourProcessingDraftService tourProcessingDraftService;
     private final FinalCommissionService finalCommissionService;
     private final TourControlReportService tourControlReportService;
+    private final TourProcessingAutoAssignSteps autoAssignSteps;
+    private final TourProcessingAutoAssignWizardService autoAssignWizardService;
 
     @GetMapping("/imports/schema")
     public ResponseEntity<ApiResponse<TourProcessingImportSchemaDto>> getImportSchema() {
@@ -92,6 +98,13 @@ public class TourProcessingController {
             @RequestParam Map<String, String> allParams,
             @PageableDefault(size = 10, page = 0) Pageable pageable
     ) {
+        if (rule != null && rule.startsWith(AutoAssignStepCatalog.FILTER_PREFIX)) {
+            Set<UUID> stepTourIds = autoAssignSteps.tourIds(id, rule.substring(AutoAssignStepCatalog.FILTER_PREFIX.length()));
+            return ApiResponseBuilder.ok(
+                    PageMapper.from(tourProcessingDraftService.findRowsOfTours(id, search, columnFilters(allParams), stepTourIds, pageable)),
+                    "Filas del paso de autoasignación"
+            );
+        }
         return ApiResponseBuilder.ok(
                 PageMapper.from(tourProcessingDraftService.findRows(id, search, columnFilters(allParams), rule, pageable)),
                 "Filas del borrador de depuración"
@@ -239,6 +252,7 @@ public class TourProcessingController {
     @PostMapping("/drafts/{id}/assignments/clear")
     public ResponseEntity<ApiResponse<Void>> clearDraftAssignments(@PathVariable UUID id) {
         tourProcessingDraftService.clearAssignments(id);
+        autoAssignWizardService.endSession(id);
         return ApiResponseBuilder.ok(null, "Asignaciones de choferes y vehículos eliminadas");
     }
 

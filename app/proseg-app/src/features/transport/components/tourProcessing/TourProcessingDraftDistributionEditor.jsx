@@ -17,9 +17,13 @@ const RESOURCE_TYPES = [
 
 export default function TourProcessingDraftDistributionEditor({
     assignments, totalPassengers, onChange, isEdit, saving, fieldSx, borrowedVehicles, error,
-    vehicleOptions, initialMode,
+    vehicleOptions, initialMode, onModeChange,
 }) {
     const [mode, setMode] = useState(() => initialMode ?? detectTripMode(assignments));
+    const updateMode = (nextMode) => {
+        setMode(nextMode);
+        onModeChange?.(nextMode === TRIP_MODES.SHARED);
+    };
     const [tripCount, setTripCount]= useState(() => String(assignments.length));
     const driverCount = Math.max(1, new Set(assignments.map((assignment) => assignment.driver?.trim().toLowerCase()).filter(Boolean)).size);
     const totalAssigned = assignments.reduce((sum, assignment) => sum + Number(assignment.passengers || 0), 0);
@@ -71,7 +75,7 @@ export default function TourProcessingDraftDistributionEditor({
             setPendingDistinctSwitch(true);
             return;
         }
-        setMode(nextMode);
+        updateMode(nextMode);
     };
 
     const confirmSharedSwitch = () => {
@@ -80,7 +84,7 @@ export default function TourProcessingDraftDistributionEditor({
             ...assignment, driver, vehicle, resourceType, borrowedVehicleId, borrowedVehiclePlate,
         })));
         setDriverFieldResets((current) => current + 1);
-        setMode(TRIP_MODES.SHARED);
+        updateMode(TRIP_MODES.SHARED);
         setPendingSharedSwitch(false);
     };
 
@@ -95,7 +99,7 @@ export default function TourProcessingDraftDistributionEditor({
             return { ...assignment, driver: '', vehicle: '', borrowedVehicleId: '', borrowedVehiclePlate: '' };
         }));
         setDriverFieldResets((current) => current + 1);
-        setMode(TRIP_MODES.DISTINCT);
+        updateMode(TRIP_MODES.DISTINCT);
         setPendingDistinctSwitch(false);
     };
 
@@ -120,7 +124,7 @@ export default function TourProcessingDraftDistributionEditor({
     };
 
     const confirmDriverChange = () => {
-        setMode(pendingDriver.switchesToShared ? TRIP_MODES.SHARED : TRIP_MODES.DISTINCT);
+        updateMode(pendingDriver.switchesToShared ? TRIP_MODES.SHARED : TRIP_MODES.DISTINCT);
         changeAssignment(pendingDriver.index, 'driver', pendingDriver.value);
         setPendingDriver(null);
     };

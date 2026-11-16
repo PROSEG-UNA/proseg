@@ -10,6 +10,7 @@ import com.proseg.msvc_transport.dto.response.DriverMonthResponseDto;
 import com.proseg.msvc_transport.dto.response.DriverMonthSurplusCapResponseDto;
 import com.proseg.msvc_transport.dto.response.DriverResponseDto;
 import com.proseg.msvc_transport.dto.response.OvertimeRequestReportDto;
+import com.proseg.msvc_transport.exception.TransportException;
 import com.proseg.msvc_transport.service.DriverMonthService;
 import com.proseg.msvc_transport.service.DriverService;
 import com.proseg.msvc_transport.service.OvertimeRequestReportService;
@@ -24,6 +25,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("${routes.drivers:/api/v1/transport/drivers}")
@@ -69,10 +72,30 @@ public class DriverController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<PageResponse<DriverResponseDto>>> findAll(@RequestParam(required = false) String search, @RequestParam Map<String, String> allParams, @PageableDefault(size = 10, page = 0) Pageable pageable) {
+    public ResponseEntity<ApiResponse<PageResponse<DriverResponseDto>>> findAll(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month,
+            @RequestParam Map<String, String> allParams,
+            @PageableDefault(size = 10, page = 0) Pageable pageable
+    ) {
         Map<String, String> filters = new HashMap<>(allParams);
         FilterConstants.RESERVED_PARAMS.forEach(filters::remove);
-        return ApiResponseBuilder.ok(PageMapper.from(service.findAll(search, filters, pageable)), "Lista de choferes");
+        filters.remove("year");
+        filters.remove("month");
+        return ApiResponseBuilder.ok(PageMapper.from(service.findAll(search, filters, pageable, monthsToSortBy(year, month, pageable))), "Lista de choferes");
+    }
+
+    private Map<UUID, DriverMonthResponseDto> monthsToSortBy(Integer year, Integer month, Pageable pageable) {
+        boolean sortsByMonthColumn = pageable.getSort().stream().anyMatch(order -> DriverService.MONTH_SORT_FIELDS.contains(order.getProperty()));
+        if (!sortsByMonthColumn || year == null || month == null) {
+            return Map.of();
+        }
+        if (month < 1 || month > 12) {
+            throw TransportException.badRequest("INVALID_MONTH", "El mes debe estar entre 1 y 12");
+        }
+        return driverMonthService.findAllForPeriod(year, month).stream()
+                .collect(Collectors.toMap(DriverMonthResponseDto::getDriverId, Function.identity()));
     }
 
     @PutMapping("/{id}")
