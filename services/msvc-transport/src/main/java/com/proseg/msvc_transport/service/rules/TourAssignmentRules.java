@@ -186,7 +186,8 @@ public final class TourAssignmentRules {
         Set<LocalDate> monthWeekends = DriverHoursRules.monthWeekends(snapshot.year(), snapshot.month());
         int weekendCap = WeekendCap.forWeekendsInMonth(monthWeekends.size());
         Map<UUID, DriverWorkload> workloads = DriverWorkload.fromAssignments(
-                attendedParts, snapshot.driversById(), snapshot.manualDays() == null ? ManualDays.NONE : snapshot.manualDays());
+                attendedParts, snapshot.driversById(), snapshot.manualDays() == null ? ManualDays.NONE : snapshot.manualDays(),
+                snapshot.businessDays());
 
         List<Map.Entry<Driver, DriverWorkload>> ordered = workloads.entrySet().stream()
                 .map(entry -> Map.entry(snapshot.driversById().get(entry.getKey()), entry.getValue()))

@@ -33,8 +33,21 @@ public class TourControlReportDto {
         private Integer businessDays;
         private double ordinaryStart;
         private double ordinaryEnd;
+        private List<DayWindow> dayWindows;
         private Double surplusHours;
         private Double overtimeHours;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class DayWindow {
+        @JsonFormat(shape = JsonFormat.Shape.STRING)
+        private LocalDate date;
+        private double ordinaryStart;
+        private double ordinaryEnd;
     }
 
     @Getter

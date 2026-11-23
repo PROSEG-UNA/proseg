@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -11,6 +11,7 @@ import {
     fetchDriverById,
     updateDriver,
     updateDriverMonthBusinessDays,
+    updateDriverMonthSchedule,
 } from '../../../services/drivers/driversService.js';
 
 vi.mock('../../../services/drivers/driversService.js', () => ({
@@ -19,10 +20,12 @@ vi.mock('../../../services/drivers/driversService.js', () => ({
     fetchDriverById: vi.fn(),
     updateDriver: vi.fn(),
     updateDriverMonthBusinessDays: vi.fn(),
+    updateDriverMonthSchedule: vi.fn(),
 }));
 
 const MAY_PERIOD = { year: 2026, month: 5, label: 'Mayo 26' };
 const BUSINESS_DAYS_FIELD = { name: /Días hábiles de Mayo 26/ };
+const MONTH_SCHEDULE_FIELD = { name: 'Horario ordinario de Mayo 26' };
 
 const PERIPHERAL_SWITCH_LABEL = /Es conductor de giras Periféricas/;
 const SCHEDULE_FIELD_LABEL = 'Horario ordinario';
@@ -46,6 +49,8 @@ beforeEach(() => {
     deleteDriver.mockResolvedValue();
     updateDriverMonthBusinessDays.mockReset();
     updateDriverMonthBusinessDays.mockResolvedValue({ driverId: 'driver-1' });
+    updateDriverMonthSchedule.mockReset();
+    updateDriverMonthSchedule.mockResolvedValue({ driverId: 'driver-1' });
     fetchDriverById.mockReset();
 });
 
@@ -361,6 +366,201 @@ describe('DriverFormModal con los días hábiles del mes', () => {
         expect(screen.getByText(/No se puede editar una depuración terminada/)).toBeInTheDocument();
         expect(onSaved).toHaveBeenCalledTimes(1);
         expect(onBusinessDaysSaved).not.toHaveBeenCalled();
+        expect(onClose).not.toHaveBeenCalled();
+    });
+});
+
+describe('DriverFormModal con el calendario de horarios del mes', () => {
+    const loadDriver = (start = '07:30:00', end = '16:30:00') => fetchDriverById.mockResolvedValue({
+        id: 'driver-1',
+        name: 'Daniel Zuniga',
+        status: 'ACTIVE',
+        ordinaryStart: start,
+        ordinaryEnd: end,
+    });
+    const monthProps = { driverId: 'driver-1', period: MAY_PERIOD, monthBusinessDays: 28, defaultBusinessDays: 28, monthScheduleDays: [] };
+    const waitForDriver = () => waitFor(() => expect(screen.getByRole('textbox', { name: /Nombre/ })).toHaveValue('Daniel Zuniga'));
+    const afternoonDay = (date) => ({ date, ordinaryStart: '12:00:00', ordinaryEnd: '20:00:00' });
+
+    it('muestra todos los días con el horario del chofer y deja los fines de semana aparte', async () => {
+        loadDriver();
+        renderModal(monthProps);
+
+        await waitForDriver();
+        expect(screen.getByText('Horario ordinario de Mayo 26')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Día 4, mañana' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Día 29, mañana' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /tarde/ })).not.toBeInTheDocument();
+        expect(screen.getByLabelText('Día 2, fin de semana')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Día 2,/ })).not.toBeInTheDocument();
+        expect(screen.getAllByRole('button', { name: /^Día \d+, mañana$/ })).toHaveLength(21);
+    });
+
+    it('selecciona el otro horario por defecto y guarda solo los días distintos del chofer', async () => {
+        loadDriver();
+        const onScheduleSaved = vi.fn();
+        const onClose = vi.fn();
+        renderModal({ ...monthProps, onScheduleSaved, onClose });
+
+        await waitForDriver();
+        await userEvent.click(screen.getByRole('button', { name: 'Día 18, mañana' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Día 19, mañana' }));
+        expect(screen.getByRole('button', { name: 'Día 18, tarde' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Día 20, mañana' })).toBeInTheDocument();
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+        await waitFor(() => expect(updateDriverMonthSchedule).toHaveBeenCalledWith('driver-1', 2026, 5, [
+            { date: '2026-05-18', ordinaryStart: '12:00', ordinaryEnd: '20:00' },
+            { date: '2026-05-19', ordinaryStart: '12:00', ordinaryEnd: '20:00' },
+        ]));
+        expect(updateDriver).toHaveBeenCalledTimes(1);
+        expect(onScheduleSaved).toHaveBeenCalledWith({ driverName: 'Daniel Zuniga', changedDays: 2 });
+        expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('cambia el horario a seleccionar para poner días de mañana sobre días de tarde', async () => {
+        loadDriver();
+        renderModal({ ...monthProps, monthScheduleDays: [afternoonDay('2026-05-18'), afternoonDay('2026-05-19')] });
+
+        await waitForDriver();
+        expect(screen.getByRole('button', { name: 'Día 18, tarde' })).toBeInTheDocument();
+        await userEvent.click(screen.getByRole('button', { name: 'Mañana 07:30 a 16:30' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Día 18, tarde' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+        expect(screen.getByRole('button', { name: 'Día 18, mañana' })).toBeInTheDocument();
+        await waitFor(() => expect(updateDriverMonthSchedule).toHaveBeenCalledWith('driver-1', 2026, 5, [
+            { date: '2026-05-19', ordinaryStart: '12:00', ordinaryEnd: '20:00' },
+        ]));
+    });
+
+    it('selecciona varios días arrastrando sobre el calendario', async () => {
+        loadDriver();
+        renderModal(monthProps);
+
+        await waitForDriver();
+        fireEvent.pointerDown(screen.getByRole('button', { name: 'Día 11, mañana' }));
+        fireEvent.pointerOver(screen.getByRole('button', { name: 'Día 12, mañana' }));
+        fireEvent.pointerOver(screen.getByRole('button', { name: 'Día 13, mañana' }));
+        fireEvent.pointerUp(document);
+        fireEvent.pointerOver(screen.getByRole('button', { name: 'Día 14, mañana' }));
+
+        expect(screen.getByRole('button', { name: 'Día 11, tarde' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Día 12, tarde' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Día 13, tarde' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Día 14, mañana' })).toBeInTheDocument();
+    });
+
+    it('muestra los días con horario distinto que ya tiene el mes y no guarda si no se tocan', async () => {
+        loadDriver();
+        renderModal({ ...monthProps, monthScheduleDays: [afternoonDay('2026-05-18')] });
+
+        await waitForDriver();
+        expect(screen.getByRole('button', { name: 'Día 18, tarde' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Día 19, mañana' })).toBeInTheDocument();
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+        await waitFor(() => expect(updateDriver).toHaveBeenCalledTimes(1));
+        expect(updateDriverMonthSchedule).not.toHaveBeenCalled();
+    });
+
+    it('guarda una lista vacía cuando se vuelven a seleccionar todos los días con el horario del chofer', async () => {
+        loadDriver();
+        const onScheduleSaved = vi.fn();
+        renderModal({ ...monthProps, monthScheduleDays: [afternoonDay('2026-05-18')], onScheduleSaved });
+
+        await waitForDriver();
+        await userEvent.click(screen.getByRole('button', { name: 'Mañana 07:30 a 16:30' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Día 18, tarde' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+        await waitFor(() => expect(updateDriverMonthSchedule).toHaveBeenCalledWith('driver-1', 2026, 5, []));
+        expect(onScheduleSaved).toHaveBeenCalledWith({ driverName: 'Daniel Zuniga', changedDays: 0 });
+    });
+
+    it('usa el horario de tarde del chofer como color por defecto', async () => {
+        loadDriver('12:00:00', '20:00:00');
+        renderModal(monthProps);
+
+        await waitForDriver();
+        await waitFor(() => expect(screen.getByRole('button', { name: 'Día 4, tarde' })).toBeInTheDocument());
+        await userEvent.click(screen.getByRole('button', { name: 'Día 5, tarde' }));
+        expect(screen.getByRole('button', { name: 'Día 5, mañana' })).toBeInTheDocument();
+    });
+
+    it('recolorea los días sin cambios cuando se cambia el horario del chofer y no llama al mes', async () => {
+        loadDriver();
+        renderModal(monthProps);
+
+        await waitForDriver();
+        await userEvent.click(screen.getByRole('combobox', { name: SCHEDULE_FIELD_LABEL }));
+        await userEvent.click(await screen.findByRole('option', { name: '12:00 a 20:00' }));
+
+        expect(screen.getByRole('button', { name: 'Día 4, tarde' })).toBeInTheDocument();
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+        await waitFor(() => expect(updateDriver).toHaveBeenCalledTimes(1));
+        expect(updateDriverMonthSchedule).not.toHaveBeenCalled();
+    });
+
+    it('muestra el calendario aunque el mes no tenga borrador, sin pedir los días hábiles', async () => {
+        loadDriver();
+        const onScheduleSaved = vi.fn();
+        renderModal({ ...monthProps, monthBusinessDays: null, defaultBusinessDays: null, onScheduleSaved });
+
+        await waitForDriver();
+        expect(screen.getByText('Horario ordinario de Mayo 26')).toBeInTheDocument();
+        expect(screen.queryByRole('textbox', { name: /Días hábiles/ })).not.toBeInTheDocument();
+        await userEvent.click(screen.getByRole('button', { name: 'Día 18, mañana' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+        await waitFor(() => expect(updateDriverMonthSchedule).toHaveBeenCalledWith('driver-1', 2026, 5, [
+            { date: '2026-05-18', ordinaryStart: '12:00', ordinaryEnd: '20:00' },
+        ]));
+        expect(updateDriverMonthBusinessDays).not.toHaveBeenCalled();
+        expect(onScheduleSaved).toHaveBeenCalledWith({ driverName: 'Daniel Zuniga', changedDays: 1 });
+    });
+
+    it('no muestra el calendario sin mes, sin datos del mes ni al crear un chofer', async () => {
+        loadDriver();
+        renderModal({ ...monthProps, period: null });
+        await waitForDriver();
+        expect(screen.queryByText('Horario ordinario de Mayo 26')).not.toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: SCHEDULE_FIELD_LABEL })).toHaveTextContent('07:30 a 16:30');
+        cleanup();
+
+        loadDriver();
+        renderModal({ ...monthProps, monthScheduleDays: null });
+        await waitForDriver();
+        expect(screen.queryByText('Horario ordinario de Mayo 26')).not.toBeInTheDocument();
+        cleanup();
+
+        renderModal({ period: MAY_PERIOD, monthBusinessDays: 28, monthScheduleDays: [] });
+        expect(screen.queryByText('Horario ordinario de Mayo 26')).not.toBeInTheDocument();
+    });
+
+    it('deshabilita los días sin permiso de edición', async () => {
+        loadDriver();
+        renderModal({ ...monthProps, canEdit: false });
+
+        await waitForDriver();
+        expect(screen.getByRole('button', { name: 'Día 4, mañana' })).toBeDisabled();
+    });
+
+    it('avisa que el chofer se guardó cuando falla el cambio de horario y no cierra', async () => {
+        loadDriver();
+        updateDriverMonthSchedule.mockRejectedValue({ response: { status: 409, data: { message: 'No se puede editar una depuración terminada. Devuélvela a borrador' } } });
+        const onSaved = vi.fn();
+        const onClose = vi.fn();
+        const onScheduleSaved = vi.fn();
+        renderModal({ ...monthProps, onSaved, onClose, onScheduleSaved });
+
+        await waitForDriver();
+        await userEvent.click(screen.getByRole('button', { name: 'Día 18, mañana' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+        expect(await screen.findByText(/El chofer se guardó, pero no se pudo cambiar el horario del mes/)).toBeInTheDocument();
+        expect(onSaved).toHaveBeenCalledTimes(1);
+        expect(onScheduleSaved).not.toHaveBeenCalled();
         expect(onClose).not.toHaveBeenCalled();
     });
 });

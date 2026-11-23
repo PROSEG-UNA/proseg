@@ -23,11 +23,11 @@ public class DriverWorkload {
             .thenComparing(TourProcessingDraftAssignment::getNumber);
 
     private final List<TourProcessingDraftAssignment> tours = new ArrayList<>();
-    private final OrdinaryWindow window;
+    private final DriverSchedule schedule;
     private final ManualDays manualDays;
 
     public DriverWorkload() {
-        this(OrdinaryWindow.STANDARD, ManualDays.NONE);
+        this(DriverSchedule.uniform(OrdinaryWindow.STANDARD), ManualDays.NONE);
     }
 
     public DriverWorkload(Driver driver) {
@@ -35,11 +35,15 @@ public class DriverWorkload {
     }
 
     public DriverWorkload(Driver driver, ManualDays manualDays) {
-        this(OrdinaryWindow.of(driver), manualDays);
+        this(DriverSchedule.of(driver), manualDays);
     }
 
-    private DriverWorkload(OrdinaryWindow window, ManualDays manualDays) {
-        this.window = window;
+    public DriverWorkload(Driver driver, ManualDays manualDays, DriverBusinessDays businessDays) {
+        this(businessDays.scheduleOf(driver), manualDays);
+    }
+
+    private DriverWorkload(DriverSchedule schedule, ManualDays manualDays) {
+        this.schedule = schedule;
         this.manualDays = manualDays;
     }
 
@@ -48,11 +52,20 @@ public class DriverWorkload {
             Map<UUID, Driver> driversById,
             ManualDays manualDays
     ) {
+        return fromAssignments(assignments, driversById, manualDays, DriverBusinessDays.uniform(0));
+    }
+
+    public static Map<UUID, DriverWorkload> fromAssignments(
+            List<TourProcessingDraftAssignment> assignments,
+            Map<UUID, Driver> driversById,
+            ManualDays manualDays,
+            DriverBusinessDays businessDays
+    ) {
         Map<UUID, DriverWorkload> workloads = new LinkedHashMap<>();
         for (TourProcessingDraftAssignment assignment : assignments) {
             Driver driver = DriverHoursRules.assignedDriver(assignment, driversById);
             if (assignment.isActive() && DriverHoursRules.countsTowardOwnDriver(assignment, driver)) {
-                workloads.computeIfAbsent(driver.getId(), id -> new DriverWorkload(driver, manualDays)).add(assignment);
+                workloads.computeIfAbsent(driver.getId(), id -> new DriverWorkload(driver, manualDays, businessDays)).add(assignment);
             }
         }
         return workloads;
@@ -63,11 +76,20 @@ public class DriverWorkload {
             Map<UUID, Driver> driversById,
             ManualDays manualDays
     ) {
+        return fromUncountedAssignments(assignments, driversById, manualDays, DriverBusinessDays.uniform(0));
+    }
+
+    public static Map<UUID, DriverWorkload> fromUncountedAssignments(
+            List<TourProcessingDraftAssignment> assignments,
+            Map<UUID, Driver> driversById,
+            ManualDays manualDays,
+            DriverBusinessDays businessDays
+    ) {
         Map<UUID, DriverWorkload> workloads = new LinkedHashMap<>();
         for (TourProcessingDraftAssignment assignment : assignments) {
             Driver driver = DriverHoursRules.assignedDriver(assignment, driversById);
             if (driver != null && assignment.isActive() && !DriverHoursRules.countsTowardOwnDriver(assignment, driver)) {
-                workloads.computeIfAbsent(driver.getId(), id -> new DriverWorkload(driver, manualDays)).add(assignment);
+                workloads.computeIfAbsent(driver.getId(), id -> new DriverWorkload(driver, manualDays, businessDays)).add(assignment);
             }
         }
         return workloads;
@@ -78,19 +100,19 @@ public class DriverWorkload {
     }
 
     public DriverWorkload without(TourProcessingDraftAssignment excluded) {
-        DriverWorkload copy = new DriverWorkload(window, manualDays);
+        DriverWorkload copy = new DriverWorkload(schedule, manualDays);
         tours.stream().filter(tour -> tour != excluded).forEach(copy::add);
         return copy;
     }
 
     public DriverWorkload copy() {
-        DriverWorkload copy = new DriverWorkload(window, manualDays);
+        DriverWorkload copy = new DriverWorkload(schedule, manualDays);
         tours.forEach(copy::add);
         return copy;
     }
 
     public DriverWorkload withoutAnyOf(Set<TourProcessingDraftAssignment> excluded) {
-        DriverWorkload copy = new DriverWorkload(window, manualDays);
+        DriverWorkload copy = new DriverWorkload(schedule, manualDays);
         tours.stream().filter(tour -> !excluded.contains(tour)).forEach(copy::add);
         return copy;
     }
@@ -104,7 +126,7 @@ public class DriverWorkload {
     }
 
     public DriverWorkload withoutSiblingsOf(TourProcessingDraftAssignment assignment) {
-        DriverWorkload copy = new DriverWorkload(window, manualDays);
+        DriverWorkload copy = new DriverWorkload(schedule, manualDays);
         tours.stream().filter(tour -> !sharedTrip(tour, assignment)).forEach(copy::add);
         return copy;
     }
@@ -192,7 +214,7 @@ public class DriverWorkload {
             for (TourDaySpan span : spans) {
                 DayAllocation edited = manual.get(span.date());
                 if (edited == null) {
-                    offScheduleHours += span.offScheduleWeekdayHours(window);
+                    offScheduleHours += span.offScheduleWeekdayHours(schedule.windowOn(tour.getDepartureDate(), span.date()));
                 } else {
                     manualSurplus += edited.surplusHours();
                 }
@@ -209,6 +231,7 @@ public class DriverWorkload {
                     days.add(edited);
                     continue;
                 }
+                OrdinaryWindow window = schedule.windowOn(tour.getDepartureDate(), span.date());
                 double dayOffSchedule = span.offScheduleWeekdayHours(window);
                 double daySurplus = Math.min(dayOffSchedule, surplusLeft);
                 surplusLeft -= daySurplus;

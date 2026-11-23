@@ -58,5 +58,7 @@ public class FinalCommissionReportDto {
         private LocalDate date;
         private double start;
         private double end;
+        private Double ordinaryStart;
+        private Double ordinaryEnd;
     }
 }

@@ -122,6 +122,24 @@ class FinalCommissionWorkbookGeneratorTest {
     }
 
     @Test
+    void aDayWithItsOwnWindowIgnoresTheWindowOfTheTourInItsFormula() throws IOException {
+        FinalCommissionReportDto custom = report();
+        FinalCommissionReportDto.Day afternoonDay = day(LocalDate.of(2026, 5, 6), 6, 18);
+        afternoonDay.setOrdinaryStart(12D);
+        afternoonDay.setOrdinaryEnd(20D);
+        FinalCommissionReportDto.Day tourWindowDay = day(LocalDate.of(2026, 5, 5), 6, 18);
+        tourWindowDay.setOrdinaryStart(7.5);
+        tourWindowDay.setOrdinaryEnd(16.5);
+        custom.setTours(List.of(tour("4020", 1, "INTERNAL", 1,
+                LocalDate.of(2026, 5, 5), LocalTime.of(6, 0), LocalDate.of(2026, 5, 6), LocalTime.of(18, 0),
+                List.of(tourWindowDay, afternoonDay))));
+        workbook = new XSSFWorkbook(new ByteArrayInputStream(new FinalCommissionWorkbookGenerator().generate(custom)));
+        workbook.getCreationHelper().createFormulaEvaluator().evaluateAll();
+
+        assertThat(number("TOTALES", "R4")).isCloseTo(9.0, within(0.001));
+    }
+
+    @Test
     void listsTheColorOfEachPriorityInALegendThatMatchesTheTourRows() {
         assertThat(text("RESUMEN", "B27")).isEqualTo("COLOR DE LAS GIRAS POR PRIORIDAD");
         assertThat(text("RESUMEN", "B28")).isEqualTo("PRIORIDAD");

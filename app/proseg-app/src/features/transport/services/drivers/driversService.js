@@ -38,6 +38,15 @@ export async function updateDriverMonthBusinessDays(driverId, year, month, busin
     return data?.data ?? null;
 }
 
+export async function updateDriverMonthSchedule(driverId, year, month, days) {
+    const { data } = await axios.put(
+        `${TRANSPORT_ENDPOINTS.drivers}/${driverId}/months/${year}/${month}/schedule`,
+        { days },
+        transportConfig,
+    );
+    return data?.data ?? null;
+}
+
 export async function exportDriverOvertimeRequest(year, month) {
     return downloadFile(TRANSPORT_DOCUMENT_ENDPOINTS.driverOvertimeRequestExport, { year, month }, OVERTIME_REQUEST_FALLBACK_FILE_NAME);
 }
