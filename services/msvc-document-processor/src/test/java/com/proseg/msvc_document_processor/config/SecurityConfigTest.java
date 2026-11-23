@@ -55,7 +55,9 @@ class SecurityConfigTest {
             "GET,/exports/vehicles,LEER_VEHICULOS,200",
             "GET,/exports/vehicles,LEER_CHOFERES,403",
             "GET,/exports/borrowed-vehicles,LEER_VEHICULOS,200",
-            "GET,/exports/borrowed-vehicles,LEER_CHOFERES,403"
+            "GET,/exports/borrowed-vehicles,LEER_CHOFERES,403",
+            "GET,/exports/external-vehicles,LEER_VEHICULOS,200",
+            "GET,/exports/external-vehicles,LEER_CHOFERES,403"
     })
     void authorizesEachTourRouteWithItsPrivilege(String method, String path, String privilege, int expectedStatus) throws Exception {
         mvc.perform(request(HttpMethod.valueOf(method), ROOT + path)

@@ -128,6 +128,33 @@ public interface TourProcessingDraftAssignmentRepository extends JpaRepository<T
             """, nativeQuery = true)
     boolean isBorrowedVehicleInOpenDraft(@Param("borrowedVehicleId") UUID borrowedVehicleId);
 
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = """
+            update tour_processing_draft_assignment_table a
+               set vehicle = :plate, driver = :provider
+              from tour_processing_draft_tour_table t
+              join tour_processing_draft_table d on d.id = t.draft_id
+             where a.tour_id = t.id
+               and d.status = 'DRAFT'
+               and a.resource_type = 'EXTERNAL'
+               and left(upper(regexp_replace(a.vehicle, '\\s+', '', 'g')), 20) = :plateKey
+            """, nativeQuery = true)
+    int renameExternalVehicle(@Param("plateKey") String plateKey, @Param("plate") String plate, @Param("provider") String provider);
+
+    @Query(value = """
+            select exists (
+                select 1
+                  from tour_processing_draft_assignment_table a
+                  join tour_processing_draft_tour_table t on t.id = a.tour_id
+                  join tour_processing_draft_table d on d.id = t.draft_id
+                 where a.resource_type = 'EXTERNAL'
+                   and left(upper(regexp_replace(a.vehicle, '\\s+', '', 'g')), 20) = :plateKey
+                   and d.status = 'DRAFT'
+                   and not d.is_deleted
+            )
+            """, nativeQuery = true)
+    boolean isExternalVehicleInOpenDraft(@Param("plateKey") String plateKey);
+
     @Query("""
             select a from TourProcessingDraftAssignment a
             join fetch a.tour t

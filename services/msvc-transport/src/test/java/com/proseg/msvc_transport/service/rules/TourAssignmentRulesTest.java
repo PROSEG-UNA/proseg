@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -105,6 +106,22 @@ class TourAssignmentRulesTest {
     }
 
     @Test
+    void warnsWhenAnExternalVehicleHasLessCapacityThanThePassengers() {
+        TourProcessingDraftTour small = external("200", "2026-05-06", "08:00", "10:00", "abc 123");
+        TourProcessingDraftTour fits = external("300", "2026-05-07", "08:00", "10:00", "xyz 789");
+        TourProcessingDraftTour withoutCapacity = external("400", "2026-05-08", "08:00", "10:00", "nop 555");
+        TourProcessingDraftTour notApproved = external("500", "2026-05-09", "08:00", "10:00", "abc 123");
+        notApproved.setApprovalStatus(TourApprovalStatus.NOT_APPROVED);
+        Map<String, Integer> capacities = Map.of("ABC123", 5, "XYZ789", 8);
+
+        List<RuleViolation> violations = rules.evaluate(snapshot(List.of(small, fits, withoutCapacity, notApproved), ManualDays.NONE, capacities));
+
+        assertThat(violations).filteredOn(violation -> violation.code() == RuleCode.VEHICLE_OVER_CAPACITY)
+                .extracting(RuleViolation::message)
+                .containsExactly("Gira 200 (06/05/2026): vehículo abc 123 lleva 8 pasajeros y su capacidad es 5");
+    }
+
+    @Test
     void warnsWhenTheDriverCannotUseTheVehicleOrTheVehicleIsUnavailable() {
         Driver sedanOnly = driver("Ana");
         sedanOnly.setAllowedVehicleTypes(EnumSet.of(VehicleType.SEDAN));
@@ -158,6 +175,10 @@ class TourAssignmentRulesTest {
     }
 
     private TourAssignmentRules.Snapshot snapshot(List<TourProcessingDraftTour> tours, ManualDays manualDays) {
+        return snapshot(tours, manualDays, Map.of());
+    }
+
+    private TourAssignmentRules.Snapshot snapshot(List<TourProcessingDraftTour> tours, ManualDays manualDays, Map<String, Integer> externalCapacities) {
         return new TourAssignmentRules.Snapshot(
                 tours,
                 DriverHoursRules.driversById(drivers),
@@ -165,7 +186,8 @@ class TourAssignmentRulesTest {
                 DriverBusinessDays.uniform(28),
                 manualDays,
                 2026,
-                5
+                5,
+                externalCapacities
         );
     }
 

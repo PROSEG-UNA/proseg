@@ -20,4 +20,5 @@ routes:
   drivers: ${api.prefix}/drivers
   vehicles: ${api.prefix}/vehicles
   borrowed-vehicles: ${api.prefix}/borrowed-vehicles
+  external-vehicles: ${api.prefix}/external-vehicles
   tour-processing: ${api.prefix}/tour-processing

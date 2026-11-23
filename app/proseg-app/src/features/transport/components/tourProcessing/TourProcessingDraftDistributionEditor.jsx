@@ -5,9 +5,13 @@ import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import TourProcessingCatalogField from './TourProcessingCatalogField.jsx';
 import BorrowedVehicleCatalogField from './BorrowedVehicleCatalogField.jsx';
+import ExternalVehicleCatalogField from './ExternalVehicleCatalogField.jsx';
+import { resolveExternalVehicle } from './tourProcessingCatalogMatch.js';
 import {
     EDITOR_TRIP_MODES, TRIP_MODES, TRIP_MODE_HINTS, TRIP_MODE_LABELS, buildTrips, detectTripMode, minimumTrips,
 } from './tripDistribution.js';
+
+const NO_EXTERNAL_VEHICLES = { options: [], loading: false, loaded: false };
 
 const RESOURCE_TYPES = [
     { value: 'INTERNAL', label: 'Interno' },
@@ -17,7 +21,7 @@ const RESOURCE_TYPES = [
 
 export default function TourProcessingDraftDistributionEditor({
     assignments, totalPassengers, onChange, isEdit, saving, fieldSx, borrowedVehicles, error,
-    vehicleOptions, initialMode, onModeChange,
+    vehicleOptions, initialMode, onModeChange, externalVehicles = NO_EXTERNAL_VEHICLES,
 }) {
     const [mode, setMode] = useState(() => initialMode ?? detectTripMode(assignments));
     const updateMode = (nextMode) => {
@@ -36,6 +40,9 @@ export default function TourProcessingDraftDistributionEditor({
         if (resource.resourceType === 'INTERNAL' || !resource.resourceType) {
             return vehicleOptions.find((option) => option.label.toUpperCase() === resource.vehicle?.trim().toUpperCase())?.capacity;
         }
+        if (resource.resourceType === 'EXTERNAL') {
+            return resolveExternalVehicle(resource.vehicle, externalVehicles.options)?.capacity;
+        }
         return null;
     };
     const capacities = assignments.map(capacityOfResource);
@@ -50,9 +57,17 @@ export default function TourProcessingDraftDistributionEditor({
         currentIndex === index ? { ...assignment, [key]: value } : assignment
     )));
 
-    const changeResourceType = (index, type) => onChange(assignments.map((assignment, currentIndex) => (
-        currentIndex === index ? { ...assignment, resourceType: type, vehicle: '', borrowedVehicleId: '' } : assignment
-    )));
+    const changeResourceType = (index, type) => onChange(assignments.map((assignment, currentIndex) => {
+        if (currentIndex !== index) return assignment;
+        const crossesExternal = type === 'EXTERNAL' || assignment.resourceType === 'EXTERNAL';
+        return {
+            ...assignment,
+            resourceType: type,
+            driver: crossesExternal ? '' : assignment.driver,
+            vehicle: '',
+            borrowedVehicleId: '',
+        };
+    }));
 
     const [pendingDriver, setPendingDriver] = useState(null);
     const [driverFieldResets, setDriverFieldResets] = useState(0);
@@ -273,14 +288,17 @@ export default function TourProcessingDraftDistributionEditor({
                     </Box>
                     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
                         {assignment.resourceType === 'EXTERNAL' ? (
-                            <TextField
-                                label="Chofer / Empresa"
-                                value={assignment.driver || ''}
-                                onChange={(event) => changeAssignment(index, 'driver', event.target.value)}
+                            <ExternalVehicleCatalogField
+                                provider={assignment.driver || ''}
+                                plate={assignment.vehicle || ''}
+                                onChange={({ driver, vehicle }) => onChange(assignments.map((current, currentIndex) => (
+                                    currentIndex === index ? { ...current, driver, vehicle } : current
+                                )))}
+                                options={externalVehicles.options}
+                                loading={externalVehicles.loading}
+                                loaded={externalVehicles.loaded}
+                                isEdit={isEdit}
                                 disabled={saving}
-                                size="small"
-                                fullWidth
-                                slotProps={{ input: { readOnly: !isEdit } }}
                                 sx={fieldSx}
                             />
                         ) : (
@@ -296,7 +314,7 @@ export default function TourProcessingDraftDistributionEditor({
                                 sx={fieldSx}
                             />
                         )}
-                        {assignment.resourceType === 'BORROWED_VEHICLE' ? (isEdit ? (
+                        {assignment.resourceType === 'EXTERNAL' ? null : assignment.resourceType === 'BORROWED_VEHICLE' ? (isEdit ? (
                             <BorrowedVehicleCatalogField
                                 options={borrowedVehicles.options}
                                 loading={borrowedVehicles.loading}
@@ -308,18 +326,7 @@ export default function TourProcessingDraftDistributionEditor({
                             />
                         ) : (
                             <TextField label="Vehículo prestado" value={assignment.borrowedVehiclePlate || ''} size="small" fullWidth slotProps={{ input: { readOnly: true } }} sx={fieldSx} />
-                        )) : assignment.resourceType === 'EXTERNAL' ? (
-                            <TextField
-                                label="Placa"
-                                value={assignment.vehicle || ''}
-                                onChange={(event) => changeAssignment(index, 'vehicle', event.target.value)}
-                                disabled={saving}
-                                size="small"
-                                fullWidth
-                                slotProps={{ input: { readOnly: !isEdit } }}
-                                sx={fieldSx}
-                            />
-                        ) : (
+                        )) : (
                             <TourProcessingCatalogField
                                 kind="vehicle"
                                 value={assignment.vehicle || ''}

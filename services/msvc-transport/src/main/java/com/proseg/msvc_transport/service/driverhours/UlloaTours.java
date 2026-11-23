@@ -40,7 +40,11 @@ public final class UlloaTours {
     }
 
     public static boolean isCoveredBy(Driver driver, UlloaShift shift) {
-        return isPeripheralDriver(driver) && windowOf(shift).equals(OrdinaryWindow.of(driver));
+        return isCoveredBy(driver, OrdinaryWindow.of(driver), shift);
+    }
+
+    public static boolean isCoveredBy(Driver driver, OrdinaryWindow driverWindow, UlloaShift shift) {
+        return isPeripheralDriver(driver) && windowOf(shift).equals(driverWindow);
     }
 
     public static Set<UlloaShift> shiftsCoveredBy(OrdinaryWindow window) {

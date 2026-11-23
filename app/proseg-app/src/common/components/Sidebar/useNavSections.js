@@ -17,6 +17,7 @@ import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import DirectionsCarFilledOutlinedIcon from '@mui/icons-material/DirectionsCarFilledOutlined';
+import HandshakeOutlinedIcon from '@mui/icons-material/HandshakeOutlined';
 import DescriptionIcon from '@mui/icons-material/Description';
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
@@ -218,6 +219,7 @@ export function useNavSections() {
                     canViewTourProcessingSubmodule ? { key: 'tourProcessing', icon: FactCheckOutlinedIcon, label: 'Depuración', path: '/transporte/depuracion' } : null,
                     canViewDriversSubmodule ? { key: 'drivers', icon: BadgeOutlinedIcon, label: 'Choferes', path: '/transporte/choferes' } : null,
                     canViewVehiclesSubmodule ? { key: 'vehicles', icon: DirectionsCarFilledOutlinedIcon, label: 'Vehículos', path: '/transporte/vehiculos' } : null,
+                    canViewVehiclesSubmodule ? { key: 'externalHiring', icon: HandshakeOutlinedIcon, label: 'Contratación Externa', path: '/transporte/contratacion-externa' } : null,
                     canViewTourProcessingSubmodule ? { key: 'transportSettings', icon: SettingsOutlinedIcon, label: 'Configuraciones', path: '/transporte/configuraciones' } : null,
                 ].filter(Boolean),
             });

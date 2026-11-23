@@ -91,6 +91,18 @@ class TourControlWorkbookGeneratorTest {
     }
 
     @Test
+    void usesTheWindowOfEachDayInTheAdjustmentOfThatDriversRows() throws IOException {
+        TourControlReportDto custom = report();
+        custom.getDrivers().get(0).setDayWindows(List.of(new TourControlReportDto.DayWindow(LocalDate.of(2026, 5, 4), 11, 20)));
+        workbook = new XSSFWorkbook(new ByteArrayInputStream(new TourControlWorkbookGenerator().generate(custom)));
+        workbook.getCreationHelper().createFormulaEvaluator().evaluateAll();
+
+        assertThat(number("HRS.EXTRAOFICIAL", "B26")).isCloseTo(2.0, within(0.001));
+        assertThat(number("HRS.EXTRAOFICIAL", "B25")).isCloseTo(-3.5, within(0.001));
+        assertThat(number("HRS.EXTRAOFICIAL", "C26")).isCloseTo(2.0, within(0.001));
+    }
+
+    @Test
     void addsBlocksForDaysAfterTheMonthWhenToursContinue() {
         int lastBlock = rowOf("HRS.EXTRAOFICIAL", 6, "NOMBRE") - 1;
         while (cell("HRS.EXTRAOFICIAL", "A" + lastBlock) == null || !"FECHA DE ".equals(cellText("A" + lastBlock))) {

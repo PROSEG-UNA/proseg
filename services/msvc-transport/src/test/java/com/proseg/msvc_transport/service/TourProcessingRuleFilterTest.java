@@ -3,6 +3,7 @@ package com.proseg.msvc_transport.service;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowResponseDto;
 import com.proseg.msvc_transport.entity.Driver;
 import com.proseg.msvc_transport.entity.DriverUnit;
+import com.proseg.msvc_transport.entity.ResourceType;
 import com.proseg.msvc_transport.entity.TourApprovalStatus;
 import com.proseg.msvc_transport.entity.TourProcessingDraft;
 import com.proseg.msvc_transport.entity.TourProcessingDraftAssignment;
@@ -10,6 +11,7 @@ import com.proseg.msvc_transport.entity.TourProcessingDraftStatus;
 import com.proseg.msvc_transport.entity.TourProcessingDraftTour;
 import com.proseg.msvc_transport.entity.Vehicle;
 import com.proseg.msvc_transport.repository.BorrowedVehicleRepository;
+import com.proseg.msvc_transport.repository.ExternalVehicleRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
 import com.proseg.msvc_transport.repository.ObservationKeywordRepository;
 import com.proseg.msvc_transport.repository.TourSplitKeywordRepository;
@@ -125,6 +127,7 @@ class TourProcessingRuleFilterTest {
                 drivers,
                 vehicles,
                 mock(BorrowedVehicleRepository.class),
+                mock(ExternalVehicleRepository.class),
                 hours,
                 new InMemoryBusinessDays().service(),
                 mock(OvertimeRequestReportService.class),
@@ -191,6 +194,24 @@ class TourProcessingRuleFilterTest {
 
         assertThat(multiple).contains(divided.getId(), halfDivided.getId(), oversized.getId()).doesNotContain(notApproved.getId());
         assertThat(needing).contains(halfDivided.getId(), oversized.getId()).doesNotContain(divided.getId());
+    }
+
+    @Test
+    void externalTripRuleIncludesOnlyTheToursWithAnExternalTrip() {
+        TourProcessingDraftTour external = tour(null, null, 10, TourApprovalStatus.APPROVED, LocalDate.of(2026, 10, 8), "9020");
+        external.primaryAssignment().setResourceType(ResourceType.EXTERNAL);
+        TourProcessingDraftTour mixed = tour(roster.get(0), bus, 10, TourApprovalStatus.APPROVED, LocalDate.of(2026, 10, 9), "9021");
+        mixed.addAssignment(TourProcessingDraftAssignment.builder().id(UUID.randomUUID()).passengers(10)
+                .resourceType(ResourceType.EXTERNAL).build());
+        rows.add(external);
+        rows.add(mixed);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Collection<UUID>> ids = ArgumentCaptor.forClass(Collection.class);
+        service.findRows(draftId, null, Map.of(), "EXTERNAL_TRIP", PageRequest.of(0, 20));
+        verify(tours).findPage(eq(draftId), isNull(), eq(Map.of()), ids.capture(), any());
+
+        assertThat(ids.getValue()).containsExactlyInAnyOrder(external.getId(), mixed.getId());
     }
 
     @Test

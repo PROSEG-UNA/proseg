@@ -1,11 +1,17 @@
 package com.proseg.msvc_transport.service;
 
+import com.proseg.msvc_transport.entity.Driver;
 import com.proseg.msvc_transport.entity.TourProcessingDraft;
 import com.proseg.msvc_transport.exception.TransportException;
 import com.proseg.msvc_transport.service.driverhours.DriverBusinessDays;
+import com.proseg.msvc_transport.service.driverhours.DriverSchedule;
+import com.proseg.msvc_transport.service.driverhours.OrdinaryWindow;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -84,6 +90,46 @@ class DriverBusinessDaysServiceTest {
         assertThatThrownBy(() -> service.set(ana, 2026, 2, -1))
                 .isInstanceOf(TransportException.class).hasMessage("Los días hábiles deben estar entre 0 y 28");
         assertThat(store.storedRecords()).isZero();
+    }
+
+    @Test
+    void schedulesAreKeptPerDriverAndDay() {
+        Driver driver = Driver.builder().id(ana).name("Ana").ordinaryStart(LocalTime.of(7, 30)).ordinaryEnd(LocalTime.of(16, 30)).build();
+        service.setSchedule(ana, 2026, 5, Map.of(LocalDate.of(2026, 5, 18), OrdinaryWindow.AFTERNOON));
+
+        DriverSchedule may = service.forMonth(2026, 5, 28).scheduleOf(driver);
+
+        assertThat(may.windowOn(LocalDate.of(2026, 5, 18))).isEqualTo(OrdinaryWindow.AFTERNOON);
+        assertThat(may.windowOn(LocalDate.of(2026, 5, 19))).isEqualTo(OrdinaryWindow.STANDARD);
+        assertThat(service.forMonth(2026, 6, 30).scheduleOf(driver).windowOn(LocalDate.of(2026, 6, 18))).isEqualTo(OrdinaryWindow.STANDARD);
+        assertThat(service.forMonth(2026, 5, 28).scheduleOverridesOf(beto)).isEmpty();
+        assertThat(service.forMonth(2026, 5, 28).scheduleOverridesOf(ana)).containsOnlyKeys(LocalDate.of(2026, 5, 18));
+    }
+
+    @Test
+    void settingTheScheduleAgainReplacesTheDaysOfThatMonthOnly() {
+        LocalDate first = LocalDate.of(2026, 5, 18);
+        LocalDate second = LocalDate.of(2026, 5, 19);
+        LocalDate june = LocalDate.of(2026, 6, 1);
+        service.setSchedule(ana, 2026, 6, Map.of(june, OrdinaryWindow.AFTERNOON));
+        service.setSchedule(ana, 2026, 5, Map.of(first, OrdinaryWindow.AFTERNOON, second, OrdinaryWindow.AFTERNOON));
+
+        service.setSchedule(ana, 2026, 5, Map.of(second, OrdinaryWindow.STANDARD));
+
+        assertThat(store.storedSchedule(ana, first)).isNull();
+        assertThat(store.storedSchedule(ana, second).getOrdinaryStart()).isEqualTo(LocalTime.of(7, 30));
+        assertThat(store.storedSchedule(ana, june).getOrdinaryStart()).isEqualTo(LocalTime.of(12, 0));
+        assertThat(store.storedScheduleDays()).isEqualTo(2);
+    }
+
+    @Test
+    void anEmptyScheduleRemovesEveryDayOfTheMonthAndIgnoresDriversWithoutOnes() {
+        service.setSchedule(ana, 2026, 5, Map.of(LocalDate.of(2026, 5, 18), OrdinaryWindow.AFTERNOON));
+
+        service.setSchedule(ana, 2026, 5, Map.of());
+        service.setSchedule(beto, 2026, 5, Map.of());
+
+        assertThat(store.storedScheduleDays()).isZero();
     }
 
     @Test

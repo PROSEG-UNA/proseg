@@ -87,8 +87,8 @@ public class DraftHoursService {
         Map<UUID, List<TourProcessingDraftDay>> existingByAssignment = existing.stream()
                 .collect(Collectors.groupingBy(day -> day.getAssignment().getId()));
         ManualDays manualDays = ManualDays.of(existing);
-        Map<UUID, DriverWorkload> workloads = DriverWorkload.fromAssignments(assignments, driversById, manualDays);
-        Map<UUID, DriverWorkload> informational = DriverWorkload.fromUncountedAssignments(assignments, driversById, manualDays);
+        Map<UUID, DriverWorkload> workloads = DriverWorkload.fromAssignments(assignments, driversById, manualDays, businessDays);
+        Map<UUID, DriverWorkload> informational = DriverWorkload.fromUncountedAssignments(assignments, driversById, manualDays, businessDays);
 
         Set<UUID> assignmentsWithDays = new HashSet<>();
         workloads.values().forEach(workload -> workload.tours().forEach(tour -> assignmentsWithDays.add(tour.getId())));

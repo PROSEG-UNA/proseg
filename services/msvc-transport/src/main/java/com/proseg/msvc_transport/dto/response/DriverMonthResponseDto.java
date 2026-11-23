@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -26,4 +27,5 @@ public class DriverMonthResponseDto {
     private Integer businessDays;
     private Double surplusCap;
     private boolean businessDaysCustomized;
+    private List<DriverDayScheduleDto> scheduleDays;
 }

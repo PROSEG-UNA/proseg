@@ -163,19 +163,34 @@ export default function DriversPage() {
         void queryClient.invalidateQueries({ queryKey: queryKeys.transport.tourProcessingDrafts() });
     };
 
-    const handleBusinessDaysSaved = ({ driverName, previousBusinessDays, businessDays, reset }) => {
+    const showMonthChangeAlert = (driverName, detail) => {
         void queryClient.invalidateQueries({ queryKey: queryKeys.transport.driverMonths(year, month) });
         void queryClient.invalidateQueries({ queryKey: queryKeys.transport.tourProcessingDrafts() });
+        setAlert((current) => (current?.monthChange
+            ? { ...current, message: `${current.message}\n${detail}` }
+            : { type: 'success', monthChange: true, message: `Chofer: ${driverName}\nMes: ${periodLabel}\n${detail}` }));
+    };
+
+    const handleBusinessDaysSaved = ({ driverName, previousBusinessDays, businessDays, reset }) => {
         const valueText = businessDays === null || businessDays === undefined ? '' : ` (${businessDays})`;
         const previousText = previousBusinessDays === null || previousBusinessDays === undefined
             ? ''
             : `\nValor anterior: ${previousBusinessDays}`;
-        setAlert({
-            type: 'success',
-            message: reset
-                ? `Chofer: ${driverName}\nMes: ${periodLabel}\nLos días hábiles volvieron al valor del mes${valueText}${previousText}`
-                : `Chofer: ${driverName}\nMes: ${periodLabel}\nLos días hábiles se cambiaron correctamente a ${businessDays}${previousText}`,
-        });
+        showMonthChangeAlert(
+            driverName,
+            reset
+                ? `Los días hábiles volvieron al valor del mes${valueText}${previousText}`
+                : `Los días hábiles se cambiaron correctamente a ${businessDays}${previousText}`,
+        );
+    };
+
+    const handleScheduleSaved = ({ driverName, changedDays }) => {
+        showMonthChangeAlert(
+            driverName,
+            changedDays === 0
+                ? 'El horario del mes se guardó: todos los días usan el horario del chofer'
+                : `El horario del mes se guardó correctamente\nDías con horario distinto al del chofer: ${changedDays}`,
+        );
     };
 
     const editingDriverMonth = driverFormId ? monthData.byDriverId?.get(driverFormId) : undefined;
@@ -323,10 +338,12 @@ export default function DriversPage() {
                     onClose={() => setDriverFormOpen(false)}
                     onSaved={refreshDrivers}
                     onBusinessDaysSaved={handleBusinessDaysSaved}
+                    onScheduleSaved={handleScheduleSaved}
                     period={monthData.enabled ? { year, month, label: periodLabel } : null}
                     monthBusinessDays={editingDriverMonth?.businessDays ?? null}
                     defaultBusinessDays={defaultBusinessDays ?? null}
                     businessDaysCustomized={Boolean(editingDriverMonth?.businessDaysCustomized)}
+                    monthScheduleDays={editingDriverMonth?.scheduleDays ?? null}
                     onDeleted={() => {
                         refreshDrivers();
                         setAlert({ type: 'success', message: 'Chofer eliminado correctamente' });

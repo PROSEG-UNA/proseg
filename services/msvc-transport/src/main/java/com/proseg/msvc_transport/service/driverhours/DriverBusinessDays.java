@@ -2,18 +2,36 @@ package com.proseg.msvc_transport.service.driverhours;
 
 import com.proseg.msvc_transport.entity.Driver;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public record DriverBusinessDays(int defaultBusinessDays, Map<UUID, Integer> customizedBusinessDays) {
+public record DriverBusinessDays(
+        int defaultBusinessDays,
+        Map<UUID, Integer> customizedBusinessDays,
+        Map<UUID, Map<LocalDate, OrdinaryWindow>> customizedSchedules
+) {
 
     public DriverBusinessDays {
         customizedBusinessDays = customizedBusinessDays == null ? Map.of() : new HashMap<>(customizedBusinessDays);
+        customizedSchedules = customizedSchedules == null ? Map.of() : new HashMap<>(customizedSchedules);
+    }
+
+    public DriverBusinessDays(int defaultBusinessDays, Map<UUID, Integer> customizedBusinessDays) {
+        this(defaultBusinessDays, customizedBusinessDays, Map.of());
     }
 
     public static DriverBusinessDays uniform(int businessDays) {
         return new DriverBusinessDays(businessDays, Map.of());
+    }
+
+    public Map<LocalDate, OrdinaryWindow> scheduleOverridesOf(UUID driverId) {
+        return driverId == null ? Map.of() : customizedSchedules.getOrDefault(driverId, Map.of());
+    }
+
+    public DriverSchedule scheduleOf(Driver driver) {
+        return new DriverSchedule(OrdinaryWindow.of(driver), driver == null ? Map.of() : scheduleOverridesOf(driver.getId()));
     }
 
     public boolean isCustomized(UUID driverId) {

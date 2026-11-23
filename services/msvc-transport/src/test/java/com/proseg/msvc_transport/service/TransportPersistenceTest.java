@@ -5,6 +5,7 @@ import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftCreateReq
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowRequestDto;
 import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingDraftRowDayRequestDto;
 import com.proseg.msvc_transport.dto.request.BorrowedVehicleRequestDto;
+import com.proseg.msvc_transport.dto.response.DriverDayScheduleDto;
 import com.proseg.msvc_transport.entity.Driver;
 import com.proseg.msvc_transport.entity.ResourceType;
 import com.proseg.msvc_transport.entity.TourApprovalStatus;
@@ -90,6 +91,42 @@ class TransportPersistenceTest {
         assertThat(count).isPositive();
         migration.afterSingletonsInstantiated();
         assertThat(jdbc.queryForObject("select count(*) from tour_processing_draft_day_table", Long.class)).isEqualTo(count);
+    }
+
+    @Test
+    void theScheduleOfASingleDayChangesOnlyTheHoursOfThatDay() {
+        when(currentUserResolver.resolve()).thenReturn("test");
+        Driver driver = driverRepository.save(Driver.builder().name("Test " + UUID.randomUUID()).status("ACTIVE").build());
+        var row = TourProcessingDraftRowRequestDto.builder().rowNumber(1).number("DAY-SCHEDULE-1")
+                .driver(driver.getName()).passengers(3).executingUnit("Unidad").responsible("Responsable")
+                .destination("Heredia").durationDays(1).priority(1).departureDate(LocalDate.of(2095, 5, 4))
+                .returnDate(LocalDate.of(2095, 5, 4)).departureTime(LocalTime.of(8, 0))
+                .returnTime(LocalTime.of(16, 0)).build();
+        drafts.create(TourProcessingDraftCreateRequestDto.builder().fileName("day-schedule.xlsx").fileType("XLSX")
+                .year(2095).month(5).businessDays(21).rows(List.of(row)).build());
+        entityManager.flush();
+        assertThat(surplusOf(driver)).isZero();
+
+        months.updateSchedule(driver.getId(), 2095, 5, List.of(
+                new DriverDayScheduleDto(LocalDate.of(2095, 5, 4), LocalTime.of(12, 0), LocalTime.of(20, 0))));
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(jdbc.queryForObject("select count(*) from driver_day_schedule_table where driver_id = ?", Long.class, driver.getId())).isEqualTo(1);
+        assertThat(surplusOf(driver)).isEqualTo(4.0);
+
+        months.updateSchedule(driver.getId(), 2095, 5, List.of());
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(jdbc.queryForObject("select count(*) from driver_day_schedule_table where driver_id = ?", Long.class, driver.getId())).isZero();
+        assertThat(surplusOf(driver)).isZero();
+    }
+
+    private double surplusOf(Driver driver) {
+        return months.findAllForPeriod(2095, 5).stream()
+                .filter(month -> driver.getId().equals(month.getDriverId()))
+                .findFirst().orElseThrow().getSurplusHoursAccrued();
     }
 
     @Test

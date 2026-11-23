@@ -226,7 +226,7 @@ public class TourControlWorkbookGenerator {
                 writeDriverRow(sheet, block, previous, driverRow, drivers.get(driverRow.driverIndex()), firstSummaryDriverRow, styles);
                 (block.weekend() ? weekendRefs : weekdayRefs).get(driverRow.driverIndex()).add(ref(HOURS_COLUMN, driverRow.row()));
                 if (!block.weekend()) {
-                    weekdayHours[driverRow.driverIndex()] += dayHours(driverRow.entry(), drivers.get(driverRow.driverIndex()), false);
+                    weekdayHours[driverRow.driverIndex()] += dayHours(driverRow.entry(), drivers.get(driverRow.driverIndex()), block.date(), false);
                 }
             }
             for (Section section : block.sections()) {
@@ -360,9 +360,9 @@ public class TourControlWorkbookGenerator {
             setFormula(sheet, row, DRIVER_COLUMN, "+" + ref(DRIVER_COLUMN, previousRow));
         }
 
-        String windowStart = number(driver.getOrdinaryStart());
-        String windowEnd = number(driver.getOrdinaryEnd());
-        setValue(sheet.getRow(row).getCell(ADJUSTMENT_COLUMN), adjustment(entry, driver, block.weekend()));
+        String windowStart = number(driver.ordinaryStartOn(block.date()));
+        String windowEnd = number(driver.ordinaryEndOn(block.date()));
+        setValue(sheet.getRow(row).getCell(ADJUSTMENT_COLUMN), adjustment(entry, driver, block.date(), block.weekend()));
         setFormula(sheet, row, DAY_TOTAL_COLUMN, "0+" + ref(HOURS_COLUMN, row));
         setFormula(sheet, row, BEFORE_COLUMN, String.format(OUTSIDE_WINDOW_FORMULA, ref(START_COLUMN, row), windowStart, windowEnd));
         setFormula(sheet, row, AFTER_COLUMN, String.format(OUTSIDE_WINDOW_FORMULA, ref(END_COLUMN, row), windowStart, windowEnd));
@@ -377,28 +377,28 @@ public class TourControlWorkbookGenerator {
         }
     }
 
-    private double adjustment(TourControlReportDto.Entry entry, TourControlReportDto.Driver driver, boolean weekend) {
+    private double adjustment(TourControlReportDto.Entry entry, TourControlReportDto.Driver driver, LocalDate date, boolean weekend) {
         if (entry == null || entry.getHours() == null || entry.getStart() == null || entry.getEnd() == null) {
             return 0;
         }
-        return round(entry.getHours() - formulaHours(entry, driver, weekend));
+        return round(entry.getHours() - formulaHours(entry, driver, date, weekend));
     }
 
-    private double dayHours(TourControlReportDto.Entry entry, TourControlReportDto.Driver driver, boolean weekend) {
+    private double dayHours(TourControlReportDto.Entry entry, TourControlReportDto.Driver driver, LocalDate date, boolean weekend) {
         if (entry == null) {
             return 0;
         }
         if (entry.getHours() != null) {
             return entry.getHours();
         }
-        return entry.getStart() == null || entry.getEnd() == null ? 0 : formulaHours(entry, driver, weekend);
+        return entry.getStart() == null || entry.getEnd() == null ? 0 : formulaHours(entry, driver, date, weekend);
     }
 
-    private double formulaHours(TourControlReportDto.Entry entry, TourControlReportDto.Driver driver, boolean weekend) {
+    private double formulaHours(TourControlReportDto.Entry entry, TourControlReportDto.Driver driver, LocalDate date, boolean weekend) {
         double start = entry.getStart();
         double end = entry.getEnd();
         double computed = weekend ? end - start : 0;
-        return computed == 0 ? outsideWindow(start, driver) + outsideWindow(end, driver) : computed;
+        return computed == 0 ? outsideWindow(start, driver, date) + outsideWindow(end, driver, date) : computed;
     }
 
     private int businessDaysOf(TourControlReportDto.Driver driver, TourControlReportDto report) {
@@ -424,11 +424,13 @@ public class TourControlWorkbookGenerator {
         return Math.round(hours * 100) / 100.0;
     }
 
-    private double outsideWindow(double hour, TourControlReportDto.Driver driver) {
-        if (hour < driver.getOrdinaryStart()) {
-            return driver.getOrdinaryStart() - hour;
+    private double outsideWindow(double hour, TourControlReportDto.Driver driver, LocalDate date) {
+        double windowStart = driver.ordinaryStartOn(date);
+        double windowEnd = driver.ordinaryEndOn(date);
+        if (hour < windowStart) {
+            return windowStart - hour;
         }
-        return hour > driver.getOrdinaryEnd() ? hour - driver.getOrdinaryEnd() : 0;
+        return hour > windowEnd ? hour - windowEnd : 0;
     }
 
     private void writeSection(Sheet sheet, Section section, Styles styles) {

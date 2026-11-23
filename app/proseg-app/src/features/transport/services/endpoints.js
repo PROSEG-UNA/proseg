@@ -2,6 +2,7 @@ export const TRANSPORT_ENDPOINTS = {
     drivers: '/api/v1/transport/drivers',
     vehicles: '/api/v1/transport/vehicles',
     borrowedVehicles: '/api/v1/transport/borrowed-vehicles',
+    externalVehicles: '/api/v1/transport/external-vehicles',
     tourProcessing: '/api/v1/transport/tour-processing',
     tourProcessingDrafts: '/api/v1/transport/tour-processing/drafts',
     observationKeywords: '/api/v1/transport/observation-keywords',
