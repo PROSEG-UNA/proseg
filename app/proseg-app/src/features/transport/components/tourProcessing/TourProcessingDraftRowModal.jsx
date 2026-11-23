@@ -27,7 +27,7 @@ import GeneralModal from '../../../../common/components/GeneralModal.jsx';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils';
 import { formatDate, formatHours } from '../../transportUtils.js';
-import { useBorrowedVehicleOptions, useVehicleOptions } from '../../hooks/useTransportOptions.js';
+import { useBorrowedVehicleOptions, useExternalVehicleOptions, useVehicleOptions } from '../../hooks/useTransportOptions.js';
 import { invalidateTourProcessingDraft, replaceCachedDraftRow } from '../../hooks/useTourProcessingDraftsData.js';
 import {
     createTourProcessingDraftRow,
@@ -47,6 +47,8 @@ import {
 } from './tourProcessingDraftLabels.js';
 import TourProcessingCatalogField from './TourProcessingCatalogField.jsx';
 import BorrowedVehicleCatalogField from './BorrowedVehicleCatalogField.jsx';
+import ExternalVehicleCatalogField from './ExternalVehicleCatalogField.jsx';
+import { resolveExternalVehicle } from './tourProcessingCatalogMatch.js';
 import DuplicateChip from './DuplicateChip.jsx';
 import { describeDraftRowChanges } from './draftRowChanges.js';
 import { useTourProcessingCatalogMatch } from '../../hooks/useTourProcessingCatalogMatch.js';
@@ -404,8 +406,13 @@ function toFormValues(row) {
 
 const BORROWED_DRIVER_MISSING_MESSAGE = 'El chofer no existe en el sistema. Agrégalo como chofer de otra unidad para poder guardar la gira de préstamo de vehículo';
 
-function validate(values, vehicleOptions, borrowedVehicleOptions, isDriverMissing) {
+const EXTERNAL_PLATE_MISSING_MESSAGE = 'La placa no existe en Contratación Externa. Agrégala al sistema para poder guardar la gira';
+
+function validate(values, vehicleOptions, borrowedVehicleOptions, isDriverMissing, externalVehicles) {
     const errors = {};
+    const isExternalPlateMissing = (plate) => externalVehicles.loaded
+        && Boolean(plate?.trim())
+        && !resolveExternalVehicle(plate, externalVehicles.options);
 
     REQUIRED_TEXT_KEYS.forEach((key) => {
         if (!values[key].trim()) errors[key] = REQUIRED_MESSAGE;
@@ -426,6 +433,9 @@ function validate(values, vehicleOptions, borrowedVehicleOptions, isDriverMissin
     if (values.resourceType === 'BORROWED_VEHICLE' && !values.assignments && isDriverMissing(values.driver)) {
         errors.driver = BORROWED_DRIVER_MISSING_MESSAGE;
     }
+    if (values.resourceType === 'EXTERNAL' && !values.assignments && isExternalPlateMissing(values.vehicle)) {
+        errors.vehicle = EXTERNAL_PLATE_MISSING_MESSAGE;
+    }
 
     if (values.assignments) {
         values.assignments.forEach((assignment) => {
@@ -435,11 +445,14 @@ function validate(values, vehicleOptions, borrowedVehicleOptions, isDriverMissin
             const vehicle = type === 'BORROWED_VEHICLE' ? assignment.borrowedVehicleId : assignment.vehicle?.trim().toUpperCase();
             if (type === 'BORROWED_VEHICLE' && !assignment.borrowedVehicleId) errors.assignments = 'Selecciona cada vehículo prestado';
             if (type === 'BORROWED_VEHICLE' && isDriverMissing(assignment.driver)) errors.assignments = BORROWED_DRIVER_MISSING_MESSAGE;
+            if (type === 'EXTERNAL' && isExternalPlateMissing(assignment.vehicle)) errors.assignments = EXTERNAL_PLATE_MISSING_MESSAGE;
             const capacity = type === 'BORROWED_VEHICLE'
                 ? borrowedVehicleOptions.find((option) => option.id === assignment.borrowedVehicleId)?.capacity
                 : type === 'INTERNAL'
                     ? vehicleOptions.find((option) => option.label.toUpperCase() === vehicle)?.capacity
-                    : null;
+                    : type === 'EXTERNAL'
+                        ? resolveExternalVehicle(assignment.vehicle, externalVehicles.options)?.capacity
+                        : null;
             if (capacity != null && passengers > capacity) errors.assignments = `Un vehículo de ${capacity} espacios no puede llevar ${passengers} pasajeros`;
         });
     }
@@ -530,10 +543,14 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
         values.resourceType === 'BORROWED_VEHICLE'
         || values.assignments?.some((assignment) => assignment.resourceType === 'BORROWED_VEHICLE')
     ));
+    const externalVehicles = useExternalVehicleOptions(isEdit && (
+        values.resourceType === 'EXTERNAL'
+        || values.assignments?.some((assignment) => assignment.resourceType === 'EXTERNAL')
+    ));
     const isDriverMissing = useTourProcessingCatalogMatch().driver.isMissing;
     const errors = useMemo(
-        () => validate(values, vehicleOptions.options, borrowedVehicles.options, isDriverMissing),
-        [values, vehicleOptions.options, borrowedVehicles.options, isDriverMissing],
+        () => validate(values, vehicleOptions.options, borrowedVehicles.options, isDriverMissing, externalVehicles),
+        [values, vehicleOptions.options, borrowedVehicles.options, isDriverMissing, externalVehicles],
     );
     const returnRangeErrors = useMemo(() => validateReturnRange(values), [values]);
 
@@ -564,6 +581,7 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
         setValues((current) => ({
             ...current,
             resourceType: nextResourceType,
+            driver: nextResourceType === 'EXTERNAL' || current.resourceType === 'EXTERNAL' ? '' : current.driver,
             vehicle: '',
             borrowedVehicleId: '',
         }));
@@ -576,6 +594,7 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
 
     const selectedVehicleCapacity = vehicleOptions.options.find((option) => option.label.toUpperCase() === values.vehicle.trim().toUpperCase())?.capacity;
     const selectedBorrowedCapacity = borrowedVehicles.options.find((option) => option.id === values.borrowedVehicleId)?.capacity;
+    const selectedExternalCapacity = resolveExternalVehicle(values.vehicle, externalVehicles.options)?.capacity;
     const maximumCapacity = Math.max(0, ...vehicleOptions.options
         .filter((option) => option.available !== false && option.capacity != null)
         .map((option) => option.capacity));
@@ -587,11 +606,16 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
         ))
         || (values.resourceType === 'BORROWED_VEHICLE'
             && selectedBorrowedCapacity != null && passengers > selectedBorrowedCapacity)
+        || (values.resourceType === 'EXTERNAL'
+            && selectedExternalCapacity != null && passengers > selectedExternalCapacity)
     );
 
     const capacityOfResource = (resource) => {
         if (resource.resourceType === 'BORROWED_VEHICLE') {
             return borrowedVehicles.options.find((option) => option.id === resource.borrowedVehicleId)?.capacity;
+        }
+        if (resource.resourceType === 'EXTERNAL') {
+            return resolveExternalVehicle(resource.vehicle, externalVehicles.options)?.capacity;
         }
         if (resource.resourceType === 'INTERNAL' || !resource.resourceType) {
             return vehicleOptions.options.find((option) => option.label.toUpperCase() === resource.vehicle?.trim().toUpperCase())?.capacity;
@@ -802,9 +826,20 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
                 </Box>
                 {!values.assignments && <Box sx={gridSx('repeat(2, 1fr)')}>
                     {values.resourceType === 'EXTERNAL'
-                        ? renderField('driver', 'Chofer / Empresa')
+                        ? (
+                            <ExternalVehicleCatalogField
+                                provider={values.driver}
+                                plate={values.vehicle}
+                                onChange={({ driver, vehicle }) => setValues((current) => ({ ...current, driver, vehicle }))}
+                                options={externalVehicles.options}
+                                loading={externalVehicles.loading}
+                                loaded={externalVehicles.loaded}
+                                isEdit={isEdit}
+                                disabled={saving}
+                                sx={fieldSx}
+                            />
+                        )
                         : renderCatalogField('driver')}
-                    {values.resourceType === 'EXTERNAL' && renderField('vehicle', 'Placa (contratación externa)')}
                     {values.resourceType === 'BORROWED_VEHICLE' && (isEdit ? (
                         <BorrowedVehicleCatalogField
                             options={borrowedVehicles.options}
@@ -832,6 +867,7 @@ function TourProcessingDraftRowForm({ row, draftId, isEdit, saving, showOptions,
                         saving={saving}
                         fieldSx={fieldSx}
                         borrowedVehicles={borrowedVehicles}
+                        externalVehicles={externalVehicles}
                         vehicleOptions={vehicleOptions.options}
                         error={submitted ? errors.assignments : undefined}
                     />

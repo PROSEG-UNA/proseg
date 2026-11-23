@@ -13,6 +13,7 @@ import com.proseg.msvc_transport.entity.TourProcessingDraftStatus;
 import com.proseg.msvc_transport.entity.TourProcessingDraftTour;
 import com.proseg.msvc_transport.entity.Vehicle;
 import com.proseg.msvc_transport.repository.DriverMonthBusinessDaysRepository;
+import com.proseg.msvc_transport.repository.ExternalVehicleRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftAssignmentRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
@@ -73,7 +74,7 @@ class MultiTripToursServiceTest {
     private FinalCommissionService commission() {
         DraftHoursService hours = mock(DraftHoursService.class);
         when(hours.manualDays(any())).thenReturn(ManualDays.NONE);
-        return new FinalCommissionService(draftRepository, tourStore, dayRepository, driverRepository, vehicleRepository, hours,
+        return new FinalCommissionService(draftRepository, tourStore, dayRepository, driverRepository, vehicleRepository, mock(ExternalVehicleRepository.class), hours,
                 new DriverBusinessDaysService(mock(DriverMonthBusinessDaysRepository.class)));
     }
 

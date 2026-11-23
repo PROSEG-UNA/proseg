@@ -84,7 +84,8 @@ public final class TourAssignmentRules {
             DriverBusinessDays businessDays,
             ManualDays manualDays,
             Integer year,
-            Integer month
+            Integer month,
+            Map<String, Integer> externalCapacities
     ) {
     }
 
@@ -481,6 +482,9 @@ public final class TourAssignmentRules {
     private Integer capacityOf(TourProcessingDraftAssignment part, Snapshot snapshot) {
         if (part.getResourceType() == ResourceType.BORROWED_VEHICLE) {
             return part.getBorrowedVehicle() == null ? null : part.getBorrowedVehicle().getCapacity();
+        }
+        if (part.getResourceType() == ResourceType.EXTERNAL) {
+            return snapshot.externalCapacities().get(DriverHoursRules.plateKey(part.getVehicle()));
         }
         Vehicle vehicle = part.getResourceType() == ResourceType.INTERNAL
                 ? DriverHoursRules.assignedVehicle(part, snapshot.vehiclesById()) : null;

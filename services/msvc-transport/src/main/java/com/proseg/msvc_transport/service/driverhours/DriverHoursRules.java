@@ -3,6 +3,7 @@ package com.proseg.msvc_transport.service.driverhours;
 import com.proseg.msvc_transport.entity.TourProcessingDraftAssignment;
 import com.proseg.msvc_transport.entity.Driver;
 import com.proseg.msvc_transport.entity.DriverUnit;
+import com.proseg.msvc_transport.entity.ExternalVehicle;
 import com.proseg.msvc_transport.entity.ResourceType;
 import com.proseg.msvc_transport.entity.Vehicle;
 
@@ -79,6 +80,14 @@ public final class DriverHoursRules {
         Map<String, Vehicle> catalog = new LinkedHashMap<>();
         vehicles.forEach(vehicle -> catalog.putIfAbsent(plateKey(vehicle.getPlate()), vehicle));
         return catalog;
+    }
+
+    public static Map<String, Integer> externalCapacitiesByPlate(List<ExternalVehicle> externalVehicles) {
+        Map<String, Integer> capacities = new LinkedHashMap<>();
+        externalVehicles.stream()
+                .filter(vehicle -> vehicle.getCapacity() != null)
+                .forEach(vehicle -> capacities.putIfAbsent(plateKey(vehicle.getPlate()), vehicle.getCapacity()));
+        return capacities;
     }
 
     public static Vehicle catalogVehicle(String rawVehicle, Map<String, Vehicle> vehicleCatalogByPlate) {

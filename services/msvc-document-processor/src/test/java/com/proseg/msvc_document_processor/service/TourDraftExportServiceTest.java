@@ -267,6 +267,11 @@ class TourDraftExportServiceTest {
         }
 
         @Override
+        public ApiResponse<PageResponse<Map<String, Object>>> getExternalVehicles(MultiValueMap<String, String> queryParams) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public ApiResponse<PageResponse<Map<String, Object>>> getDrivers(MultiValueMap<String, String> queryParams) {
             throw new UnsupportedOperationException();
         }

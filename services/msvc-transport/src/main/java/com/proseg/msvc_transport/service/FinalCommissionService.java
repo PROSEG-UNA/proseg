@@ -16,6 +16,7 @@ import com.proseg.msvc_transport.exception.TransportException;
 import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
+import com.proseg.msvc_transport.repository.ExternalVehicleRepository;
 import com.proseg.msvc_transport.repository.VehicleRepository;
 import com.proseg.msvc_transport.service.driverhours.DriverBusinessDays;
 import com.proseg.msvc_transport.service.driverhours.DriverHoursRules;
@@ -62,6 +63,7 @@ public class FinalCommissionService {
     private final TourProcessingDraftDayRepository dayRepository;
     private final DriverRepository driverRepository;
     private final VehicleRepository vehicleRepository;
+    private final ExternalVehicleRepository externalVehicleRepository;
     private final DraftHoursService draftHoursService;
     private final DriverBusinessDaysService businessDaysService;
 
@@ -305,7 +307,8 @@ public class FinalCommissionService {
                 businessDays,
                 draft.getId() == null ? ManualDays.NONE : draftHoursService.manualDays(draft.getId()),
                 draft.getYear(),
-                draft.getMonth()
+                draft.getMonth(),
+                snapshot.externalCapacities()
         ));
         Set<UUID> beyondFleet = toursBeyondFleet(snapshot);
         List<FinalCommissionCheckDto.Issue> warnings = new ArrayList<>();
@@ -351,7 +354,8 @@ public class FinalCommissionService {
                 .filter(TourProcessingDraftTour::isPrimary)
                 .toList();
         List<Vehicle> vehicles = vehicleRepository.findAll();
-        return new Snapshot(tours, DriverHoursRules.driversById(driverRepository.findAll()), DriverHoursRules.vehiclesById(vehicles), vehicles);
+        return new Snapshot(tours, DriverHoursRules.driversById(driverRepository.findAll()), DriverHoursRules.vehiclesById(vehicles), vehicles,
+                DriverHoursRules.externalCapacitiesByPlate(externalVehicleRepository.findAllByIsDeletedFalse()));
     }
 
     private TourProcessingDraft getDraft(UUID draftId) {
@@ -421,7 +425,8 @@ public class FinalCommissionService {
             List<TourProcessingDraftTour> tours,
             Map<UUID, Driver> driversById,
             Map<UUID, Vehicle> vehiclesById,
-            List<Vehicle> vehicles
+            List<Vehicle> vehicles,
+            Map<String, Integer> externalCapacities
     ) {
 
         List<TourProcessingDraftTour> approved() {

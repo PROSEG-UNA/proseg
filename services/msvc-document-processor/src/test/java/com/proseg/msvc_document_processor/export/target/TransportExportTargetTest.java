@@ -65,6 +65,25 @@ class TransportExportTargetTest {
     }
 
     @Test
+    void writesExternalVehicleColumnsInSpanish() throws Exception {
+        TransportClient transportClient = mock(TransportClient.class);
+        when(transportClient.getExternalVehicles(any())).thenReturn(page(List.of(Map.of(
+                "provider", "Anca",
+                "plate", "HB4380",
+                "capacity", 13,
+                "available", false
+        ))));
+        ExternalVehicleExportTarget target = new ExternalVehicleExportTarget(transportClient);
+
+        byte[] workbook = new ExcelExportWriter().write(target.columns(), target.fetchPage(new LinkedMultiValueMap<>()).rows());
+
+        try (Workbook excel = new XSSFWorkbook(new ByteArrayInputStream(workbook))) {
+            assertThat(cells(excel.getSheetAt(0).getRow(0))).containsExactly("Proveedor", "Placa", "Capacidad", "Estado");
+            assertThat(cells(excel.getSheetAt(0).getRow(1))).containsExactly("Anca", "HB4380", "13", "No disponible");
+        }
+    }
+
+    @Test
     void writesBaseDriverColumnsWhenNoMonthIsSelected() throws Exception {
         TransportClient transportClient = mock(TransportClient.class);
         when(transportClient.getDrivers(any())).thenReturn(page(List.of(Map.of(

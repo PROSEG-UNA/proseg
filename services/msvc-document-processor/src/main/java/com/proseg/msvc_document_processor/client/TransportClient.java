@@ -63,6 +63,9 @@ public interface TransportClient {
     @GetMapping("/v1/transport/borrowed-vehicles")
     ApiResponse<PageResponse<Map<String, Object>>> getBorrowedVehicles(@RequestParam MultiValueMap<String, String> queryParams);
 
+    @GetMapping("/v1/transport/external-vehicles")
+    ApiResponse<PageResponse<Map<String, Object>>> getExternalVehicles(@RequestParam MultiValueMap<String, String> queryParams);
+
     @GetMapping("/v1/transport/drivers")
     ApiResponse<PageResponse<Map<String, Object>>> getDrivers(@RequestParam MultiValueMap<String, String> queryParams);
 

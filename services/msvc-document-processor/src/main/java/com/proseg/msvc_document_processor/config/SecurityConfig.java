@@ -60,6 +60,11 @@ public class SecurityConfig {
                         ).hasAuthority(Privileges.Vehiculos.LEER)
 
                         .requestMatchers(HttpMethod.GET,
+                                "/api/v1/document-processor/exports/external-vehicles",
+                                "/api/v1/document-processor/exports/external-vehicles/**"
+                        ).hasAuthority(Privileges.Vehiculos.LEER)
+
+                        .requestMatchers(HttpMethod.GET,
                                 "/api/v1/document-processor/exports/assets/**"
                         ).hasAnyAuthority(Privileges.Activos.IMPORTAR, Privileges.Activos.EXPORTAR)
 
