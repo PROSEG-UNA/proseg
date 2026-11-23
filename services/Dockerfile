@@ -15,6 +15,7 @@ COPY msvc-archive/pom.xml ./msvc-archive/
 COPY msvc-transport/pom.xml ./msvc-transport/
 COPY msvc-document-processor/pom.xml ./msvc-document-processor/
 COPY msvc-maintenance/pom.xml ./msvc-maintenance/
+COPY msvc-forms/pom.xml ./msvc-forms/
 
 RUN mvn -B -pl ${SERVICE_NAME} -am -DskipTests \
       -Dmaven.repo.local=/app/.m2 dependency:go-offline || true

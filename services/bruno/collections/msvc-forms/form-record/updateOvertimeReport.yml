@@ -1,0 +1,38 @@
+info:
+  name: updateOvertimeReport
+  type: http
+  seq: 6
+
+http:
+  method: PUT
+  url: "{{gatewayUrl}}/api/{{apiVersion}}/forms/{{formRecordId}}"
+  body:
+    type: json
+    data: |-
+      {
+        "formTypeId": "{{overtimeFormTypeId}}",
+        "data": {
+          "fecha": "2026-09-14",
+          "grupo": "Grupo B",
+          "supervisor": "Supervisor Editado",
+          "detalle": [
+            {
+              "no": 1,
+              "nombre": "Juan Perez",
+              "cedula": "1-1111-1111",
+              "fecha": "2026-09-14",
+              "horaEntrada": "17:00",
+              "horaSalida": "20:00",
+              "totalHoras": 3.0
+            }
+          ],
+          "observacion": "Actualizado desde Bruno"
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

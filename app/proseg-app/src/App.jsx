@@ -30,6 +30,7 @@ import TicketsDashboard from './features/maintenance/pages/TicketsDashboard.jsx'
 import DriversPage from './features/transport/pages/drivers/DriversPage.jsx';
 import VehiclesPage from './features/transport/pages/vehicles/VehiclesPage.jsx';
 import ExternalHiringPage from './features/transport/pages/externalHiring/ExternalHiringPage.jsx';
+import FormsPage from './features/forms/pages/FormsPage.jsx';
 import TourProcessingPage from './features/transport/pages/tourProcessing/TourProcessingPage.jsx';
 import TourProcessingDraftPage from './features/transport/pages/tourProcessing/TourProcessingDraftPage.jsx';
 import TransportSettingsPage from './features/transport/pages/settings/TransportSettingsPage.jsx';
@@ -243,6 +244,18 @@ function App() {
                                             element={
                                                 <DashboardLayout title="Contratación Externa" pageTitle="Contratación Externa" description="Administra los proveedores y vehículos de contratación externa.">
                                                     <ExternalHiringPage />
+                                                </DashboardLayout>
+                                            }
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/formularios"
+                                    element={
+                                        <ProtectedRoute
+                                            element={
+                                                <DashboardLayout title="Registro de Formularios" pageTitle="Formularios">
+                                                    <FormsPage />
                                                 </DashboardLayout>
                                             }
                                         />

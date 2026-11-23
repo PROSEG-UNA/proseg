@@ -1,0 +1,47 @@
+info:
+  name: createOvertimeReport
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{gatewayUrl}}/api/{{apiVersion}}/forms"
+  body:
+    type: json
+    data: |-
+      {
+        "formTypeId": "{{overtimeFormTypeId}}",
+        "data": {
+          "fecha": "2026-09-13",
+          "grupo": "Grupo A",
+          "supervisor": "Supervisor Uno",
+          "detalle": [
+            {
+              "no": 1,
+              "nombre": "Juan Perez",
+              "cedula": "1-1111-1111",
+              "fecha": "2026-09-13",
+              "horaEntrada": "17:00",
+              "horaSalida": "19:30",
+              "totalHoras": 2.5
+            },
+            {
+              "no": 2,
+              "nombre": "Maria Lopez",
+              "cedula": "2-2222-2222",
+              "fecha": "2026-09-13",
+              "horaEntrada": "18:00",
+              "horaSalida": "21:00",
+              "totalHoras": 3.0
+            }
+          ],
+          "observacion": "Prueba Bruno horas extras"
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

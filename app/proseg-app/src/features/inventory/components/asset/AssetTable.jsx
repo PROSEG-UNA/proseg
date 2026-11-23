@@ -141,6 +141,11 @@ export default function AssetTable() {
         setViewAssetId(row.id);
     }, []);
 
+    const handleViewEdit = useCallback(() => {
+        setEditAssetId(viewAssetId);
+        setViewAssetId(null);
+    }, [viewAssetId]);
+
     const handleDelete = useCallback((row) => {
         setAssetToDelete(row);
     }, []);
@@ -260,6 +265,8 @@ export default function AssetTable() {
                 open={!!viewAssetId}
                 assetId={viewAssetId}
                 onClose={() => setViewAssetId(null)}
+                onEdit={handleViewEdit}
+                canEdit={canManageAssets}
             />
 
             <AssetMaintenanceHistoryModal

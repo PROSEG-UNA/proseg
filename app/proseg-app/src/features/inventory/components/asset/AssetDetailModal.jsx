@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-    Avatar,
+    Alert,
     Box,
+    Button,
     Chip,
     Card,
     Divider,
@@ -33,118 +34,46 @@ import { fetchAssetById, fetchLastKnownNetworkInterface } from '../../services/a
 import { fetchAssetArchives } from '../../services/assetArchiveService.js';
 import { fetchAssetComponents } from '../../services/assetComponentsService.js';
 import { queryKeys } from '../../../../common/query';
+import { AssetReadOnlyField, AssetSectionTitle } from './AssetModalFields.jsx';
 
 const EMPTY_LIST = [];
 
-function buildAssetDisplayName(asset) {
-    const parts = [
-        asset?.model?.type?.name,
-        asset?.model?.brand?.name,
-        asset?.model?.name,
-    ].filter(Boolean);
-
-    if (parts.length === 0) {
-        return asset?.assetNumber ? `Activo ${asset.assetNumber}` : 'Activo';
-    }
-
-    return parts.join(' - ');
-}
-
-function HeroMetricCard({ label, value, color = 'text.primary' }) {
+function HeroMetricCard({ label, value, color }) {
     return (
-        <Card
-            variant="outlined"
-            sx={{
-                p: 1.5,
-                borderRadius: '14px',
-                bgcolor: 'background.paperWarm',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 0.45,
-                minHeight: 84,
-            }}
-        >
-            <Typography sx={{ fontSize: 10.5, fontWeight: 700, color: 'text.disabled', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                {label}
-            </Typography>
-            <Typography sx={{ fontSize: 17, fontWeight: 800, color, wordBreak: 'break-word', lineHeight: 1.25 }}>
-                {value || '—'}
-            </Typography>
-        </Card>
-    );
-}
-
-function DetailCard({ label, value, icon: Icon }) {
-    return (
-        <Card
-            variant="outlined"
-            sx={{
-                p: 1.5,
-                borderRadius: '14px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 0.8,
-                minHeight: 98,
-                bgcolor: 'hsla(220, 20%, 50%, 0.02)',
-            }}
-        >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {Icon ? <Icon sx={{ fontSize: 16, color: 'text.disabled' }} /> : null}
-                <Typography sx={{ fontSize: 10.75, fontWeight: 700, color: 'text.disabled', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                    {label}
-                </Typography>
-            </Box>
-            <Typography sx={{ fontSize: 14, fontWeight: 700, color: 'text.primary', wordBreak: 'break-word', lineHeight: 1.45 }}>
-                {value || '—'}
-            </Typography>
-        </Card>
-    );
-}
-
-function SectionBlock({ icon, title, children }) {
-    const SectionIcon = icon;
-
-    return (
-        <Paper
-            variant="outlined"
-            sx={{
-                p: { xs: 1.5, sm: 2 },
-                borderRadius: '16px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 1.5,
-                bgcolor: 'background.paperWarm',
-            }}
-        >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.1 }}>
-                <Avatar
-                    sx={{
-                        width: 32,
-                        height: 32,
-                        bgcolor: 'hsla(343, 68%, 48%, 0.10)',
-                        color: 'hsl(343, 68%, 48%)',
-                    }}
-                >
-                    <SectionIcon sx={{ fontSize: 17 }} />
-                </Avatar>
-                <Box>
-                    <Typography sx={{ fontSize: 14, fontWeight: 800, color: 'text.primary', lineHeight: 1.2 }}>
-                        {title}
-                    </Typography>
-                </Box>
-            </Box>
-            <Divider />
-            {children}
+        <Paper variant="outlined" sx={{ p: 1.5, height: '100%', borderRadius: '12px' }}>
+            <Typography sx={{ color, fontSize: 24, fontWeight: 800 }}>{value}</Typography>
+            <Typography variant="body2" color="text.secondary">{label}</Typography>
         </Paper>
     );
 }
 
-export default function AssetDetailModal({ open, onClose, assetId }) {
-    const theme = useTheme();
+function DetailCard({ label, value, icon: Icon, multiline = false, minRows }) {
+    return (
+        <AssetReadOnlyField
+            label={label}
+            value={value}
+            icon={Icon}
+            multiline={multiline}
+            minRows={minRows}
+        />
+    );
+}
 
+function SectionBlock({ icon, title, children }) {
+    return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            <AssetSectionTitle icon={icon}>{title}</AssetSectionTitle>
+            {children}
+            <Divider sx={{ mt: 1 }} />
+        </Box>
+    );
+}
+
+export default function AssetDetailModal({ open, onClose, onEdit, canEdit = false, assetId }) {
+    const theme = useTheme();
     const detailEnabled = Boolean(open && assetId);
 
-    const { data, isPending } = useQuery({
+    const { data, isPending, error, refetch } = useQuery({
         queryKey: queryKeys.inventory.assetFullDetail(assetId),
         queryFn: async () => {
             const [assetData, archivesData, componentsData, lastKnown] = await Promise.all([
@@ -171,14 +100,19 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
     const networkInterface = data?.networkInterface ?? null;
 
     const imageArchives = useMemo(() => archives.filter((archive) => !!archive.imageUrl), [archives]);
-    const statusColor = asset?.status === 'APROBADO' ? 'success' : (asset?.status === 'DE_BAJA' ? 'error' : 'default');
-    const assetDisplayName = buildAssetDisplayName(asset);
     const assetLocationSummary = [
         asset?.location?.description,
         asset?.location?.floor?.name ? `Piso ${asset.location.floor.name}` : null,
         asset?.location?.floor?.building?.name,
         asset?.location?.floor?.building?.campus?.name,
     ].filter(Boolean).join(' - ');
+
+    const assetDisplayName = [asset?.model?.brand?.name, asset?.model?.name]
+        .filter(Boolean).join(' ') || asset?.assetNumber || 'Activo';
+    const statusColor = asset?.status === 'DE_BAJA' ? 'error' : 'default';
+    const rosePalette = theme.vars?.palette?.tones?.rose;
+    const heroStart = rosePalette?.footerBg ?? theme.palette.background.paper;
+    const heroEnd = rosePalette?.headerOverlay ?? theme.palette.action.hover;
 
     const modalTitle = asset?.assetNumber ? `Detalle del activo ${asset.assetNumber}` : 'Detalle del activo';
     const modalSubtitle = asset?.serialNumber ? `Serie: ${asset.serialNumber}` : 'Ficha técnica del activo';
@@ -187,7 +121,7 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
         <GeneralModal
             open={open}
             onClose={onClose}
-            maxWidth={false}
+            maxWidth="md"
             fillHeight
             icon={VisibilityOutlinedIcon}
             title={modalTitle}
@@ -195,12 +129,7 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
             loading={loading}
             showCloseButton
             primaryButton={{ label: 'Cerrar', onClick: onClose }}
-            paperSx={{
-                width: { xs: '100%', md: '90vw' },
-                maxWidth: '1800px',
-                maxHeight: { xs: '100dvh', md: '90vh' },
-                height: { xs: '100dvh', md: '90vh' },
-            }}
+            secondaryButton={canEdit ? { label: 'Editar activo', onClick: onEdit } : undefined}
             contentSx={{
                 overflow: 'hidden',
             }}
@@ -209,8 +138,8 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
                 sx={{
                     height: '100%',
                     overflowY: 'auto',
-                    px: { xs: 2, sm: 2.5, md: 3 },
-                    pt: 2,
+                    px: { xs: 2.5, sm: 3 },
+                    pt: 2.5,
                     pb: 3,
                     '&::-webkit-scrollbar': { width: '6px' },
                     '&::-webkit-scrollbar-track': { background: 'transparent' },
@@ -220,14 +149,14 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
                     },
                 }}
             >
-                <Stack spacing={2}>
+                <Stack spacing={3}>
                     {!loading && asset && (
                         <Paper
                             variant="outlined"
                             sx={{
                                 p: { xs: 1.75, sm: 2, md: 2.5 },
                                 borderRadius: '18px',
-                                background: `linear-gradient(135deg, ${theme.vars.palette.tones.rose.footerBg} 0%, ${theme.vars.palette.tones.rose.headerOverlay} 100%)`,
+                                background: `linear-gradient(135deg, ${heroStart} 0%, ${heroEnd} 100%)`,
                                 overflow: 'hidden',
                             }}
                         >
@@ -255,10 +184,10 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
 
                                 <Grid size={{ xs: 12, lg: 5 }}>
                                     <Grid container spacing={1.25}>
-                                        <Grid size={{ xs: 12, sm: 4 }}>
+                                        <Grid size={{ xs: 12, sm: 6 }}>
                                             <HeroMetricCard label="Componentes" value={String(components.length)} color="primary.main" />
                                         </Grid>
-                                        <Grid size={{ xs: 12, sm: 4 }}>
+                                        <Grid size={{ xs: 12, sm: 6 }}>
                                             <HeroMetricCard label="Imágenes" value={String(imageArchives.length)} color="primary.main" />
                                         </Grid>
                                     </Grid>
@@ -268,46 +197,84 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
                     )}
 
                     {loading && (
-                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr' }, gap: 1.5 }}>
-                            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((item) => <Skeleton key={item} variant="rounded" height={96} />)}
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                            {[1, 2, 3, 4, 5, 6, 7].map((item) => <Skeleton key={item} variant="rounded" height={56} />)}
                         </Box>
                     )}
 
-                    {!loading && !asset && (
-                        <Typography sx={{ color: 'text.secondary', textAlign: 'center', py: 3 }}>
+                    {!loading && error && (
+                        <Alert
+                            severity="error"
+                            action={<Button color="inherit" size="small" onClick={() => void refetch()}>Reintentar</Button>}
+                        >
                             No se pudo cargar el detalle del activo.
+                        </Alert>
+                    )}
+
+                    {!loading && !error && !asset && (
+                        <Typography sx={{ color: 'text.secondary', textAlign: 'center', py: 3 }}>
+                            No se encontró información para este activo.
                         </Typography>
                     )}
 
                     {!loading && asset && (
                         <>
-                            <SectionBlock icon={InfoOutlinedIcon} title="Información General">
-                                <Grid container spacing={1.5}>
-                                    <Grid size={{ xs: 12, sm: 6, xl: 4 }}><DetailCard label="Número de activo" value={asset.assetNumber} icon={Inventory2OutlinedIcon} /></Grid>
-                                    <Grid size={{ xs: 12, sm: 6, xl: 4 }}><DetailCard label="Número de serie" value={asset.serialNumber} icon={TagOutlinedIcon} /></Grid>
-                                    <Grid size={{ xs: 12, sm: 6, xl: 4 }}><DetailCard label="Tipo" value={asset.model?.type?.name} icon={InfoOutlinedIcon} /></Grid>
-                                    <Grid size={{ xs: 12, sm: 6, xl: 4 }}><DetailCard label="Marca" value={asset.model?.brand?.name} icon={InfoOutlinedIcon} /></Grid>
-                                    <Grid size={{ xs: 12, sm: 6, xl: 4 }}><DetailCard label="Modelo" value={asset.model?.name} icon={InfoOutlinedIcon} /></Grid>
+                            <SectionBlock icon={InfoOutlinedIcon} title="Identificación">
+                                <Grid container spacing={2}>
+                                    <Grid size={{ xs: 12, sm: 6 }}><DetailCard label="Número de activo" value={asset.assetNumber} icon={Inventory2OutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6 }}><DetailCard label="Número de serie" value={asset.serialNumber} icon={TagOutlinedIcon} /></Grid>
                                 </Grid>
                             </SectionBlock>
 
-                            <SectionBlock icon={Inventory2OutlinedIcon} title="Información del Activo">
-                                <Grid container spacing={1.5}>
-                                    <Grid size={{ xs: 12, sm: 6, lg: 4 }}><DetailCard label="Fecha de adquisición" value={formatDate(asset.acquisitionDate)} icon={EventOutlinedIcon} /></Grid>
-                                    <Grid size={{ xs: 12, sm: 6, lg: 4 }}><DetailCard label="Fin de garantía" value={formatDate(asset.warrantyEndDate)} icon={EventOutlinedIcon} /></Grid>
-                                    <Grid size={{ xs: 12, sm: 6, lg: 4 }}><DetailCard label="Fin de soporte firmware" value={formatDate(asset.firmwareSupportEndDate)} icon={EventOutlinedIcon} /></Grid>
-                                    <Grid size={{ xs: 12, sm: 6, lg: 4 }}><DetailCard label="Fecha de baja" value={formatDate(asset.decommissionDate)} icon={EventOutlinedIcon} /></Grid>
-                                    <Grid size={{ xs: 12, sm: 6, lg: 4 }}><DetailCard label="Actualizado" value={formatDateTime(asset.updatedAt)} icon={EventOutlinedIcon} /></Grid>
+                            <SectionBlock icon={Inventory2OutlinedIcon} title="Clasificación">
+                                <Grid container spacing={2}>
+                                    <Grid size={{ xs: 12, sm: 6 }}><DetailCard label="Tipo de activo" value={asset.model?.type?.name} icon={InfoOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6 }}><DetailCard label="Marca" value={asset.model?.brand?.name} icon={InfoOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12 }}><DetailCard label="Modelo" value={asset.model?.name} icon={InfoOutlinedIcon} /></Grid>
                                 </Grid>
                             </SectionBlock>
 
                             <SectionBlock icon={PlaceOutlinedIcon} title="Ubicación">
-                                <Stack spacing={1.25}>
-                                    <Typography sx={{ fontSize: 13.5, color: 'text.secondary' }}>
-                                        {assetLocationSummary || 'Sin ubicación detallada registrada'}
-                                    </Typography>
+                                <Grid container spacing={2}>
+                                    <Grid size={{ xs: 12, sm: 6 }}><DetailCard label="Campus" value={asset.location?.floor?.building?.campus?.name} icon={PlaceOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6 }}><DetailCard label="Edificio" value={asset.location?.floor?.building?.name} icon={PlaceOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6 }}><DetailCard label="Número de piso" value={asset.location?.floor?.name} icon={PlaceOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6 }}><DetailCard label="Detalle de ubicación" value={asset.location?.description} icon={PlaceOutlinedIcon} /></Grid>
+                                </Grid>
+                            </SectionBlock>
 
-                                    <Paper variant="outlined" sx={{ p: 1.25, borderRadius: '14px' }}>
+                            <SectionBlock icon={Inventory2OutlinedIcon} title="Estado">
+                                <Grid container spacing={2}>
+                                    <Grid size={{ xs: 12, sm: 6 }}><DetailCard label="Estado" value={asset.status} icon={Inventory2OutlinedIcon} /></Grid>
+                                    {asset.status === 'DE_BAJA' && (
+                                        <Grid size={{ xs: 12, sm: 6 }}><DetailCard label="Fecha de baja" value={formatDate(asset.decommissionDate)} icon={EventOutlinedIcon} /></Grid>
+                                    )}
+                                </Grid>
+                            </SectionBlock>
+
+                            <SectionBlock icon={EngineeringOutlinedIcon} title="IP y MAC">
+                                <Grid container spacing={2}>
+                                    <Grid size={{ xs: 12, sm: 6 }}><DetailCard label="Dirección IP" value={networkInterface?.ipAddress} icon={RouterOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6 }}><DetailCard label="Dirección MAC" value={networkInterface?.macAddress} icon={RouterOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6 }}><DetailCard label="Archivos asociados" value={String(archives.length)} icon={PhotoLibraryOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6 }}><DetailCard label="Creado" value={formatDateTime(asset.createdAt)} icon={EventOutlinedIcon} /></Grid>
+                                </Grid>
+                            </SectionBlock>
+
+                            <SectionBlock icon={EventOutlinedIcon} title="Fechas">
+                                <Grid container spacing={2}>
+                                    <Grid size={{ xs: 12, sm: 6 }}><DetailCard label="Fecha de adquisición" value={formatDate(asset.acquisitionDate)} icon={EventOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6 }}><DetailCard label="Fin de garantía" value={formatDate(asset.warrantyEndDate)} icon={EventOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6 }}><DetailCard label="Fin de soporte firmware" value={formatDate(asset.firmwareSupportEndDate)} icon={EventOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6 }}><DetailCard label="Actualizado" value={formatDateTime(asset.updatedAt)} icon={EventOutlinedIcon} /></Grid>
+                                </Grid>
+                            </SectionBlock>
+
+                            <SectionBlock icon={PlaceOutlinedIcon} title="Coordenadas">
+                                <Grid container spacing={2}>
+                                    <Grid size={{ xs: 12, sm: 6 }}><DetailCard label="Latitud" value={asset.latitude} /></Grid>
+                                    <Grid size={{ xs: 12, sm: 6 }}><DetailCard label="Longitud" value={asset.longitude} /></Grid>
+                                    <Grid size={{ xs: 12 }}>
                                         <CoordinateMapPicker
                                             latitude={asset.latitude != null ? String(asset.latitude) : ''}
                                             longitude={asset.longitude != null ? String(asset.longitude) : ''}
@@ -319,10 +286,10 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
                                             errors={{}}
                                             touched={{}}
                                             showCoordinateFields={false}
-                                            mapHeight={360}
+                                            mapHeight={300}
                                         />
-                                    </Paper>
-                                </Stack>
+                                    </Grid>
+                                </Grid>
                             </SectionBlock>
 
                             <SectionBlock icon={PersonOutlineOutlinedIcon} title="Responsable">
@@ -331,65 +298,6 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
                                     <Grid size={{ xs: 12, md: 4 }}><DetailCard label="Funcionario responsable" value={asset.employee?.name} icon={PersonOutlineOutlinedIcon} /></Grid>
                                     <Grid size={{ xs: 12, md: 4 }}><DetailCard label="ID del funcionario" value={asset.employee?.identification} icon={PersonOutlineOutlinedIcon} /></Grid>
                                 </Grid>
-                            </SectionBlock>
-
-                            <SectionBlock icon={EngineeringOutlinedIcon} title="Información Técnica">
-                                <Grid container spacing={1.5}>
-                                    <Grid size={{ xs: 12, sm: 6, lg: 3 }}><DetailCard label="IP" value={networkInterface?.ipAddress} icon={RouterOutlinedIcon} /></Grid>
-                                    <Grid size={{ xs: 12, sm: 6, lg: 3 }}><DetailCard label="MAC" value={networkInterface?.macAddress} icon={RouterOutlinedIcon} /></Grid>
-                                    <Grid size={{ xs: 12, sm: 6, lg: 3 }}><DetailCard label="Archivos asociados" value={String(archives.length)} icon={PhotoLibraryOutlinedIcon} /></Grid>
-                                    <Grid size={{ xs: 12, sm: 6, lg: 3 }}><DetailCard label="Creado" value={formatDateTime(asset.createdAt)} icon={EventOutlinedIcon} /></Grid>
-                                </Grid>
-                            </SectionBlock>
-
-                            <SectionBlock icon={ImageOutlinedIcon} title="Galería del Activo">
-                                {imageArchives.length === 0 ? (
-                                    <Paper
-                                        variant="outlined"
-                                        sx={{
-                                            p: 2.25,
-                                            borderStyle: 'dashed',
-                                            borderRadius: '14px',
-                                            bgcolor: 'hsla(220, 20%, 50%, 0.02)',
-                                            textAlign: 'center',
-                                        }}
-                                    >
-                                        <Typography sx={{ color: 'text.secondary', fontSize: 13.5 }}>
-                                            Este activo no posee imágenes asociadas.
-                                        </Typography>
-                                    </Paper>
-                                ) : (
-                                    <Grid container spacing={1.25}>
-                                        {imageArchives.map((image) => (
-                                            <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={image.id}>
-                                                <Card
-                                                    variant="outlined"
-                                                    sx={{
-                                                        borderRadius: '14px',
-                                                        overflow: 'hidden',
-                                                    }}
-                                                >
-                                                    <Box
-                                                        component="img"
-                                                        src={image.imageUrl}
-                                                        alt={image.caption || ''}
-                                                        sx={{
-                                                            width: '100%',
-                                                            height: { xs: 170, md: 190 },
-                                                            objectFit: 'cover',
-                                                            display: 'block',
-                                                        }}
-                                                    />
-                                                    <Box sx={{ p: 1.25 }}>
-                                                        <Typography sx={{ fontSize: 12.75, fontWeight: 600, color: 'text.secondary' }}>
-                                                            {image.caption || 'Imagen del activo'}
-                                                        </Typography>
-                                                    </Box>
-                                                </Card>
-                                            </Grid>
-                                        ))}
-                                    </Grid>
-                                )}
                             </SectionBlock>
 
                             <SectionBlock icon={WidgetsOutlinedIcon} title="Componentes Asociados">
@@ -437,8 +345,58 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
                                                     <Divider />
                                                     <Grid container spacing={1.25}>
                                                         <Grid size={{ xs: 12 }}><DetailCard label="Ubicación" value={component.location || '—'} icon={PlaceOutlinedIcon} /></Grid>
-                                                        <Grid size={{ xs: 12 }}><DetailCard label="Observaciones" value={component.observations || '—'} icon={NotesOutlinedIcon} /></Grid>
+                                                        <Grid size={{ xs: 12 }}><DetailCard label="Observaciones" value={component.observations} icon={NotesOutlinedIcon} multiline minRows={2} /></Grid>
                                                     </Grid>
+                                                </Card>
+                                            </Grid>
+                                        ))}
+                                    </Grid>
+                                )}
+                            </SectionBlock>
+
+                            <SectionBlock icon={ImageOutlinedIcon} title="Fotos">
+                                {imageArchives.length === 0 ? (
+                                    <Paper
+                                        variant="outlined"
+                                        sx={{
+                                            p: 2.25,
+                                            borderStyle: 'dashed',
+                                            borderRadius: '14px',
+                                            bgcolor: 'hsla(220, 20%, 50%, 0.02)',
+                                            textAlign: 'center',
+                                        }}
+                                    >
+                                        <Typography sx={{ color: 'text.secondary', fontSize: 13.5 }}>
+                                            Este activo no posee imágenes asociadas.
+                                        </Typography>
+                                    </Paper>
+                                ) : (
+                                    <Grid container spacing={1.25}>
+                                        {imageArchives.map((image) => (
+                                            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={image.id}>
+                                                <Card
+                                                    variant="outlined"
+                                                    sx={{
+                                                        borderRadius: '14px',
+                                                        overflow: 'hidden',
+                                                    }}
+                                                >
+                                                    <Box
+                                                        component="img"
+                                                        src={image.imageUrl}
+                                                        alt={image.caption || ''}
+                                                        sx={{
+                                                            width: '100%',
+                                                            height: { xs: 170, md: 190 },
+                                                            objectFit: 'cover',
+                                                            display: 'block',
+                                                        }}
+                                                    />
+                                                    <Box sx={{ p: 1.25 }}>
+                                                        <Typography sx={{ fontSize: 12.75, fontWeight: 600, color: 'text.secondary' }}>
+                                                            {image.caption || 'Imagen del activo'}
+                                                        </Typography>
+                                                    </Box>
                                                 </Card>
                                             </Grid>
                                         ))}
@@ -449,7 +407,7 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
                             <SectionBlock icon={NotesOutlinedIcon} title="Observaciones">
                                 <Grid container spacing={1.5}>
                                     <Grid size={{ xs: 12, md: 6 }}><DetailCard label="Resumen de ubicación" value={assetLocationSummary || 'Sin ubicación resumida'} icon={NotesOutlinedIcon} /></Grid>
-                                    <Grid size={{ xs: 12, md: 6 }}><DetailCard label="Observaciones registradas" value="No hay observaciones adicionales disponibles para este activo." icon={NotesOutlinedIcon} /></Grid>
+                                    <Grid size={{ xs: 12, md: 6 }}><DetailCard label="Observaciones registradas" value="No hay observaciones adicionales disponibles para este activo." icon={NotesOutlinedIcon} multiline minRows={2} /></Grid>
                                 </Grid>
                             </SectionBlock>
                         </>
@@ -459,4 +417,3 @@ export default function AssetDetailModal({ open, onClose, assetId }) {
         </GeneralModal>
     );
 }
-
