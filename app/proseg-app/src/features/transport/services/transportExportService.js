@@ -9,6 +9,10 @@ export function exportBorrowedVehicles(params = {}) {
     return downloadFile(`${TRANSPORT_DOCUMENT_ENDPOINTS.exports}/borrowed-vehicles`, { format: 'xlsx', ...params }, 'vehiculos-prestados.xlsx');
 }
 
+export function exportExternalVehicles(params = {}) {
+    return downloadFile(`${TRANSPORT_DOCUMENT_ENDPOINTS.exports}/external-vehicles`, { format: 'xlsx', ...params }, 'contratacion-externa.xlsx');
+}
+
 export function exportDrivers(params = {}) {
     return downloadFile(`${TRANSPORT_DOCUMENT_ENDPOINTS.exports}/drivers`, { format: 'xlsx', ...params }, 'choferes.xlsx');
 }

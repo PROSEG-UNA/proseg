@@ -16,9 +16,11 @@ import com.proseg.msvc_transport.exception.TransportException;
 import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
+import com.proseg.msvc_transport.repository.ExternalVehicleRepository;
 import com.proseg.msvc_transport.repository.VehicleRepository;
 import com.proseg.msvc_transport.service.driverhours.DriverBusinessDays;
 import com.proseg.msvc_transport.service.driverhours.DriverHoursRules;
+import com.proseg.msvc_transport.service.driverhours.DriverSchedule;
 import com.proseg.msvc_transport.service.driverhours.ManualDays;
 import com.proseg.msvc_transport.service.driverhours.OrdinaryWindow;
 import com.proseg.msvc_transport.service.rules.TourAssignmentRules;
@@ -62,6 +64,7 @@ public class FinalCommissionService {
     private final TourProcessingDraftDayRepository dayRepository;
     private final DriverRepository driverRepository;
     private final VehicleRepository vehicleRepository;
+    private final ExternalVehicleRepository externalVehicleRepository;
     private final DraftHoursService draftHoursService;
     private final DriverBusinessDaysService businessDaysService;
 
@@ -133,7 +136,7 @@ public class FinalCommissionService {
                 .activeDriversSurplusCap(activeRoster.stream().mapToDouble(businessDays::surplusCapOf).sum())
                 .tours(snapshot.tours().stream()
                         .sorted(REPORT_ORDER)
-                        .map(tour -> toReportTour(tour, snapshot, daysByAssignment, !withheld.contains(tour)))
+                        .map(tour -> toReportTour(tour, snapshot, businessDays, daysByAssignment, !withheld.contains(tour)))
                         .toList())
                 .build();
     }
@@ -141,12 +144,14 @@ public class FinalCommissionService {
     private FinalCommissionReportDto.Tour toReportTour(
             TourProcessingDraftTour tour,
             Snapshot snapshot,
+            DriverBusinessDays businessDays,
             Map<UUID, List<TourProcessingDraftDay>> daysByAssignment,
             boolean countsAsApproved
     ) {
         TourProcessingDraftAssignment main = tour.primaryAssignment();
         boolean approved = countsAsApproved && tour.isApproved();
-        OrdinaryWindow window = OrdinaryWindow.of(main == null ? null : DriverHoursRules.assignedDriver(main, snapshot.driversById()));
+        DriverSchedule schedule = businessDays.scheduleOf(main == null ? null : DriverHoursRules.assignedDriver(main, snapshot.driversById()));
+        OrdinaryWindow window = schedule.windowOn(tour.getDepartureDate());
         return FinalCommissionReportDto.Tour.builder()
                 .number(tour.getNumber())
                 .passengers(tour.getPassengers())
@@ -163,7 +168,7 @@ public class FinalCommissionService {
                 .vehicles(TourTrips.distinctDrivers(tour))
                 .ordinaryStart(window.start())
                 .ordinaryEnd(window.end())
-                .days(reportDays(tour, main, daysByAssignment, approved))
+                .days(reportDays(tour, main, schedule, daysByAssignment, approved))
                 .build();
     }
 
@@ -178,6 +183,7 @@ public class FinalCommissionService {
     private List<FinalCommissionReportDto.Day> reportDays(
             TourProcessingDraftTour tour,
             TourProcessingDraftAssignment main,
+            DriverSchedule schedule,
             Map<UUID, List<TourProcessingDraftDay>> daysByAssignment,
             boolean countsAsApproved
     ) {
@@ -190,14 +196,19 @@ public class FinalCommissionService {
                     .map(day -> {
                         double start = DriverHoursRules.hourOf(day.getStartTime());
                         double end = DriverHoursRules.hourOf(day.getEndTime());
-                        return new FinalCommissionReportDto.Day(day.getDate(), start, end < start ? end + 24 : end);
+                        return dayOf(schedule, tour.getDepartureDate(), day.getDate(), start, end < start ? end + 24 : end);
                     })
                     .toList();
         }
         TourProcessingDraftAssignment source = main != null ? main : TourProcessingDraftAssignment.builder().tour(tour).build();
         return DriverHoursRules.daySpans(source).stream()
-                .map(span -> new FinalCommissionReportDto.Day(span.date(), span.start(), span.end()))
+                .map(span -> dayOf(schedule, tour.getDepartureDate(), span.date(), span.start(), span.end()))
                 .toList();
+    }
+
+    private static FinalCommissionReportDto.Day dayOf(DriverSchedule schedule, LocalDate departure, LocalDate date, double start, double end) {
+        OrdinaryWindow window = schedule.windowOn(departure, date);
+        return new FinalCommissionReportDto.Day(date, start, end, window.start(), window.end());
     }
 
     private List<FinalCommissionCheckDto.Issue> blockers(TourProcessingDraft draft, Snapshot snapshot) {
@@ -305,7 +316,8 @@ public class FinalCommissionService {
                 businessDays,
                 draft.getId() == null ? ManualDays.NONE : draftHoursService.manualDays(draft.getId()),
                 draft.getYear(),
-                draft.getMonth()
+                draft.getMonth(),
+                snapshot.externalCapacities()
         ));
         Set<UUID> beyondFleet = toursBeyondFleet(snapshot);
         List<FinalCommissionCheckDto.Issue> warnings = new ArrayList<>();
@@ -351,7 +363,8 @@ public class FinalCommissionService {
                 .filter(TourProcessingDraftTour::isPrimary)
                 .toList();
         List<Vehicle> vehicles = vehicleRepository.findAll();
-        return new Snapshot(tours, DriverHoursRules.driversById(driverRepository.findAll()), DriverHoursRules.vehiclesById(vehicles), vehicles);
+        return new Snapshot(tours, DriverHoursRules.driversById(driverRepository.findAll()), DriverHoursRules.vehiclesById(vehicles), vehicles,
+                DriverHoursRules.externalCapacitiesByPlate(externalVehicleRepository.findAllByIsDeletedFalse()));
     }
 
     private TourProcessingDraft getDraft(UUID draftId) {
@@ -421,7 +434,8 @@ public class FinalCommissionService {
             List<TourProcessingDraftTour> tours,
             Map<UUID, Driver> driversById,
             Map<UUID, Vehicle> vehiclesById,
-            List<Vehicle> vehicles
+            List<Vehicle> vehicles,
+            Map<String, Integer> externalCapacities
     ) {
 
         List<TourProcessingDraftTour> approved() {

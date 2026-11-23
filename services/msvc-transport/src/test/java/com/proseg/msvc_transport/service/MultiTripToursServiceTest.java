@@ -13,7 +13,9 @@ import com.proseg.msvc_transport.entity.TourProcessingDraftStatus;
 import com.proseg.msvc_transport.entity.TourProcessingDraftTour;
 import com.proseg.msvc_transport.entity.Vehicle;
 import com.proseg.msvc_transport.repository.DriverMonthBusinessDaysRepository;
+import com.proseg.msvc_transport.repository.DriverDayScheduleRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
+import com.proseg.msvc_transport.repository.ExternalVehicleRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftAssignmentRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftRepository;
@@ -73,8 +75,8 @@ class MultiTripToursServiceTest {
     private FinalCommissionService commission() {
         DraftHoursService hours = mock(DraftHoursService.class);
         when(hours.manualDays(any())).thenReturn(ManualDays.NONE);
-        return new FinalCommissionService(draftRepository, tourStore, dayRepository, driverRepository, vehicleRepository, hours,
-                new DriverBusinessDaysService(mock(DriverMonthBusinessDaysRepository.class)));
+        return new FinalCommissionService(draftRepository, tourStore, dayRepository, driverRepository, vehicleRepository, mock(ExternalVehicleRepository.class), hours,
+                new DriverBusinessDaysService(mock(DriverMonthBusinessDaysRepository.class), mock(DriverDayScheduleRepository.class)));
     }
 
     private TourProcessingDraftTour tour(String number, String date, String departure, String arrival, int passengers) {
@@ -251,7 +253,7 @@ class MultiTripToursServiceTest {
         when(dayRepository.findByAssignmentIdIn(any())).thenReturn(List.of(day(anchor, "2026-05-04", "07:30", "17:00", 0.5)));
         when(tourStore.findPrimariesByDraftId(draftId)).thenReturn(List.of(tour));
         TourControlReportService service = new TourControlReportService(draftRepository, tourStore, dayRepository, driverRepository,
-                vehicleRepository, new DriverBusinessDaysService(mock(DriverMonthBusinessDaysRepository.class)));
+                vehicleRepository, new DriverBusinessDaysService(mock(DriverMonthBusinessDaysRepository.class), mock(DriverDayScheduleRepository.class)));
 
         TourControlReportDto report = service.report(draftId);
 
@@ -277,7 +279,7 @@ class MultiTripToursServiceTest {
                 day(tour.getAssignments().get(1), "2026-05-04", "07:30", "17:00", 0.5)));
         when(tourStore.findPrimariesByDraftId(draftId)).thenReturn(List.of(tour));
         TourControlReportService service = new TourControlReportService(draftRepository, tourStore, dayRepository, driverRepository,
-                vehicleRepository, new DriverBusinessDaysService(mock(DriverMonthBusinessDaysRepository.class)));
+                vehicleRepository, new DriverBusinessDaysService(mock(DriverMonthBusinessDaysRepository.class), mock(DriverDayScheduleRepository.class)));
 
         TourControlReportDto report = service.report(draftId);
 
@@ -296,7 +298,7 @@ class MultiTripToursServiceTest {
         when(rowRepository.findActiveByDraftId(draftId)).thenReturn(trips);
         when(dayRepository.findByAssignmentIdIn(anyCollection())).thenReturn(List.of(day(trips.get(0), "2026-05-04", "07:30", "17:00", 0.5)));
         OvertimeRequestReportService service = new OvertimeRequestReportService(draftRepository, rowRepository, dayRepository, driverRepository,
-                new DriverBusinessDaysService(mock(DriverMonthBusinessDaysRepository.class)));
+                new DriverBusinessDaysService(mock(DriverMonthBusinessDaysRepository.class), mock(DriverDayScheduleRepository.class)));
 
         OvertimeRequestReportDto report = service.build(2026, 5);
 

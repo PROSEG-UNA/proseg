@@ -347,11 +347,18 @@ public class FinalCommissionWorkbookGenerator {
 
         List<FinalCommissionReportDto.Day> days = tour.getDays() == null ? List.of() : tour.getDays();
         for (int day = 0; day < MAX_DAYS; day++) {
-            writeDay(sheet, rowIndex, day, day < days.size() ? days.get(day) : null, style);
+            writeDay(sheet, rowIndex, day, day < days.size() ? days.get(day) : null, tour, style);
         }
     }
 
-    private void writeDay(Sheet sheet, int rowIndex, int day, FinalCommissionReportDto.Day value, IntFunction<CellStyle> style) {
+    private void writeDay(
+            Sheet sheet,
+            int rowIndex,
+            int day,
+            FinalCommissionReportDto.Day value,
+            FinalCommissionReportDto.Tour tour,
+            IntFunction<CellStyle> style
+    ) {
         int start = startColumn(day);
         String weekday = day == 0 ? "$" + ref(DEPARTURE_WEEKDAY_COLUMN, rowIndex) : ref(dayFirstColumn(day), rowIndex);
         if (day > 0) {
@@ -381,8 +388,10 @@ public class FinalCommissionWorkbookGenerator {
         String endRef = ref(start + 1, rowIndex);
         String totalRef = ref(start + 2, rowIndex);
         String weekend = String.format(WEEKEND_TEST, weekday);
-        String ordinaryStart = "$" + ref(ORDINARY_START_COLUMN, rowIndex);
-        String ordinaryEnd = "$" + ref(ORDINARY_END_COLUMN, rowIndex);
+        boolean ownWindow = value.getOrdinaryStart() != null && value.getOrdinaryEnd() != null
+                && (value.getOrdinaryStart() != tour.getOrdinaryStart() || value.getOrdinaryEnd() != tour.getOrdinaryEnd());
+        String ordinaryStart = ownWindow ? String.valueOf(value.getOrdinaryStart()) : "$" + ref(ORDINARY_START_COLUMN, rowIndex);
+        String ordinaryEnd = ownWindow ? String.valueOf(value.getOrdinaryEnd()) : "$" + ref(ORDINARY_END_COLUMN, rowIndex);
         startCell.setCellValue(value.getStart());
         endCell.setCellValue(value.getEnd());
         totalCell.setCellFormula("+IF(" + weekend + "," + endRef + "-" + startRef + ",IF(" + startRef + "<" + ordinaryStart + ","

@@ -1,5 +1,6 @@
 package com.proseg.msvc_transport.service;
 
+import com.proseg.msvc_transport.dto.response.DriverDayScheduleDto;
 import com.proseg.msvc_transport.dto.response.DriverMonthResponseDto;
 import com.proseg.msvc_transport.dto.response.DriverMonthSurplusCapResponseDto;
 import com.proseg.msvc_transport.entity.Driver;
@@ -176,6 +177,148 @@ class DriverMonthServiceTest {
         assertThat(businessDays.storedRecords()).isZero();
         assertThat(response.getBusinessDays()).isEqualTo(28);
         assertThat(response.isBusinessDaysCustomized()).isFalse();
+    }
+
+    private static DriverDayScheduleDto afternoon(LocalDate date) {
+        return new DriverDayScheduleDto(date, LocalTime.of(12, 0), LocalTime.of(20, 0));
+    }
+
+    @Test
+    void everyDriverStartsWithoutScheduleChangesInTheMonth() {
+        stubDraft(TourProcessingDraftStatus.DRAFT, 28);
+
+        List<DriverMonthResponseDto> months = service.findAllForPeriod(2026, 5);
+
+        assertThat(months).extracting(DriverMonthResponseDto::getScheduleDays).containsExactly(List.of(), List.of());
+    }
+
+    @Test
+    void editingTheScheduleStoresTheDaysAndRecalculatesOnlyThatDriversHours() {
+        TourProcessingDraft draft = stubDraft(TourProcessingDraftStatus.DRAFT, 28);
+        TourProcessingDraftAssignment assignment = assignmentOf(ana);
+        when(tourStore.findAllByDraftIdOrderByRowNumberAsc(draftId)).thenReturn(List.of(assignment.getTour()));
+        LocalDate first = LocalDate.of(2026, 5, 19);
+        LocalDate second = LocalDate.of(2026, 5, 18);
+
+        DriverMonthResponseDto response = service.updateSchedule(ana.getId(), 2026, 5, List.of(afternoon(first), afternoon(second)));
+
+        assertThat(businessDays.storedSchedule(ana.getId(), first).getOrdinaryStart()).isEqualTo(LocalTime.of(12, 0));
+        assertThat(businessDays.storedSchedule(ana.getId(), second).getOrdinaryEnd()).isEqualTo(LocalTime.of(20, 0));
+        verify(draftHoursService).syncDriver(draft, List.of(assignment), ana.getId());
+        assertThat(response.getScheduleDays()).containsExactly(afternoon(second), afternoon(first));
+        assertThat(ana.getOrdinaryStart()).isNull();
+    }
+
+    @Test
+    void theNewListReplacesTheDaysAndAnEmptyListRestoresTheDriversSchedule() {
+        stubDraft(TourProcessingDraftStatus.DRAFT, 28);
+        when(tourStore.findAllByDraftIdOrderByRowNumberAsc(draftId)).thenReturn(List.of());
+        service.updateSchedule(ana.getId(), 2026, 5, List.of(afternoon(LocalDate.of(2026, 5, 18)), afternoon(LocalDate.of(2026, 5, 19))));
+
+        DriverMonthResponseDto replaced = service.updateSchedule(ana.getId(), 2026, 5, List.of(afternoon(LocalDate.of(2026, 5, 20))));
+        DriverMonthResponseDto restored = service.updateSchedule(ana.getId(), 2026, 5, null);
+
+        assertThat(replaced.getScheduleDays()).containsExactly(afternoon(LocalDate.of(2026, 5, 20)));
+        assertThat(restored.getScheduleDays()).isEmpty();
+        assertThat(businessDays.storedScheduleDays()).isZero();
+    }
+
+    @Test
+    void daysThatMatchTheDriversScheduleAndWeekendsAreNotStored() {
+        stubDraft(TourProcessingDraftStatus.DRAFT, 28);
+        when(tourStore.findAllByDraftIdOrderByRowNumberAsc(draftId)).thenReturn(List.of());
+        DriverDayScheduleDto sameAsDriver = new DriverDayScheduleDto(LocalDate.of(2026, 5, 18), LocalTime.of(7, 30), LocalTime.of(16, 30));
+
+        DriverMonthResponseDto response = service.updateSchedule(ana.getId(), 2026, 5,
+                List.of(sameAsDriver, afternoon(LocalDate.of(2026, 5, 16)), afternoon(LocalDate.of(2026, 5, 19))));
+
+        assertThat(response.getScheduleDays()).containsExactly(afternoon(LocalDate.of(2026, 5, 19)));
+        assertThat(businessDays.storedScheduleDays()).isEqualTo(1);
+    }
+
+    @Test
+    void rejectsSchedulesThatAreNotOneOfTheAllowedWindows() {
+        stubDraft(TourProcessingDraftStatus.DRAFT, 28);
+        DriverDayScheduleDto invalid = new DriverDayScheduleDto(LocalDate.of(2026, 5, 18), LocalTime.of(8, 0), LocalTime.of(17, 0));
+
+        assertThatThrownBy(() -> service.updateSchedule(ana.getId(), 2026, 5, List.of(invalid)))
+                .isInstanceOf(TransportException.class)
+                .hasMessage("El horario ordinario debe ser de 07:30 a 16:30 o 12:00 a 20:00");
+        assertThat(businessDays.storedScheduleDays()).isZero();
+        verify(draftHoursService, never()).syncDriver(any(), anyList(), any());
+    }
+
+    @Test
+    void rejectsDaysOutsideTheSelectedMonth() {
+        stubDraft(TourProcessingDraftStatus.DRAFT, 28);
+
+        assertThatThrownBy(() -> service.updateSchedule(ana.getId(), 2026, 5, List.of(afternoon(LocalDate.of(2026, 6, 1)))))
+                .isInstanceOf(TransportException.class)
+                .hasMessage("Todos los días del horario deben pertenecer al mes seleccionado");
+        assertThatThrownBy(() -> service.updateSchedule(ana.getId(), 2026, 5, List.of(afternoon(null))))
+                .isInstanceOf(TransportException.class);
+        assertThat(businessDays.storedScheduleDays()).isZero();
+        verify(draftHoursService, never()).syncDriver(any(), anyList(), any());
+    }
+
+    @Test
+    void rejectsEditingTheScheduleOfAClosedOrRegisteredMonth() {
+        stubDraft(TourProcessingDraftStatus.CLOSED, 28);
+        assertThatThrownBy(() -> service.updateSchedule(ana.getId(), 2026, 5, List.of(afternoon(LocalDate.of(2026, 5, 18)))))
+                .isInstanceOf(TransportException.class)
+                .hasMessage("No se puede editar una depuración terminada. Devuélvela a borrador");
+
+        stubDraft(TourProcessingDraftStatus.REGISTERED, 28);
+        assertThatThrownBy(() -> service.updateSchedule(ana.getId(), 2026, 5, List.of(afternoon(LocalDate.of(2026, 5, 18)))))
+                .isInstanceOf(TransportException.class)
+                .hasMessage("No se puede editar un borrador que ya fue registrado");
+        assertThat(businessDays.storedScheduleDays()).isZero();
+    }
+
+    @Test
+    void editsTheScheduleOfAMonthWithoutDraftWithoutRecalculatingAnything() {
+        when(draftRepository.findFirstByYearAndMonthOrderByImportedAtDesc(2026, 6)).thenReturn(Optional.empty());
+        LocalDate day = LocalDate.of(2026, 6, 1);
+
+        DriverMonthResponseDto response = service.updateSchedule(ana.getId(), 2026, 6, List.of(afternoon(day)));
+
+        assertThat(businessDays.storedSchedule(ana.getId(), day).getOrdinaryStart()).isEqualTo(LocalTime.of(12, 0));
+        assertThat(response.getScheduleDays()).containsExactly(afternoon(day));
+        assertThat(response.getBusinessDays()).isNull();
+        verify(draftHoursService, never()).syncDriver(any(), anyList(), any());
+    }
+
+    @Test
+    void editsTheScheduleOfAMonthWhoseDraftHasNoBusinessDaysYet() {
+        TourProcessingDraft draft = TourProcessingDraft.builder().id(draftId).status(TourProcessingDraftStatus.DRAFT).year(2026).month(5).build();
+        when(draftRepository.findFirstByYearAndMonthOrderByImportedAtDesc(eq(2026), eq(5))).thenReturn(Optional.of(draft));
+        when(draftRepository.findByIdForUpdate(draftId)).thenReturn(Optional.of(draft));
+
+        DriverMonthResponseDto response = service.updateSchedule(ana.getId(), 2026, 5, List.of(afternoon(LocalDate.of(2026, 5, 18))));
+
+        assertThat(response.getScheduleDays()).containsExactly(afternoon(LocalDate.of(2026, 5, 18)));
+        verify(draftHoursService, never()).syncDriver(any(), anyList(), any());
+    }
+
+    @Test
+    void theMonthShowsTheStoredScheduleEvenWithoutDraft() {
+        when(draftRepository.findFirstByYearAndMonthOrderByImportedAtDesc(2026, 6)).thenReturn(Optional.empty());
+        service.updateSchedule(ana.getId(), 2026, 6, List.of(afternoon(LocalDate.of(2026, 6, 2))));
+
+        List<DriverMonthResponseDto> months = service.findAllForPeriod(2026, 6);
+
+        assertThat(months).extracting(DriverMonthResponseDto::getScheduleDays)
+                .containsExactly(List.of(afternoon(LocalDate.of(2026, 6, 2))), List.of());
+        assertThat(months).extracting(DriverMonthResponseDto::getBusinessDays).containsOnlyNulls();
+    }
+
+    @Test
+    void rejectsEditingTheScheduleOfAnUnknownDriverOrAnInvalidMonth() {
+        assertThatThrownBy(() -> service.updateSchedule(UUID.randomUUID(), 2026, 6, List.of()))
+                .isInstanceOf(TransportException.class);
+        assertThatThrownBy(() -> service.updateSchedule(ana.getId(), 2026, 13, List.of()))
+                .isInstanceOf(TransportException.class).hasMessage("El mes debe estar entre 1 y 12");
+        assertThat(businessDays.storedScheduleDays()).isZero();
     }
 
     @Test

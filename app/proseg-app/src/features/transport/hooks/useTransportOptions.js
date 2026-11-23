@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchDrivers } from '../services/drivers/driversService';
 import { fetchVehicles } from '../services/vehicles/vehiclesService';
 import { fetchBorrowedVehicles } from '../services/borrowedVehicles/borrowedVehiclesService';
+import { fetchExternalVehicles } from '../services/externalVehicles/externalVehiclesService';
 import { queryKeys } from '../../../common/query';
 
 const OPTIONS_PAGE = { page: 0, size: 300 };
@@ -39,6 +40,16 @@ export function toVehicleOption(vehicle) {
     };
 }
 
+export function toExternalVehicleOption(vehicle) {
+    return {
+        id: vehicle.id,
+        label: vehicleLabel(vehicle),
+        provider: vehicle.provider ?? '',
+        capacity: vehicle.capacity ?? null,
+        available: vehicle.available,
+    };
+}
+
 export function useDriverOptions(enabled = true) {
     const { data, isLoading, error } = useQuery({
         queryKey: queryKeys.transport.driverOptions(),
@@ -65,6 +76,20 @@ export function useVehicleOptions(enabled = true) {
     });
 
     return { options: data ?? EMPTY_OPTIONS, loading: isLoading, error };
+}
+
+export function useExternalVehicleOptions(enabled = true) {
+    const { data, isLoading, isSuccess, error } = useQuery({
+        queryKey: queryKeys.transport.externalVehicleOptions(),
+        queryFn: async () => {
+            const response = await fetchExternalVehicles(OPTIONS_PAGE);
+            return (response?.content ?? []).map(toExternalVehicleOption);
+        },
+        enabled: Boolean(enabled),
+        staleTime: OPTIONS_STALE_TIME,
+    });
+
+    return { options: data ?? EMPTY_OPTIONS, loading: isLoading, loaded: isSuccess, error };
 }
 
 export function useBorrowedVehicleOptions(enabled = true) {

@@ -32,8 +32,37 @@ public class TourControlReportDto {
         private Integer businessDays;
         private double ordinaryStart;
         private double ordinaryEnd;
+        private List<DayWindow> dayWindows;
         private Double surplusHours;
         private Double overtimeHours;
+
+        public double ordinaryStartOn(LocalDate date) {
+            DayWindow window = dayWindowOn(date);
+            return window == null ? ordinaryStart : window.getOrdinaryStart();
+        }
+
+        public double ordinaryEndOn(LocalDate date) {
+            DayWindow window = dayWindowOn(date);
+            return window == null ? ordinaryEnd : window.getOrdinaryEnd();
+        }
+
+        private DayWindow dayWindowOn(LocalDate date) {
+            if (dayWindows == null || date == null) {
+                return null;
+            }
+            return dayWindows.stream().filter(window -> date.equals(window.getDate())).findFirst().orElse(null);
+        }
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class DayWindow {
+        private LocalDate date;
+        private double ordinaryStart;
+        private double ordinaryEnd;
     }
 
     @Getter

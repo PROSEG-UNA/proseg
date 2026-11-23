@@ -300,6 +300,10 @@ public class TourControlReportService {
                 .businessDays(businessDays.businessDaysOf(driver))
                 .ordinaryStart(window.start())
                 .ordinaryEnd(window.end())
+                .dayWindows(businessDays.scheduleOverridesOf(driver.getId()).entrySet().stream()
+                        .sorted(Map.Entry.comparingByKey())
+                        .map(entry -> new TourControlReportDto.DayWindow(entry.getKey(), entry.getValue().start(), entry.getValue().end()))
+                        .toList())
                 .surplusHours(known ? round(totals == null ? 0 : totals.surplus) : null)
                 .overtimeHours(known ? round(totals == null ? 0 : totals.overtime) : null)
                 .build();

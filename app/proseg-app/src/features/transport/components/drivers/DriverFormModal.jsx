@@ -4,9 +4,18 @@ import dayjs from 'dayjs';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import DeleteIcon from '@mui/icons-material/Delete';
 import GeneralModal from '../../../../common/components/GeneralModal.jsx';
+import DriverMonthScheduleCalendar from './DriverMonthScheduleCalendar.jsx';
+import { dayOverridesFromScheduleDays, sameDayOverrides, scheduleDaysPayload } from './driverScheduleDays.js';
 import DialogModal from '../../../../common/components/DialogModal.jsx';
 import { getFriendlyApiErrorMessage } from '../../../../common/utils/index.js';
-import { createDriver, deleteDriver, fetchDriverById, updateDriver, updateDriverMonthBusinessDays } from '../../services/drivers/driversService';
+import {
+    createDriver,
+    deleteDriver,
+    fetchDriverById,
+    updateDriver,
+    updateDriverMonthBusinessDays,
+    updateDriverMonthSchedule,
+} from '../../services/drivers/driversService';
 import {
     DRIVER_STATUS_OPTIONS,
     DRIVER_UNIT_OPTIONS,
@@ -54,6 +63,7 @@ export default function DriverFormModal({
     onSaved,
     onDeleted,
     onBusinessDaysSaved,
+    onScheduleSaved,
     driverId = null,
     initialValues = null,
     canEdit = true,
@@ -62,9 +72,13 @@ export default function DriverFormModal({
     monthBusinessDays = null,
     defaultBusinessDays = null,
     businessDaysCustomized = false,
+    monthScheduleDays = null,
 }) {
     const isEdit = !!driverId;
     const showBusinessDays = isEdit && Boolean(period) && monthBusinessDays !== null;
+    const showMonthCalendar = isEdit && Boolean(period) && monthScheduleDays !== null;
+    const [initialDayOverrides] = useState(() => dayOverridesFromScheduleDays(monthScheduleDays));
+    const [dayOverrides, setDayOverrides] = useState(initialDayOverrides);
     const [businessDaysDraft, setBusinessDaysDraft] = useState(() => (monthBusinessDays === null ? '' : String(monthBusinessDays)));
     const [businessDaysReset, setBusinessDaysReset] = useState(false);
     const [businessDaysError, setBusinessDaysError] = useState('');
@@ -144,6 +158,20 @@ export default function DriverFormModal({
         setBusinessDaysError('');
     };
 
+    const baseScheduleValue = formValues.ordinarySchedule;
+
+    const handleDaySelect =(day, value) => {
+        setDayOverrides((current) => {
+            const next = { ...current };
+            if (value === baseScheduleValue) {
+                delete next[day];
+            } else {
+                next[day] = value;
+            }
+            return sameDayOverrides(current, next) ? current : next;
+        });
+    };
+
     const handleSave = async () => {
         if (!canEdit) return;
         const nextTouched = {};
@@ -208,6 +236,22 @@ export default function DriverFormModal({
                     setAlert({
                         type: 'error',
                         message: `El chofer se guardó, pero no se pudieron cambiar los días hábiles. ${getFriendlyApiErrorMessage(error, '')}`.trim(),
+                    });
+                    return;
+                }
+            }
+
+            const scheduleChanged = showMonthCalendar && !sameDayOverrides(dayOverrides, initialDayOverrides);
+            if (scheduleChanged) {
+                const scheduleDays = scheduleDaysPayload(dayOverrides, baseScheduleValue, period);
+                try {
+                    await updateDriverMonthSchedule(driverId, period.year, period.month, scheduleDays);
+                    onScheduleSaved?.({ driverName: payload.name, changedDays: scheduleDays.length });
+                } catch (error) {
+                    onSaved?.(saved);
+                    setAlert({
+                        type: 'error',
+                        message: `El chofer se guardó, pero no se pudo cambiar el horario del mes. ${getFriendlyApiErrorMessage(error, '')}`.trim(),
                     });
                     return;
                 }
@@ -393,6 +437,15 @@ export default function DriverFormModal({
                         >
                             {`Usar el valor del mes (${defaultBusinessDays})`}
                         </Button>
+                    )}
+                    {showMonthCalendar && (
+                        <DriverMonthScheduleCalendar
+                            period={period}
+                            baseValue={baseScheduleValue}
+                            overrides={dayOverrides}
+                            disabled={!canEdit}
+                            onSelect={handleDaySelect}
+                        />
                     )}
                 </Box>
             </GeneralModal>

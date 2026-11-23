@@ -188,6 +188,70 @@ class DriverWorkloadTest {
     }
 
     @Test
+    void aDayWindowReplacesTheDriversScheduleOnlyOnThatDate() {
+        Driver ricardo = driverWithSchedule("Ricardo", "12:00", "20:00");
+        LocalDate changedDay = LocalDate.of(2026, 5, 5);
+        DriverBusinessDays month = new DriverBusinessDays(28, Map.of(), Map.of(ricardo.getId(), Map.of(changedDay, OrdinaryWindow.STANDARD)));
+        DriverWorkload workload = new DriverWorkload(ricardo, ManualDays.NONE, month);
+        workload.add(sameDayTour("A", "2026-05-05", "12:00", "22:00"));
+        workload.add(sameDayTour("B", "2026-05-06", "12:00", "22:00"));
+
+        var allocations = workload.allocations(MAY_SURPLUS_CAP);
+
+        assertThat(allocations.get(0).days().get(0).ordinaryHours()).isEqualTo(4.5);
+        assertThat(allocations.get(0).days().get(0).surplusHours()).isEqualTo(5.5);
+        assertThat(allocations.get(1).days().get(0).ordinaryHours()).isEqualTo(8.0);
+        assertThat(allocations.get(1).days().get(0).surplusHours()).isEqualTo(2.0);
+    }
+
+    @Test
+    void aMultiDayTourUsesTheWindowOfEachOfItsDays() {
+        Driver ana = driver("Ana");
+        DriverBusinessDays month = new DriverBusinessDays(28, Map.of(), Map.of(ana.getId(), Map.of(LocalDate.of(2026, 5, 6), OrdinaryWindow.AFTERNOON)));
+        DriverWorkload workload = new DriverWorkload(ana, ManualDays.NONE, month);
+        workload.add(tour("A", "2026-05-05", "07:30", "2026-05-07", "16:30"));
+
+        var days = workload.allocations(MAY_SURPLUS_CAP).get(0).days();
+
+        assertThat(days.get(0).ordinaryHours()).isEqualTo(9.0);
+        assertThat(days.get(1).ordinaryHours()).isEqualTo(8.0);
+        assertThat(days.get(1).span().date()).isEqualTo(LocalDate.of(2026, 5, 6));
+        assertThat(days.get(2).ordinaryHours()).isEqualTo(9.0);
+    }
+
+    @Test
+    void theDaysOfATourInTheNextMonthUseTheWindowOfItsDepartureDay() {
+        Driver ana = driver("Ana");
+        DriverBusinessDays month = new DriverBusinessDays(28, Map.of(), Map.of(ana.getId(), Map.of(LocalDate.of(2026, 4, 30), OrdinaryWindow.AFTERNOON)));
+        DriverWorkload workload = new DriverWorkload(ana, ManualDays.NONE, month);
+        workload.add(tour("A", "2026-04-30", "07:30", "2026-05-01", "16:30"));
+
+        var days = workload.allocations(MAY_SURPLUS_CAP).get(0).days();
+
+        assertThat(days.get(0).ordinaryHours()).isEqualTo(8.0);
+        assertThat(days.get(1).span().date()).isEqualTo(LocalDate.of(2026, 5, 1));
+        assertThat(days.get(1).ordinaryHours()).isEqualTo(4.5);
+    }
+
+    @Test
+    void workloadsBuiltFromAssignmentsUseTheDayWindowsOfEachDriver() {
+        Driver ricardo = driverWithSchedule("Ricardo", "12:00", "20:00");
+        Driver ana = driver("Ana");
+        DriverBusinessDays month = new DriverBusinessDays(28, Map.of(), Map.of(
+                ricardo.getId(), Map.of(LocalDate.of(2026, 5, 5), OrdinaryWindow.STANDARD),
+                ana.getId(), Map.of(LocalDate.of(2026, 5, 6), OrdinaryWindow.AFTERNOON)));
+        List<TourProcessingDraftAssignment> assignments = List.of(
+                assigned(sameDayTour("A", "2026-05-05", "12:00", "22:00"), ricardo),
+                assigned(sameDayTour("B", "2026-05-06", "12:00", "22:00"), ana));
+
+        Map<UUID, DriverWorkload> workloads = DriverWorkload.fromAssignments(
+                assignments, Map.of(ricardo.getId(), ricardo, ana.getId(), ana), ManualDays.NONE, month);
+
+        assertThat(workloads.get(ricardo.getId()).totals(MAY_SURPLUS_CAP, MAY_WEEKENDS).ordinaryHours()).isEqualTo(4.5);
+        assertThat(workloads.get(ana.getId()).totals(MAY_SURPLUS_CAP, MAY_WEEKENDS).ordinaryHours()).isEqualTo(8.0);
+    }
+
+    @Test
     void aWeekdayTourInsideTheAfternoonScheduleIsEntirelyOrdinary() {
         DriverWorkload lateShift = new DriverWorkload(driverWithSchedule("Ricardo", "12:00", "20:00"));
         lateShift.add(sameDayTour("A", "2026-05-05", "14:00", "20:00"));

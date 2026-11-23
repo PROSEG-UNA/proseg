@@ -5,4 +5,5 @@ export const TOUR_RULE_FILTERS = [
     { code: 'PRIORITY_ONE_UNDER_MINIMUM', label: 'Prioridad 1 con menos de 5 pasajeros' },
     { code: 'PRIORITY_ONE_UNATTENDED', label: 'Prioridad 1 con menos de 5 pasajeros y sin atender' },
     { code: 'INCOMPLETE', label: 'Sin chofer o sin vehículo' },
+    { code: 'EXTERNAL_TRIP', label: 'Con viaje de contratación externa' },
 ];

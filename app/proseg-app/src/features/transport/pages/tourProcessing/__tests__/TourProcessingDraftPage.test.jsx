@@ -374,6 +374,17 @@ describe('comisión final y errores', () => {
         await userEvent.click(await screen.findByRole('option', { name: 'Más de un viaje y sin atender' }));
         await waitFor(() => expect(fetchTourProcessingDraftRows).toHaveBeenCalledWith('draft-1', expect.objectContaining({ rule: 'NEEDS_MULTIPLE_TRIPS' })));
     });
+
+    it('filtra en el servidor las giras con un viaje de contratación externa', async () => {
+        granted.permissions = ['LEER_GIRAS'];
+        renderDraftPage();
+
+        await userEvent.click(await screen.findByRole('combobox', { name: /Filtros al mostrar giras/ }));
+        await userEvent.click(await screen.findByRole('option', { name: 'Con viaje de contratación externa' }));
+
+        await waitFor(() => expect(fetchTourProcessingDraftRows).toHaveBeenCalledWith('draft-1', expect.objectContaining({ rule: 'EXTERNAL_TRIP' })));
+        expect(screen.getByRole('combobox', { name: /Filtros al mostrar giras/ })).toHaveTextContent('Con viaje de contratación externa');
+    });
 });
 
 describe('autoasignación paso a paso', () => {

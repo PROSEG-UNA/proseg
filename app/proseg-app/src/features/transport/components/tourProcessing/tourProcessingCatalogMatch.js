@@ -74,6 +74,22 @@ export function buildVehicleCatalogEntry(vehicle) {
     };
 }
 
+export function buildExternalVehicleCatalogEntry(vehicle) {
+    const capacity = vehicle.capacity != null ? `${vehicle.capacity} pasajeros` : '';
+    return {
+        label: vehicle.label,
+        provider: vehicle.provider,
+        secondary: joinParts([vehicle.provider, capacity]),
+        searchText: joinParts([vehicle.label, vehicle.provider, capacity]),
+    };
+}
+
+export function resolveExternalVehicle(value, vehicles) {
+    const key = plateMatchKey(value);
+    if (key === '') return null;
+    return vehicles.find((vehicle) => plateMatchKey(vehicle.label) === key) ?? null;
+}
+
 export function catalogEntryLabel(option) {
     return typeof option === 'string' ? option : option?.label ?? '';
 }

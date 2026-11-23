@@ -138,16 +138,16 @@ final class ScheduleOptimizer {
         this.cap = new double[driverCount];
         this.target = new double[driverCount];
         this.windowOf = new int[driverCount];
-        List<OrdinaryWindow> windows = new ArrayList<>();
+        List<DriverSchedule> windows = new ArrayList<>();
         for (int index = 0; index < driverCount; index++) {
             Driver driver = drivers.get(index);
             cap[index] = assigner.surplusCapOf(driver);
             target[index] = cap[index] * DriverHoursRules.SURPLUS_CUTOFF_RATIO;
-            OrdinaryWindow window = OrdinaryWindow.of(driver);
-            if (!windows.contains(window)) {
-                windows.add(window);
+            DriverSchedule schedule = assigner.scheduleOf(driver);
+            if (!windows.contains(schedule)) {
+                windows.add(schedule);
             }
-            windowOf[index] = windows.indexOf(window);
+            windowOf[index] = windows.indexOf(schedule);
         }
 
         List<TourProcessingDraftAssignment> rows = new ArrayList<>();
@@ -215,7 +215,7 @@ final class ScheduleOptimizer {
         }
     }
 
-    private Profile profileOf(TourProcessingDraftAssignment row, int chrono, List<OrdinaryWindow> windows, List<LocalDate> weekendKeys) {
+    private Profile profileOf(TourProcessingDraftAssignment row, int chrono, List<DriverSchedule> windows, List<LocalDate> weekendKeys) {
         Profile profile = new Profile();
         profile.ref = row;
         profile.chrono = chrono;
@@ -249,8 +249,9 @@ final class ScheduleOptimizer {
             if (edited == null) {
                 profile.baseOvertime += span.weekendHours();
                 for (int window = 0; window < windows.size(); window++) {
-                    profile.off[window] += span.offScheduleWeekdayHours(windows.get(window));
-                    profile.ordinary[window] += span.ordinaryHours(windows.get(window));
+                    OrdinaryWindow dayWindow = windows.get(window).windowOn(row.getDepartureDate(), span.date());
+                    profile.off[window] += span.offScheduleWeekdayHours(dayWindow);
+                    profile.ordinary[window] += span.ordinaryHours(dayWindow);
                 }
             } else {
                 profile.manualSurplus += edited.surplusHours();
@@ -508,7 +509,7 @@ final class ScheduleOptimizer {
         }
         changedDrivers.remove(-1);
         for (int driver : changedDrivers) {
-            DriverWorkload workload = new DriverWorkload(drivers.get(driver), assigner.manualDays());
+            DriverWorkload workload = new DriverWorkload(drivers.get(driver), assigner.manualDays(), assigner.businessDays());
             for (int index = 0; index < loadSize[driver]; index++) {
                 workload.add(profiles[load[driver][index]].ref);
             }

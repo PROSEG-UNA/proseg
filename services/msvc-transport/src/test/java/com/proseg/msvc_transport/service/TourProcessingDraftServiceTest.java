@@ -23,6 +23,7 @@ import com.proseg.msvc_transport.entity.TourProcessingDraftDay;
 import com.proseg.msvc_transport.entity.TourProcessingDraftStatus;
 import com.proseg.msvc_transport.entity.BorrowedVehicle;
 import com.proseg.msvc_transport.entity.Driver;
+import com.proseg.msvc_transport.entity.ExternalVehicle;
 import com.proseg.msvc_transport.entity.ObservationKeyword;
 import com.proseg.msvc_transport.entity.ResourceType;
 import com.proseg.msvc_transport.entity.TourApprovalStatus;
@@ -35,6 +36,7 @@ import com.proseg.msvc_transport.entity.Vehicle;
 import com.proseg.msvc_transport.entity.VehicleType;
 import com.proseg.msvc_transport.exception.TransportException;
 import com.proseg.msvc_transport.repository.BorrowedVehicleRepository;
+import com.proseg.msvc_transport.repository.ExternalVehicleRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
@@ -80,6 +82,7 @@ class TourProcessingDraftServiceTest {
     private DriverRepository driverRepository;
     private VehicleRepository vehicleRepository;
     private BorrowedVehicleRepository borrowedVehicleRepository;
+    private ExternalVehicleRepository externalVehicleRepository;
     private DraftHoursService draftHoursService;
     private OvertimeRequestReportService overtimeRequestReportService;
     private InMemoryBusinessDays businessDays;
@@ -98,6 +101,7 @@ class TourProcessingDraftServiceTest {
         driverRepository = mock(DriverRepository.class);
         vehicleRepository = mock(VehicleRepository.class);
         borrowedVehicleRepository = mock(BorrowedVehicleRepository.class);
+        externalVehicleRepository = mock(ExternalVehicleRepository.class);
         draftHoursService = mock(DraftHoursService.class);
         when(draftHoursService.manualDays(any())).thenReturn(ManualDays.NONE);
         overtimeRequestReportService = mock(OvertimeRequestReportService.class);
@@ -119,6 +123,7 @@ class TourProcessingDraftServiceTest {
                 driverRepository,
                 vehicleRepository,
                 borrowedVehicleRepository,
+                externalVehicleRepository,
                 draftHoursService,
                 businessDays.service(),
                 overtimeRequestReportService,
@@ -462,6 +467,52 @@ class TourProcessingDraftServiceTest {
         verify(rowRepository, org.mockito.Mockito.times(2)).save(any());
     }
 
+    private TourProcessingDraftRowRequestDto externalVehicleRequest(String driver, String plate) {
+        TourProcessingDraftRowRequestDto request = row(1, "04504", "Merced");
+        request.setResourceType(ResourceType.EXTERNAL);
+        request.setDriver(driver);
+        request.setVehicle(plate);
+        return request;
+    }
+
+    @Test
+    void rejectsExternalRowWhenThePlateIsNotInTheExternalCatalog() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        stubDraft(draft, entity(draft, 8, "03625", "Tayutic"));
+        when(externalVehicleRepository.findAllByIsDeletedFalse())
+                .thenReturn(List.of(ExternalVehicle.builder().provider("Anca").plate("HB4380").build()));
+
+        assertThatThrownBy(() -> service.createRow(draft.getId(), externalVehicleRequest("Anca", "ZZ9999")))
+                .isInstanceOf(TransportException.class)
+                .hasMessageContaining("\"ZZ9999\" no existe en Contratación Externa");
+        verify(rowRepository, never()).save(any());
+    }
+
+    @Test
+    void takesTheProviderAndPlateFromTheExternalCatalogWhenSavingAnExternalRow() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        stubDraft(draft, entity(draft, 8, "03625", "Tayutic"));
+        when(externalVehicleRepository.findAllByIsDeletedFalse())
+                .thenReturn(List.of(ExternalVehicle.builder().provider("Anca").plate("HB4380").build()));
+
+        service.createRow(draft.getId(), externalVehicleRequest("texto libre", " hb 4380 "));
+
+        org.mockito.ArgumentCaptor<TourProcessingDraftTour> saved = org.mockito.ArgumentCaptor.forClass(TourProcessingDraftTour.class);
+        verify(rowRepository).save(saved.capture());
+        assertThat(saved.getValue().primaryAssignment().getDriver()).isEqualTo("Anca");
+        assertThat(saved.getValue().primaryAssignment().getVehicle()).isEqualTo("HB4380");
+    }
+
+    @Test
+    void acceptsExternalRowWithoutPlateWhileItIsPendingContracting() {
+        TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.DRAFT);
+        stubDraft(draft, entity(draft, 8, "03625", "Tayutic"));
+
+        service.createRow(draft.getId(), externalVehicleRequest(null, null));
+
+        verify(rowRepository).save(any());
+    }
+
     @Test
     void rejectsRowCreationOnRegisteredDraft() {
         TourProcessingDraft draft = draftWithStatus(TourProcessingDraftStatus.REGISTERED);
@@ -555,6 +606,28 @@ class TourProcessingDraftServiceTest {
         verify(rowRepository, never()).saveAll(anyList());
         verify(rowRepository, never()).flush();
         verify(draftHoursService, never()).syncChanged(any(), anyMap(), anyList());
+    }
+
+    @Test
+    void warnsWhenAnExternalVehicleHasLessCapacityThanThePassengers() {
+        var warnings = externalVehicleWarnings(9, 5);
+
+        assertThat(warnings).extracting(com.proseg.msvc_transport.service.rules.TourAssignmentRules.RuleViolation::code)
+                .contains(com.proseg.msvc_transport.service.rules.TourAssignmentRules.RuleCode.VEHICLE_OVER_CAPACITY);
+        assertThat(warnings).extracting(com.proseg.msvc_transport.service.rules.TourAssignmentRules.RuleViolation::message)
+                .anyMatch(message -> message.contains("vehículo HB4380 lleva 9 pasajeros y su capacidad es 5"));
+    }
+
+    @Test
+    void doesNotWarnWhenTheExternalVehicleFitsThePassengers() {
+        assertThat(externalVehicleWarnings(5, 5)).extracting(com.proseg.msvc_transport.service.rules.TourAssignmentRules.RuleViolation::code)
+                .doesNotContain(com.proseg.msvc_transport.service.rules.TourAssignmentRules.RuleCode.VEHICLE_OVER_CAPACITY);
+    }
+
+    @Test
+    void doesNotWarnWhenTheExternalVehicleHasNoCapacity() {
+        assertThat(externalVehicleWarnings(9, null)).extracting(com.proseg.msvc_transport.service.rules.TourAssignmentRules.RuleViolation::code)
+                .doesNotContain(com.proseg.msvc_transport.service.rules.TourAssignmentRules.RuleCode.VEHICLE_OVER_CAPACITY);
     }
 
     @Test
@@ -2364,6 +2437,20 @@ class TourProcessingDraftServiceTest {
         tour.setDepartureDate(LocalDate.of(2026, 5, 4));
         tour.setReturnDate(LocalDate.of(2026, 5, 4));
         return tour;
+    }
+
+    private List<com.proseg.msvc_transport.service.rules.TourAssignmentRules.RuleViolation> externalVehicleWarnings(int passengers, Integer capacity) {
+        TourProcessingDraft draft = draftWithPeriod();
+        TourProcessingDraftTour tour = oneDayTour(draft);
+        when(draftRepository.findById(draft.getId())).thenReturn(Optional.of(draft));
+        when(rowRepository.findByIdAndDraftId(tour.getId(), draft.getId())).thenReturn(Optional.of(tour));
+        when(rowRepository.findAllByDraftIdOrderByRowNumberAsc(draft.getId())).thenReturn(List.of(tour));
+        when(driverRepository.findAll()).thenReturn(List.of(catalogDriver()));
+        when(externalVehicleRepository.findAllByIsDeletedFalse())
+                .thenReturn(List.of(ExternalVehicle.builder().provider("Anca").plate("HB4380").capacity(capacity).build()));
+        TourProcessingDraftRowRequestDto request = externalVehicleRequest("Anca", "HB4380");
+        request.setPassengers(passengers);
+        return service.rowWarnings(draft.getId(), tour.getId(), request);
     }
 
     private TourProcessingDraftRowRequestDto twoDayWeekdayRequest() {

@@ -16,9 +16,11 @@ import com.proseg.msvc_transport.entity.Vehicle;
 import com.proseg.msvc_transport.entity.VehicleType;
 import com.proseg.msvc_transport.exception.TransportException;
 import com.proseg.msvc_transport.repository.DriverMonthBusinessDaysRepository;
+import com.proseg.msvc_transport.repository.DriverDayScheduleRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftRepository;
 import com.proseg.msvc_transport.repository.DriverRepository;
+import com.proseg.msvc_transport.repository.ExternalVehicleRepository;
 import com.proseg.msvc_transport.repository.VehicleRepository;
 import com.proseg.msvc_transport.service.driverhours.ManualDays;
 import org.junit.jupiter.api.BeforeEach;
@@ -71,8 +73,8 @@ class FinalCommissionServiceTest {
         when(vehicleRepository.findAll()).thenReturn(List.of(microbus, sedan));
         draftHoursService = mock(DraftHoursService.class);
         when(draftHoursService.manualDays(any())).thenReturn(ManualDays.NONE);
-        service = new FinalCommissionService(draftRepository, tourStore, dayRepository, driverRepository, vehicleRepository, draftHoursService,
-                new DriverBusinessDaysService(mock(DriverMonthBusinessDaysRepository.class)));
+        service = new FinalCommissionService(draftRepository, tourStore, dayRepository, driverRepository, vehicleRepository, mock(ExternalVehicleRepository.class), draftHoursService,
+                new DriverBusinessDaysService(mock(DriverMonthBusinessDaysRepository.class), mock(DriverDayScheduleRepository.class)));
     }
 
     @Test

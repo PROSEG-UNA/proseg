@@ -11,6 +11,7 @@ import com.proseg.msvc_transport.entity.ResourceType;
 import com.proseg.msvc_transport.entity.TourApprovalStatus;
 import com.proseg.msvc_transport.exception.TransportException;
 import com.proseg.msvc_transport.repository.DriverMonthBusinessDaysRepository;
+import com.proseg.msvc_transport.repository.DriverDayScheduleRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftAssignmentRepository;
@@ -51,7 +52,7 @@ class OvertimeRequestReportServiceTest {
         dayRepository = mock(TourProcessingDraftDayRepository.class);
         driverRepository = mock(DriverRepository.class);
         service = new OvertimeRequestReportService(draftRepository, rowRepository, dayRepository, driverRepository,
-                new DriverBusinessDaysService(mock(DriverMonthBusinessDaysRepository.class)));
+                new DriverBusinessDaysService(mock(DriverMonthBusinessDaysRepository.class), mock(DriverDayScheduleRepository.class)));
     }
 
     @Test

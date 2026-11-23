@@ -64,5 +64,11 @@ public class FinalCommissionReportDto {
         private LocalDate date;
         private double start;
         private double end;
+        private Double ordinaryStart;
+        private Double ordinaryEnd;
+
+        public Day(LocalDate date, double start, double end) {
+            this(date, start, end, null, null);
+        }
     }
 }

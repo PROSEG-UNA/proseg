@@ -17,6 +17,7 @@ import com.proseg.msvc_transport.dto.tourprocessing.TourProcessingVehicleAutoAss
 import com.proseg.msvc_transport.dto.tourprocessing.TourSplitMode;
 import com.proseg.msvc_transport.dto.response.OvertimeRequestReportDto;
 import com.proseg.msvc_transport.entity.BorrowedVehicle;
+import com.proseg.msvc_transport.entity.ExternalVehicle;
 import com.proseg.msvc_transport.entity.TourProcessingDraft;
 import com.proseg.msvc_transport.entity.TourProcessingDraftAssignment;
 import com.proseg.msvc_transport.entity.TourProcessingDraftDay;
@@ -30,6 +31,7 @@ import com.proseg.msvc_transport.entity.Vehicle;
 import com.proseg.msvc_transport.exception.TransportException;
 import com.proseg.msvc_transport.importer.TransportImportField;
 import com.proseg.msvc_transport.repository.BorrowedVehicleRepository;
+import com.proseg.msvc_transport.repository.ExternalVehicleRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftAssignmentRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftDayRepository;
 import com.proseg.msvc_transport.repository.TourProcessingDraftRepository;
@@ -117,6 +119,7 @@ public class TourProcessingDraftService {
     private final DriverRepository driverRepository;
     private final VehicleRepository vehicleRepository;
     private final BorrowedVehicleRepository borrowedVehicleRepository;
+    private final ExternalVehicleRepository externalVehicleRepository;
     private final DraftHoursService draftHoursService;
     private final DriverBusinessDaysService businessDaysService;
     private final OvertimeRequestReportService overtimeRequestReportService;
@@ -299,11 +302,20 @@ public class TourProcessingDraftService {
         if ("INCOMPLETE".equals(rule)) {
             return assignmentRules.incompleteTourIds(snapshot);
         }
+        if ("EXTERNAL_TRIP".equals(rule)) {
+            Set<UUID> ids = new LinkedHashSet<>();
+            tours.stream().filter(TourProcessingDraftService::hasExternalTrip).forEach(tour -> ids.add(tour.getId()));
+            return ids;
+        }
         try {
             return assignmentRules.tourIdsViolating(snapshot, TourAssignmentRules.RuleCode.valueOf(rule));
         } catch (IllegalArgumentException ex) {
             throw TransportException.badRequest("TOUR_RULE_FILTER_UNKNOWN", "No existe la condición " + rule);
         }
+    }
+
+    static boolean hasExternalTrip(TourProcessingDraftTour tour) {
+        return tour.getAssignments().stream().anyMatch(assignment -> assignment.getResourceType() == ResourceType.EXTERNAL);
     }
 
     @Transactional(readOnly = true)
@@ -635,7 +647,8 @@ public class TourProcessingDraftService {
                 periodDefined ? businessDaysService.forDraft(draft) : null,
                 manualDays != null ? manualDays : draftHoursService.manualDays(draft.getId()),
                 draft.getYear(),
-                draft.getMonth()
+                draft.getMonth(),
+                DriverHoursRules.externalCapacitiesByPlate(externalVehicleRepository.findAllByIsDeletedFalse())
         );
     }
 
@@ -1600,8 +1613,14 @@ public class TourProcessingDraftService {
                     BorrowedVehicle borrowed = borrowedVehicleRepository.findByIdAndIsDeletedFalse(assignment.getBorrowedVehicleId()).orElse(null);
                     if (borrowed == null) return List.of("El vehículo prestado seleccionado no existe");
                 }
+                if (type == ResourceType.EXTERNAL && externalVehicleOf(assignment.getVehicle()) == null && trimToNull(assignment.getVehicle()) != null) {
+                    return List.of(missingExternalVehicleReason(assignment.getVehicle()));
+                }
             }
             return List.of();
+        }
+        if (row.getResourceType() == ResourceType.EXTERNAL && externalVehicleOf(row.getVehicle()) == null && trimToNull(row.getVehicle()) != null) {
+            return List.of(missingExternalVehicleReason(row.getVehicle()));
         }
         if (row.getResourceType() == ResourceType.BORROWED_VEHICLE) {
             if (row.getBorrowedVehicleId() == null) {
@@ -1613,6 +1632,21 @@ public class TourProcessingDraftService {
             }
         }
         return List.of();
+    }
+
+    private ExternalVehicle externalVehicleOf(String plate) {
+        String key = DriverHoursRules.plateKey(plate);
+        if (key.isEmpty()) {
+            return null;
+        }
+        return externalVehicleRepository.findAllByIsDeletedFalse().stream()
+                .filter(vehicle -> DriverHoursRules.plateKey(vehicle.getPlate()).equals(key))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private String missingExternalVehicleReason(String plate) {
+        return "La placa \"" + plate.trim() + "\" no existe en Contratación Externa. Agrégala al sistema antes de guardar la gira";
     }
 
     private BorrowedVehicle resolveBorrowedVehicle(UUID borrowedVehicleId) {
@@ -1761,6 +1795,11 @@ public class TourProcessingDraftService {
         ResourceType type = requested.getResourceType() == null ? ResourceType.INTERNAL : requested.getResourceType();
         String requestedDriver = trimToNull(requested.getDriver());
         String requestedVehicle = type == ResourceType.BORROWED_VEHICLE ? null : trimToNull(requested.getVehicle());
+        ExternalVehicle externalVehicle = type == ResourceType.EXTERNAL ? externalVehicleOf(requestedVehicle) : null;
+        if (externalVehicle != null) {
+            requestedDriver = externalVehicle.getProvider();
+            requestedVehicle = externalVehicle.getPlate();
+        }
         if (!Objects.equals(assignment.getDriver(), requestedDriver) || type != assignment.getResourceType()) {
             assignment.setDriverAutoAssigned(false);
         }

@@ -107,7 +107,7 @@ public class DriverAutoAssigner {
                 .filter(row -> row.getResourceType() == ResourceType.INTERNAL)
                 .toList();
         this.workloads = DriverWorkload.fromAssignments(
-                internalRows.stream().filter(DriverAutoAssigner::hasValidSchedule).toList(), driversById, manualDays);
+                internalRows.stream().filter(DriverAutoAssigner::hasValidSchedule).toList(), driversById, manualDays, businessDays);
         internalRows.stream().filter(DriverHoursRules::isActive).forEach(row -> {
             Driver driver = DriverHoursRules.assignedDriver(row, driversById);
             if (driver != null) {
@@ -159,7 +159,7 @@ public class DriverAutoAssigner {
             return List.of(DriverRejection.invalidSchedule().message());
         }
         List<Driver> eligible = availableDrivers.stream()
-                .filter(driver -> !ulloaOnly || UlloaTours.shiftOf(tour).filter(shift -> UlloaTours.isCoveredBy(driver, shift)).isPresent())
+                .filter(driver -> !ulloaOnly || UlloaTours.shiftOf(tour).filter(shift -> covers(driver, tour, shift)).isPresent())
                 .toList();
         if (eligible.isEmpty()) {
             return List.of(ulloaOnly ? "No hay choferes activos de Servicios Generales configurados para este turno de Periféricas."
@@ -274,6 +274,18 @@ public class DriverAutoAssigner {
 
     double surplusCapOf(Driver driver) {
         return businessDays.surplusCapOf(driver);
+    }
+
+    DriverBusinessDays businessDays() {
+        return businessDays;
+    }
+
+    DriverSchedule scheduleOf(Driver driver) {
+        return businessDays.scheduleOf(driver);
+    }
+
+    private boolean covers(Driver driver, TourProcessingDraftAssignment tour, UlloaShift shift) {
+        return UlloaTours.isCoveredBy(driver, scheduleOf(driver).windowOn(tour.getDepartureDate()), shift);
     }
 
     DriverMonthTotals totalsOf(Driver driver) {
@@ -597,7 +609,7 @@ public class DriverAutoAssigner {
         }
         List<GroupChoice> result = new ArrayList<>();
         for (Driver driver : drivers) {
-            if (fixed == null && ulloaOnly && UlloaTours.shiftOf(part).filter(shift -> UlloaTours.isCoveredBy(driver, shift)).isEmpty()) continue;
+            if (fixed == null && ulloaOnly && UlloaTours.shiftOf(part).filter(shift -> covers(driver, part, shift)).isEmpty()) continue;
             DriverWorkload workload = fixed == null ? workloadOf(driver) : workloadExcluding(driver, part);
             if (evaluate(driver, workload, part, DriverHoursRules.daySpans(part), true).candidate() == null) continue;
             if (surplusOnly && fixed == null) {
@@ -660,7 +672,7 @@ public class DriverAutoAssigner {
 
     private Optional<Driver> pickUlloaDriver(TourProcessingDraftAssignment tour, UlloaShift shift) {
         return candidates(tour).stream()
-                .filter(candidate -> UlloaTours.isCoveredBy(candidate.driver(), shift))
+                .filter(candidate -> covers(candidate.driver(), tour, shift))
                 .min(Comparator.comparingDouble((Candidate candidate) -> continuityGap(candidate.driver(), tour, shift))
                         .thenComparing(CANDIDATE_ORDER))
                 .map(Candidate::driver);
@@ -866,7 +878,7 @@ public class DriverAutoAssigner {
         });
         Map<UUID, DriverWorkload> next = new LinkedHashMap<>();
         for (Driver driver : affected) {
-            DriverWorkload workload = new DriverWorkload(driver, manualDays);
+            DriverWorkload workload = new DriverWorkload(driver, manualDays, businessDays);
             workloadOf(driver).tours().stream().filter(tour -> !changes.containsKey(tour)).forEach(workload::add);
             changes.forEach((tour, assigned) -> {
                 if (driver.equals(assigned)) {
@@ -1089,7 +1101,7 @@ public class DriverAutoAssigner {
     }
 
     DriverWorkload workloadOf(Driver driver) {
-        return workloads.computeIfAbsent(driver.getId(), id -> new DriverWorkload(driver, manualDays));
+        return workloads.computeIfAbsent(driver.getId(), id -> new DriverWorkload(driver, manualDays, businessDays));
     }
 
     static int assignmentLevel(TourProcessingDraftAssignment tour) {
